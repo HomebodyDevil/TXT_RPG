@@ -1,0 +1,17 @@
+{
+  "name": "TxTRPG.UI",
+  "rootNamespace": "TxTRPG.UI",
+  "references": [
+    "Unity.TextMeshPro",
+    "Unity.ugui"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

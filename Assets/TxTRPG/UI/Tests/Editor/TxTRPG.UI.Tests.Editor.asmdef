@@ -1,0 +1,26 @@
+{
+  "name": "TxTRPG.UI.Tests.Editor",
+  "rootNamespace": "TxTRPG.UI.Tests",
+  "references": [
+    "TxTRPG.UI",
+    "TxTRPG.UI.Editor",
+    "Unity.TextMeshPro",
+    "Unity.ugui"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

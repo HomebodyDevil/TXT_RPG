@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1437e9c5f6534bbfa64e86bfed8866e8, type: 3}
+  m_Name: StoryTextPanelDemoData
+  m_EditorClassIdentifier: TxTRPG.UI::TxTRPG.UI.StoryTextPanelDemoData
+  entries:
+  - speaker: 
+    text: Night settles over the northern road.
+  - speaker: Scout
+    text: The caravan stopped here three days ago. No one has seen it since.
+  - speaker: 
+    text: A cold wind moves through the trees.
+  - speaker: Mira
+    text: Did you hear that?
+  - speaker: Rowan
+    text: Only branches. Keep your lantern covered.
+  - speaker: 
+    text: Footprints emerge from the mud and disappear at the ruined milestone.
+  - speaker: Scout
+    text: These tracks are fresh. There may be more than one creature.
+  - speaker: 
+    text: A bell rings once somewhere beyond the fog.
+  - speaker: Mira
+    text: That chapel has been empty for twenty years.
+  - speaker: Rowan
+    text: Then someone has finally come home.
+  - speaker: 
+    text: You advance between the black pines. The path narrows until the party must
+      walk in single file.
+  - speaker: Scout
+    text: Movement. Left side.
+  - speaker: 
+    text: Two pale eyes open beneath the roots.
+  - speaker: Rowan
+    text: Stay behind me.
+  - speaker: 
+    text: The creature steps into the lantern light, and the old bell rings again.
+  - speaker: 
+    text: Choose your next action.
