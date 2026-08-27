@@ -1,0 +1,45 @@
+# TxT-RPG 프로젝트 문서
+
+이 디렉터리는 프로젝트의 구조, 클래스와 Unity 오브젝트의 책임, 자산 관계, 개발 절차를 설명합니다. 새로운 기능을 분석하거나 수정하기 전에 이 문서에서 관련 영역을 확인하십시오.
+
+## 문서 목록
+
+| 문서 | 설명 |
+| --- | --- |
+| [프로젝트 구조](architecture/project-structure.md) | 디렉터리, 어셈블리, 런타임·Editor·테스트 경계를 설명합니다. |
+| [StoryTextPanel 설계](architecture/story-text-panel.md) | 클래스, 프리팹, 데이터 흐름, 스크롤과 투명도 동작을 설명합니다. |
+| [개발 및 검증 절차](development/workflows.md) | 프리팹 재생성, 데모 미리보기, 테스트와 변경 시 확인 사항을 설명합니다. |
+
+## 현재 구현 범위
+
+현재 프로젝트에서 직접 구현한 제품 기능은 텍스트 RPG의 메시지 표시 영역인 `StoryTextPanel`입니다. 기본 Unity 샘플 씬과 튜토리얼 자산은 제품 아키텍처에 포함하지 않습니다.
+
+`StoryTextPanel` 기능은 다음 영역으로 분리되어 있습니다.
+
+```mermaid
+flowchart LR
+    Game[향후 게임·스토리 시스템] -->|StoryMessage 전달| Panel[StoryTextPanel]
+    Panel -->|항목 생성·배치| Item[StoryMessageItem]
+    Panel --> Scroll[ScrollRect와 독립 Scrollbar]
+
+    DemoData[StoryTextPanelDemoData] --> DemoLoader[StoryTextPanelDemoLoader]
+    DemoLoader --> Panel
+
+    PrefabBuilder[StoryTextPanelPrefabBuilder] --> PanelPrefab[StoryTextPanel.prefab]
+    PrefabBuilder --> ItemPrefab[StoryMessageItem.prefab]
+    DemoBuilder[StoryTextPanelDemoBuilder] --> DemoData
+    DemoBuilder --> DemoPrefab[StoryTextPanelDemo.prefab]
+    Preview[StoryTextPanelEditModePreview] --> DemoPrefab
+
+    Tests[Edit Mode Tests] --> Panel
+    Tests --> PanelPrefab
+    Tests --> DemoPrefab
+```
+
+## 문서 사용 원칙
+
+- 클래스나 프리팹의 책임을 변경할 때 관련 아키텍처 문서를 함께 수정합니다.
+- 새 어셈블리, 주요 디렉터리, 실행 진입점 또는 데이터 흐름을 추가하면 프로젝트 구조 문서를 수정합니다.
+- Editor 메뉴나 생성 절차가 바뀌면 개발 및 검증 절차 문서를 수정합니다.
+- 문서에 기재된 경로, 클래스명, 메뉴명은 실제 프로젝트와 일치해야 합니다.
+- 구현되지 않은 계획은 현재 구조처럼 서술하지 않고 별도의 후속 작업으로 구분합니다.

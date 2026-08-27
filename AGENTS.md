@@ -96,6 +96,23 @@ After changing a cross-platform feature:
 6. Test failure and recovery paths for saves, platform services, asynchronous loading, and device disconnection when relevant.
 7. Report which checks were actually performed and clearly state any target devices or builds that remain unverified.
 
+## Project Documentation
+
+Treat `DOCS/README.md` as the entry point for repository architecture and development documentation. Read the relevant documents under `DOCS/` before changing an area they describe.
+
+- Keep documentation in the same change as the code or asset structure it describes.
+- Update `DOCS/architecture/project-structure.md` when adding, removing, moving, or materially changing a major directory, assembly, subsystem, runtime entry point, or dependency boundary.
+- Update the relevant feature architecture document when class responsibilities, object or prefab hierarchies, serialized references, data flow, lifecycle behavior, extension points, or failure behavior change.
+- Update `DOCS/development/workflows.md` when setup steps, Editor menu paths, generation commands, test locations, validation procedures, or required tooling change.
+- Add a focused document under `DOCS/architecture/` for a new subsystem that cannot be explained clearly in the project structure document. Add a focused document under `DOCS/development/` for a substantial new authoring, build, deployment, migration, or operational workflow.
+- Link every new document from `DOCS/README.md`. Avoid creating isolated documentation that cannot be discovered from the documentation index.
+- Use exact repository paths, class names, assembly names, prefab names, ScriptableObject names, and Editor menu paths. Verify them against the current worktree before finalizing documentation.
+- Describe verified current behavior separately from planned or recommended behavior. Do not document an unimplemented design as if it already exists.
+- Prefer concise responsibility tables and small Mermaid diagrams when they make dependencies, ownership, hierarchy, or execution order materially easier to understand.
+- Do not treat generated directories such as `Library`, `Temp`, `Logs`, or `obj` as authoritative architecture. Document version-controlled source, assets, configuration, and reproducible generation workflows.
+- When changing a documented area, confirm that existing links remain valid and that the documentation index still reflects the available documents.
+
+Documentation-only changes still require verification of referenced paths and symbols. Code or asset changes are not complete when their associated documentation is materially inaccurate.
 ## Decision Standard
 
 Prefer the simplest implementation that remains maintainable across supported platforms. A feature is not complete merely because it works in the Unity Editor at one resolution with one input device.
