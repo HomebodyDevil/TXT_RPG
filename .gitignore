@@ -1,0 +1,77 @@
+# Unity-generated directories
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+/[Pp]rofilerCaptures/
+
+# Build outputs
+/[Bb]uild/
+/[Bb]uilds/
+/[Dd]ist/
+
+# Unity Asset Store tools
+/Assets/AssetStoreTools*
+
+# IDE and editor-generated files
+/.idea/
+/.vs/
+/.vscode/
+/.consulo/
+*.csproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Unity-generated metadata and crash reports
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+sysinfo.txt
+crashlytics-build.properties
+
+# Unity package exports
+*.unitypackage
+
+# Addressables build artifacts
+/ServerData/
+/Assets/AddressableAssetsData/*/*.bin*
+/Assets/StreamingAssets/aa.meta
+/Assets/StreamingAssets/aa/*
+
+# Test and coverage output
+/TestResults/
+/CodeCoverage/
+*.coverage
+*.coveragexml
+
+# Local CodeGraph index
+/.codegraph/
+
+# Operating system files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
