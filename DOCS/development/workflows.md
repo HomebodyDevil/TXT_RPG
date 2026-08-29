@@ -48,6 +48,18 @@ Tools > TxT RPG > Refresh Story Text Panel Edit Mode Preview
 
 캐릭터 표시 데모는 `Assets/TxTRPG/UI/DEMO/CharacterDisplayPanel/CharacterDisplayPanelDemo.prefab`을 Prefab Mode로 열어 확인합니다. Edit Mode에서는 생성된 샘플 캐릭터가 완전히 표시되며, Play Mode에서는 실제 `ShowCharacter` 호출과 등장 페이드가 실행됩니다.
 
+## ActionGridPanel을 씬에서 사용하기
+
+1. `Assets/TxTRPG/UI/Prefabs/ActionGridPanel.prefab`을 Canvas 아래에 배치합니다.
+2. 아이템과 스킬 도메인 데이터를 `ActionGridEntry` 목록으로 변환하여 `SetEntries`에 전달합니다.
+3. `IActionMenuProvider`와 `IActionCommandExecutor` 구현을 `SetServices`로 연결합니다.
+4. `Layout Mode`, 최대 열 수, 셀 최소·최대 크기, `Spacing (X, Y)`와 Padding을 화면 정책에 맞게 설정합니다. `Fixed Columns`의 열 수는 최대값이며 좁은 화면에서는 자동으로 감소합니다.
+5. 제한된 슬롯을 표시할 때만 `Fill Capacity With Empty Slots`와 `Capacity`를 사용합니다.
+
+셀에 애니메이션을 추가할 때 테두리 효과는 `Border`, 아이콘과 상태의 흔들림·확대·회전 효과는 `ContentRoot`에 적용합니다. `ActionGridCell` 루트 Transform에는 위치 또는 크기 애니메이션을 적용하지 않습니다.
+
+`Assets/TxTRPG/UI/DEMO/ActionGridPanel/ActionGridPanelDemo.prefab`을 Prefab Mode로 열면 아이템과 스킬, 수량, 비활성, 쿨다운, 선택과 컨텍스트 메뉴를 동시에 확인할 수 있습니다. Play Mode에서는 셀 선택과 Demo 명령 실행 흐름을 확인할 수 있습니다.
+
 ## 자산 재생성 메뉴
 
 | 메뉴 | 효과 |
@@ -57,6 +69,8 @@ Tools > TxT RPG > Refresh Story Text Panel Edit Mode Preview
 | `Tools > TxT RPG > Refresh Story Text Panel Edit Mode Preview` | 현재 데모 데이터로 미리보기 항목을 다시 생성합니다. |
 | `Tools > TxT RPG > Rebuild Character Display Panel Prefab` | 운영용 2D 캐릭터 표시 패널 프리팹을 기본 구조로 다시 생성합니다. |
 | `Tools > TxT RPG > Rebuild Character Display Panel Demo` | 샘플 Sprite, 외형 정의, 데이터와 캐릭터 표시 데모 Prefab을 다시 생성합니다. |
+| `Tools > TxT RPG > Rebuild Action Grid Prefabs` | 셀, 컨텍스트 메뉴와 ActionGridPanel 운영용 Prefab을 다시 생성합니다. |
+| `Tools > TxT RPG > Rebuild Action Grid Demo` | 샘플 아이콘, 혼합 항목 데이터와 ActionGridPanel Demo를 다시 생성합니다. |
 
 운영용 프리팹 재생성은 수동으로 적용한 프리팹 변경을 덮어쓸 수 있습니다. 생성기 코드가 권위 있는 구조인지 확인한 뒤 실행하십시오.
 
@@ -72,6 +86,7 @@ Edit Mode 테스트는 `Assets/TxTRPG/UI/Tests/Editor`에 있습니다.
 | `StoryTextPanelDemoTests` | 데모 데이터의 양, 발화자 조합, 로더와 패널 연결을 검증합니다. |
 | `StoryTextPanelEditModePreviewTests` | 데모 데이터 개수와 직렬화된 미리보기 항목 개수가 일치하는지 검증합니다. |
 | `CharacterDisplayPanelTests` | 표시 요청의 null 정규화, 2D 패널 계층과 데모 미리보기·로더 연결을 검증합니다. |
+| `ActionGridPanelTests` | 표시 모델 정규화, 운영용 Prefab 경계와 혼합 항목 Demo 상태를 검증합니다. |
 
 관련 변경 후에는 다음 항목을 확인합니다.
 
@@ -96,6 +111,7 @@ Edit Mode 테스트는 `Assets/TxTRPG/UI/Tests/Editor`에 있습니다.
 | Editor 생성기 경로·메뉴 | 이 문서와 `DOCS/architecture/story-text-panel.md` |
 | 어셈블리 정의 | 프로젝트 구조 문서, 플레이어 빌드 포함 여부, 테스트 참조 |
 | `CharacterDisplayPanel` 또는 View | 2D Prefab, 외형 정의, 페이드 수명 주기, 향후 3D 교체 경계 |
+| `ActionGridPanel` 또는 Cell | 셀 풀, Navigation, 반응형 열 수, 컨텍스트 메뉴와 외부 명령 경계 |
 
 ## 다국어 글꼴 확인
 

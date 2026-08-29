@@ -62,6 +62,12 @@ TxT-RPG/
 | `CharacterEffectPlayer.cs` | 선택적인 Animator 기반 캐릭터 효과를 재생합니다. |
 | `CharacterDisplayPanelDemoData.cs` | 데모 외형 정의와 ID 기반 표시 요청을 보관합니다. |
 | `CharacterDisplayPanelDemoLoader.cs` | Play Mode에서 데모 캐릭터와 등장 전환을 실행합니다. |
+| `ActionGridModels.cs` | 공통 항목, 메뉴 옵션, 결과와 외부 Provider·Executor 경계를 정의합니다. |
+| `ActionGridCell.cs` | 아이콘, 수량, 쿨다운, 비활성, 선택과 빈 슬롯 상태를 표시합니다. |
+| `ActionGridPanel.cs` | 셀 풀, 반응형 레이아웃, 선택, Navigation과 명령 실행 흐름을 관리합니다. |
+| `ActionContextMenu.cs` | 외부에서 제공된 명령 옵션 Button을 풀링하고 포커스를 복원합니다. |
+| `ActionGridPanelDemoData.cs` | 아이템과 스킬이 혼합된 데모 표시 데이터를 보관합니다. |
+| `ActionGridPanelDemoController.cs` | Play Mode 데모의 옵션 제공자와 명령 실행기 예제를 제공합니다. |
 | `TxTRPG.UI.asmdef` | 런타임 UI 어셈블리 경계를 정의합니다. |
 
 ### `Assets/TxTRPG/UI/Editor`
@@ -75,6 +81,8 @@ TxT-RPG/
 | `StoryTextPanelEditModePreview.cs` | 데모 데이터를 미리보기 항목으로 직렬화하고 열린 미리보기의 레이아웃·투명도를 갱신합니다. |
 | `CharacterDisplayPanelPrefabBuilder.cs` | 운영용 `CharacterDisplayPanel` 2D Prefab을 생성합니다. |
 | `CharacterDisplayPanelDemoBuilder.cs` | 데모 Sprite, 외형 정의, 데이터와 미리보기 Prefab을 생성합니다. |
+| `ActionGridPrefabBuilder.cs` | 셀, 컨텍스트 메뉴와 그리드 패널 운영용 Prefab을 생성합니다. |
+| `ActionGridPanelDemoBuilder.cs` | 데모 아이콘, 데이터와 Edit Mode 미리보기 Prefab을 생성합니다. |
 | `TxTRPG.UI.Editor.asmdef` | Editor 전용 어셈블리 경계를 정의합니다. |
 
 ### `Assets/TxTRPG/UI/Prefabs`
@@ -84,6 +92,9 @@ TxT-RPG/
 | `StoryMessageItem.prefab` | 본문과 선택적 발화자를 표시하는 메시지 항목입니다. |
 | `StoryTextPanel.prefab` | 실제 게임 화면에 배치하는 운영용 텍스트 패널입니다. |
 | `CharacterDisplayPanel.prefab` | 교체 가능한 2D View를 포함하는 운영용 캐릭터 표시 패널입니다. |
+| `ActionGridCell.prefab` | 공통 행동 항목 하나의 표시와 선택 상태를 담당합니다. |
+| `ActionContextMenu.prefab` | 선택 항목의 동적 명령 목록을 표시합니다. |
+| `ActionGridPanel.prefab` | 아이템과 스킬을 표시하는 반응형 선택 그리드입니다. |
 
 ### `Assets/TxTRPG/UI/DEMO`
 
@@ -92,6 +103,7 @@ TxT-RPG/
 | `StoryTextPanelDemoData.asset` | 길이와 발화자 유무가 다른 기본 메시지 16개를 보관합니다. |
 | `StoryTextPanelDemo.prefab` | 운영용 패널, 런타임 로더, Edit Mode 미리보기 항목을 조합한 검증용 프리팹입니다. |
 | `CharacterDisplayPanel/CharacterDisplayPanelDemo.prefab` | 운영용 캐릭터 패널, 샘플 외형과 런타임 로더를 조합한 검증용 프리팹입니다. |
+| `ActionGridPanel/ActionGridPanelDemo.prefab` | 혼합 항목, 셀 상태와 컨텍스트 메뉴를 조합한 검증용 프리팹입니다. |
 
 ### `Assets/TxTRPG/UI/Tests/Editor`
 
