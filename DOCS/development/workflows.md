@@ -58,6 +58,8 @@ Tools > TxT RPG > Refresh Story Text Panel Edit Mode Preview
 
 셀에 애니메이션을 추가할 때 테두리 효과는 `Border`, 아이콘과 상태의 흔들림·확대·회전 효과는 `ContentRoot`에 적용합니다. `ActionGridCell` 루트 Transform에는 위치 또는 크기 애니메이션을 적용하지 않습니다.
 
+컨텍스트 메뉴는 선택 셀의 오른쪽을 우선하여 표시하고 공간이 부족하면 왼쪽, 아래쪽, 위쪽 순으로 위치를 전환합니다. 모든 후보가 완전히 들어가지 않으면 `ContextMenuAnchor` 경계 안으로 좌표를 제한합니다. 메뉴의 셀 간격은 `ActionContextMenu.Anchor Gap`, 패널 가장자리 여백은 `Edge Padding`에서 설정합니다.
+
 `Assets/TxTRPG/UI/DEMO/ActionGridPanel/ActionGridPanelDemo.prefab`을 Prefab Mode로 열면 아이템과 스킬, 수량, 비활성, 쿨다운, 선택과 컨텍스트 메뉴를 동시에 확인할 수 있습니다. Play Mode에서는 셀 선택과 Demo 명령 실행 흐름을 확인할 수 있습니다.
 
 ## FlexibleLayoutPanel로 화면 구성하기
@@ -101,7 +103,7 @@ Edit Mode 테스트는 `Assets/TxTRPG/UI/Tests/Editor`에 있습니다.
 | `StoryTextPanelDemoTests` | 데모 데이터의 양, 발화자 조합, 로더와 패널 연결을 검증합니다. |
 | `StoryTextPanelEditModePreviewTests` | 데모 데이터 개수와 직렬화된 미리보기 항목 개수가 일치하는지 검증합니다. |
 | `CharacterDisplayPanelTests` | 표시 요청의 null 정규화, 2D 패널 계층과 데모 미리보기·로더 연결을 검증합니다. |
-| `ActionGridPanelTests` | 표시 모델 정규화, 운영용 Prefab 경계와 혼합 항목 Demo 상태를 검증합니다. |
+| `ActionGridPanelTests` | 표시 모델 정규화, 열 수, 컨텍스트 메뉴 방향 전환·경계 제한, 운영용 Prefab 경계와 혼합 항목 Demo 상태를 검증합니다. |
 | `FlexibleLayoutPanelTests` | 가중치·고정 크기, 최소·최대 크기, Overflow 계산과 생성된 재귀 Prefab 구조를 검증합니다. |
 
 관련 변경 후에는 다음 항목을 확인합니다.

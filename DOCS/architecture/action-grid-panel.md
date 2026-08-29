@@ -52,7 +52,7 @@ ActionGridCell
 
 `ActionGridCell` 루트는 `GridLayoutGroup`이 위치와 크기를 제어하는 레이아웃 전용 Transform입니다. 테두리 색상과 Outline은 `Border`에 적용하고, 흔들림·확대·회전·노이즈 같은 항목 연출은 `ContentRoot`에 적용합니다. 셀 루트에 Animator가 위치나 크기를 기록하면 GridLayoutGroup의 재배치와 충돌할 수 있으므로 사용하지 않습니다.
 
-컨텍스트 메뉴는 `Assets/TxTRPG/UI/Prefabs/ActionContextMenu.prefab`이며 선택한 항목에 대해 외부 `IActionMenuProvider`가 반환한 옵션만 동적으로 표시합니다.
+컨텍스트 메뉴는 `Assets/TxTRPG/UI/Prefabs/ActionContextMenu.prefab`이며 선택한 항목에 대해 외부 `IActionMenuProvider`가 반환한 옵션만 동적으로 표시합니다. `ContextMenuAnchor`는 패널 전체를 덮는 마스크 밖 오버레이 좌표계입니다. 메뉴는 선택 셀의 RectTransform을 이 좌표계로 변환하여 오른쪽, 왼쪽, 아래쪽, 위쪽 순으로 배치 가능한 위치를 선택하고, 마지막으로 패널 경계 안에 좌표를 제한합니다.
 
 ## 데이터 및 명령 경계
 
@@ -64,7 +64,7 @@ ActionGridCell
 
 기본 `Activation Behavior`는 `Open Context Menu`입니다. 셀의 `Button`은 EventSystem의 Point와 Submit 입력을 함께 처리하므로 마우스, 터치, 키보드와 게임패드에서 동일한 활성화 경로를 사용합니다.
 
-셀 Navigation은 현재 열 수를 이용하여 상하좌우 대상을 명시적으로 연결합니다. 컨텍스트 메뉴를 닫으면 이전 셀로 포커스를 복원합니다. 선택 상태와 명령 실행은 분리되므로 셀을 선택하는 동작만으로 게임 명령이 실행되지 않습니다.
+셀 Navigation은 현재 열 수를 이용하여 상하좌우 대상을 명시적으로 연결합니다. 컨텍스트 메뉴를 닫으면 위치 기준으로 사용했던 셀로 포커스를 복원합니다. 위치 기준 RectTransform과 포커스 복구 GameObject는 별도로 전달하므로 두 책임이 섞이지 않습니다. 선택 상태와 명령 실행은 분리되므로 셀을 선택하는 동작만으로 게임 명령이 실행되지 않습니다.
 
 `Activation Behavior`의 설정은 다음과 같습니다.
 

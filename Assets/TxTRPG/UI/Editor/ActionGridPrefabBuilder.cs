@@ -223,13 +223,17 @@ namespace TxTRPG.UI.Editor
 
                 var contextAnchor = CreateUiObject("ContextMenuAnchor", root.transform);
                 var anchorRect = (RectTransform)contextAnchor.transform;
-                anchorRect.anchorMin = new Vector2(1f, 0.5f);
-                anchorRect.anchorMax = new Vector2(1f, 0.5f);
-                anchorRect.pivot = new Vector2(1f, 0.5f);
-                anchorRect.anchoredPosition = new Vector2(-24f, 0f);
-                anchorRect.sizeDelta = new Vector2(220f, 180f);
+                Stretch(anchorRect);
                 var menuObject = (GameObject)PrefabUtility.InstantiatePrefab(contextMenuPrefab.gameObject, contextAnchor.transform);
-                Stretch((RectTransform)menuObject.transform);
+                var menuRect = (RectTransform)menuObject.transform;
+                menuRect.anchorMin = new Vector2(0.5f, 0.5f);
+                menuRect.anchorMax = new Vector2(0.5f, 0.5f);
+                menuRect.pivot = new Vector2(0.5f, 0.5f);
+                menuRect.anchoredPosition = Vector2.zero;
+                menuRect.sizeDelta = new Vector2(220f, 180f);
+                var menuProperties = new SerializedObject(menuObject.GetComponent<ActionContextMenu>());
+                menuProperties.FindProperty("placementBounds").objectReferenceValue = anchorRect;
+                menuProperties.ApplyModifiedPropertiesWithoutUndo();
                 menuObject.SetActive(false);
 
                 var panel = root.AddComponent<ActionGridPanel>();

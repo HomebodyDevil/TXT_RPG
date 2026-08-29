@@ -307,6 +307,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: TxTRPG.UI::TxTRPG.UI.ActionContextMenu
   optionList: {fileID: 6270521051033440421}
   optionPrefab: {fileID: 9030094069736562903}
+  placementBounds: {fileID: 0}
+  anchorGap: 8
+  edgePadding: 8
 --- !u!1 &5605169524787273432
 GameObject:
   m_ObjectHideFlags: 0

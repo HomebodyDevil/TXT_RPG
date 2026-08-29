@@ -168,6 +168,7 @@ namespace TxTRPG.UI.Editor
                         new ActionMenuOption("inspect", "Inspect")
                     },
                     null,
+                    panelObject.GetComponentsInChildren<ActionGridCell>(true)[1].transform as RectTransform,
                     null);
 
                 var controller = root.AddComponent<ActionGridPanelDemoController>();

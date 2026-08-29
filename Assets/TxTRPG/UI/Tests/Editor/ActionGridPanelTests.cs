@@ -56,6 +56,59 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        public void ContextMenuPosition_PrefersRightOfAnchor()
+        {
+            var position = ActionContextMenu.CalculatePosition(
+                new Rect(-50f, -20f, 40f, 40f),
+                new Vector2(100f, 80f),
+                new Rect(-300f, -200f, 600f, 400f),
+                10f,
+                8f);
+
+            Assert.That(position, Is.EqualTo(new Vector2(50f, 0f)));
+        }
+
+        [Test]
+        public void ContextMenuPosition_FlipsLeftNearRightEdge()
+        {
+            var position = ActionContextMenu.CalculatePosition(
+                new Rect(240f, -20f, 40f, 40f),
+                new Vector2(100f, 80f),
+                new Rect(-300f, -200f, 600f, 400f),
+                10f,
+                8f);
+
+            Assert.That(position, Is.EqualTo(new Vector2(180f, 0f)));
+        }
+
+        [Test]
+        public void ContextMenuPosition_UsesBelowWhenNeitherHorizontalSideFits()
+        {
+            var position = ActionContextMenu.CalculatePosition(
+                new Rect(-20f, 50f, 40f, 40f),
+                new Vector2(260f, 80f),
+                new Rect(-150f, -200f, 300f, 400f),
+                10f,
+                8f);
+
+            Assert.That(position, Is.EqualTo(new Vector2(0f, 0f)));
+        }
+
+        [Test]
+        public void ContextMenuPosition_ClampsOversizedCandidateInsideBounds()
+        {
+            var position = ActionContextMenu.CalculatePosition(
+                new Rect(80f, 70f, 20f, 20f),
+                new Vector2(120f, 100f),
+                new Rect(-100f, -80f, 200f, 160f),
+                8f,
+                10f);
+
+            Assert.That(position.x, Is.InRange(-30f, 30f));
+            Assert.That(position.y, Is.InRange(-20f, 20f));
+        }
+
+        [Test]
         public void GeneratedPrefabs_HaveRequiredBoundariesAndReferences()
         {
             ActionGridPrefabBuilder.CreateOrUpdatePrefabs();
@@ -77,6 +130,9 @@ namespace TxTRPG.UI.Tests
             Assert.That(panel.GetComponent<ActionGridPanel>(), Is.Not.Null);
             Assert.That(panel.GetComponentInChildren<GridLayoutGroup>(true), Is.Not.Null);
             Assert.That(panel.transform.Find("ContextMenuAnchor/ActionContextMenu"), Is.Not.Null);
+            var contextAnchor = (RectTransform)panel.transform.Find("ContextMenuAnchor");
+            Assert.That(contextAnchor.anchorMin, Is.EqualTo(Vector2.zero));
+            Assert.That(contextAnchor.anchorMax, Is.EqualTo(Vector2.one));
         }
 
         [Test]

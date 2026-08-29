@@ -184,7 +184,8 @@ namespace TxTRPG.UI
 
             var entry = entries[selectedIndex];
             var options = menuProvider.GetOptions(entry.Id);
-            contextMenu.Show(options, ExecuteOption, cellPool[selectedIndex].gameObject);
+            var cell = cellPool[selectedIndex];
+            contextMenu.Show(options, ExecuteOption, cell.transform as RectTransform, cell.gameObject);
         }
 
         private void ExecuteDefaultAction()
