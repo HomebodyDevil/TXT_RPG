@@ -60,6 +60,19 @@ Tools > TxT RPG > Refresh Story Text Panel Edit Mode Preview
 
 `Assets/TxTRPG/UI/DEMO/ActionGridPanel/ActionGridPanelDemo.prefab`을 Prefab Mode로 열면 아이템과 스킬, 수량, 비활성, 쿨다운, 선택과 컨텍스트 메뉴를 동시에 확인할 수 있습니다. Play Mode에서는 셀 선택과 Demo 명령 실행 흐름을 확인할 수 있습니다.
 
+## FlexibleLayoutPanel로 화면 구성하기
+
+1. `Assets/TxTRPG/UI/Prefabs/FlexibleLayoutPanel.prefab`을 Canvas 또는 상위 UI 컨테이너 아래에 배치합니다.
+2. 직계 자식에 `FlexibleLayoutItem`을 추가하고 `Weighted` 또는 `Fixed`를 선택합니다.
+3. 가중치, 고정 크기와 필요한 최소·최대 크기를 설정합니다.
+4. 부모 패널에서 Axis, Spacing, Padding과 Overflow 정책을 설정합니다.
+5. 좁은 화면에서 배치 방향을 바꾸려면 Axis Policy와 Breakpoint를 설정합니다.
+6. 복합 화면은 자식에 `FlexibleLayoutPanel`을 추가하여 같은 방식으로 중첩합니다.
+
+`Assets/TxTRPG/UI/DEMO/FlexibleLayoutPanel/FlexibleLayoutPanelDemo.prefab`을 Prefab Mode로 열면 넓은 화면의 `MainContent : Character = 7 : 3` 구성과 `Story : Action = 65 : 35` 중첩 구성을 확인할 수 있습니다. Prefab 루트의 너비를 720 미만으로 줄이면 최상위 축이 세로로 전환됩니다.
+
+같은 오브젝트에서 주축을 제어하는 `ContentSizeFitter`는 사용하지 않습니다. 레이아웃 중첩은 필요한 수준으로만 유지하고, 런타임에서 매 프레임 `Rebuild`를 호출하지 않습니다.
+
 ## 자산 재생성 메뉴
 
 | 메뉴 | 효과 |
@@ -71,6 +84,8 @@ Tools > TxT RPG > Refresh Story Text Panel Edit Mode Preview
 | `Tools > TxT RPG > Rebuild Character Display Panel Demo` | 샘플 Sprite, 외형 정의, 데이터와 캐릭터 표시 데모 Prefab을 다시 생성합니다. |
 | `Tools > TxT RPG > Rebuild Action Grid Prefabs` | 셀, 컨텍스트 메뉴와 ActionGridPanel 운영용 Prefab을 다시 생성합니다. |
 | `Tools > TxT RPG > Rebuild Action Grid Demo` | 샘플 아이콘, 혼합 항목 데이터와 ActionGridPanel Demo를 다시 생성합니다. |
+| `Tools > TxT RPG > Rebuild Flexible Layout Prefab` | 자식 없는 운영용 FlexibleLayoutPanel Prefab을 다시 생성합니다. |
+| `Tools > TxT RPG > Rebuild Flexible Layout Demo` | 세 제품 UI Demo를 중첩한 반응형 Flexible Layout Demo를 다시 생성합니다. |
 
 운영용 프리팹 재생성은 수동으로 적용한 프리팹 변경을 덮어쓸 수 있습니다. 생성기 코드가 권위 있는 구조인지 확인한 뒤 실행하십시오.
 
@@ -87,6 +102,7 @@ Edit Mode 테스트는 `Assets/TxTRPG/UI/Tests/Editor`에 있습니다.
 | `StoryTextPanelEditModePreviewTests` | 데모 데이터 개수와 직렬화된 미리보기 항목 개수가 일치하는지 검증합니다. |
 | `CharacterDisplayPanelTests` | 표시 요청의 null 정규화, 2D 패널 계층과 데모 미리보기·로더 연결을 검증합니다. |
 | `ActionGridPanelTests` | 표시 모델 정규화, 운영용 Prefab 경계와 혼합 항목 Demo 상태를 검증합니다. |
+| `FlexibleLayoutPanelTests` | 가중치·고정 크기, 최소·최대 크기, Overflow 계산과 생성된 재귀 Prefab 구조를 검증합니다. |
 
 관련 변경 후에는 다음 항목을 확인합니다.
 
@@ -112,6 +128,7 @@ Edit Mode 테스트는 `Assets/TxTRPG/UI/Tests/Editor`에 있습니다.
 | 어셈블리 정의 | 프로젝트 구조 문서, 플레이어 빌드 포함 여부, 테스트 참조 |
 | `CharacterDisplayPanel` 또는 View | 2D Prefab, 외형 정의, 페이드 수명 주기, 향후 3D 교체 경계 |
 | `ActionGridPanel` 또는 Cell | 셀 풀, Navigation, 반응형 열 수, 컨텍스트 메뉴와 외부 명령 경계 |
+| `FlexibleLayoutPanel` 또는 Item | 크기 계산, Overflow, 반응형 축, 중첩 Demo, 동일 축의 다른 Layout 컴포넌트 충돌 |
 
 ## 다국어 글꼴 확인
 

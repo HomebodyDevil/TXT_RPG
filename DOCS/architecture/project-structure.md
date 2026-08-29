@@ -22,7 +22,10 @@ TxT-RPG/
 │   ├── README.md
 │   ├── architecture/
 │   │   ├── project-structure.md
-│   │   └── story-text-panel.md
+│   │   ├── story-text-panel.md
+│   │   ├── character-display-panel.md
+│   │   ├── action-grid-panel.md
+│   │   └── flexible-layout-panel.md
 │   └── development/
 │       └── workflows.md
 ├── Assets/
@@ -68,6 +71,8 @@ TxT-RPG/
 | `ActionContextMenu.cs` | 외부에서 제공된 명령 옵션 Button을 풀링하고 포커스를 복원합니다. |
 | `ActionGridPanelDemoData.cs` | 아이템과 스킬이 혼합된 데모 표시 데이터를 보관합니다. |
 | `ActionGridPanelDemoController.cs` | Play Mode 데모의 옵션 제공자와 명령 실행기 예제를 제공합니다. |
+| `FlexibleLayoutItem.cs` | 자식 영역의 가중치·고정 크기와 최소·최대 크기를 정의합니다. |
+| `FlexibleLayoutPanel.cs` | 가로·세로 재귀 분할, 반응형 축 전환과 Overflow 크기 계산을 담당합니다. |
 | `TxTRPG.UI.asmdef` | 런타임 UI 어셈블리 경계를 정의합니다. |
 
 ### `Assets/TxTRPG/UI/Editor`
@@ -83,6 +88,7 @@ TxT-RPG/
 | `CharacterDisplayPanelDemoBuilder.cs` | 데모 Sprite, 외형 정의, 데이터와 미리보기 Prefab을 생성합니다. |
 | `ActionGridPrefabBuilder.cs` | 셀, 컨텍스트 메뉴와 그리드 패널 운영용 Prefab을 생성합니다. |
 | `ActionGridPanelDemoBuilder.cs` | 데모 아이콘, 데이터와 Edit Mode 미리보기 Prefab을 생성합니다. |
+| `FlexibleLayoutPrefabBuilder.cs` | 빈 운영용 레이아웃 Prefab과 세 제품 UI를 조합한 재귀 Demo를 생성합니다. |
 | `TxTRPG.UI.Editor.asmdef` | Editor 전용 어셈블리 경계를 정의합니다. |
 
 ### `Assets/TxTRPG/UI/Prefabs`
@@ -95,6 +101,7 @@ TxT-RPG/
 | `ActionGridCell.prefab` | 공통 행동 항목 하나의 표시와 선택 상태를 담당합니다. |
 | `ActionContextMenu.prefab` | 선택 항목의 동적 명령 목록을 표시합니다. |
 | `ActionGridPanel.prefab` | 아이템과 스킬을 표시하는 반응형 선택 그리드입니다. |
+| `FlexibleLayoutPanel.prefab` | 화면별 UI 영역을 조합하기 위한 자식 없는 운영용 레이아웃 컨테이너입니다. |
 
 ### `Assets/TxTRPG/UI/DEMO`
 
@@ -104,10 +111,11 @@ TxT-RPG/
 | `StoryTextPanelDemo.prefab` | 운영용 패널, 런타임 로더, Edit Mode 미리보기 항목을 조합한 검증용 프리팹입니다. |
 | `CharacterDisplayPanel/CharacterDisplayPanelDemo.prefab` | 운영용 캐릭터 패널, 샘플 외형과 런타임 로더를 조합한 검증용 프리팹입니다. |
 | `ActionGridPanel/ActionGridPanelDemo.prefab` | 혼합 항목, 셀 상태와 컨텍스트 메뉴를 조합한 검증용 프리팹입니다. |
+| `FlexibleLayoutPanel/FlexibleLayoutPanelDemo.prefab` | Story, Action과 Character Demo를 가중치 기반 중첩 레이아웃으로 조합한 검증용 프리팹입니다. |
 
 ### `Assets/TxTRPG/UI/Tests/Editor`
 
-투명도 계산, 캐릭터 표시 요청, 운영용 프리팹 참조, 데모 데이터 구성, Edit Mode 미리보기 항목 수를 검증합니다. 테스트 어셈블리는 플레이어 빌드에 포함되지 않습니다.
+투명도 계산, 캐릭터 표시 요청, 운영용 프리팹 참조, 데모 데이터 구성, Edit Mode 미리보기 항목 수와 Flexible Layout의 순수 크기 계산·재귀 Demo 구조를 검증합니다. 테스트 어셈블리는 플레이어 빌드에 포함되지 않습니다.
 
 ## 어셈블리 의존 관계
 
@@ -142,6 +150,6 @@ flowchart TD
 - 3D 캐릭터·적 표시, 동적 전투 슬롯과 자산 비동기 로딩
 - 저장 데이터와 마이그레이션
 - Steam 및 모바일 플랫폼 서비스
-- 모바일 Safe Area를 포함한 최종 화면 조합
+- 모바일 Safe Area를 포함한 최종 화면 조합과 기기별 레이아웃 검증
 
 새 영역을 구현할 때 런타임, 플랫폼 어댑터, Editor 제작 도구와 테스트의 경계를 먼저 결정해야 합니다.
