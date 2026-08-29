@@ -53,11 +53,34 @@ namespace TxTRPG.UI.Editor
                 body.text = "Story text appears here.";
                 body.lineSpacing = 14f;
 
+                var separatorSlot = CreateUiObject("Separator", root.transform);
+                var separatorSlotRect = (RectTransform)separatorSlot.transform;
+                separatorSlotRect.sizeDelta = new Vector2(0f, 1f);
+                var separatorLayout = separatorSlot.AddComponent<LayoutElement>();
+                separatorLayout.minHeight = 1f;
+                separatorLayout.preferredHeight = 1f;
+                separatorLayout.flexibleHeight = 0f;
+
+                var separatorVisualObject = CreateUiObject("Visual", separatorSlot.transform);
+                var separatorVisual = (RectTransform)separatorVisualObject.transform;
+                separatorVisual.anchorMin = new Vector2(0.5f, 0.5f);
+                separatorVisual.anchorMax = new Vector2(0.5f, 0.5f);
+                separatorVisual.pivot = new Vector2(0.5f, 0.5f);
+                separatorVisual.anchoredPosition = Vector2.zero;
+                separatorVisual.sizeDelta = new Vector2(360f, 1f);
+                var separatorImage = separatorVisualObject.AddComponent<Image>();
+                separatorImage.color = new Color(1f, 1f, 1f, 0.2f);
+                separatorImage.raycastTarget = false;
+
                 var component = root.AddComponent<StoryMessageItem>();
                 var serialized = new SerializedObject(component);
                 serialized.FindProperty("speakerText").objectReferenceValue = speaker;
                 serialized.FindProperty("bodyText").objectReferenceValue = body;
                 serialized.FindProperty("canvasGroup").objectReferenceValue = canvasGroup;
+                serialized.FindProperty("separatorSlot").objectReferenceValue = separatorSlot;
+                serialized.FindProperty("separatorVisual").objectReferenceValue = separatorVisual;
+                serialized.FindProperty("separatorImage").objectReferenceValue = separatorImage;
+                serialized.FindProperty("separatorLayout").objectReferenceValue = separatorLayout;
                 serialized.ApplyModifiedPropertiesWithoutUndo();
 
                 var prefab = PrefabUtility.SaveAsPrefabAsset(root, MessagePrefabPath);

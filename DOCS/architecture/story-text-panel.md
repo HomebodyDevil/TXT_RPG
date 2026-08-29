@@ -72,8 +72,12 @@ StoryTextPanel
 ```text
 StoryMessageItem             CanvasGroup, VerticalLayoutGroup, ContentSizeFitter
 ├── Speaker                  TextMeshProUGUI, 발화자가 없으면 비활성화됨
-└── Body                     TextMeshProUGUI
+├── Body                     TextMeshProUGUI
+└── Separator                LayoutElement, 마지막 메시지에서는 비활성화됨
+    └── Visual               Image
 ```
+
+구분선은 각 메시지 항목 아래에 포함되지만 마지막 메시지의 구분선은 자동으로 숨겨지므로 메시지 사이에만 나타납니다. 기존 구분선 구조가 없는 이전 프리팹을 로드하면 `StoryMessageItem`이 같은 구조를 런타임에 보완합니다.
 
 ## 메시지 추가 흐름
 
@@ -95,6 +99,8 @@ sequenceDiagram
 ```
 
 `followLatestMessage`가 활성화된 기본 상태에서는 메시지를 추가한 다음 프레임에 레이아웃을 갱신하고 최신 위치로 이동합니다. 이 한 프레임 지연은 `ContentSizeFitter`가 새 항목의 높이를 계산한 뒤 정확한 하단 위치를 얻기 위해 필요합니다.
+
+`revealInitialMessages`가 활성화되면 초기 메시지는 이 레이아웃 계산과 최신 위치 이동이 끝날 때까지 완전히 숨겨집니다. 준비가 끝난 뒤에도 진행률 `0`인 상태를 한 프레임 동안 먼저 렌더링한 다음, `initialRevealDuration` 동안 부드러운 곡선으로 나타납니다. 이때 표시 진행률은 각 항목에 이미 계산된 위치별 투명도에 곱해지므로, 상단의 오래된 메시지가 잠시 완전 불투명하게 보이는 현상이 발생하지 않습니다. 표시 시간은 일시 정지 상태에서도 동작하도록 비례하지 않은 시간을 사용합니다. 게임 시작이나 Editor 정체로 한 프레임이 비정상적으로 길어져도 표시 진행률이 크게 건너뛰지 않도록 프레임당 반영 시간을 최대 `0.1`초로 제한합니다.
 
 ## 스크롤 설계
 
@@ -140,6 +146,14 @@ flowchart LR
 | `Scrollbar Width`, `Scrollbar Gap` | 스크롤바 폭과 본문 사이 간격을 설정합니다. |
 | `Follow Latest Message` | 메시지 추가 후 최신 위치로 이동합니다. |
 | `Maximum Retained Messages` | 메모리에 유지하는 메시지 수를 제한합니다. `0`은 무제한입니다. |
+| `Show Message Separators` | 메시지 사이의 구분선을 표시하거나 숨깁니다. |
+| `Separator Sprite`, `Separator Image Type` | 구분선 이미지와 `Simple`, `Sliced`, `Tiled`, `Filled` 표시 방식을 설정합니다. Sprite를 비워 두면 단색 기본 이미지를 사용합니다. |
+| `Separator Color` | 이미지 틴트와 투명도를 설정합니다. |
+| `Separator Width`, `Separator Height` | 구분선 Visual의 크기를 Canvas 기준 단위로 설정합니다. |
+| `Speaker Font Size` | 발화자 이름의 글자 크기를 Canvas 기준 단위로 설정합니다. |
+| `Body Font Size` | 메시지 본문의 글자 크기를 Canvas 기준 단위로 설정합니다. |
+| `Reveal Initial Messages` | 초기 레이아웃과 투명도 계산이 끝날 때까지 메시지를 숨긴 뒤 점진적으로 표시합니다. 비활성화하면 기존처럼 즉시 표시합니다. |
+| `Initial Reveal Duration` | 초기 메시지가 최종 위치별 투명도까지 나타나는 시간을 초 단위로 설정합니다. `0`이면 준비가 끝난 직후 표시합니다. |
 
 ## 데모와 Edit Mode 미리보기
 

@@ -541,5 +541,15 @@ MonoBehaviour:
   oldestVisibleOpacity: 0.15
   fadeStartFromBottom: 0.35
   fadeExponent: 1.5
+  showMessageSeparators: 1
+  separatorSprite: {fileID: 0}
+  separatorColor: {r: 1, g: 1, b: 1, a: 0.2}
+  separatorImageType: 0
+  separatorWidth: 360
+  separatorHeight: 1
+  speakerFontSize: 17
+  bodyFontSize: 24
   followLatestMessage: 1
   maximumRetainedMessages: 0
+  revealInitialMessages: 1
+  initialRevealDuration: 0.35

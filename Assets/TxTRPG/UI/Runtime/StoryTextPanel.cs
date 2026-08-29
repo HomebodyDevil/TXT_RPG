@@ -15,6 +15,8 @@ namespace TxTRPG.UI
     [DisallowMultipleComponent]
     public sealed class StoryTextPanel : MonoBehaviour
     {
+        private const float MaximumInitialRevealFrameDelta = 0.1f;
+
         [Header("Message Content")]
         [SerializeField] private StoryMessageItem messagePrefab;
         [SerializeField] private RectTransform viewport;
@@ -39,13 +41,34 @@ namespace TxTRPG.UI
         [Tooltip("Higher values keep messages opaque longer before fading near the top.")]
         [SerializeField, Range(0.1f, 5f)] private float fadeExponent = 1.5f;
 
+        [Header("Message Separators")]
+        [SerializeField] private bool showMessageSeparators = true;
+        [SerializeField] private Sprite separatorSprite;
+        [SerializeField] private Color separatorColor = new(1f, 1f, 1f, 0.2f);
+        [SerializeField] private Image.Type separatorImageType = Image.Type.Simple;
+        [SerializeField, Min(1f)] private float separatorWidth = 360f;
+        [SerializeField, Min(1f)] private float separatorHeight = 1f;
+
+        [Header("Typography")]
+        [SerializeField, Min(1f)] private float speakerFontSize = 17f;
+        [SerializeField, Min(1f)] private float bodyFontSize = 24f;
+
         [Header("Behavior")]
         [SerializeField] private bool followLatestMessage = true;
         [SerializeField, Min(0)] private int maximumRetainedMessages;
 
+        [Header("Initial Reveal")]
+        [Tooltip("Keeps messages hidden until their initial layout is ready, then gradually reveals them with their position-based opacity applied.")]
+        [SerializeField] private bool revealInitialMessages = true;
+        [Tooltip("Duration in unscaled seconds for the initial message reveal. This setting is used only when Reveal Initial Messages is enabled.")]
+        [SerializeField, Min(0f)] private float initialRevealDuration = 0.35f;
+
         private readonly List<StoryMessageItem> items = new();
         private bool synchronizingScrollbar;
         private Coroutine scrollToBottomRoutine;
+        private Coroutine initialRevealRoutine;
+        private float initialRevealProgress = 1f;
+        private float initialRevealElapsed;
 
         public bool AllowUserScrolling
         {
@@ -69,6 +92,54 @@ namespace TxTRPG.UI
 
         public int MessageCount => items.Count;
 
+        public bool RevealInitialMessages
+        {
+            get => revealInitialMessages;
+            set
+            {
+                if (revealInitialMessages == value)
+                {
+                    return;
+                }
+
+                revealInitialMessages = value;
+                if (!Application.isPlaying)
+                {
+                    return;
+                }
+
+                if (!revealInitialMessages)
+                {
+                    if (initialRevealRoutine != null)
+                    {
+                        StopCoroutine(initialRevealRoutine);
+                        initialRevealRoutine = null;
+                    }
+
+                    initialRevealProgress = 1f;
+                    RefreshMessageOpacity();
+                    return;
+                }
+
+                initialRevealProgress = 0f;
+                initialRevealElapsed = 0f;
+                if (followLatestMessage)
+                {
+                    ScheduleScrollToBottom();
+                }
+                else if (isActiveAndEnabled)
+                {
+                    RebuildAndRefresh();
+                }
+            }
+        }
+
+        public float InitialRevealDuration
+        {
+            get => initialRevealDuration;
+            set => initialRevealDuration = Mathf.Max(0f, value);
+        }
+
         public void AddMessage(string text, string speaker = null)
         {
             AddMessage(new StoryMessage(text, speaker));
@@ -79,8 +150,10 @@ namespace TxTRPG.UI
             var item = Instantiate(messagePrefab, content);
             item.gameObject.SetActive(true);
             item.Bind(message);
+            item.ConfigureTextSize(speakerFontSize, bodyFontSize);
             items.Add(item);
             TrimOldMessages();
+            RefreshMessageSeparators();
 
             if (followLatestMessage)
             {
@@ -137,8 +210,20 @@ namespace TxTRPG.UI
             return Mathf.Lerp(1f, Mathf.Clamp01(minimumOpacity), shapedProgress);
         }
 
+        public static float CalculateInitialRevealProgress(float elapsed, float duration)
+        {
+            if (duration <= 0f)
+            {
+                return 1f;
+            }
+
+            return Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / duration));
+        }
+
         private void Awake()
         {
+            initialRevealProgress = revealInitialMessages ? 0f : 1f;
+            initialRevealElapsed = 0f;
             ApplyOptions();
         }
 
@@ -154,6 +239,19 @@ namespace TxTRPG.UI
         {
             scrollRect.onValueChanged.RemoveListener(SynchronizeFromScrollRect);
             scrollbar.onValueChanged.RemoveListener(SynchronizeFromScrollbar);
+
+            if (scrollToBottomRoutine != null)
+            {
+                StopCoroutine(scrollToBottomRoutine);
+            }
+
+            if (initialRevealRoutine != null)
+            {
+                StopCoroutine(initialRevealRoutine);
+            }
+
+            scrollToBottomRoutine = null;
+            initialRevealRoutine = null;
         }
 
         private void LateUpdate()
@@ -175,10 +273,16 @@ namespace TxTRPG.UI
             fadeStartFromBottom = Mathf.Clamp01(fadeStartFromBottom);
             oldestVisibleOpacity = Mathf.Clamp01(oldestVisibleOpacity);
             fadeExponent = Mathf.Max(0.1f, fadeExponent);
+            separatorWidth = Mathf.Max(1f, separatorWidth);
+            separatorHeight = Mathf.Max(1f, separatorHeight);
+            speakerFontSize = Mathf.Max(1f, speakerFontSize);
+            bodyFontSize = Mathf.Max(1f, bodyFontSize);
+            initialRevealDuration = Mathf.Max(0f, initialRevealDuration);
 
             if (isActiveAndEnabled && scrollRect != null && scrollbar != null)
             {
                 ApplyOptions();
+                RefreshMessageSeparators();
             }
         }
 
@@ -265,7 +369,7 @@ namespace TxTRPG.UI
                     normalizedHeight,
                     fadeStartFromBottom,
                     oldestVisibleOpacity,
-                    fadeExponent));
+                    fadeExponent) * initialRevealProgress);
             }
         }
 
@@ -284,6 +388,27 @@ namespace TxTRPG.UI
                 {
                     Destroy(oldest.gameObject);
                 }
+            }
+        }
+
+        private void RefreshMessageSeparators()
+        {
+            for (var i = 0; i < items.Count; i++)
+            {
+                var item = items[i];
+                if (item == null)
+                {
+                    continue;
+                }
+
+                item.ConfigureTextSize(speakerFontSize, bodyFontSize);
+                item.ConfigureSeparator(
+                    showMessageSeparators && i < items.Count - 1,
+                    separatorSprite,
+                    separatorColor,
+                    separatorImageType,
+                    separatorWidth,
+                    separatorHeight);
             }
         }
 
@@ -309,12 +434,55 @@ namespace TxTRPG.UI
             scrollRect.verticalNormalizedPosition = 0f;
             SynchronizeFromScrollRect(Vector2.zero);
             scrollToBottomRoutine = null;
+            StartInitialRevealWhenReady();
+        }
+
+        private void StartInitialRevealWhenReady()
+        {
+            if (!revealInitialMessages || items.Count == 0 || initialRevealProgress >= 1f || initialRevealRoutine != null)
+            {
+                return;
+            }
+
+            initialRevealRoutine = StartCoroutine(RevealInitialMessagesOverTime());
+        }
+
+        private IEnumerator RevealInitialMessagesOverTime()
+        {
+            if (initialRevealDuration <= 0f)
+            {
+                initialRevealProgress = 1f;
+                RefreshMessageOpacity();
+                initialRevealRoutine = null;
+                yield break;
+            }
+
+            // Render one complete frame at zero opacity before consuming any elapsed time.
+            initialRevealProgress = 0f;
+            RefreshMessageOpacity();
+            yield return null;
+
+            while (initialRevealElapsed < initialRevealDuration)
+            {
+                var frameDelta = Mathf.Min(Time.unscaledDeltaTime, MaximumInitialRevealFrameDelta);
+                initialRevealElapsed = Mathf.Min(initialRevealElapsed + frameDelta, initialRevealDuration);
+                initialRevealProgress = CalculateInitialRevealProgress(
+                    initialRevealElapsed,
+                    initialRevealDuration);
+                RefreshMessageOpacity();
+                yield return null;
+            }
+
+            initialRevealProgress = 1f;
+            RefreshMessageOpacity();
+            initialRevealRoutine = null;
         }
 
         private void RebuildAndRefresh()
         {
             RebuildLayout();
             SynchronizeFromScrollRect(scrollRect.normalizedPosition);
+            StartInitialRevealWhenReady();
         }
 
         private void RebuildLayout()

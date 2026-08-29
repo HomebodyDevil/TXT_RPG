@@ -74,10 +74,32 @@ namespace TxTRPG.UI.Editor
             var fadeStart = properties.FindProperty("fadeStartFromBottom").floatValue;
             var minimumOpacity = properties.FindProperty("oldestVisibleOpacity").floatValue;
             var exponent = properties.FindProperty("fadeExponent").floatValue;
+            var speakerFontSize = properties.FindProperty("speakerFontSize").floatValue;
+            var bodyFontSize = properties.FindProperty("bodyFontSize").floatValue;
+            var showSeparators = properties.FindProperty("showMessageSeparators").boolValue;
+            var separatorSprite = (Sprite)properties.FindProperty("separatorSprite").objectReferenceValue;
+            var separatorColor = properties.FindProperty("separatorColor").colorValue;
+            var separatorImageType = (Image.Type)properties.FindProperty("separatorImageType").enumValueIndex;
+            var separatorWidth = properties.FindProperty("separatorWidth").floatValue;
+            var separatorHeight = properties.FindProperty("separatorHeight").floatValue;
 
             if (viewport == null || content == null || scrollRect == null)
             {
                 return;
+            }
+
+            var previewItems = panel.GetComponentsInChildren<StoryTextPanelDemoPreviewItem>(true);
+            for (var i = 0; i < previewItems.Length; i++)
+            {
+                var item = previewItems[i].GetComponent<StoryMessageItem>();
+                item.ConfigureTextSize(speakerFontSize, bodyFontSize);
+                item.ConfigureSeparator(
+                    showSeparators && i < previewItems.Length - 1,
+                    separatorSprite,
+                    separatorColor,
+                    separatorImageType,
+                    separatorWidth,
+                    separatorHeight);
             }
 
             Canvas.ForceUpdateCanvases();
@@ -86,7 +108,6 @@ namespace TxTRPG.UI.Editor
             Canvas.ForceUpdateCanvases();
 
             var viewportRect = viewport.rect;
-            var previewItems = panel.GetComponentsInChildren<StoryTextPanelDemoPreviewItem>(true);
             foreach (var previewItem in previewItems)
             {
                 var item = previewItem.GetComponent<StoryMessageItem>();
