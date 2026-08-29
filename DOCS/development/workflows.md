@@ -35,6 +35,19 @@ public void ShowDialogue(string localizedSpeaker, string localizedBody)
 Tools > TxT RPG > Refresh Story Text Panel Edit Mode Preview
 ```
 
+## CharacterDisplayPanel을 씬에서 사용하기
+
+1. `Assets/TxTRPG/UI/Prefabs/CharacterDisplayPanel.prefab`을 Canvas 아래에 배치합니다.
+2. `Character2DView`의 `Appearance Definitions`에 캐릭터별 `CharacterAppearanceDefinition` 자산을 등록합니다.
+3. 외형 정의의 `Framing`을 원본에 맞게 `Whole Artwork`, `Thigh Up` 또는 `Custom`으로 설정합니다.
+4. View의 `Animate Visibility`, 등장·퇴장 시간과 프레임 시간 상한을 설정합니다.
+5. 게임 또는 스토리 컴포넌트에서 `CharacterDisplayPanel`을 참조하고 ID 기반 `CharacterPresentation`을 전달합니다.
+6. 위치 또는 크기 애니메이션은 `ArtworkRoot`가 아니라 `VisualRoot`에 적용합니다.
+
+외형 정의 자산은 `Assets > Create > TxT RPG > UI > Character Appearance Definition`에서 생성할 수 있습니다.
+
+캐릭터 표시 데모는 `Assets/TxTRPG/UI/DEMO/CharacterDisplayPanel/CharacterDisplayPanelDemo.prefab`을 Prefab Mode로 열어 확인합니다. Edit Mode에서는 생성된 샘플 캐릭터가 완전히 표시되며, Play Mode에서는 실제 `ShowCharacter` 호출과 등장 페이드가 실행됩니다.
+
 ## 자산 재생성 메뉴
 
 | 메뉴 | 효과 |
@@ -42,6 +55,8 @@ Tools > TxT RPG > Refresh Story Text Panel Edit Mode Preview
 | `Tools > TxT RPG > Rebuild Story Text Panel Prefabs` | 운영용 메시지와 패널 프리팹을 기본 구조로 다시 생성합니다. |
 | `Tools > TxT RPG > Rebuild Story Text Panel Demo` | 데모 데이터와 데모 프리팹을 기본 상태로 다시 생성합니다. |
 | `Tools > TxT RPG > Refresh Story Text Panel Edit Mode Preview` | 현재 데모 데이터로 미리보기 항목을 다시 생성합니다. |
+| `Tools > TxT RPG > Rebuild Character Display Panel Prefab` | 운영용 2D 캐릭터 표시 패널 프리팹을 기본 구조로 다시 생성합니다. |
+| `Tools > TxT RPG > Rebuild Character Display Panel Demo` | 샘플 Sprite, 외형 정의, 데이터와 캐릭터 표시 데모 Prefab을 다시 생성합니다. |
 
 운영용 프리팹 재생성은 수동으로 적용한 프리팹 변경을 덮어쓸 수 있습니다. 생성기 코드가 권위 있는 구조인지 확인한 뒤 실행하십시오.
 
@@ -56,6 +71,7 @@ Edit Mode 테스트는 `Assets/TxTRPG/UI/Tests/Editor`에 있습니다.
 | `StoryTextPanelTests` | 투명도 경계값과 운영용 프리팹 필수 참조를 검증합니다. |
 | `StoryTextPanelDemoTests` | 데모 데이터의 양, 발화자 조합, 로더와 패널 연결을 검증합니다. |
 | `StoryTextPanelEditModePreviewTests` | 데모 데이터 개수와 직렬화된 미리보기 항목 개수가 일치하는지 검증합니다. |
+| `CharacterDisplayPanelTests` | 표시 요청의 null 정규화, 2D 패널 계층과 데모 미리보기·로더 연결을 검증합니다. |
 
 관련 변경 후에는 다음 항목을 확인합니다.
 
@@ -79,6 +95,7 @@ Edit Mode 테스트는 `Assets/TxTRPG/UI/Tests/Editor`에 있습니다.
 | 데모 데이터 | 런타임 로더, Edit Mode 미리보기 재생성, 미리보기 테스트 |
 | Editor 생성기 경로·메뉴 | 이 문서와 `DOCS/architecture/story-text-panel.md` |
 | 어셈블리 정의 | 프로젝트 구조 문서, 플레이어 빌드 포함 여부, 테스트 참조 |
+| `CharacterDisplayPanel` 또는 View | 2D Prefab, 외형 정의, 페이드 수명 주기, 향후 3D 교체 경계 |
 
 ## 다국어 글꼴 확인
 

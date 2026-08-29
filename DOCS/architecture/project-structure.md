@@ -53,6 +53,15 @@ TxT-RPG/
 | `StoryTextPanelDemoData.cs` | Editor와 런타임 데모가 공유하는 메시지 목록 ScriptableObject입니다. |
 | `StoryTextPanelDemoLoader.cs` | Play Mode 시작 시 데모 데이터를 실제 패널 메시지로 추가합니다. |
 | `StoryTextPanelDemoPreviewItem.cs` | Edit Mode 전용 미리보기 항목을 표시하고 Play Mode에서 해당 오브젝트를 제거합니다. |
+| `CharacterPresentation.cs` | Unity 자산 참조 없이 캐릭터 표시 상태를 전달하는 불변 값 객체입니다. |
+| `ICharacterView.cs` | 2D와 향후 3D View의 최소 공통 API를 정의합니다. |
+| `CharacterViewBase.cs` | View의 표시 상태와 등장·퇴장 페이드를 관리합니다. |
+| `CharacterDisplayPanel.cs` | 활성 캐릭터 View의 표시, 교체, 숨김과 초기화를 조율합니다. |
+| `Character2DView.cs` | 외형 Sprite, Overlay, 좌우 반전과 2D 애니메이션을 처리합니다. |
+| `CharacterAppearanceDefinition.cs` | 캐릭터별 ID 조합과 Sprite를 연결하는 ScriptableObject입니다. |
+| `CharacterEffectPlayer.cs` | 선택적인 Animator 기반 캐릭터 효과를 재생합니다. |
+| `CharacterDisplayPanelDemoData.cs` | 데모 외형 정의와 ID 기반 표시 요청을 보관합니다. |
+| `CharacterDisplayPanelDemoLoader.cs` | Play Mode에서 데모 캐릭터와 등장 전환을 실행합니다. |
 | `TxTRPG.UI.asmdef` | 런타임 UI 어셈블리 경계를 정의합니다. |
 
 ### `Assets/TxTRPG/UI/Editor`
@@ -64,6 +73,8 @@ TxT-RPG/
 | `StoryTextPanelPrefabBuilder.cs` | 운영용 `StoryMessageItem`과 `StoryTextPanel` 프리팹을 생성합니다. |
 | `StoryTextPanelDemoBuilder.cs` | 기본 데모 데이터와 `StoryTextPanelDemo` 프리팹을 생성합니다. |
 | `StoryTextPanelEditModePreview.cs` | 데모 데이터를 미리보기 항목으로 직렬화하고 열린 미리보기의 레이아웃·투명도를 갱신합니다. |
+| `CharacterDisplayPanelPrefabBuilder.cs` | 운영용 `CharacterDisplayPanel` 2D Prefab을 생성합니다. |
+| `CharacterDisplayPanelDemoBuilder.cs` | 데모 Sprite, 외형 정의, 데이터와 미리보기 Prefab을 생성합니다. |
 | `TxTRPG.UI.Editor.asmdef` | Editor 전용 어셈블리 경계를 정의합니다. |
 
 ### `Assets/TxTRPG/UI/Prefabs`
@@ -72,6 +83,7 @@ TxT-RPG/
 | --- | --- |
 | `StoryMessageItem.prefab` | 본문과 선택적 발화자를 표시하는 메시지 항목입니다. |
 | `StoryTextPanel.prefab` | 실제 게임 화면에 배치하는 운영용 텍스트 패널입니다. |
+| `CharacterDisplayPanel.prefab` | 교체 가능한 2D View를 포함하는 운영용 캐릭터 표시 패널입니다. |
 
 ### `Assets/TxTRPG/UI/DEMO`
 
@@ -79,10 +91,11 @@ TxT-RPG/
 | --- | --- |
 | `StoryTextPanelDemoData.asset` | 길이와 발화자 유무가 다른 기본 메시지 16개를 보관합니다. |
 | `StoryTextPanelDemo.prefab` | 운영용 패널, 런타임 로더, Edit Mode 미리보기 항목을 조합한 검증용 프리팹입니다. |
+| `CharacterDisplayPanel/CharacterDisplayPanelDemo.prefab` | 운영용 캐릭터 패널, 샘플 외형과 런타임 로더를 조합한 검증용 프리팹입니다. |
 
 ### `Assets/TxTRPG/UI/Tests/Editor`
 
-투명도 계산, 프리팹 참조, 데모 데이터 구성, Edit Mode 미리보기 항목 수를 검증합니다. 테스트 어셈블리는 플레이어 빌드에 포함되지 않습니다.
+투명도 계산, 캐릭터 표시 요청, 운영용 프리팹 참조, 데모 데이터 구성, Edit Mode 미리보기 항목 수를 검증합니다. 테스트 어셈블리는 플레이어 빌드에 포함되지 않습니다.
 
 ## 어셈블리 의존 관계
 
@@ -114,7 +127,7 @@ flowchart TD
 
 - 스토리 진행 및 선택지 결정 시스템
 - 현지화 서비스와 문자열 테이블
-- 캐릭터·적 표시 및 애니메이션·스킨 시스템
+- 3D 캐릭터·적 표시, 동적 전투 슬롯과 자산 비동기 로딩
 - 저장 데이터와 마이그레이션
 - Steam 및 모바일 플랫폼 서비스
 - 모바일 Safe Area를 포함한 최종 화면 조합
