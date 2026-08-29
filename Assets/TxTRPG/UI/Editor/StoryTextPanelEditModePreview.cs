@@ -75,6 +75,7 @@ namespace TxTRPG.UI.Editor
             var minimumOpacity = properties.FindProperty("oldestVisibleOpacity").floatValue;
             var exponent = properties.FindProperty("fadeExponent").floatValue;
             var speakerFontSize = properties.FindProperty("speakerFontSize").floatValue;
+            var speakerColor = properties.FindProperty("speakerColor").colorValue;
             var bodyFontSize = properties.FindProperty("bodyFontSize").floatValue;
             var showSeparators = properties.FindProperty("showMessageSeparators").boolValue;
             var separatorSprite = (Sprite)properties.FindProperty("separatorSprite").objectReferenceValue;
@@ -82,6 +83,10 @@ namespace TxTRPG.UI.Editor
             var separatorImageType = (Image.Type)properties.FindProperty("separatorImageType").enumValueIndex;
             var separatorWidth = properties.FindProperty("separatorWidth").floatValue;
             var separatorHeight = properties.FindProperty("separatorHeight").floatValue;
+            var speakerBodySpacing = properties.FindProperty("speakerBodySpacing").floatValue;
+            var messageSpacing = properties.FindProperty("messageSpacing").floatValue;
+            var separatorSpacingAbove = properties.FindProperty("separatorSpacingAbove").floatValue;
+            var separatorSpacingBelow = properties.FindProperty("separatorSpacingBelow").floatValue;
 
             if (viewport == null || content == null || scrollRect == null)
             {
@@ -93,13 +98,23 @@ namespace TxTRPG.UI.Editor
             {
                 var item = previewItems[i].GetComponent<StoryMessageItem>();
                 item.ConfigureTextSize(speakerFontSize, bodyFontSize);
+                item.ConfigureSpeakerColor(speakerColor);
+                item.ConfigureSpeakerBodySpacing(speakerBodySpacing);
                 item.ConfigureSeparator(
                     showSeparators && i < previewItems.Length - 1,
                     separatorSprite,
                     separatorColor,
                     separatorImageType,
                     separatorWidth,
-                    separatorHeight);
+                    separatorHeight,
+                    separatorSpacingAbove,
+                    separatorSpacingBelow);
+            }
+
+            var contentLayout = content.GetComponent<VerticalLayoutGroup>();
+            if (contentLayout != null)
+            {
+                contentLayout.spacing = messageSpacing;
             }
 
             Canvas.ForceUpdateCanvases();

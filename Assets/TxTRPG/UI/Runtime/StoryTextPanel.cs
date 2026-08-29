@@ -51,7 +51,14 @@ namespace TxTRPG.UI
 
         [Header("Typography")]
         [SerializeField, Min(1f)] private float speakerFontSize = 17f;
+        [SerializeField] private Color speakerColor = new(0.8549f, 0.6039f, 0.3647f, 1f);
         [SerializeField, Min(1f)] private float bodyFontSize = 24f;
+
+        [Header("Message Spacing")]
+        [SerializeField, Min(0f)] private float speakerBodySpacing = 3f;
+        [SerializeField, Min(0f)] private float messageSpacing = 12f;
+        [SerializeField, Min(0f)] private float separatorSpacingAbove = 3f;
+        [SerializeField, Min(0f)] private float separatorSpacingBelow = 10f;
 
         [Header("Behavior")]
         [SerializeField] private bool followLatestMessage = true;
@@ -151,6 +158,8 @@ namespace TxTRPG.UI
             item.gameObject.SetActive(true);
             item.Bind(message);
             item.ConfigureTextSize(speakerFontSize, bodyFontSize);
+            item.ConfigureSpeakerColor(speakerColor);
+            item.ConfigureSpeakerBodySpacing(speakerBodySpacing);
             items.Add(item);
             TrimOldMessages();
             RefreshMessageSeparators();
@@ -277,6 +286,10 @@ namespace TxTRPG.UI
             separatorHeight = Mathf.Max(1f, separatorHeight);
             speakerFontSize = Mathf.Max(1f, speakerFontSize);
             bodyFontSize = Mathf.Max(1f, bodyFontSize);
+            speakerBodySpacing = Mathf.Max(0f, speakerBodySpacing);
+            messageSpacing = Mathf.Max(0f, messageSpacing);
+            separatorSpacingAbove = Mathf.Max(0f, separatorSpacingAbove);
+            separatorSpacingBelow = Mathf.Max(0f, separatorSpacingBelow);
             initialRevealDuration = Mathf.Max(0f, initialRevealDuration);
 
             if (isActiveAndEnabled && scrollRect != null && scrollbar != null)
@@ -291,6 +304,12 @@ namespace TxTRPG.UI
             if (scrollRect == null || scrollbar == null || viewport == null)
             {
                 return;
+            }
+
+            var contentLayout = content != null ? content.GetComponent<VerticalLayoutGroup>() : null;
+            if (contentLayout != null)
+            {
+                contentLayout.spacing = messageSpacing;
             }
 
             scrollRect.vertical = allowUserScrolling;
@@ -402,13 +421,17 @@ namespace TxTRPG.UI
                 }
 
                 item.ConfigureTextSize(speakerFontSize, bodyFontSize);
+                item.ConfigureSpeakerColor(speakerColor);
+                item.ConfigureSpeakerBodySpacing(speakerBodySpacing);
                 item.ConfigureSeparator(
                     showMessageSeparators && i < items.Count - 1,
                     separatorSprite,
                     separatorColor,
                     separatorImageType,
                     separatorWidth,
-                    separatorHeight);
+                    separatorHeight,
+                    separatorSpacingAbove,
+                    separatorSpacingBelow);
             }
         }
 

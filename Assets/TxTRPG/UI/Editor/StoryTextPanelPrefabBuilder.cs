@@ -33,8 +33,8 @@ namespace TxTRPG.UI.Editor
 
                 var canvasGroup = root.AddComponent<CanvasGroup>();
                 var layout = root.AddComponent<VerticalLayoutGroup>();
-                layout.padding = new RectOffset(8, 12, 6, 10);
-                layout.spacing = 3f;
+                layout.padding = new RectOffset(8, 12, 6, 0);
+                layout.spacing = 0f;
                 layout.childAlignment = TextAnchor.UpperLeft;
                 layout.childControlWidth = true;
                 layout.childControlHeight = true;
@@ -48,6 +48,12 @@ namespace TxTRPG.UI.Editor
                 var speaker = CreateText("Speaker", root.transform, 17f, new Color32(218, 154, 93, 255));
                 speaker.fontStyle = FontStyles.Bold;
                 speaker.text = "Speaker";
+
+                var speakerBodySpacer = CreateUiObject("Speaker Body Spacing", root.transform);
+                var speakerBodySpacerLayout = speakerBodySpacer.AddComponent<LayoutElement>();
+                speakerBodySpacerLayout.minHeight = 3f;
+                speakerBodySpacerLayout.preferredHeight = 3f;
+                speakerBodySpacerLayout.flexibleHeight = 0f;
 
                 var body = CreateText("Body", root.transform, 24f, new Color32(235, 230, 218, 255));
                 body.text = "Story text appears here.";
@@ -77,6 +83,8 @@ namespace TxTRPG.UI.Editor
                 serialized.FindProperty("speakerText").objectReferenceValue = speaker;
                 serialized.FindProperty("bodyText").objectReferenceValue = body;
                 serialized.FindProperty("canvasGroup").objectReferenceValue = canvasGroup;
+                serialized.FindProperty("speakerBodySpacer").objectReferenceValue = speakerBodySpacer;
+                serialized.FindProperty("speakerBodySpacerLayout").objectReferenceValue = speakerBodySpacerLayout;
                 serialized.FindProperty("separatorSlot").objectReferenceValue = separatorSlot;
                 serialized.FindProperty("separatorVisual").objectReferenceValue = separatorVisual;
                 serialized.FindProperty("separatorImage").objectReferenceValue = separatorImage;

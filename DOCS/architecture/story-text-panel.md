@@ -72,6 +72,7 @@ StoryTextPanel
 ```text
 StoryMessageItem             CanvasGroup, VerticalLayoutGroup, ContentSizeFitter
 ├── Speaker                  TextMeshProUGUI, 발화자가 없으면 비활성화됨
+├── Speaker Body Spacing     LayoutElement, 발화자가 없으면 비활성화됨
 ├── Body                     TextMeshProUGUI
 └── Separator                LayoutElement, 마지막 메시지에서는 비활성화됨
     └── Visual               Image
@@ -151,7 +152,11 @@ flowchart LR
 | `Separator Color` | 이미지 틴트와 투명도를 설정합니다. |
 | `Separator Width`, `Separator Height` | 구분선 Visual의 크기를 Canvas 기준 단위로 설정합니다. |
 | `Speaker Font Size` | 발화자 이름의 글자 크기를 Canvas 기준 단위로 설정합니다. |
+| `Speaker Color` | 발화자 이름의 색상과 투명도를 설정합니다. |
 | `Body Font Size` | 메시지 본문의 글자 크기를 Canvas 기준 단위로 설정합니다. |
+| `Speaker Body Spacing` | 발화자 이름과 본문 사이의 세로 간격을 설정합니다. 발화자가 없는 메시지에는 적용하지 않습니다. |
+| `Message Spacing` | 하나의 발화자·본문 메시지 묶음과 다음 메시지 묶음 사이의 기본 간격을 설정합니다. |
+| `Separator Spacing Above`, `Separator Spacing Below` | 구분선 이미지의 위쪽과 아래쪽 여백을 각각 설정합니다. |
 | `Reveal Initial Messages` | 초기 레이아웃과 투명도 계산이 끝날 때까지 메시지를 숨긴 뒤 점진적으로 표시합니다. 비활성화하면 기존처럼 즉시 표시합니다. |
 | `Initial Reveal Duration` | 초기 메시지가 최종 위치별 투명도까지 나타나는 시간을 초 단위로 설정합니다. `0`이면 준비가 끝난 직후 표시합니다. |
 

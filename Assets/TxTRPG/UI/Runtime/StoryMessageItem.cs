@@ -11,6 +11,8 @@ namespace TxTRPG.UI
         [SerializeField] private TMP_Text speakerText;
         [SerializeField] private TMP_Text bodyText;
         [SerializeField] private CanvasGroup canvasGroup;
+        [SerializeField] private GameObject speakerBodySpacer;
+        [SerializeField] private LayoutElement speakerBodySpacerLayout;
         [SerializeField] private GameObject separatorSlot;
         [SerializeField] private RectTransform separatorVisual;
         [SerializeField] private Image separatorImage;
@@ -20,6 +22,11 @@ namespace TxTRPG.UI
         {
             bodyText.text = message.Text;
             speakerText.gameObject.SetActive(message.HasSpeaker);
+            if (speakerBodySpacer != null)
+            {
+                speakerBodySpacer.SetActive(message.HasSpeaker);
+            }
+
             if (message.HasSpeaker)
             {
                 speakerText.text = message.Speaker;
@@ -37,13 +44,42 @@ namespace TxTRPG.UI
             bodyText.fontSize = Mathf.Max(1f, bodyFontSize);
         }
 
+        public void ConfigureSpeakerColor(Color color)
+        {
+            speakerText.color = color;
+        }
+
+        public void ConfigureSpeakerBodySpacing(float spacing)
+        {
+            if (!TryEnsureSpeakerBodySpacer())
+            {
+                return;
+            }
+
+            var clampedSpacing = Mathf.Max(0f, spacing);
+            speakerBodySpacerLayout.minHeight = clampedSpacing;
+            speakerBodySpacerLayout.preferredHeight = clampedSpacing;
+            speakerBodySpacer.SetActive(speakerText.gameObject.activeSelf && clampedSpacing > 0f);
+
+            var layout = GetComponent<VerticalLayoutGroup>();
+            if (layout != null)
+            {
+                layout.spacing = 0f;
+                var padding = layout.padding;
+                padding.bottom = 0;
+                layout.padding = padding;
+            }
+        }
+
         public void ConfigureSeparator(
             bool visible,
             Sprite sprite,
             Color color,
             Image.Type imageType,
             float width,
-            float height)
+            float height,
+            float spacingAbove,
+            float spacingBelow)
         {
             if (!TryEnsureSeparatorReferences())
             {
@@ -58,12 +94,45 @@ namespace TxTRPG.UI
 
             var clampedWidth = Mathf.Max(1f, width);
             var clampedHeight = Mathf.Max(1f, height);
-            separatorLayout.minHeight = clampedHeight;
-            separatorLayout.preferredHeight = clampedHeight;
+            var clampedSpacingAbove = Mathf.Max(0f, spacingAbove);
+            var clampedSpacingBelow = Mathf.Max(0f, spacingBelow);
+            var slotHeight = clampedSpacingAbove + clampedHeight + clampedSpacingBelow;
+            separatorLayout.minHeight = slotHeight;
+            separatorLayout.preferredHeight = slotHeight;
             separatorVisual.sizeDelta = new Vector2(clampedWidth, clampedHeight);
+            separatorVisual.anchoredPosition = new Vector2(
+                0f,
+                (clampedSpacingBelow - clampedSpacingAbove) * 0.5f);
             separatorImage.sprite = sprite;
             separatorImage.color = color;
             separatorImage.type = imageType;
+        }
+
+        private bool TryEnsureSpeakerBodySpacer()
+        {
+            if (speakerBodySpacer != null && speakerBodySpacerLayout != null)
+            {
+                return true;
+            }
+
+            var existingSpacer = transform.Find("Speaker Body Spacing");
+            if (existingSpacer != null)
+            {
+                speakerBodySpacer = existingSpacer.gameObject;
+                speakerBodySpacerLayout = existingSpacer.GetComponent<LayoutElement>();
+                return speakerBodySpacerLayout != null;
+            }
+
+            speakerBodySpacer = new GameObject(
+                "Speaker Body Spacing",
+                typeof(RectTransform),
+                typeof(LayoutElement));
+            speakerBodySpacer.layer = gameObject.layer;
+            speakerBodySpacer.transform.SetParent(transform, false);
+            speakerBodySpacer.transform.SetSiblingIndex(speakerText.transform.GetSiblingIndex() + 1);
+            speakerBodySpacerLayout = speakerBodySpacer.GetComponent<LayoutElement>();
+            speakerBodySpacerLayout.flexibleHeight = 0f;
+            return true;
         }
 
         private bool TryEnsureSeparatorReferences()

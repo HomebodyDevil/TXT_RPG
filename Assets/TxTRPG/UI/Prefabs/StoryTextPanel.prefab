@@ -548,7 +548,12 @@ MonoBehaviour:
   separatorWidth: 360
   separatorHeight: 1
   speakerFontSize: 17
+  speakerColor: {r: 0.8549, g: 0.6039, b: 0.3647, a: 1}
   bodyFontSize: 24
+  speakerBodySpacing: 3
+  messageSpacing: 12
+  separatorSpacingAbove: 3
+  separatorSpacingBelow: 10
   followLatestMessage: 1
   maximumRetainedMessages: 0
   revealInitialMessages: 1
