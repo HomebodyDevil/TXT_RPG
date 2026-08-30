@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -21,6 +23,15 @@ namespace TxTRPG.UI
 
         private Sprite currentSprite;
         private CharacterArtworkFraming currentFraming;
+        private IAssetProvider assetProvider;
+        private CancellationTokenSource artworkCancellation;
+        private AssetLease<Sprite> artworkLease;
+
+        public void SetAssetProvider(IAssetProvider provider)
+        {
+            ReleaseArtwork();
+            assetProvider = provider;
+        }
 
         public void SetAppearanceDefinitions(IEnumerable<CharacterAppearanceDefinition> definitions)
         {
@@ -41,17 +52,7 @@ namespace TxTRPG.UI
 
         protected override void ApplyPresentation(in CharacterPresentation presentation)
         {
-            var resolved = TryResolveSprite(presentation, out var sprite, out var framing);
-            if (baseImage != null)
-            {
-                baseImage.sprite = sprite;
-                baseImage.enabled = resolved;
-                baseImage.preserveAspect = true;
-            }
-
-            currentSprite = sprite;
-            currentFraming = framing;
-            ApplyArtworkFraming();
+            ApplyArtworkAsync(presentation);
 
             if (visualRoot != null)
             {
@@ -78,6 +79,7 @@ namespace TxTRPG.UI
 
         protected override void ClearPresentation()
         {
+            ReleaseArtwork();
             ClearImage(baseImage);
             ClearImage(skinOverlay);
             ClearImage(effectOverlay);
@@ -85,22 +87,84 @@ namespace TxTRPG.UI
             effectPlayer?.Clear();
         }
 
-        private bool TryResolveSprite(
+        private async void ApplyArtworkAsync(CharacterPresentation presentation)
+        {
+            if (!TryResolveArtwork(presentation, out var artwork))
+            {
+                SetArtwork(null, default);
+                return;
+            }
+
+            if (!Application.isPlaying || string.IsNullOrWhiteSpace(artwork.AssetId))
+            {
+                SetArtwork(artwork.EditorFallback, artwork.Framing);
+                return;
+            }
+
+            artworkCancellation?.Cancel();
+            artworkCancellation?.Dispose();
+            var cancellation = new CancellationTokenSource();
+            artworkCancellation = cancellation;
+            try
+            {
+                var lease = await (assetProvider ?? AddressablesAssetProvider.Shared)
+                    .LoadAsync<Sprite>(artwork.AssetId, cancellation.Token);
+                cancellation.Token.ThrowIfCancellationRequested();
+                artworkLease?.Dispose();
+                artworkLease = lease;
+                SetArtwork(lease.Asset, artwork.Framing);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning($"Character artwork '{artwork.AssetId}' could not be loaded: {exception.Message}", this);
+            }
+        }
+
+        private bool TryResolveArtwork(
             in CharacterPresentation presentation,
-            out Sprite sprite,
-            out CharacterArtworkFraming framing)
+            out CharacterArtworkReference artwork)
         {
             foreach (var definition in appearanceDefinitions)
             {
-                if (definition != null && definition.TryResolve(presentation, out sprite, out framing))
+                if (definition != null && definition.TryResolveReference(presentation, out artwork))
                 {
                     return true;
                 }
             }
 
-            sprite = null;
-            framing = default;
+            artwork = default;
             return false;
+        }
+
+        private void SetArtwork(Sprite sprite, CharacterArtworkFraming framing)
+        {
+            if (baseImage != null)
+            {
+                baseImage.sprite = sprite;
+                baseImage.enabled = sprite != null;
+                baseImage.preserveAspect = true;
+            }
+
+            currentSprite = sprite;
+            currentFraming = framing;
+            ApplyArtworkFraming();
+        }
+
+        private void ReleaseArtwork()
+        {
+            artworkCancellation?.Cancel();
+            artworkCancellation?.Dispose();
+            artworkCancellation = null;
+            artworkLease?.Dispose();
+            artworkLease = null;
+        }
+
+        private void OnDestroy()
+        {
+            ReleaseArtwork();
         }
 
         private void OnRectTransformDimensionsChange()

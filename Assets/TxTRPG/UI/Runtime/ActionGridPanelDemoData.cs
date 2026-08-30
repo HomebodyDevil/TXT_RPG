@@ -12,7 +12,10 @@ namespace TxTRPG.UI
         {
             [SerializeField] private string id;
             [SerializeField] private ActionGridEntryKind kind;
+#if UNITY_EDITOR
             [SerializeField] private Sprite icon;
+#endif
+            [SerializeField] private string iconAssetId;
             [SerializeField] private string displayName;
             [SerializeField, TextArea] private string description;
             [SerializeField, Min(0)] private int quantity;
@@ -25,13 +28,18 @@ namespace TxTRPG.UI
                 return new ActionGridEntry(
                     id,
                     kind,
+#if UNITY_EDITOR
                     icon,
+#else
+                    null,
+#endif
                     displayName,
                     description,
                     quantity,
                     isEnabled,
                     cooldownNormalized,
-                    shortcutLabel);
+                    shortcutLabel,
+                    iconAssetId);
             }
         }
 

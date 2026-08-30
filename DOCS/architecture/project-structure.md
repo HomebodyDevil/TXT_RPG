@@ -25,7 +25,8 @@ TxT-RPG/
 │   │   ├── story-text-panel.md
 │   │   ├── character-display-panel.md
 │   │   ├── action-grid-panel.md
-│   │   └── flexible-layout-panel.md
+│   │   ├── flexible-layout-panel.md
+│   │   └── asset-management.md
 │   └── development/
 │       └── workflows.md
 ├── Assets/
@@ -73,6 +74,12 @@ TxT-RPG/
 | `ActionGridPanelDemoController.cs` | Play Mode 데모의 옵션 제공자와 명령 실행기 예제를 제공합니다. |
 | `FlexibleLayoutItem.cs` | 자식 영역의 가중치·고정 크기와 최소·최대 크기를 정의합니다. |
 | `FlexibleLayoutPanel.cs` | 가로·세로 재귀 분할, 반응형 축 전환과 Overflow 크기 계산을 담당합니다. |
+| `FlexibleLayoutBackground.cs` | 배경 슬롯, 효과 Overlay, 클리핑, 머티리얼 소유권과 교차 페이드를 관리합니다. |
+| `FlexibleLayoutBackgroundStyle.cs` | 재사용 가능한 배경 Sprite·색상·표시·Material 정책을 정의합니다. |
+| `IAssetProvider.cs` | UI와 Addressables 구현 사이의 비동기 로딩 경계를 정의합니다. |
+| `AddressablesAssetProvider.cs` | Addressables Handle을 Lease로 감싸고 실패·취소 시 해제합니다. |
+| `AssetLease.cs` | 로드된 에셋과 정확히 한 번 실행되는 해제 책임을 함께 보관합니다. |
+| `AssetScope.cs` | 화면 또는 목록 수명에 속한 여러 Lease를 일괄 해제합니다. |
 | `TxTRPG.UI.asmdef` | 런타임 UI 어셈블리 경계를 정의합니다. |
 
 ### `Assets/TxTRPG/UI/Editor`
@@ -89,6 +96,7 @@ TxT-RPG/
 | `ActionGridPrefabBuilder.cs` | 셀, 컨텍스트 메뉴와 그리드 패널 운영용 Prefab을 생성합니다. |
 | `ActionGridPanelDemoBuilder.cs` | 데모 아이콘, 데이터와 Edit Mode 미리보기 Prefab을 생성합니다. |
 | `FlexibleLayoutPrefabBuilder.cs` | 빈 운영용 레이아웃 Prefab과 세 제품 UI를 조합한 재귀 Demo를 생성합니다. |
+| `AddressableAssetEditor.cs` | 수명 기반 그룹과 안정적인 주소 등록 및 Player Content 빌드 메뉴를 제공합니다. |
 | `TxTRPG.UI.Editor.asmdef` | Editor 전용 어셈블리 경계를 정의합니다. |
 
 ### `Assets/TxTRPG/UI/Prefabs`
@@ -101,7 +109,7 @@ TxT-RPG/
 | `ActionGridCell.prefab` | 공통 행동 항목 하나의 표시와 선택 상태를 담당합니다. |
 | `ActionContextMenu.prefab` | 선택 항목의 동적 명령 목록을 표시합니다. |
 | `ActionGridPanel.prefab` | 아이템과 스킬을 표시하는 반응형 선택 그리드입니다. |
-| `FlexibleLayoutPanel.prefab` | 화면별 UI 영역을 조합하기 위한 자식 없는 운영용 레이아웃 컨테이너입니다. |
+| `FlexibleLayoutPanel.prefab` | Background·Content·Foreground 계층과 빈 ContentLayer를 제공하는 운영용 레이아웃 컨테이너입니다. |
 
 ### `Assets/TxTRPG/UI/DEMO`
 
@@ -112,10 +120,15 @@ TxT-RPG/
 | `CharacterDisplayPanel/CharacterDisplayPanelDemo.prefab` | 운영용 캐릭터 패널, 샘플 외형과 런타임 로더를 조합한 검증용 프리팹입니다. |
 | `ActionGridPanel/ActionGridPanelDemo.prefab` | 혼합 항목, 셀 상태와 컨텍스트 메뉴를 조합한 검증용 프리팹입니다. |
 | `FlexibleLayoutPanel/FlexibleLayoutPanelDemo.prefab` | Story, Action과 Character Demo를 가중치 기반 중첩 레이아웃으로 조합한 검증용 프리팹입니다. |
+| `FlexibleLayoutPanel/FlexibleLayoutBackgroundDemoStyle.asset` | Demo 루트의 정적 배경 색상과 클리핑 정책을 정의합니다. |
 
 ### `Assets/TxTRPG/UI/Tests/Editor`
 
 투명도 계산, 캐릭터 표시 요청, 운영용 프리팹 참조, 데모 데이터 구성, Edit Mode 미리보기 항목 수와 Flexible Layout의 순수 크기 계산·재귀 Demo 구조를 검증합니다. 테스트 어셈블리는 플레이어 빌드에 포함되지 않습니다.
+
+### `Assets/AddressableAssetsData`
+
+Addressables 프로필, 빌드 스크립트와 `SharedUI`, `Gameplay_Common`, `Character_Demo` 그룹 설정을 보관합니다. 이 디렉터리는 재현 가능한 빌드 설정이므로 버전 관리 대상입니다. 생성된 실제 Bundle 출력은 소스 구조로 취급하지 않습니다.
 
 ## 어셈블리 의존 관계
 

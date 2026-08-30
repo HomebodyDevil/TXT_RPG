@@ -4,7 +4,10 @@
   "references": [
     "TxTRPG.UI",
     "Unity.TextMeshPro",
-    "Unity.ugui"
+    "Unity.ugui",
+    "Unity.Addressables",
+    "Unity.ResourceManager",
+    "Unity.Addressables.Editor"
   ],
   "includePlatforms": [
     "Editor"

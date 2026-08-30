@@ -51,6 +51,9 @@ namespace TxTRPG.UI.Tests
 
             Assert.That(data, Is.Not.Null);
             Assert.That(data.AppearanceDefinition, Is.Not.Null);
+            Assert.That(data.AppearanceDefinition.TryResolveReference(
+                data.ToPresentation(), out var artwork), Is.True);
+            Assert.That(artwork.AssetId, Is.Not.Empty);
             Assert.That(prefab, Is.Not.Null);
             Assert.That(prefab.GetComponent<CharacterDisplayPanelDemoLoader>(), Is.Not.Null);
             Assert.That(prefab.GetComponentInChildren<CharacterDisplayPanel>(true), Is.Not.Null);

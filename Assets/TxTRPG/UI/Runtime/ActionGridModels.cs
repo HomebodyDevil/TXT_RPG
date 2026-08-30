@@ -42,7 +42,8 @@ namespace TxTRPG.UI
             int quantity = 0,
             bool isEnabled = true,
             float cooldownNormalized = 0f,
-            string shortcutLabel = "")
+            string shortcutLabel = "",
+            string iconAssetId = "")
         {
             Id = id ?? string.Empty;
             Kind = kind;
@@ -53,6 +54,7 @@ namespace TxTRPG.UI
             IsEnabled = isEnabled;
             CooldownNormalized = Mathf.Clamp01(cooldownNormalized);
             ShortcutLabel = shortcutLabel ?? string.Empty;
+            IconAssetId = iconAssetId ?? string.Empty;
         }
 
         public string Id { get; }
@@ -64,6 +66,22 @@ namespace TxTRPG.UI
         public bool IsEnabled { get; }
         public float CooldownNormalized { get; }
         public string ShortcutLabel { get; }
+        public string IconAssetId { get; }
+
+        public ActionGridEntry WithIcon(Sprite icon)
+        {
+            return new ActionGridEntry(
+                Id,
+                Kind,
+                icon,
+                DisplayName,
+                Description,
+                Quantity,
+                IsEnabled,
+                CooldownNormalized,
+                ShortcutLabel,
+                IconAssetId);
+        }
     }
 
     public readonly struct ActionMenuOption

@@ -16,6 +16,7 @@ MonoBehaviour:
   - id: item-potion
     kind: 0
     icon: {fileID: -4885650299593897663, guid: 95492e7bfb154e24a97284174956661d, type: 2}
+    iconAssetId: 'ui/action-icons/demo-atlas[ActionIcon0]'
     displayName: Health Potion
     description: Demo description for Health Potion.
     quantity: 8
@@ -25,6 +26,7 @@ MonoBehaviour:
   - id: skill-frost
     kind: 1
     icon: {fileID: 5645188680247327825, guid: 95492e7bfb154e24a97284174956661d, type: 2}
+    iconAssetId: 'ui/action-icons/demo-atlas[ActionIcon1]'
     displayName: Frost Lance
     description: Demo description for Frost Lance.
     quantity: 0
@@ -34,6 +36,7 @@ MonoBehaviour:
   - id: equipment-sword
     kind: 2
     icon: {fileID: 1907337190412428750, guid: 95492e7bfb154e24a97284174956661d, type: 2}
+    iconAssetId: 'ui/action-icons/demo-atlas[ActionIcon2]'
     displayName: Sunsteel Sword
     description: Demo description for Sunsteel Sword.
     quantity: 1
@@ -43,6 +46,7 @@ MonoBehaviour:
   - id: skill-void
     kind: 1
     icon: {fileID: 7563113535265842670, guid: 95492e7bfb154e24a97284174956661d, type: 2}
+    iconAssetId: 'ui/action-icons/demo-atlas[ActionIcon3]'
     displayName: Void Step
     description: Demo description for Void Step.
     quantity: 0
@@ -52,6 +56,7 @@ MonoBehaviour:
   - id: item-elixir
     kind: 0
     icon: {fileID: -4885650299593897663, guid: 95492e7bfb154e24a97284174956661d, type: 2}
+    iconAssetId: 'ui/action-icons/demo-atlas[ActionIcon0]'
     displayName: Mana Elixir
     description: Demo description for Mana Elixir.
     quantity: 3
@@ -61,6 +66,7 @@ MonoBehaviour:
   - id: skill-guard
     kind: 1
     icon: {fileID: 5645188680247327825, guid: 95492e7bfb154e24a97284174956661d, type: 2}
+    iconAssetId: 'ui/action-icons/demo-atlas[ActionIcon1]'
     displayName: Arcane Guard
     description: Demo description for Arcane Guard.
     quantity: 0
@@ -70,6 +76,7 @@ MonoBehaviour:
   - id: equipment-ring
     kind: 2
     icon: {fileID: 1907337190412428750, guid: 95492e7bfb154e24a97284174956661d, type: 2}
+    iconAssetId: 'ui/action-icons/demo-atlas[ActionIcon2]'
     displayName: Amber Ring
     description: Demo description for Amber Ring.
     quantity: 1
@@ -79,6 +86,7 @@ MonoBehaviour:
   - id: quest-seal
     kind: 3
     icon: {fileID: 7563113535265842670, guid: 95492e7bfb154e24a97284174956661d, type: 2}
+    iconAssetId: 'ui/action-icons/demo-atlas[ActionIcon3]'
     displayName: Ancient Seal
     description: Demo description for Ancient Seal.
     quantity: 1
@@ -88,6 +96,7 @@ MonoBehaviour:
   - id: item-tonic
     kind: 0
     icon: {fileID: -4885650299593897663, guid: 95492e7bfb154e24a97284174956661d, type: 2}
+    iconAssetId: 'ui/action-icons/demo-atlas[ActionIcon0]'
     displayName: Iron Tonic
     description: Demo description for Iron Tonic.
     quantity: 12
@@ -97,6 +106,7 @@ MonoBehaviour:
   - id: skill-flare
     kind: 1
     icon: {fileID: 1907337190412428750, guid: 95492e7bfb154e24a97284174956661d, type: 2}
+    iconAssetId: 'ui/action-icons/demo-atlas[ActionIcon2]'
     displayName: Solar Flare
     description: Demo description for Solar Flare.
     quantity: 0

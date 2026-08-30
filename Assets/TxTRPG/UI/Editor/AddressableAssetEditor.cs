@@ -1,0 +1,79 @@
+using System;
+using UnityEditor;
+using UnityEditor.AddressableAssets;
+using UnityEditor.AddressableAssets.Settings;
+using UnityEditor.AddressableAssets.Settings.GroupSchemas;
+using UnityEngine;
+
+namespace TxTRPG.UI.Editor
+{
+    public static class AddressableAssetEditor
+    {
+        [MenuItem("Tools/TxT RPG/Addressables/Register UI Assets")]
+        public static void RegisterUiAssets()
+        {
+            Register("Assets/TxTRPG/UI/Prefabs/StoryTextPanel.prefab", "ui/prefabs/story-text-panel", "Gameplay_Common");
+            Register("Assets/TxTRPG/UI/Prefabs/StoryMessageItem.prefab", "ui/prefabs/story-message-item", "Gameplay_Common");
+            Register("Assets/TxTRPG/UI/Prefabs/CharacterDisplayPanel.prefab", "ui/prefabs/character-display-panel", "Gameplay_Common");
+            Register("Assets/TxTRPG/UI/Prefabs/ActionGridPanel.prefab", "ui/prefabs/action-grid-panel", "Gameplay_Common");
+            Register("Assets/TxTRPG/UI/Prefabs/ActionGridCell.prefab", "ui/prefabs/action-grid-cell", "Gameplay_Common");
+            Register("Assets/TxTRPG/UI/Prefabs/ActionContextMenu.prefab", "ui/prefabs/action-context-menu", "Gameplay_Common");
+            Register("Assets/TxTRPG/UI/Prefabs/FlexibleLayoutPanel.prefab", "ui/prefabs/flexible-layout-panel", "Gameplay_Common");
+            Register("Assets/TxTRPG/UI/DEMO/FlexibleLayoutPanel/FlexibleLayoutBackgroundDemoStyle.asset", "ui/backgrounds/flexible-demo-style", "SharedUI");
+            AssetDatabase.SaveAssets();
+            Debug.Log("TxT RPG UI assets registered with Addressables.");
+        }
+
+        [MenuItem("Tools/TxT RPG/Addressables/Build Player Content")]
+        public static void BuildPlayerContent()
+        {
+            AddressableAssetSettings.BuildPlayerContent(out var result);
+            if (!string.IsNullOrEmpty(result.Error))
+            {
+                throw new InvalidOperationException($"Addressables build failed: {result.Error}");
+            }
+
+            Debug.Log($"Addressables player content built at {result.OutputPath}.");
+        }
+
+        public static string Register(string assetPath, string address, string groupName)
+        {
+            if (string.IsNullOrWhiteSpace(assetPath) || string.IsNullOrWhiteSpace(address))
+            {
+                throw new ArgumentException("Asset path and address are required.");
+            }
+
+            var guid = AssetDatabase.AssetPathToGUID(assetPath);
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw new InvalidOperationException($"Asset was not found at '{assetPath}'.");
+            }
+
+            var settings = AddressableAssetSettingsDefaultObject.GetSettings(true);
+            var group = settings.FindGroup(groupName) ?? settings.CreateGroup(
+                groupName,
+                false,
+                false,
+                false,
+                null,
+                typeof(BundledAssetGroupSchema),
+                typeof(ContentUpdateGroupSchema));
+            var entry = settings.CreateOrMoveEntry(guid, group, false, false);
+            entry.address = address;
+            entry.SetLabel(groupName, true, true, false);
+            settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryModified, entry, true, true);
+            return address;
+        }
+
+        public static string RegisterSprite(Sprite sprite, string address, string groupName)
+        {
+            if (sprite == null)
+            {
+                return string.Empty;
+            }
+
+            var baseAddress = Register(AssetDatabase.GetAssetPath(sprite), address, groupName);
+            return $"{baseAddress}[{sprite.name}]";
+        }
+    }
+}

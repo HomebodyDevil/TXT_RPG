@@ -148,6 +148,8 @@ namespace TxTRPG.UI.Tests
 
             Assert.That(data, Is.Not.Null);
             var entries = data.CreateEntries();
+            Assert.That(entries, Has.All.Matches<ActionGridEntry>(entry =>
+                !string.IsNullOrWhiteSpace(entry.IconAssetId)));
             Assert.That(entries, Has.Some.Matches<ActionGridEntry>(entry => entry.Kind == ActionGridEntryKind.Item));
             Assert.That(entries, Has.Some.Matches<ActionGridEntry>(entry => entry.Kind == ActionGridEntryKind.Skill));
             Assert.That(prefab.GetComponent<ActionGridPanelDemoController>(), Is.Not.Null);

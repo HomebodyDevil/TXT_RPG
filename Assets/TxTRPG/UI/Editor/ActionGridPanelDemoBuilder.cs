@@ -127,6 +127,10 @@ namespace TxTRPG.UI.Editor
             property.FindPropertyRelative("id").stringValue = id;
             property.FindPropertyRelative("kind").enumValueIndex = (int)kind;
             property.FindPropertyRelative("icon").objectReferenceValue = icon;
+            property.FindPropertyRelative("iconAssetId").stringValue = AddressableAssetEditor.RegisterSprite(
+                icon,
+                "ui/action-icons/demo-atlas",
+                "SharedUI");
             property.FindPropertyRelative("displayName").stringValue = displayName;
             property.FindPropertyRelative("description").stringValue = $"Demo description for {displayName}.";
             property.FindPropertyRelative("quantity").intValue = quantity;

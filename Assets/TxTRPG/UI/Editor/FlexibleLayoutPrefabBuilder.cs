@@ -10,6 +10,7 @@ namespace TxTRPG.UI.Editor
         private const string DemoFolder = "Assets/TxTRPG/UI/DEMO/FlexibleLayoutPanel";
         private const string PanelPrefabPath = PrefabFolder + "/FlexibleLayoutPanel.prefab";
         private const string DemoPrefabPath = DemoFolder + "/FlexibleLayoutPanelDemo.prefab";
+        private const string DemoStylePath = DemoFolder + "/FlexibleLayoutBackgroundDemoStyle.asset";
         private const string StoryDemoPath = "Assets/TxTRPG/UI/DEMO/StoryTextPanelDemo.prefab";
         private const string CharacterDemoPath = "Assets/TxTRPG/UI/DEMO/CharacterDisplayPanel/CharacterDisplayPanelDemo.prefab";
         private const string ActionDemoPath = "Assets/TxTRPG/UI/DEMO/ActionGridPanel/ActionGridPanelDemo.prefab";
@@ -50,15 +51,14 @@ namespace TxTRPG.UI.Editor
             var storyPrefab = LoadRequiredPrefab(StoryDemoPath);
             var characterPrefab = LoadRequiredPrefab(CharacterDemoPath);
             var actionPrefab = LoadRequiredPrefab(ActionDemoPath);
+            var backgroundStyle = CreateOrUpdateDemoStyle();
 
             var root = CreateLayoutObject("FlexibleLayoutPanelDemo", "gameplay-layout-root");
             try
             {
                 var rootRect = (RectTransform)root.transform;
                 rootRect.sizeDelta = new Vector2(1280f, 720f);
-                var background = root.AddComponent<Image>();
-                background.color = new Color32(8, 10, 14, 255);
-                background.raycastTarget = false;
+                ConfigureBackground(root, backgroundStyle, new Color32(8, 10, 14, 255));
                 ConfigureLayout(
                     root.GetComponent<FlexibleLayoutPanel>(),
                     FlexibleLayoutAxis.Horizontal,
@@ -70,7 +70,7 @@ namespace TxTRPG.UI.Editor
                     false,
                     TextAnchor.MiddleCenter);
 
-                var left = CreateLayoutObject("MainContent", "gameplay-layout-main", root.transform);
+                var left = CreateLayoutObject("MainContent", "gameplay-layout-main", root.GetComponent<FlexibleLayoutPanel>().ContentRoot);
                 ConfigureLayout(
                     left.GetComponent<FlexibleLayoutPanel>(),
                     FlexibleLayoutAxis.Vertical,
@@ -86,19 +86,19 @@ namespace TxTRPG.UI.Editor
                     7f,
                     newMinimumSize: 480f);
 
-                var story = InstantiatePanel(storyPrefab, left.transform, "StoryTextPanelArea");
+                var story = InstantiatePanel(storyPrefab, left.GetComponent<FlexibleLayoutPanel>().ContentRoot, "StoryTextPanelArea");
                 story.AddComponent<FlexibleLayoutItem>().Configure(
                     FlexibleLayoutSizeMode.Weighted,
                     65f,
                     newMinimumSize: 280f);
 
-                var actions = InstantiatePanel(actionPrefab, left.transform, "ActionGridPanelArea");
+                var actions = InstantiatePanel(actionPrefab, left.GetComponent<FlexibleLayoutPanel>().ContentRoot, "ActionGridPanelArea");
                 actions.AddComponent<FlexibleLayoutItem>().Configure(
                     FlexibleLayoutSizeMode.Weighted,
                     35f,
                     newMinimumSize: 220f);
 
-                var character = InstantiatePanel(characterPrefab, root.transform, "CharacterDisplayPanelArea");
+                var character = InstantiatePanel(characterPrefab, root.GetComponent<FlexibleLayoutPanel>().ContentRoot, "CharacterDisplayPanelArea");
                 character.AddComponent<FlexibleLayoutItem>().Configure(
                     FlexibleLayoutSizeMode.Weighted,
                     3f,
@@ -138,10 +138,96 @@ namespace TxTRPG.UI.Editor
             }
 
             var layout = gameObject.AddComponent<FlexibleLayoutPanel>();
+            var backgroundLayer = CreateLayer("BackgroundLayer", gameObject.transform);
+            var clipMask = backgroundLayer.AddComponent<RectMask2D>();
+            var visualRoot = CreateLayer("BackgroundVisualRoot", backgroundLayer.transform);
+            var backgroundA = CreateImage("BackgroundA", visualRoot.transform, Color.clear);
+            var backgroundB = CreateImage("BackgroundB", visualRoot.transform, Color.clear);
+            var effectOverlay = CreateImage("BackgroundEffectOverlay", visualRoot.transform, Color.clear);
+            backgroundB.gameObject.SetActive(false);
+            effectOverlay.gameObject.SetActive(false);
+
+            var background = backgroundLayer.AddComponent<FlexibleLayoutBackground>();
+            var backgroundProperties = new SerializedObject(background);
+            backgroundProperties.FindProperty("visualRoot").objectReferenceValue = visualRoot.transform;
+            backgroundProperties.FindProperty("backgroundA").objectReferenceValue = backgroundA;
+            backgroundProperties.FindProperty("backgroundB").objectReferenceValue = backgroundB;
+            backgroundProperties.FindProperty("effectOverlay").objectReferenceValue = effectOverlay;
+            backgroundProperties.FindProperty("clipMask").objectReferenceValue = clipMask;
+            backgroundProperties.ApplyModifiedPropertiesWithoutUndo();
+
+            var contentLayer = CreateLayer("ContentLayer", gameObject.transform);
+            var foregroundLayer = CreateLayer("ForegroundLayer", gameObject.transform);
+            CreateImage("Border", foregroundLayer.transform, Color.clear);
+
             var serialized = new SerializedObject(layout);
             serialized.FindProperty("nodeId").stringValue = nodeId;
+            serialized.FindProperty("contentRoot").objectReferenceValue = contentLayer.transform;
             serialized.ApplyModifiedPropertiesWithoutUndo();
             return gameObject;
+        }
+
+        private static GameObject CreateLayer(string name, Transform parent)
+        {
+            var layer = new GameObject(name, typeof(RectTransform), typeof(LayoutElement), typeof(CanvasGroup));
+            layer.transform.SetParent(parent, false);
+            Stretch((RectTransform)layer.transform);
+            layer.GetComponent<LayoutElement>().ignoreLayout = true;
+            return layer;
+        }
+
+        private static Image CreateImage(string name, Transform parent, Color color)
+        {
+            var imageObject = new GameObject(name, typeof(RectTransform), typeof(Image));
+            imageObject.transform.SetParent(parent, false);
+            Stretch((RectTransform)imageObject.transform);
+            var image = imageObject.GetComponent<Image>();
+            image.color = color;
+            image.raycastTarget = false;
+            return image;
+        }
+
+        private static void Stretch(RectTransform rect)
+        {
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+        }
+
+        private static FlexibleLayoutBackgroundStyle CreateOrUpdateDemoStyle()
+        {
+            var style = AssetDatabase.LoadAssetAtPath<FlexibleLayoutBackgroundStyle>(DemoStylePath);
+            if (style == null)
+            {
+                style = ScriptableObject.CreateInstance<FlexibleLayoutBackgroundStyle>();
+                AssetDatabase.CreateAsset(style, DemoStylePath);
+            }
+
+            style.Configure(
+                null,
+                new Color32(8, 10, 14, 255),
+                FlexibleLayoutBackgroundScaleMode.Stretch,
+                1f,
+                FlexibleLayoutBackgroundOverflowMode.ClipToPanel);
+            EditorUtility.SetDirty(style);
+            return style;
+        }
+
+        private static void ConfigureBackground(
+            GameObject layoutObject,
+            FlexibleLayoutBackgroundStyle style,
+            Color previewColor)
+        {
+            var background = layoutObject.GetComponentInChildren<FlexibleLayoutBackground>(true);
+            var properties = new SerializedObject(background);
+            properties.FindProperty("initialStyle").objectReferenceValue = style;
+            properties.ApplyModifiedPropertiesWithoutUndo();
+            var image = background.transform.Find("BackgroundVisualRoot/BackgroundA")?.GetComponent<Image>();
+            if (image != null)
+            {
+                image.color = previewColor;
+            }
         }
 
         private static void ConfigureLayout(

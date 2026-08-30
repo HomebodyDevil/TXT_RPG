@@ -65,11 +65,14 @@ Tools > TxT RPG > Refresh Story Text Panel Edit Mode Preview
 ## FlexibleLayoutPanel로 화면 구성하기
 
 1. `Assets/TxTRPG/UI/Prefabs/FlexibleLayoutPanel.prefab`을 Canvas 또는 상위 UI 컨테이너 아래에 배치합니다.
-2. 직계 자식에 `FlexibleLayoutItem`을 추가하고 `Weighted` 또는 `Fixed`를 선택합니다.
-3. 가중치, 고정 크기와 필요한 최소·최대 크기를 설정합니다.
-4. 부모 패널에서 Axis, Spacing, Padding과 Overflow 정책을 설정합니다.
-5. 좁은 화면에서 배치 방향을 바꾸려면 Axis Policy와 Breakpoint를 설정합니다.
-6. 복합 화면은 자식에 `FlexibleLayoutPanel`을 추가하여 같은 방식으로 중첩합니다.
+2. 배치할 UI를 `ContentLayer` 아래에 추가합니다.
+3. ContentLayer의 직계 자식에 `FlexibleLayoutItem`을 추가하고 `Weighted` 또는 `Fixed`를 선택합니다.
+4. 가중치, 고정 크기와 필요한 최소·최대 크기를 설정합니다.
+5. 부모 패널에서 Axis, Spacing, Padding과 Overflow 정책을 설정합니다.
+6. 좁은 화면에서 배치 방향을 바꾸려면 Axis Policy와 Breakpoint를 설정합니다.
+7. 복합 화면은 ContentLayer의 자식에 `FlexibleLayoutPanel`을 추가하여 같은 방식으로 중첩합니다.
+
+배경 스타일은 Project 창의 `Assets > Create > TxT RPG > UI > Flexible Layout Background Style`에서 생성한 뒤 `BackgroundLayer`의 `FlexibleLayoutBackground.Initial Style`에 연결합니다. 즉시 변경에는 `ApplyStyle`, 교차 페이드에는 `Change`를 사용합니다. 배경과 셰이더 애니메이션은 `BackgroundVisualRoot`에만 적용하고, 입력 차단이 필요하면 별도의 InputBlocker를 Content 또는 Foreground 계층에 명시적으로 추가합니다.
 
 `Assets/TxTRPG/UI/DEMO/FlexibleLayoutPanel/FlexibleLayoutPanelDemo.prefab`을 Prefab Mode로 열면 넓은 화면의 `MainContent : Character = 7 : 3` 구성과 `Story : Action = 65 : 35` 중첩 구성을 확인할 수 있습니다. Prefab 루트의 너비를 720 미만으로 줄이면 최상위 축이 세로로 전환됩니다.
 
@@ -88,6 +91,19 @@ Tools > TxT RPG > Refresh Story Text Panel Edit Mode Preview
 | `Tools > TxT RPG > Rebuild Action Grid Demo` | 샘플 아이콘, 혼합 항목 데이터와 ActionGridPanel Demo를 다시 생성합니다. |
 | `Tools > TxT RPG > Rebuild Flexible Layout Prefab` | 자식 없는 운영용 FlexibleLayoutPanel Prefab을 다시 생성합니다. |
 | `Tools > TxT RPG > Rebuild Flexible Layout Demo` | 세 제품 UI Demo를 중첩한 반응형 Flexible Layout Demo를 다시 생성합니다. |
+| `Tools > TxT RPG > Addressables > Register UI Assets` | 기존 운영용 UI Prefab과 공통 스타일을 수명 기반 Addressables 그룹에 등록합니다. |
+| `Tools > TxT RPG > Addressables > Build Player Content` | 현재 프로필과 그룹 설정으로 Addressables Player Content를 빌드합니다. |
+
+## Addressables 콘텐츠 제작
+
+1. 게임과 저장 데이터에서 사용할 안정적인 에셋 ID를 정합니다.
+2. 동시에 로드하고 해제할 수명을 기준으로 그룹을 선택합니다.
+3. 캐릭터, Action 아이콘 또는 배경 Style의 Addressables ID 필드에 주소를 기록합니다.
+4. 화면 진입 전에 필요한 ID를 `AssetScope`로 미리 로드합니다.
+5. 새 Scope가 준비된 뒤 화면을 교체하고 이전 Scope를 Dispose합니다.
+6. Player 빌드 전에 `Build Player Content` 메뉴를 실행합니다.
+
+Editor fallback Sprite는 미리보기 용도로만 사용합니다. 새 런타임 콘텐츠에 Addressables ID 없이 직접 Sprite만 설정하지 않습니다. Prefab 생성 또는 Demo 재생성 후에는 `Register UI Assets`를 다시 실행하여 주소와 그룹을 동기화합니다.
 
 운영용 프리팹 재생성은 수동으로 적용한 프리팹 변경을 덮어쓸 수 있습니다. 생성기 코드가 권위 있는 구조인지 확인한 뒤 실행하십시오.
 
@@ -104,7 +120,8 @@ Edit Mode 테스트는 `Assets/TxTRPG/UI/Tests/Editor`에 있습니다.
 | `StoryTextPanelEditModePreviewTests` | 데모 데이터 개수와 직렬화된 미리보기 항목 개수가 일치하는지 검증합니다. |
 | `CharacterDisplayPanelTests` | 표시 요청의 null 정규화, 2D 패널 계층과 데모 미리보기·로더 연결을 검증합니다. |
 | `ActionGridPanelTests` | 표시 모델 정규화, 열 수, 컨텍스트 메뉴 방향 전환·경계 제한, 운영용 Prefab 경계와 혼합 항목 Demo 상태를 검증합니다. |
-| `FlexibleLayoutPanelTests` | 가중치·고정 크기, 최소·최대 크기, Overflow 계산과 생성된 재귀 Prefab 구조를 검증합니다. |
+| `FlexibleLayoutPanelTests` | 가중치·고정 크기, 최소·최대 크기, Overflow 계산, 배경 스타일 정책과 생성된 계층형 Prefab 구조를 검증합니다. |
+| `AssetManagementTests` | AssetScope의 중복 없는 Lease 해제와 Addressables 주소·그룹 등록을 검증합니다. |
 
 관련 변경 후에는 다음 항목을 확인합니다.
 

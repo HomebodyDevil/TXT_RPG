@@ -46,6 +46,20 @@ namespace TxTRPG.UI
         }
     }
 
+    public readonly struct CharacterArtworkReference
+    {
+        public CharacterArtworkReference(string assetId, Sprite editorFallback, CharacterArtworkFraming framing)
+        {
+            AssetId = assetId ?? string.Empty;
+            EditorFallback = editorFallback;
+            Framing = framing;
+        }
+
+        public string AssetId { get; }
+        public Sprite EditorFallback { get; }
+        public CharacterArtworkFraming Framing { get; }
+    }
+
     [CreateAssetMenu(menuName = "TxT RPG/UI/Character Appearance Definition")]
     public sealed class CharacterAppearanceDefinition : ScriptableObject
     {
@@ -55,22 +69,78 @@ namespace TxTRPG.UI
             [SerializeField] private string appearanceId = string.Empty;
             [SerializeField] private string poseId = string.Empty;
             [SerializeField] private string expressionId = string.Empty;
+#if UNITY_EDITOR
             [SerializeField] private Sprite sprite;
+#endif
+            [SerializeField] private string spriteAssetId;
             [SerializeField] private CharacterArtworkFraming framing;
 
             public string AppearanceId => appearanceId;
             public string PoseId => poseId;
             public string ExpressionId => expressionId;
+#if UNITY_EDITOR
             public Sprite Sprite => sprite;
+#else
+            public Sprite Sprite => null;
+#endif
+            public string SpriteAssetId => spriteAssetId;
             public CharacterArtworkFraming Framing => framing;
         }
 
         [SerializeField] private string characterId = string.Empty;
+#if UNITY_EDITOR
         [SerializeField] private Sprite fallbackSprite;
+#endif
+        [SerializeField] private string fallbackSpriteAssetId;
         [SerializeField] private CharacterArtworkFraming fallbackFraming;
         [SerializeField] private List<Variant> variants = new();
 
         public string CharacterId => characterId;
+
+        public bool TryResolveReference(
+            in CharacterPresentation presentation,
+            out CharacterArtworkReference artwork)
+        {
+            artwork = default;
+            if (!string.Equals(characterId, presentation.CharacterId, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            Variant best = null;
+            var bestScore = -1;
+            foreach (var variant in variants)
+            {
+                if (variant == null ||
+                    (string.IsNullOrWhiteSpace(variant.SpriteAssetId) && variant.Sprite == null) ||
+                    !Matches(variant.AppearanceId, presentation.AppearanceId) ||
+                    !Matches(variant.PoseId, presentation.PoseId) ||
+                    !Matches(variant.ExpressionId, presentation.ExpressionId))
+                {
+                    continue;
+                }
+
+                var score = Specificity(variant.AppearanceId) + Specificity(variant.PoseId) +
+                            Specificity(variant.ExpressionId);
+                if (score > bestScore)
+                {
+                    best = variant;
+                    bestScore = score;
+                }
+            }
+
+            artwork = best != null
+                ? new CharacterArtworkReference(best.SpriteAssetId, best.Sprite, best.Framing)
+                : new CharacterArtworkReference(
+                    fallbackSpriteAssetId,
+#if UNITY_EDITOR
+                    fallbackSprite,
+#else
+                    null,
+#endif
+                    fallbackFraming);
+            return !string.IsNullOrWhiteSpace(artwork.AssetId) || artwork.EditorFallback != null;
+        }
 
         public bool TryResolve(in CharacterPresentation presentation, out Sprite sprite)
         {
@@ -116,7 +186,9 @@ namespace TxTRPG.UI
 
             if (sprite == null)
             {
+#if UNITY_EDITOR
                 sprite = fallbackSprite;
+#endif
             }
 
             return sprite != null;

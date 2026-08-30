@@ -94,6 +94,11 @@ namespace TxTRPG.UI.Editor
             var properties = new SerializedObject(definition);
             properties.FindProperty("characterId").stringValue = "demo-character";
             properties.FindProperty("fallbackSprite").objectReferenceValue = sprite;
+            properties.FindProperty("fallbackSpriteAssetId").stringValue =
+                AddressableAssetEditor.RegisterSprite(
+                    sprite,
+                    "ui/characters/demo",
+                    "Character_Demo");
             var framing = properties.FindProperty("fallbackFraming");
             framing.FindPropertyRelative("preset").enumValueIndex = (int)CharacterFramingPreset.ThighUp;
             framing.FindPropertyRelative("additionalScale").floatValue = 1f;

@@ -63,12 +63,14 @@ namespace TxTRPG.UI
         [SerializeField, Min(0f)] private float spacing;
         [SerializeField] private FlexibleLayoutOverflow overflow = FlexibleLayoutOverflow.ShrinkBelowMinimum;
         [SerializeField] private bool includeInactiveChildren;
+        [SerializeField] private RectTransform contentRoot;
 
         private readonly List<FlexibleLayoutItem> items = new();
         private float[] calculatedSizes = Array.Empty<float>();
 
         public string NodeId => nodeId;
         public FlexibleLayoutAxis CurrentAxis => ResolveAxis(rectTransform.rect.width);
+        public RectTransform ContentRoot => contentRoot != null ? contentRoot : rectTransform;
 
         public override void CalculateLayoutInputHorizontal()
         {
@@ -99,7 +101,7 @@ namespace TxTRPG.UI
                 return;
             }
 
-            child.SetParent(transform, false);
+            child.SetParent(ContentRoot, false);
             var item = child.GetComponent<FlexibleLayoutItem>() ?? child.gameObject.AddComponent<FlexibleLayoutItem>();
             item.Configure(FlexibleLayoutSizeMode.Weighted, weight);
             Rebuild();
@@ -107,7 +109,7 @@ namespace TxTRPG.UI
 
         public void Remove(Transform child)
         {
-            if (child != null && child.parent == transform)
+            if (child != null && child.parent == ContentRoot)
             {
                 child.SetParent(null, false);
                 Rebuild();
@@ -116,7 +118,7 @@ namespace TxTRPG.UI
 
         public void SetWeight(Transform child, float weight)
         {
-            if (child == null || child.parent != transform)
+            if (child == null || child.parent != ContentRoot)
             {
                 return;
             }
@@ -288,9 +290,10 @@ namespace TxTRPG.UI
         {
             rectChildren.Clear();
             items.Clear();
-            for (var i = 0; i < rectTransform.childCount; i++)
+            var container = ContentRoot;
+            for (var i = 0; i < container.childCount; i++)
             {
-                if (rectTransform.GetChild(i) is not RectTransform child ||
+                if (container.GetChild(i) is not RectTransform child ||
                     (!includeInactiveChildren && !child.gameObject.activeInHierarchy) ||
                     IsIgnored(child))
                 {

@@ -3,7 +3,9 @@
   "rootNamespace": "TxTRPG.UI",
   "references": [
     "Unity.TextMeshPro",
-    "Unity.ugui"
+    "Unity.ugui",
+    "Unity.Addressables",
+    "Unity.ResourceManager"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

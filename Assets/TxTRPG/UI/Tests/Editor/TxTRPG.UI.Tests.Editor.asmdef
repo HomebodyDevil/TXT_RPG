@@ -5,7 +5,10 @@
     "TxTRPG.UI",
     "TxTRPG.UI.Editor",
     "Unity.TextMeshPro",
-    "Unity.ugui"
+    "Unity.ugui",
+    "Unity.Addressables",
+    "Unity.ResourceManager",
+    "Unity.Addressables.Editor"
   ],
   "includePlatforms": [
     "Editor"

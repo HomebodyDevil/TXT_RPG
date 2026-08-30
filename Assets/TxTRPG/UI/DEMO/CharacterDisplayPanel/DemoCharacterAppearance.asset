@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: TxTRPG.UI::TxTRPG.UI.CharacterAppearanceDefinition
   characterId: demo-character
   fallbackSprite: {fileID: -5339565592640043107, guid: e64cdfeec1d806f44ad681a0aa5c7ea5, type: 2}
+  fallbackSpriteAssetId: 'ui/characters/demo[DemoCharacter]'
   fallbackFraming:
     preset: 1
     customVisibleRect:

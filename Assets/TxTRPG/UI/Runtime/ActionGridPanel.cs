@@ -36,6 +36,9 @@ namespace TxTRPG.UI
         private IActionMenuProvider menuProvider;
         private IActionCommandExecutor commandExecutor;
         private CancellationTokenSource commandCancellation;
+        private CancellationTokenSource assetCancellation;
+        private AssetScope assetScope;
+        private IAssetProvider assetProvider;
         private int selectedIndex = -1;
         private int currentColumns = 1;
 
@@ -71,6 +74,13 @@ namespace TxTRPG.UI
         private void OnDestroy()
         {
             CancelPendingCommand();
+            ReleaseAssets();
+        }
+
+        public void SetAssetProvider(IAssetProvider provider)
+        {
+            ReleaseAssets();
+            assetProvider = provider;
         }
 
         private void OnRectTransformDimensionsChange()
@@ -137,6 +147,10 @@ namespace TxTRPG.UI
             }
 
             RefreshSelection(false);
+            if (Application.isPlaying)
+            {
+                LoadIconsAsync();
+            }
         }
 
         public void Select(int index, bool moveFocus = true)
@@ -351,6 +365,56 @@ namespace TxTRPG.UI
             commandCancellation?.Cancel();
             commandCancellation?.Dispose();
             commandCancellation = null;
+        }
+
+        private async void LoadIconsAsync()
+        {
+            ReleaseAssets();
+            var cancellation = new CancellationTokenSource();
+            assetCancellation = cancellation;
+            var scope = new AssetScope(assetProvider);
+            assetScope = scope;
+            try
+            {
+                for (var i = 0; i < entries.Count; i++)
+                {
+                    var entry = entries[i];
+                    if (string.IsNullOrWhiteSpace(entry.IconAssetId))
+                    {
+                        continue;
+                    }
+
+                    var lease = await scope.LoadAsync<Sprite>(entry.IconAssetId, cancellation.Token);
+                    cancellation.Token.ThrowIfCancellationRequested();
+                    if (i >= entries.Count || !string.Equals(entries[i].Id, entry.Id, StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    entries[i] = entry.WithIcon(lease.Asset);
+                    if (i < cellPool.Count && cellPool[i].gameObject.activeSelf)
+                    {
+                        cellPool[i].Bind(i, entries[i], ActivateCell);
+                        cellPool[i].SetSelected(i == selectedIndex);
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning($"Action grid icons could not be loaded: {exception.Message}", this);
+            }
+        }
+
+        private void ReleaseAssets()
+        {
+            assetCancellation?.Cancel();
+            assetCancellation?.Dispose();
+            assetCancellation = null;
+            assetScope?.Dispose();
+            assetScope = null;
         }
     }
 }
