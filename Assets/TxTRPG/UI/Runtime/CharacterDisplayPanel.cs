@@ -5,8 +5,10 @@ namespace TxTRPG.UI
     public sealed class CharacterDisplayPanel : MonoBehaviour
     {
         [SerializeField] private CharacterViewBase activeView;
+        [SerializeField] private PanelBackgroundRenderer backgroundRenderer;
 
         public bool IsVisible => activeView != null && activeView.IsVisible;
+        public PanelBackgroundRenderer BackgroundRenderer => backgroundRenderer;
 
         public void ShowCharacter(in CharacterPresentation presentation)
         {
@@ -17,6 +19,16 @@ namespace TxTRPG.UI
             }
 
             activeView.Show(presentation);
+        }
+
+        public void ShowCharacterImmediately(in CharacterPresentation presentation)
+        {
+            if (activeView == null)
+            {
+                Debug.LogWarning("CharacterDisplayPanel has no active view.", this);
+                return;
+            }
+            activeView.ShowImmediately(presentation);
         }
 
         public void UpdateCharacter(in CharacterPresentation presentation)
@@ -43,6 +55,19 @@ namespace TxTRPG.UI
         {
             activeView?.Clear();
         }
+
+        public void ApplyBackground(PanelBackgroundStyle style) => backgroundRenderer?.ApplyStyle(style);
+
+        public void ChangeBackground(PanelBackgroundStyle style, float duration = -1f) =>
+            backgroundRenderer?.Change(style, duration);
+
+        public void ClearBackground() => backgroundRenderer?.Clear();
+
+        public void SetBackgroundEffectsEnabled(bool enabled) =>
+            backgroundRenderer?.SetEffectsEnabled(enabled);
+
+        public void SetBackgroundAssetProvider(IAssetProvider provider) =>
+            backgroundRenderer?.SetAssetProvider(provider);
 
         public void SetView(CharacterViewBase view, bool clearPrevious = true)
         {

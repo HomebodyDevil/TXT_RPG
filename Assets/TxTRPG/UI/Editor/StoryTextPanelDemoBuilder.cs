@@ -61,7 +61,7 @@ namespace TxTRPG.UI.Editor
                 throw new UnityException($"StoryTextPanel prefab was not found at {PanelPrefabPath}.");
             }
 
-            var root = new GameObject("StoryTextPanelDemo", typeof(RectTransform));
+            var root = new GameObject("StoryTextPanelDemo", typeof(RectTransform), typeof(CanvasGroup));
             try
             {
                 var rootRect = (RectTransform)root.transform;
@@ -79,6 +79,7 @@ namespace TxTRPG.UI.Editor
                 serialized.FindProperty("target").objectReferenceValue = panelInstance.GetComponent<StoryTextPanel>();
                 serialized.FindProperty("data").objectReferenceValue = demoData;
                 serialized.ApplyModifiedPropertiesWithoutUndo();
+                PanelStartupPrefabUtility.Configure(root, loader, panelRect);
 
                 PrefabUtility.SaveAsPrefabAsset(root, DemoPrefabPath);
             }

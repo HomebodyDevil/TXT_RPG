@@ -29,6 +29,10 @@ namespace TxTRPG.UI.Tests
                 "Assets/TxTRPG/UI/Prefabs/CharacterDisplayPanel.prefab");
             Assert.That(prefab, Is.Not.Null);
             Assert.That(prefab.GetComponent<CharacterDisplayPanel>(), Is.Not.Null);
+            Assert.That(prefab.GetComponent<CharacterDisplayPanel>().BackgroundRenderer, Is.Not.Null);
+            Assert.That(prefab.transform.Find("BackgroundLayer/BackgroundViewport/BackgroundVisualRoot/BackgroundA"), Is.Not.Null);
+            Assert.That(prefab.transform.Find("BackgroundLayer/BackgroundViewport/BackgroundVisualRoot/BackgroundB"), Is.Not.Null);
+            Assert.That(prefab.transform.Find("BackgroundLayer/BackgroundViewport/BackgroundVisualRoot/BackgroundEffectOverlay"), Is.Not.Null);
             Assert.That(prefab.transform.Find("DisplayRoot/Character2DView"), Is.Not.Null);
             Assert.That(prefab.GetComponentInChildren<Character2DView>(true), Is.Not.Null);
             Assert.That(prefab.transform.Find(
@@ -37,6 +41,9 @@ namespace TxTRPG.UI.Tests
             Assert.That(prefab.transform.Find("DisplayRoot/Character2DView/FrameViewport")
                 .GetComponent<RectMask2D>(), Is.Not.Null);
             Assert.That(prefab.transform.Find("TransitionOverlay"), Is.Not.Null);
+            Assert.That(prefab.transform.Find("ForegroundEffectLayer"), Is.Not.Null);
+            foreach (var image in prefab.GetComponentsInChildren<Image>(true))
+                Assert.That(image.raycastTarget, Is.False, image.name);
         }
 
         [Test]
@@ -56,6 +63,9 @@ namespace TxTRPG.UI.Tests
             Assert.That(artwork.AssetId, Is.Not.Empty);
             Assert.That(prefab, Is.Not.Null);
             Assert.That(prefab.GetComponent<CharacterDisplayPanelDemoLoader>(), Is.Not.Null);
+            Assert.That(prefab.GetComponent<PanelStartupController>(), Is.Not.Null);
+            Assert.That(prefab.GetComponent<FadePanelRevealTransition>(), Is.Not.Null);
+            Assert.That(prefab.GetComponent<CanvasGroup>(), Is.Not.Null);
             Assert.That(prefab.GetComponentInChildren<CharacterDisplayPanel>(true), Is.Not.Null);
 
             var baseImage = prefab.transform
@@ -63,6 +73,13 @@ namespace TxTRPG.UI.Tests
                 .GetComponent<Image>();
             Assert.That(baseImage.enabled, Is.True);
             Assert.That(baseImage.sprite, Is.Not.Null);
+            var backgroundStyle = AssetDatabase.LoadAssetAtPath<PanelBackgroundStyle>(
+                "Assets/TxTRPG/UI/DEMO/CharacterDisplayPanel/CharacterDisplayBackgroundDemoStyle.asset");
+            Assert.That(backgroundStyle, Is.Not.Null);
+            var renderer = prefab.GetComponentInChildren<CharacterDisplayPanel>(true).BackgroundRenderer;
+            var rendererProperties = new SerializedObject(renderer);
+            Assert.That(rendererProperties.FindProperty("initialStyle").objectReferenceValue,
+                Is.EqualTo(backgroundStyle));
         }
     }
 }

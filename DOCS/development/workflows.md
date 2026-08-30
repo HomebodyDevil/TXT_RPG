@@ -48,6 +48,10 @@ Tools > TxT RPG > Refresh Story Text Panel Edit Mode Preview
 
 캐릭터 표시 데모는 `Assets/TxTRPG/UI/DEMO/CharacterDisplayPanel/CharacterDisplayPanelDemo.prefab`을 Prefab Mode로 열어 확인합니다. Edit Mode에서는 생성된 샘플 캐릭터가 완전히 표시되며, Play Mode에서는 실제 `ShowCharacter` 호출과 등장 페이드가 실행됩니다.
 
+같은 Demo의 `CharacterDisplayBackgroundDemoStyle.asset`은 공통 `PanelBackgroundStyle` 제작 예시입니다. CharacterDisplayPanel의 배경은 `ApplyBackground`, `ChangeBackground`, `ClearBackground`로 캐릭터 표시와 독립적으로 제어합니다. 배경 전용 효과는 `BackgroundEffectOverlay`, 캐릭터 전용 효과는 Character2DView의 `EffectOverlay`, 전경 효과는 `ForegroundEffectLayer`, 전체 화면 전환은 `TransitionOverlay`에 적용합니다.
+
+Story, Character와 Action Grid Demo는 동일한 `PanelStartupController` 경로를 사용합니다. Demo 루트의 `CanvasGroup`, 구체적인 `PanelInitialDataLoader`, `FadePanelRevealTransition`과 `PanelStartupController` 참조를 함께 유지해야 합니다. Fade Duration은 기본 0.35초이며, 모션 감소가 필요하면 `Reduce Motion`을 활성화합니다. Loader를 교체할 때는 동기 `Start()`를 추가하지 않고 `LoadAndApplyAsync`가 모든 자산 준비를 기다리도록 구현합니다.
+
 ## ActionGridPanel을 씬에서 사용하기
 
 1. `Assets/TxTRPG/UI/Prefabs/ActionGridPanel.prefab`을 Canvas 아래에 배치합니다.
@@ -55,6 +59,8 @@ Tools > TxT RPG > Refresh Story Text Panel Edit Mode Preview
 3. `IActionMenuProvider`와 `IActionCommandExecutor` 구현을 `SetServices`로 연결합니다.
 4. `Layout Mode`, 최대 열 수, 셀 최소·최대 크기, `Spacing (X, Y)`와 Padding을 화면 정책에 맞게 설정합니다. `Fixed Columns`의 열 수는 최대값이며 좁은 화면에서는 자동으로 감소합니다.
 5. 제한된 슬롯을 표시할 때만 `Fill Capacity With Empty Slots`와 `Capacity`를 사용합니다.
+
+`Initial Capacity`와 `Population Mode`로 초기 셀 풀과 빈 슬롯 표시를 설정합니다. 런타임 변경은 `SetCapacity`, `TryAddEntry`, `TryInsertEntry`, `RemoveEntry`, `UpdateEntry` API를 사용합니다. 공통 스크롤바 외형은 `Assets > Create > TxT RPG > UI > Scrollbar Style`에서 생성하고 Scroll View의 `ConfigurableScrollbarController`에 연결합니다.
 
 셀에 애니메이션을 추가할 때 테두리 효과는 `Border`, 아이콘과 상태의 흔들림·확대·회전 효과는 `ContentRoot`에 적용합니다. `ActionGridCell` 루트 Transform에는 위치 또는 크기 애니메이션을 적용하지 않습니다.
 
@@ -72,9 +78,15 @@ Tools > TxT RPG > Refresh Story Text Panel Edit Mode Preview
 6. 좁은 화면에서 배치 방향을 바꾸려면 Axis Policy와 Breakpoint를 설정합니다.
 7. 복합 화면은 ContentLayer의 자식에 `FlexibleLayoutPanel`을 추가하여 같은 방식으로 중첩합니다.
 
+ContentLayer의 RectTransform Offset은 콘텐츠 전체의 외부 여백이고, `FlexibleContentLayoutGroup`의 Padding은 내부 여백입니다. 두 값은 합산됩니다. 실제 표시 영역을 자르려면 루트 `FlexibleLayoutPanel`의 `Clip Content`를 활성화합니다. `Overflow = Clip`만으로는 렌더링이 잘리지 않습니다.
+
+Inspector에서 자식 사이 간격은 `Spacing`, ContentLayer 내부 상·하·좌·우 여백은 기본 `Padding`을 사용합니다. 패널 테두리와 ContentLayer 사이의 상·하·좌·우 외부 여백까지 설정하려면 `Override Content Margins`를 활성화하고 `Content Margins`를 입력합니다. 기존에 ContentLayer RectTransform Offset을 직접 편집한 Prefab은 이 옵션을 비활성화하여 기존 값을 유지할 수 있습니다.
+
 배경 스타일은 Project 창의 `Assets > Create > TxT RPG > UI > Flexible Layout Background Style`에서 생성한 뒤 `BackgroundLayer`의 `FlexibleLayoutBackground.Initial Style`에 연결합니다. 즉시 변경에는 `ApplyStyle`, 교차 페이드에는 `Change`를 사용합니다. 배경과 셰이더 애니메이션은 `BackgroundVisualRoot`에만 적용하고, 입력 차단이 필요하면 별도의 InputBlocker를 Content 또는 Foreground 계층에 명시적으로 추가합니다.
 
 `Assets/TxTRPG/UI/DEMO/FlexibleLayoutPanel/FlexibleLayoutPanelDemo.prefab`을 Prefab Mode로 열면 넓은 화면의 `MainContent : Character = 7 : 3` 구성과 `Story : Action = 65 : 35` 중첩 구성을 확인할 수 있습니다. Prefab 루트의 너비를 720 미만으로 줄이면 최상위 축이 세로로 전환됩니다.
+
+`Assets/TxTRPG/UI/DEMO/FlexibleLayoutPanel/Sample_Main_FlexibleLayoutPanelDemo.prefab`은 `SampleScene`의 주 레이아웃을 참조한 1:3:1 열 구성입니다. 왼쪽부터 ActionGridPanel, StoryTextPanel, CharacterDisplayPanel Demo Prefab을 사용합니다. 루트 너비가 720 미만이면 세 열이 세로 방향으로 전환됩니다.
 
 같은 오브젝트에서 주축을 제어하는 `ContentSizeFitter`는 사용하지 않습니다. 레이아웃 중첩은 필요한 수준으로만 유지하고, 런타임에서 매 프레임 `Rebuild`를 호출하지 않습니다.
 
@@ -91,7 +103,9 @@ Tools > TxT RPG > Refresh Story Text Panel Edit Mode Preview
 | `Tools > TxT RPG > Rebuild Action Grid Demo` | 샘플 아이콘, 혼합 항목 데이터와 ActionGridPanel Demo를 다시 생성합니다. |
 | `Tools > TxT RPG > Rebuild Flexible Layout Prefab` | 자식 없는 운영용 FlexibleLayoutPanel Prefab을 다시 생성합니다. |
 | `Tools > TxT RPG > Rebuild Flexible Layout Demo` | 세 제품 UI Demo를 중첩한 반응형 Flexible Layout Demo를 다시 생성합니다. |
+| `Tools > TxT RPG > Rebuild Sample Main Flexible Layout Demo` | SampleScene의 1:3:1 주 레이아웃과 세 Demo Prefab을 조합한 샘플을 다시 생성합니다. |
 | `Tools > TxT RPG > Addressables > Register UI Assets` | 기존 운영용 UI Prefab과 공통 스타일을 수명 기반 Addressables 그룹에 등록합니다. |
+| `Tools > TxT RPG > Addressables > Validate Settings` | 빈 주소, 대소문자 중복, 누락 GUID와 그룹 스키마를 검사합니다. |
 | `Tools > TxT RPG > Addressables > Build Player Content` | 현재 프로필과 그룹 설정으로 Addressables Player Content를 빌드합니다. |
 
 ## Addressables 콘텐츠 제작

@@ -87,6 +87,28 @@ ActionGridCell
 
 인벤토리 용량과 화면 배치는 분리합니다. `Population Mode`가 `Entries Only`이면 데이터 셀만 표시하고, `Fill Capacity With Empty Slots`이면 `Capacity`까지 빈 슬롯을 표시합니다.
 
+## 용량과 Entry 변경
+
+`Initial Capacity`는 Play Mode 초기화 시 준비하는 셀 풀의 최소 크기입니다. 기존 Prefab 미리보기 셀을 먼저 풀에 편입한 뒤 부족한 셀만 생성합니다. 런타임에서는 `SetCapacity()`, `TryAddEntry()`, `TryInsertEntry()`, `RemoveEntry()`, `UpdateEntry()`, `ReplaceEntry()`, `ClearEntries()`로 목록을 변경합니다.
+
+`Compact Forward`에서는 중간 Entry를 제거하면 뒤의 Entry가 앞으로 이동하며, `Preserve Slots`에서는 제거한 인덱스를 빈 슬롯으로 유지합니다. Entry 식별에는 셀 인덱스 대신 `EntryInstanceId`를 사용합니다. 현재 호환성을 위해 `EntryInstanceId`는 기존 `Id`의 별칭입니다.
+
+용량 축소 정책은 다음과 같습니다.
+
+| 정책 | 동작 |
+| --- | --- |
+| `Reject If Occupied` | 잘리는 Entry가 있으면 변경을 거부하는 안전한 기본값입니다. |
+| `Move Overflow` | UI에서 제외한 Entry를 `Overflowed` 이벤트로 외부 시스템에 전달합니다. |
+| `Remove Overflow` | UI 목록에서만 제거하며 도메인 아이템 삭제를 의미하지 않습니다. |
+
+선택한 Entry가 제거되면 같은 위치의 다음 Entry, 그다음 이전 Entry 순서로 선택을 복원합니다. 열려 있던 컨텍스트 메뉴는 닫습니다. 비동기 아이콘 결과는 기존 인덱스가 아니라 `EntryInstanceId`를 다시 검색한 후 적용합니다.
+
+## 스크롤바
+
+`ConfigurableScrollbarController`는 `Hidden`, `Auto`, `Always` 가시성, 공간 예약 방식, 좌우 배치, 너비와 간격을 관리합니다. 핸들 크기는 콘텐츠 비율, 정규화 고정값, 픽셀 고정값 또는 최소 픽셀 크기를 사용할 수 있습니다. 컨트롤러가 `ScrollRect`와 값을 양방향 동기화하므로 고정 크기 모드에서도 Unity가 핸들 크기를 덮어쓰지 않습니다.
+
+`ScrollbarStyle` ScriptableObject에서 배경과 핸들의 Sprite, Color, Material 및 배경 표시 여부를 공통 설정할 수 있습니다.
+
 ## 풀링과 갱신
 
 패널은 필요한 수만큼 셀을 생성한 뒤 목록 갱신 시 재사용합니다. Demo Prefab에 저장된 Edit Mode 미리보기 셀도 Play Mode 시작 시 풀에 편입되므로 중복 셀이 생성되지 않습니다. 현재 초기 구현은 수십 개 규모의 목록을 대상으로 하며 수백 개 이상에서는 별도의 가상화가 필요합니다.

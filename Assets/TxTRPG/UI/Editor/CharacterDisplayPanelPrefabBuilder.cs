@@ -19,6 +19,28 @@ namespace TxTRPG.UI.Editor
                 var rootRect = (RectTransform)root.transform;
                 rootRect.sizeDelta = new Vector2(760f, 520f);
 
+                var backgroundLayer = CreateUiObject("BackgroundLayer", root.transform);
+                Stretch((RectTransform)backgroundLayer.transform);
+                backgroundLayer.AddComponent<CanvasGroup>();
+                var backgroundViewport = CreateUiObject("BackgroundViewport", backgroundLayer.transform);
+                Stretch((RectTransform)backgroundViewport.transform);
+                var backgroundMask = backgroundViewport.AddComponent<RectMask2D>();
+                var backgroundVisualRoot = CreateUiObject("BackgroundVisualRoot", backgroundViewport.transform);
+                Stretch((RectTransform)backgroundVisualRoot.transform);
+                var backgroundA = CreateImage("BackgroundA", backgroundVisualRoot.transform);
+                var backgroundB = CreateImage("BackgroundB", backgroundVisualRoot.transform);
+                var backgroundEffect = CreateImage("BackgroundEffectOverlay", backgroundVisualRoot.transform);
+                backgroundB.gameObject.SetActive(false);
+                backgroundEffect.gameObject.SetActive(false);
+                var backgroundRenderer = backgroundLayer.AddComponent<PanelBackgroundRenderer>();
+                var backgroundProperties = new SerializedObject(backgroundRenderer);
+                backgroundProperties.FindProperty("visualRoot").objectReferenceValue = backgroundVisualRoot.transform;
+                backgroundProperties.FindProperty("backgroundA").objectReferenceValue = backgroundA;
+                backgroundProperties.FindProperty("backgroundB").objectReferenceValue = backgroundB;
+                backgroundProperties.FindProperty("effectOverlay").objectReferenceValue = backgroundEffect;
+                backgroundProperties.FindProperty("clipMask").objectReferenceValue = backgroundMask;
+                backgroundProperties.ApplyModifiedPropertiesWithoutUndo();
+
                 var displayRoot = CreateUiObject("DisplayRoot", root.transform);
                 Stretch((RectTransform)displayRoot.transform);
 
@@ -53,6 +75,10 @@ namespace TxTRPG.UI.Editor
                 viewProperties.FindProperty("effectPlayer").objectReferenceValue = effectPlayer;
                 viewProperties.ApplyModifiedPropertiesWithoutUndo();
 
+                var foregroundEffectLayer = CreateImage("ForegroundEffectLayer", root.transform);
+                foregroundEffectLayer.color = Color.clear;
+                foregroundEffectLayer.enabled = false;
+
                 var transitionOverlay = CreateImage("TransitionOverlay", root.transform);
                 transitionOverlay.color = Color.clear;
                 transitionOverlay.enabled = false;
@@ -60,6 +86,7 @@ namespace TxTRPG.UI.Editor
                 var panel = root.AddComponent<CharacterDisplayPanel>();
                 var panelProperties = new SerializedObject(panel);
                 panelProperties.FindProperty("activeView").objectReferenceValue = view;
+                panelProperties.FindProperty("backgroundRenderer").objectReferenceValue = backgroundRenderer;
                 panelProperties.ApplyModifiedPropertiesWithoutUndo();
 
                 PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);

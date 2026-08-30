@@ -6,6 +6,12 @@
 
 이 컴포넌트는 스토리 규칙이나 현지화 키를 해석하지 않습니다. 호출자는 현지화가 완료된 문자열과 발화자를 `StoryMessage`로 전달해야 합니다.
 
+## 초기화와 필수 참조
+
+`StoryTextPanel`에는 `messagePrefab`, `viewport`, `content`, `scrollRect`, `scrollbar` 참조가 필요합니다. `OnEnable()`은 모든 필수 참조가 준비된 경우에만 스크롤 이벤트를 등록합니다. 참조가 누락되면 Editor와 Development Build에서 누락된 필드 이름을 경고하고 초기화를 중단하므로, Prefab 생성 도중이나 불완전한 Scene 인스턴스에서도 `NullReferenceException`이 발생하지 않습니다.
+
+`OnDisable()`은 이벤트가 실제로 등록된 경우에만 안전하게 해제합니다. 운영용 Prefab 생성기는 루트 GameObject를 비활성화한 상태에서 컴포넌트와 직렬화 참조를 구성하고, 모든 참조를 적용한 뒤 활성화하여 저장합니다.
+
 ## 런타임 클래스 관계
 
 ```mermaid

@@ -93,9 +93,29 @@ namespace TxTRPG.UI
             SetSelected(false);
         }
 
+        public void Unbind()
+        {
+            activate = null;
+            HasEntry = false;
+            if (icon != null) { icon.sprite = null; icon.enabled = false; }
+            if (quantity != null) { quantity.text = string.Empty; quantity.gameObject.SetActive(false); }
+            if (cooldownOverlay != null) { cooldownOverlay.fillAmount = 0f; cooldownOverlay.gameObject.SetActive(false); }
+            disabledOverlay?.SetActive(false);
+            selectionFrame?.SetActive(false);
+            if (shortcutLabel != null) { shortcutLabel.text = string.Empty; shortcutLabel.gameObject.SetActive(false); }
+            emptySlotVisual?.SetActive(false);
+        }
+
         public void SetSelected(bool selected)
         {
             selectionFrame?.SetActive(selected);
+        }
+
+        public void ClearIcon()
+        {
+            if (icon == null) return;
+            icon.sprite = null;
+            icon.enabled = false;
         }
 
         private void Activate()

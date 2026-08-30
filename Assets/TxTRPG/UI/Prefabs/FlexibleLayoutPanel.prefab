@@ -65,6 +65,9 @@ MonoBehaviour:
   overflow: 0
   includeInactiveChildren: 0
   contentRoot: {fileID: 9134192191214517861}
+  contentLayout: {fileID: 8854991644967675989}
+  contentMask: {fileID: 2441808215002690609}
+  clipContent: 0
 --- !u!1 &2614579155677921620
 GameObject:
   m_ObjectHideFlags: 0
@@ -555,6 +558,8 @@ GameObject:
   - component: {fileID: 9134192191214517861}
   - component: {fileID: 725867628306505467}
   - component: {fileID: 2728885713164717049}
+  - component: {fileID: 2441808215002690609}
+  - component: {fileID: 8854991644967675989}
   m_Layer: 0
   m_Name: ContentLayer
   m_TagString: Untagged
@@ -613,6 +618,44 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &2441808215002690609
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8992195014108772992}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3312d7739989d2b4e91e6319e9a96d76, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.RectMask2D
+  m_Padding: {x: 0, y: 0, z: 0, w: 0}
+  m_Softness: {x: 0, y: 0}
+--- !u!114 &8854991644967675989
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8992195014108772992}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5915668cecda3ed478d1c5cba0889656, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TxTRPG.UI::TxTRPG.UI.FlexibleContentLayoutGroup
+  m_Padding:
+    m_Left: 12
+    m_Right: 12
+    m_Top: 12
+    m_Bottom: 12
+  m_ChildAlignment: 4
+  fixedAxis: 0
+  axisPolicy: 0
+  breakpoint: 720
+  spacing: 12
+  overflow: 0
+  includeInactiveChildren: 0
 --- !u!1 &8995261765606359235
 GameObject:
   m_ObjectHideFlags: 0

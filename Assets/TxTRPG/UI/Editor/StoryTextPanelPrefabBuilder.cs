@@ -103,6 +103,7 @@ namespace TxTRPG.UI.Editor
         private static void BuildPanelPrefab(StoryMessageItem messagePrefab)
         {
             var root = CreateUiObject("StoryTextPanel");
+            root.SetActive(false);
             try
             {
                 var rootRect = (RectTransform)root.transform;
@@ -161,6 +162,7 @@ namespace TxTRPG.UI.Editor
                 serialized.FindProperty("scrollbarBackground").objectReferenceValue = scrollbarBackground;
                 serialized.ApplyModifiedPropertiesWithoutUndo();
 
+                root.SetActive(true);
                 PrefabUtility.SaveAsPrefabAsset(root, PanelPrefabPath);
             }
             finally
@@ -213,7 +215,7 @@ namespace TxTRPG.UI.Editor
             text.fontSize = fontSize;
             text.color = color;
             text.alignment = TextAlignmentOptions.TopLeft;
-            text.enableWordWrapping = true;
+            text.textWrappingMode = TextWrappingModes.Normal;
             text.overflowMode = TextOverflowModes.Overflow;
             text.raycastTarget = false;
             return text;

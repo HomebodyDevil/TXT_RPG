@@ -147,14 +147,20 @@ namespace TxTRPG.UI.Editor
                 throw new UnityException($"Action grid panel prefab was not found at {PanelPrefabPath}.");
             }
 
-            var root = new GameObject("ActionGridPanelDemo", typeof(RectTransform));
+            var root = new GameObject("ActionGridPanelDemo", typeof(RectTransform), typeof(CanvasGroup));
             try
             {
                 ((RectTransform)root.transform).sizeDelta = new Vector2(760f, 520f);
                 var panelObject = (GameObject)PrefabUtility.InstantiatePrefab(panelPrefab, root.transform);
                 Stretch((RectTransform)panelObject.transform);
                 var panel = panelObject.GetComponent<ActionGridPanel>();
-                panel.SetEntries(data.CreateEntries());
+                var panelProperties = new SerializedObject(panel);
+                panelProperties.FindProperty("populationMode").enumValueIndex =
+                    (int)ActionGridPopulationMode.FillCapacityWithEmptySlots;
+                panelProperties.FindProperty("initialCapacity").intValue = 12;
+                panelProperties.FindProperty("capacity").intValue = 12;
+                panelProperties.ApplyModifiedPropertiesWithoutUndo();
+                panel.SetEntries(data.CreateEntries(), 12);
                 panel.Select(1, false);
 
                 var title = panelObject.transform.Find("Header/Title")?.GetComponent<TextMeshProUGUI>();
@@ -180,6 +186,7 @@ namespace TxTRPG.UI.Editor
                 properties.FindProperty("target").objectReferenceValue = panel;
                 properties.FindProperty("data").objectReferenceValue = data;
                 properties.ApplyModifiedPropertiesWithoutUndo();
+                PanelStartupPrefabUtility.Configure(root, controller, (RectTransform)panelObject.transform);
 
                 PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
             }

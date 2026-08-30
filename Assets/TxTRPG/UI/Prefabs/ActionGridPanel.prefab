@@ -450,7 +450,10 @@ MonoBehaviour:
     m_Bottom: 0
   activationBehavior: 1
   populationMode: 0
-  capacity: 0
+  packingMode: 0
+  initialCapacity: 20
+  capacity: 20
+  maxConcurrentIconLoads: 4
 --- !u!1 &3209910385930643471
 GameObject:
   m_ObjectHideFlags: 0
@@ -760,6 +763,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6915196511010776510}
   - component: {fileID: 5821572373998615129}
+  - component: {fileID: 7049455077455274752}
   m_Layer: 0
   m_Name: Scroll View
   m_TagString: Untagged
@@ -818,6 +822,32 @@ MonoBehaviour:
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &7049455077455274752
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8196803812808442673}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d9360b0238f1a94da88ccd5d632d2bf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TxTRPG.UI::TxTRPG.UI.ConfigurableScrollbarController
+  scrollRect: {fileID: 5821572373998615129}
+  viewport: {fileID: 2799687139059118830}
+  scrollbar: {fileID: 405219222788398994}
+  background: {fileID: 7288152043030448872}
+  handle: {fileID: 4890867252434430718}
+  style: {fileID: 0}
+  visibility: 1
+  spaceMode: 0
+  side: 1
+  handleSizeMode: 3
+  width: 16
+  gap: 8
+  fixedNormalizedSize: 0.18
+  handlePixels: 36
 --- !u!1 &8307631741353226332
 GameObject:
   m_ObjectHideFlags: 0

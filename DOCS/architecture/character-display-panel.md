@@ -2,7 +2,7 @@
 
 ## 책임과 경계
 
-`CharacterDisplayPanel`은 게임 또는 스토리 시스템에서 전달한 `CharacterPresentation`을 현재 View로 전달합니다. 패널은 `Image`, `Animator`, 모델 또는 RenderTexture를 직접 제어하지 않습니다.
+`CharacterDisplayPanel`은 게임 또는 스토리 시스템에서 전달한 `CharacterPresentation`을 현재 View로 전달하고, 캐릭터와 독립적인 패널 배경 요청을 공통 배경 렌더러에 위임합니다. 패널은 `Image`, `Animator`, 모델 또는 RenderTexture를 직접 제어하지 않습니다.
 
 ```mermaid
 flowchart LR
@@ -20,6 +20,8 @@ flowchart LR
 | `ICharacterView` | 2D와 향후 3D View가 제공해야 하는 최소 표시 API를 정의합니다. |
 | `CharacterViewBase` | 표시 상태와 선택 가능한 등장·퇴장 페이드를 관리합니다. |
 | `CharacterDisplayPanel` | 활성 View에 표시, 갱신, 애니메이션, 효과, 숨김과 초기화 요청을 전달합니다. |
+| `PanelBackgroundRenderer` | 배경 A/B 슬롯, 효과 Overlay, 교차 페이드, Addressables Lease와 Material 수명을 관리합니다. |
+| `PanelBackgroundStyle` | 배경 Sprite ID, Tint, Opacity, Material, 표시 방식과 효과 정책을 정의합니다. |
 | `Character2DView` | Sprite 해석, UI Image, 좌우 반전, Animator와 효과 재생을 담당합니다. |
 | `CharacterAppearanceDefinition` | 캐릭터 ID와 외형·포즈·표정 조합을 실제 Sprite에 연결합니다. |
 | `CharacterEffectPlayer` | 선택적으로 연결된 Animator의 효과 상태를 재생하고 초기화합니다. |
@@ -30,6 +32,12 @@ flowchart LR
 
 ```text
 CharacterDisplayPanel
+├── BackgroundLayer
+│   └── BackgroundViewport
+│       └── BackgroundVisualRoot
+│           ├── BackgroundA
+│           ├── BackgroundB
+│           └── BackgroundEffectOverlay
 ├── DisplayRoot
 │   └── Character2DView
 │       └── FrameViewport
@@ -38,12 +46,17 @@ CharacterDisplayPanel
 │                   ├── BaseImage
 │                   ├── SkinOverlay
 │                   └── EffectOverlay
+├── ForegroundEffectLayer
 └── TransitionOverlay
 ```
 
 `FrameViewport`의 `RectMask2D`는 원본 전신 일러스트가 표시 영역을 벗어나는 부분을 잘라냅니다. `ArtworkRoot`는 선택한 원본 구간을 패널에 맞추는 프레이밍 계산만 담당하고, `VisualRoot`는 호흡·흔들림·등장 애니메이션을 담당합니다. 두 Transform을 분리하므로 런타임 구도 갱신이 Animator의 위치와 크기 값을 덮어쓰지 않습니다.
 
 `TransitionOverlay`는 향후 패널 단위 전환 효과를 추가할 자리입니다. 현재는 비활성 Image이며, 등장·퇴장 페이드는 View의 `CanvasGroup`이 담당합니다.
+
+`BackgroundEffectOverlay`는 배경에만 적용되는 효과, Character2DView의 `EffectOverlay`는 캐릭터에만 적용되는 효과를 담당합니다. `ForegroundEffectLayer`는 캐릭터 앞의 안개나 빗방울 같은 표현을 위한 자리이며, `TransitionOverlay`는 배경과 캐릭터를 함께 덮는 전환용입니다. 모든 Image는 기본적으로 Raycast를 차단하지 않습니다.
+
+`PanelBackgroundRenderer`는 FlexibleLayoutPanel에서도 사용하는 공통 구현입니다. 기존 `FlexibleLayoutBackground`와 `FlexibleLayoutBackgroundStyle`은 직렬화와 자산 호환성을 위한 래퍼로 유지됩니다. 배경 로드가 실패하면 스타일에 설정된 Editor Fallback을 사용하며, 연속 요청이나 비활성화 시 진행 중 요청과 Lease를 정리합니다.
 
 ## 외형 해석
 
@@ -97,6 +110,11 @@ public void ShowMira()
         animationId: "breathing");
 
     characterDisplayPanel.ShowCharacter(presentation);
+}
+
+public void ChangeLocation(PanelBackgroundStyle locationStyle)
+{
+    characterDisplayPanel.ChangeBackground(locationStyle, 0.35f);
 }
 ```
 

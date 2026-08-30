@@ -33,6 +33,15 @@ namespace TxTRPG.UI
             visibilityRoutine = StartCoroutine(Fade(0f, 1f, showDuration, false));
         }
 
+        public void ShowImmediately(in CharacterPresentation presentation)
+        {
+            StopVisibilityRoutine();
+            gameObject.SetActive(true);
+            ApplyPresentation(presentation);
+            IsVisible = true;
+            SetOpacity(1f);
+        }
+
         public void UpdatePresentation(in CharacterPresentation presentation)
         {
             ApplyPresentation(presentation);

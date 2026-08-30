@@ -216,6 +216,16 @@ namespace TxTRPG.UI.Editor
                 scrollRect.movementType = ScrollRect.MovementType.Clamped;
                 scrollRect.scrollSensitivity = 28f;
 
+                var scrollbarController = scrollView.AddComponent<ConfigurableScrollbarController>();
+                var scrollbarProperties = new SerializedObject(scrollbarController);
+                scrollbarProperties.FindProperty("scrollRect").objectReferenceValue = scrollRect;
+                scrollbarProperties.FindProperty("viewport").objectReferenceValue = viewport.transform;
+                scrollbarProperties.FindProperty("scrollbar").objectReferenceValue = scrollbar;
+                scrollbarProperties.FindProperty("background").objectReferenceValue = scrollbar.GetComponent<Image>();
+                scrollbarProperties.FindProperty("handle").objectReferenceValue =
+                    scrollbar.handleRect.GetComponent<Image>();
+                scrollbarProperties.ApplyModifiedPropertiesWithoutUndo();
+
                 var emptyState = CreateText("EmptyState", root.transform, 22f, new Color32(150, 156, 169, 255), TextAlignmentOptions.Center);
                 Stretch((RectTransform)emptyState.transform, 30f, 30f, 30f, 70f);
                 emptyState.text = "No actions available";

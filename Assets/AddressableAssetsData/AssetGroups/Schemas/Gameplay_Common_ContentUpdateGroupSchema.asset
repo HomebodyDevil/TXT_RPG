@@ -13,4 +13,4 @@ MonoBehaviour:
   m_Name: Gameplay_Common_ContentUpdateGroupSchema
   m_EditorClassIdentifier: Unity.Addressables.Editor::UnityEditor.AddressableAssets.Settings.GroupSchemas.ContentUpdateGroupSchema
   m_Group: {fileID: 11400000, guid: d0810ba2a5beab04899f337504a717ef, type: 2}
-  m_StaticContent: 0
+  m_StaticContent: 1

@@ -76,6 +76,7 @@ namespace TxTRPG.UI
         private Coroutine initialRevealRoutine;
         private float initialRevealProgress = 1f;
         private float initialRevealElapsed;
+        private bool scrollListenersRegistered;
 
         public bool AllowUserScrolling
         {
@@ -146,6 +147,13 @@ namespace TxTRPG.UI
             get => initialRevealDuration;
             set => initialRevealDuration = Mathf.Max(0f, value);
         }
+
+        public bool HasRequiredReferences =>
+            messagePrefab != null &&
+            viewport != null &&
+            content != null &&
+            scrollRect != null &&
+            scrollbar != null;
 
         public void AddMessage(string text, string speaker = null)
         {
@@ -238,16 +246,27 @@ namespace TxTRPG.UI
 
         private void OnEnable()
         {
+            if (!HasRequiredReferences)
+            {
+                LogMissingRequiredReferences();
+                return;
+            }
+
             scrollRect.onValueChanged.AddListener(SynchronizeFromScrollRect);
             scrollbar.onValueChanged.AddListener(SynchronizeFromScrollbar);
+            scrollListenersRegistered = true;
             ApplyOptions();
             ScheduleScrollToBottom();
         }
 
         private void OnDisable()
         {
-            scrollRect.onValueChanged.RemoveListener(SynchronizeFromScrollRect);
-            scrollbar.onValueChanged.RemoveListener(SynchronizeFromScrollbar);
+            if (scrollListenersRegistered)
+            {
+                scrollRect?.onValueChanged.RemoveListener(SynchronizeFromScrollRect);
+                scrollbar?.onValueChanged.RemoveListener(SynchronizeFromScrollbar);
+                scrollListenersRegistered = false;
+            }
 
             if (scrollToBottomRoutine != null)
             {
@@ -261,6 +280,21 @@ namespace TxTRPG.UI
 
             scrollToBottomRoutine = null;
             initialRevealRoutine = null;
+        }
+
+        private void LogMissingRequiredReferences()
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            var missing = new List<string>();
+            if (messagePrefab == null) missing.Add(nameof(messagePrefab));
+            if (viewport == null) missing.Add(nameof(viewport));
+            if (content == null) missing.Add(nameof(content));
+            if (scrollRect == null) missing.Add(nameof(scrollRect));
+            if (scrollbar == null) missing.Add(nameof(scrollbar));
+            Debug.LogWarning(
+                $"StoryTextPanel is disabled because required references are missing: {string.Join(", ", missing)}.",
+                this);
+#endif
         }
 
         private void LateUpdate()

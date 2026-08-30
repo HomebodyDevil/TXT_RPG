@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -26,6 +27,8 @@ namespace TxTRPG.UI
         private IAssetProvider assetProvider;
         private CancellationTokenSource artworkCancellation;
         private AssetLease<Sprite> artworkLease;
+        private Task currentArtworkTask = Task.CompletedTask;
+        public Task WhenAssetsReady => currentArtworkTask;
 
         public void SetAssetProvider(IAssetProvider provider)
         {
@@ -52,7 +55,7 @@ namespace TxTRPG.UI
 
         protected override void ApplyPresentation(in CharacterPresentation presentation)
         {
-            ApplyArtworkAsync(presentation);
+            currentArtworkTask = ObserveArtworkLoadAsync(ApplyArtworkAsync(presentation));
 
             if (visualRoot != null)
             {
@@ -87,7 +90,9 @@ namespace TxTRPG.UI
             effectPlayer?.Clear();
         }
 
-        private async void ApplyArtworkAsync(CharacterPresentation presentation)
+        public async Task ApplyArtworkAsync(
+            CharacterPresentation presentation,
+            CancellationToken cancellationToken = default)
         {
             if (!TryResolveArtwork(presentation, out var artwork))
             {
@@ -101,25 +106,45 @@ namespace TxTRPG.UI
                 return;
             }
 
-            artworkCancellation?.Cancel();
-            artworkCancellation?.Dispose();
-            var cancellation = new CancellationTokenSource();
+            CancelArtworkRequest();
+            var cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             artworkCancellation = cancellation;
+            AssetLease<Sprite> pendingLease = null;
             try
             {
-                var lease = await (assetProvider ?? AddressablesAssetProvider.Shared)
+                pendingLease = await (assetProvider ?? AddressablesAssetProvider.Shared)
                     .LoadAsync<Sprite>(artwork.AssetId, cancellation.Token);
                 cancellation.Token.ThrowIfCancellationRequested();
-                artworkLease?.Dispose();
-                artworkLease = lease;
-                SetArtwork(lease.Asset, artwork.Framing);
+
+                var previousLease = artworkLease;
+                artworkLease = pendingLease;
+                pendingLease = null;
+                SetArtwork(artworkLease.Asset, artwork.Framing);
+                previousLease?.Dispose();
+            }
+            finally
+            {
+                pendingLease?.Dispose();
+                if (ReferenceEquals(artworkCancellation, cancellation))
+                {
+                    artworkCancellation = null;
+                }
+                cancellation.Dispose();
+            }
+        }
+
+        private async Task ObserveArtworkLoadAsync(Task loadTask)
+        {
+            try
+            {
+                await loadTask;
             }
             catch (OperationCanceledException)
             {
             }
             catch (Exception exception)
             {
-                Debug.LogWarning($"Character artwork '{artwork.AssetId}' could not be loaded: {exception.Message}", this);
+                Debug.LogWarning($"Character artwork could not be loaded: {exception.Message}", this);
             }
         }
 
@@ -155,11 +180,17 @@ namespace TxTRPG.UI
 
         private void ReleaseArtwork()
         {
+            CancelArtworkRequest();
+            ClearImage(baseImage);
+            artworkLease?.Dispose();
+            artworkLease = null;
+        }
+
+        private void CancelArtworkRequest()
+        {
             artworkCancellation?.Cancel();
             artworkCancellation?.Dispose();
             artworkCancellation = null;
-            artworkLease?.Dispose();
-            artworkLease = null;
         }
 
         private void OnDestroy()

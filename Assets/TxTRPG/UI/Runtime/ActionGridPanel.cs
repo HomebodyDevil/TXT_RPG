@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -29,7 +30,10 @@ namespace TxTRPG.UI
         [Header("Behavior")]
         [SerializeField] private GridActivationBehavior activationBehavior = GridActivationBehavior.OpenContextMenu;
         [SerializeField] private ActionGridPopulationMode populationMode = ActionGridPopulationMode.EntriesOnly;
-        [SerializeField, Min(0)] private int capacity;
+        [SerializeField] private ActionGridPackingMode packingMode = ActionGridPackingMode.CompactForward;
+        [SerializeField, Min(0)] private int initialCapacity = 20;
+        [SerializeField, Min(0)] private int capacity = 20;
+        [SerializeField, Range(1, 8)] private int maxConcurrentIconLoads = 4;
 
         private readonly List<ActionGridEntry> entries = new();
         private readonly List<ActionGridCell> cellPool = new();
@@ -41,12 +45,21 @@ namespace TxTRPG.UI
         private IAssetProvider assetProvider;
         private int selectedIndex = -1;
         private int currentColumns = 1;
+        private Task currentIconLoadTask = Task.CompletedTask;
+        public Task WhenAssetsReady => currentIconLoadTask;
 
         public event Action<ActionGridEntry> SelectionChanged;
         public event Action<ActionCommandResult> CommandCompleted;
+        public event Action<int> CapacityChanged;
+        public event Action<ActionGridEntry> EntryAdded;
+        public event Action<ActionGridEntry> EntryRemoved;
+        public event Action<IReadOnlyList<ActionGridEntry>> Overflowed;
 
         public int SelectedIndex => selectedIndex;
         public int CurrentColumns => currentColumns;
+        public int Capacity => capacity;
+        public int EntryCount => CountOccupiedEntries();
+        public ActionGridPackingMode PackingMode => packingMode;
 
         private void OnEnable()
         {
@@ -69,6 +82,9 @@ namespace TxTRPG.UI
                     cellPool.Add(cell);
                 }
             }
+
+            capacity = Mathf.Max(capacity, initialCapacity);
+            EnsurePool(capacity);
         }
 
         private void OnDestroy()
@@ -113,6 +129,13 @@ namespace TxTRPG.UI
             {
                 capacity = slotCapacity;
             }
+            capacity = Mathf.Max(capacity, entries.Count);
+            capacity = Mathf.Max(capacity, entries.Count);
+
+            if (packingMode == ActionGridPackingMode.CompactForward)
+            {
+                entries.RemoveAll(entry => string.IsNullOrEmpty(entry.EntryInstanceId));
+            }
 
             var displayedCount = populationMode == ActionGridPopulationMode.FillCapacityWithEmptySlots
                 ? Mathf.Max(entries.Count, capacity)
@@ -124,10 +147,11 @@ namespace TxTRPG.UI
                 cellPool[i].gameObject.SetActive(active);
                 if (!active)
                 {
+                    cellPool[i].Unbind();
                     continue;
                 }
 
-                if (i < entries.Count)
+                if (i < entries.Count && !string.IsNullOrEmpty(entries[i].EntryInstanceId))
                 {
                     cellPool[i].Bind(i, entries[i], ActivateCell);
                 }
@@ -137,25 +161,25 @@ namespace TxTRPG.UI
                 }
             }
 
-            emptyState?.SetActive(entries.Count == 0 && displayedCount == 0);
+            emptyState?.SetActive(CountOccupiedEntries() == 0 && displayedCount == 0);
             ApplyLayout();
             ConfigureNavigation();
             selectedIndex = FindEntryIndex(selectedId);
-            if (selectedIndex < 0 && entries.Count > 0)
+            if (selectedIndex < 0)
             {
-                selectedIndex = 0;
+                selectedIndex = FindNearestOccupiedIndex(0);
             }
 
             RefreshSelection(false);
             if (Application.isPlaying)
             {
-                LoadIconsAsync();
+                currentIconLoadTask = ObserveIconLoadsAsync(LoadIconsAsync());
             }
         }
 
         public void Select(int index, bool moveFocus = true)
         {
-            if (index < 0 || index >= entries.Count)
+            if (!IsOccupied(index))
             {
                 return;
             }
@@ -165,6 +189,113 @@ namespace TxTRPG.UI
             SelectionChanged?.Invoke(entries[index]);
         }
 
+        public CapacityChangeResult SetCapacity(
+            int newCapacity,
+            CapacityReductionPolicy reductionPolicy = CapacityReductionPolicy.RejectIfOccupied)
+        {
+            newCapacity = Mathf.Max(0, newCapacity);
+            var previous = capacity;
+            var overflow = new List<ActionGridEntry>();
+            for (var i = newCapacity; i < entries.Count; i++)
+            {
+                if (!string.IsNullOrEmpty(entries[i].EntryInstanceId)) overflow.Add(entries[i]);
+            }
+            if (overflow.Count > 0 && reductionPolicy == CapacityReductionPolicy.RejectIfOccupied)
+            {
+                return new CapacityChangeResult(false, previous, previous, overflow.Count);
+            }
+
+            var selectedId = IsOccupied(selectedIndex) ? entries[selectedIndex].EntryInstanceId : string.Empty;
+            if (entries.Count > newCapacity) entries.RemoveRange(newCapacity, entries.Count - newCapacity);
+            capacity = newCapacity;
+            EnsurePool(capacity);
+            contextMenu?.Hide(false);
+            Rebind(selectedId);
+            if (overflow.Count > 0 && reductionPolicy == CapacityReductionPolicy.MoveOverflow) Overflowed?.Invoke(overflow);
+            CapacityChanged?.Invoke(capacity);
+            return new CapacityChangeResult(true, previous, capacity, overflow.Count);
+        }
+
+        public bool TryAddEntry(in ActionGridEntry entry)
+        {
+            if (string.IsNullOrEmpty(entry.EntryInstanceId) || FindEntryIndex(entry.EntryInstanceId) >= 0) return false;
+            if (packingMode == ActionGridPackingMode.PreserveSlots)
+            {
+                var empty = entries.FindIndex(value => string.IsNullOrEmpty(value.EntryInstanceId));
+                if (empty >= 0) entries[empty] = entry;
+                else if (entries.Count < capacity) entries.Add(entry);
+                else return false;
+            }
+            else
+            {
+                if (entries.Count >= capacity) return false;
+                entries.Add(entry);
+            }
+            Rebind(entry.EntryInstanceId);
+            EntryAdded?.Invoke(entry);
+            return true;
+        }
+
+        public bool TryInsertEntry(int index, in ActionGridEntry entry)
+        {
+            if (index < 0 || index >= capacity || string.IsNullOrEmpty(entry.EntryInstanceId) ||
+                FindEntryIndex(entry.EntryInstanceId) >= 0) return false;
+            if (packingMode == ActionGridPackingMode.PreserveSlots)
+            {
+                while (entries.Count <= index) entries.Add(default);
+                if (IsOccupied(index)) return false;
+                entries[index] = entry;
+            }
+            else
+            {
+                if (entries.Count >= capacity) return false;
+                entries.Insert(Mathf.Min(index, entries.Count), entry);
+            }
+            Rebind(entry.EntryInstanceId);
+            EntryAdded?.Invoke(entry);
+            return true;
+        }
+
+        public bool RemoveEntry(string entryInstanceId)
+        {
+            var index = FindEntryIndex(entryInstanceId);
+            if (index < 0) return false;
+            var removed = entries[index];
+            if (packingMode == ActionGridPackingMode.CompactForward) entries.RemoveAt(index);
+            else entries[index] = default;
+            contextMenu?.Hide(false);
+            Rebind(string.Empty, index);
+            EntryRemoved?.Invoke(removed);
+            return true;
+        }
+
+        public bool UpdateEntry(in ActionGridEntry replacement)
+        {
+            var index = FindEntryIndex(replacement.EntryInstanceId);
+            if (index < 0) return false;
+            entries[index] = replacement;
+            Rebind(replacement.EntryInstanceId);
+            return true;
+        }
+
+        public bool ReplaceEntry(string entryInstanceId, in ActionGridEntry replacement)
+        {
+            var index = FindEntryIndex(entryInstanceId);
+            if (index < 0 || string.IsNullOrEmpty(replacement.EntryInstanceId)) return false;
+            var duplicate = FindEntryIndex(replacement.EntryInstanceId);
+            if (duplicate >= 0 && duplicate != index) return false;
+            entries[index] = replacement;
+            Rebind(replacement.EntryInstanceId);
+            return true;
+        }
+
+        public void ClearEntries()
+        {
+            entries.Clear();
+            contextMenu?.Hide(false);
+            Rebind(string.Empty);
+        }
+
         public void CloseContextMenu()
         {
             contextMenu?.Hide();
@@ -172,7 +303,7 @@ namespace TxTRPG.UI
 
         private void ActivateCell(int index)
         {
-            if (index < 0 || index >= entries.Count)
+            if (!IsOccupied(index))
             {
                 return;
             }
@@ -360,6 +491,34 @@ namespace TxTRPG.UI
             return entries.FindIndex(entry => string.Equals(entry.Id, id, StringComparison.Ordinal));
         }
 
+        private bool IsOccupied(int index)
+        {
+            return index >= 0 && index < entries.Count && !string.IsNullOrEmpty(entries[index].EntryInstanceId);
+        }
+
+        private int CountOccupiedEntries()
+        {
+            var count = 0;
+            for (var i = 0; i < entries.Count; i++) if (!string.IsNullOrEmpty(entries[i].EntryInstanceId)) count++;
+            return count;
+        }
+
+        private int FindNearestOccupiedIndex(int preferred)
+        {
+            if (CountOccupiedEntries() == 0) return -1;
+            for (var i = Mathf.Clamp(preferred, 0, entries.Count - 1); i < entries.Count; i++) if (IsOccupied(i)) return i;
+            for (var i = Mathf.Min(preferred - 1, entries.Count - 1); i >= 0; i--) if (IsOccupied(i)) return i;
+            return -1;
+        }
+
+        private void Rebind(string selectedId, int preferredIndex = 0)
+        {
+            SetEntries(entries.ToArray(), capacity);
+            var restored = FindEntryIndex(selectedId);
+            selectedIndex = restored >= 0 ? restored : FindNearestOccupiedIndex(preferredIndex);
+            RefreshSelection(false);
+        }
+
         private void CancelPendingCommand()
         {
             commandCancellation?.Cancel();
@@ -367,31 +526,86 @@ namespace TxTRPG.UI
             commandCancellation = null;
         }
 
-        private async void LoadIconsAsync()
+        public async Task LoadIconsAsync(CancellationToken cancellationToken = default)
         {
             ReleaseAssets();
-            var cancellation = new CancellationTokenSource();
+            var cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             assetCancellation = cancellation;
             var scope = new AssetScope(assetProvider);
             assetScope = scope;
             try
             {
+                var uniqueAssetIds = new List<string>();
+                var seenAssetIds = new HashSet<string>(StringComparer.Ordinal);
                 for (var i = 0; i < entries.Count; i++)
                 {
                     var entry = entries[i];
-                    if (string.IsNullOrWhiteSpace(entry.IconAssetId))
+                    if (string.IsNullOrEmpty(entry.EntryInstanceId) || string.IsNullOrWhiteSpace(entry.IconAssetId))
+                    {
+                        continue;
+                    }
+                    if (seenAssetIds.Add(entry.IconAssetId))
+                    {
+                        uniqueAssetIds.Add(entry.IconAssetId);
+                    }
+                }
+
+                using var concurrency = new SemaphoreSlim(Mathf.Clamp(maxConcurrentIconLoads, 1, 8));
+                var loads = new List<Task>(uniqueAssetIds.Count);
+                for (var i = 0; i < uniqueAssetIds.Count; i++)
+                {
+                    loads.Add(LoadAndApplyIconAsync(
+                        uniqueAssetIds[i],
+                        scope,
+                        concurrency,
+                        cancellation.Token));
+                }
+
+                await Task.WhenAll(loads);
+            }
+            finally
+            {
+                if (ReferenceEquals(assetCancellation, cancellation))
+                {
+                    assetCancellation = null;
+                }
+                cancellation.Dispose();
+            }
+        }
+
+        private async Task LoadAndApplyIconAsync(
+            string assetId,
+            AssetScope scope,
+            SemaphoreSlim concurrency,
+            CancellationToken cancellationToken)
+        {
+            await concurrency.WaitAsync(cancellationToken);
+            try
+            {
+                AssetLease<Sprite> lease;
+                try
+                {
+                    lease = await scope.LoadAsync<Sprite>(assetId, cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogWarning($"Action grid icon '{assetId}' could not be loaded: {exception.Message}", this);
+                    return;
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+                for (var i = 0; i < entries.Count; i++)
+                {
+                    if (!string.Equals(entries[i].IconAssetId, assetId, StringComparison.Ordinal))
                     {
                         continue;
                     }
 
-                    var lease = await scope.LoadAsync<Sprite>(entry.IconAssetId, cancellation.Token);
-                    cancellation.Token.ThrowIfCancellationRequested();
-                    if (i >= entries.Count || !string.Equals(entries[i].Id, entry.Id, StringComparison.Ordinal))
-                    {
-                        continue;
-                    }
-
-                    entries[i] = entry.WithIcon(lease.Asset);
+                    entries[i] = entries[i].WithIcon(lease.Asset);
                     if (i < cellPool.Count && cellPool[i].gameObject.activeSelf)
                     {
                         cellPool[i].Bind(i, entries[i], ActivateCell);
@@ -399,12 +613,24 @@ namespace TxTRPG.UI
                     }
                 }
             }
+            finally
+            {
+                concurrency.Release();
+            }
+        }
+
+        private async Task ObserveIconLoadsAsync(Task loadTask)
+        {
+            try
+            {
+                await loadTask;
+            }
             catch (OperationCanceledException)
             {
             }
             catch (Exception exception)
             {
-                Debug.LogWarning($"Action grid icons could not be loaded: {exception.Message}", this);
+                Debug.LogWarning($"Action grid icon loading stopped unexpectedly: {exception.Message}", this);
             }
         }
 
@@ -413,6 +639,20 @@ namespace TxTRPG.UI
             assetCancellation?.Cancel();
             assetCancellation?.Dispose();
             assetCancellation = null;
+            for (var i = 0; i < cellPool.Count; i++)
+            {
+                if (cellPool[i] != null && cellPool[i].HasEntry)
+                {
+                    cellPool[i].ClearIcon();
+                }
+            }
+            for (var i = 0; i < entries.Count; i++)
+            {
+                if (!string.IsNullOrWhiteSpace(entries[i].IconAssetId))
+                {
+                    entries[i] = entries[i].WithIcon(null);
+                }
+            }
             assetScope?.Dispose();
             assetScope = null;
         }

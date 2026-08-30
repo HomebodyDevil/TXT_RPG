@@ -10,6 +10,7 @@ namespace TxTRPG.UI
     {
         private readonly IAssetProvider provider;
         private readonly List<IDisposable> leases = new();
+        private readonly object synchronization = new();
         private bool disposed;
 
         public AssetScope(IAssetProvider assetProvider = null)
@@ -22,36 +23,47 @@ namespace TxTRPG.UI
             CancellationToken cancellationToken = default)
             where T : UnityEngine.Object
         {
-            if (disposed)
+            lock (synchronization)
             {
-                throw new ObjectDisposedException(nameof(AssetScope));
+                if (disposed)
+                {
+                    throw new ObjectDisposedException(nameof(AssetScope));
+                }
             }
 
             var lease = await provider.LoadAsync<T>(assetId, cancellationToken);
-            if (disposed)
+            lock (synchronization)
             {
-                lease.Dispose();
-                throw new ObjectDisposedException(nameof(AssetScope));
+                if (!disposed)
+                {
+                    leases.Add(lease);
+                    return lease;
+                }
             }
 
-            leases.Add(lease);
-            return lease;
+            lease.Dispose();
+            throw new ObjectDisposedException(nameof(AssetScope));
         }
 
         public void Dispose()
         {
-            if (disposed)
+            IDisposable[] ownedLeases;
+            lock (synchronization)
             {
-                return;
+                if (disposed)
+                {
+                    return;
+                }
+
+                disposed = true;
+                ownedLeases = leases.ToArray();
+                leases.Clear();
             }
 
-            disposed = true;
-            for (var i = leases.Count - 1; i >= 0; i--)
+            for (var i = ownedLeases.Length - 1; i >= 0; i--)
             {
-                leases[i]?.Dispose();
+                ownedLeases[i]?.Dispose();
             }
-
-            leases.Clear();
         }
     }
 }

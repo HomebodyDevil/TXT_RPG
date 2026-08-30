@@ -69,13 +69,22 @@ TxT-RPG/
 | `ActionGridModels.cs` | 공통 항목, 메뉴 옵션, 결과와 외부 Provider·Executor 경계를 정의합니다. |
 | `ActionGridCell.cs` | 아이콘, 수량, 쿨다운, 비활성, 선택과 빈 슬롯 상태를 표시합니다. |
 | `ActionGridPanel.cs` | 셀 풀, 반응형 레이아웃, 선택, Navigation과 명령 실행 흐름을 관리합니다. |
+| `ConfigurableScrollbarController.cs` | ScrollRect와 스크롤바 동기화, 가시성, 공간과 핸들 크기 정책을 관리합니다. |
+| `ScrollbarStyle.cs` | 여러 UI에서 재사용할 스크롤바 Sprite, Color와 Material을 정의합니다. |
 | `ActionContextMenu.cs` | 외부에서 제공된 명령 옵션 Button을 풀링하고 포커스를 복원합니다. |
 | `ActionGridPanelDemoData.cs` | 아이템과 스킬이 혼합된 데모 표시 데이터를 보관합니다. |
 | `ActionGridPanelDemoController.cs` | Play Mode 데모의 옵션 제공자와 명령 실행기 예제를 제공합니다. |
 | `FlexibleLayoutItem.cs` | 자식 영역의 가중치·고정 크기와 최소·최대 크기를 정의합니다. |
-| `FlexibleLayoutPanel.cs` | 가로·세로 재귀 분할, 반응형 축 전환과 Overflow 크기 계산을 담당합니다. |
+| `FlexibleLayoutPanel.cs` | 레이아웃 컨테이너의 외부 API, 직렬화 설정과 ContentLayer 참조를 관리합니다. |
+| `FlexibleContentLayoutGroup.cs` | ContentLayer의 실제 크기를 기준으로 직계 자식의 반응형 배치를 담당합니다. |
 | `FlexibleLayoutBackground.cs` | 배경 슬롯, 효과 Overlay, 클리핑, 머티리얼 소유권과 교차 페이드를 관리합니다. |
 | `FlexibleLayoutBackgroundStyle.cs` | 재사용 가능한 배경 Sprite·색상·표시·Material 정책을 정의합니다. |
+| `PanelBackgroundRenderer.cs` | 여러 UI 패널이 공유하는 배경 교차 페이드와 Addressables 수명 관리를 제공합니다. |
+| `PanelBackgroundStyle.cs` | 여러 UI 패널이 공유하는 배경 스타일 기반 형식을 제공합니다. |
+| `PanelStartupController.cs` | 패널 초기화 상태, 취소, 레이아웃 확정과 입력 활성화 순서를 관리합니다. |
+| `PanelInitialDataLoader.cs` | 패널별 초기 데이터 Loader의 비동기 계약을 제공합니다. |
+| `PanelRevealTransition.cs` | 교체 가능한 패널 등장 연출 계약을 제공합니다. |
+| `FadePanelRevealTransition.cs` | 첫 프레임을 숨김 상태로 유지하는 기본 Fade 등장 연출입니다. |
 | `IAssetProvider.cs` | UI와 Addressables 구현 사이의 비동기 로딩 경계를 정의합니다. |
 | `AddressablesAssetProvider.cs` | Addressables Handle을 Lease로 감싸고 실패·취소 시 해제합니다. |
 | `AssetLease.cs` | 로드된 에셋과 정확히 한 번 실행되는 해제 책임을 함께 보관합니다. |

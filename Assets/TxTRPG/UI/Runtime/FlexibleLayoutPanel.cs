@@ -65,33 +65,44 @@ namespace TxTRPG.UI
         [SerializeField] private bool includeInactiveChildren;
         [SerializeField] private RectTransform contentRoot;
 
-        private readonly List<FlexibleLayoutItem> items = new();
-        private float[] calculatedSizes = Array.Empty<float>();
+        [Header("Content Insets")]
+        [Tooltip("Applies Left, Right, Top, and Bottom margins to the stretched ContentLayer. Disabled preserves manually authored RectTransform offsets.")]
+        [SerializeField] private bool overrideContentMargins;
+        [SerializeField] private RectOffset contentMargins = new();
+
+        [Header("Content Display")]
+        [SerializeField] private FlexibleContentLayoutGroup contentLayout;
+        [SerializeField] private RectMask2D contentMask;
+        [SerializeField] private bool clipContent;
 
         public string NodeId => nodeId;
-        public FlexibleLayoutAxis CurrentAxis => ResolveAxis(rectTransform.rect.width);
+        public FlexibleLayoutAxis CurrentAxis => ResolveAxis(ContentRoot.rect.width);
         public RectTransform ContentRoot => contentRoot != null ? contentRoot : rectTransform;
+        public FlexibleContentLayoutGroup ContentLayout => contentLayout;
+        public bool ClipContent => clipContent;
+        public RectOffset ContentPadding => padding;
+        public RectOffset ContentMargins => contentMargins;
+        public bool OverridesContentMargins => overrideContentMargins;
 
         public override void CalculateLayoutInputHorizontal()
         {
-            base.CalculateLayoutInputHorizontal();
-            CollectChildren();
-            SetInputForAxis(0);
+            SyncContentLayout();
+            SetLayoutInputForAxis(-1f, -1f, -1f, 0);
         }
 
         public override void CalculateLayoutInputVertical()
         {
-            SetInputForAxis(1);
+            SetLayoutInputForAxis(-1f, -1f, -1f, 1);
         }
 
         public override void SetLayoutHorizontal()
         {
-            ArrangeAxis(0);
+            SyncContentLayout();
         }
 
         public override void SetLayoutVertical()
         {
-            ArrangeAxis(1);
+            SyncContentLayout();
         }
 
         public void Add(Transform child, float weight = 1f)
@@ -141,10 +152,36 @@ namespace TxTRPG.UI
             Rebuild();
         }
 
+        public void SetPadding(int left, int right, int top, int bottom)
+        {
+            padding = CreateInsets(left, right, top, bottom);
+            Rebuild();
+        }
+
+        public void SetContentMargins(int left, int right, int top, int bottom)
+        {
+            contentMargins = CreateInsets(left, right, top, bottom);
+            overrideContentMargins = true;
+            Rebuild();
+        }
+
+        public void UseAuthoredContentOffsets()
+        {
+            overrideContentMargins = false;
+            Rebuild();
+        }
+
+        public void SetClipContent(bool value)
+        {
+            clipContent = value;
+            SyncContentLayout();
+        }
+
         public void Rebuild()
         {
             SetDirty();
-            LayoutRebuilder.MarkLayoutForRebuild(rectTransform);
+            SyncContentLayout();
+            if (contentLayout != null) contentLayout.Rebuild();
         }
 
         public FlexibleLayoutAxis ResolveAxis(float width)
@@ -272,7 +309,7 @@ namespace TxTRPG.UI
         {
             base.OnEnable();
             EnsureNodeId();
-            SetDirty();
+            SyncContentLayout();
         }
 
 #if UNITY_EDITOR
@@ -282,132 +319,43 @@ namespace TxTRPG.UI
             breakpoint = Mathf.Max(1f, breakpoint);
             spacing = Mathf.Max(0f, spacing);
             EnsureNodeId();
-            SetDirty();
+            SyncContentLayout();
         }
 #endif
 
-        private void CollectChildren()
+        private void SyncContentLayout()
         {
-            rectChildren.Clear();
-            items.Clear();
             var container = ContentRoot;
-            for (var i = 0; i < container.childCount; i++)
+            if (container == rectTransform)
             {
-                if (container.GetChild(i) is not RectTransform child ||
-                    (!includeInactiveChildren && !child.gameObject.activeInHierarchy) ||
-                    IsIgnored(child))
-                {
-                    continue;
-                }
-
-                rectChildren.Add(child);
-                items.Add(child.GetComponent<FlexibleLayoutItem>());
-            }
-        }
-
-        private void SetInputForAxis(int axis)
-        {
-            var mainAxis = CurrentAxis == FlexibleLayoutAxis.Horizontal ? 0 : 1;
-            if (axis == mainAxis)
-            {
-                float minimum = padding.horizontal;
-                float preferred = padding.horizontal;
-                if (axis == 1)
-                {
-                    minimum = padding.vertical;
-                    preferred = padding.vertical;
-                }
-
-                minimum += Mathf.Max(0, rectChildren.Count - 1) * spacing;
-                preferred += Mathf.Max(0, rectChildren.Count - 1) * spacing;
-                for (var i = 0; i < rectChildren.Count; i++)
-                {
-                    var request = GetRequest(i);
-                    minimum += request.MinimumSize;
-                    preferred += request.Mode == FlexibleLayoutSizeMode.Fixed
-                        ? Mathf.Max(request.FixedSize, request.MinimumSize)
-                        : request.MinimumSize;
-                }
-
-                SetLayoutInputForAxis(minimum, preferred, -1f, axis);
+                contentLayout = null;
                 return;
             }
-
-            var crossMinimum = 0f;
-            var crossPreferred = 0f;
-            for (var i = 0; i < rectChildren.Count; i++)
+            if (contentLayout == null || contentLayout.transform != container)
+                contentLayout = container.GetComponent<FlexibleContentLayoutGroup>();
+            if (contentLayout == null)
+                contentLayout = container.gameObject.AddComponent<FlexibleContentLayoutGroup>();
+            if (overrideContentMargins)
             {
-                crossMinimum = Mathf.Max(crossMinimum, LayoutUtility.GetMinSize(rectChildren[i], axis));
-                crossPreferred = Mathf.Max(crossPreferred, LayoutUtility.GetPreferredSize(rectChildren[i], axis));
+                container.offsetMin = new Vector2(contentMargins.left, contentMargins.bottom);
+                container.offsetMax = new Vector2(-contentMargins.right, -contentMargins.top);
             }
-
-            var crossPadding = axis == 0 ? padding.horizontal : padding.vertical;
-            SetLayoutInputForAxis(crossMinimum + crossPadding, crossPreferred + crossPadding, -1f, axis);
+            contentLayout.Configure(fixedAxis, axisPolicy, breakpoint, spacing, padding, overflow,
+                includeInactiveChildren, childAlignment);
+            if (contentMask == null || contentMask.transform != container)
+                contentMask = container.GetComponent<RectMask2D>();
+            if (contentMask == null && clipContent)
+                contentMask = container.gameObject.AddComponent<RectMask2D>();
+            if (contentMask != null) contentMask.enabled = clipContent;
         }
 
-        private void ArrangeAxis(int axis)
+        private static RectOffset CreateInsets(int left, int right, int top, int bottom)
         {
-            CollectChildren();
-            var mainAxis = CurrentAxis == FlexibleLayoutAxis.Horizontal ? 0 : 1;
-            if (axis != mainAxis)
-            {
-                var start = axis == 0 ? padding.left : padding.top;
-                var size = rectTransform.rect.size[axis] - (axis == 0 ? padding.horizontal : padding.vertical);
-                for (var i = 0; i < rectChildren.Count; i++)
-                {
-                    SetChildAlongAxis(rectChildren[i], axis, start, Mathf.Max(0f, size));
-                }
-
-                return;
-            }
-
-            var available = rectTransform.rect.size[axis] - (axis == 0 ? padding.horizontal : padding.vertical);
-            var requests = new FlexibleLayoutSizeRequest[rectChildren.Count];
-            for (var i = 0; i < requests.Length; i++)
-            {
-                requests[i] = GetRequest(i);
-            }
-
-            calculatedSizes = CalculateSizes(available, spacing, overflow, requests);
-            var required = Mathf.Max(0, calculatedSizes.Length - 1) * spacing;
-            for (var i = 0; i < calculatedSizes.Length; i++)
-            {
-                required += calculatedSizes[i];
-            }
-
-            var position = GetStartOffset(axis, required);
-            for (var i = 0; i < rectChildren.Count; i++)
-            {
-                SetChildAlongAxis(rectChildren[i], axis, position, calculatedSizes[i]);
-                position += calculatedSizes[i] + spacing;
-            }
-        }
-
-        private FlexibleLayoutSizeRequest GetRequest(int index)
-        {
-            var item = index >= 0 && index < items.Count ? items[index] : null;
-            return item == null
-                ? new FlexibleLayoutSizeRequest(FlexibleLayoutSizeMode.Weighted, 1f, 0f, 0f, 0f)
-                : new FlexibleLayoutSizeRequest(
-                    item.SizeMode,
-                    item.Weight,
-                    item.FixedSize,
-                    item.MinimumSize,
-                    item.MaximumSize);
-        }
-
-        private static bool IsIgnored(RectTransform child)
-        {
-            var ignorers = child.GetComponents<ILayoutIgnorer>();
-            for (var i = 0; i < ignorers.Length; i++)
-            {
-                if (ignorers[i].ignoreLayout)
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            return new RectOffset(
+                Mathf.Max(0, left),
+                Mathf.Max(0, right),
+                Mathf.Max(0, top),
+                Mathf.Max(0, bottom));
         }
 
         private void EnsureNodeId()

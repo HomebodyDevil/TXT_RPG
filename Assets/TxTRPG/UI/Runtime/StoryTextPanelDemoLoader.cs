@@ -1,21 +1,24 @@
+using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace TxTRPG.UI
 {
     [DisallowMultipleComponent]
-    public sealed class StoryTextPanelDemoLoader : MonoBehaviour
+    public sealed class StoryTextPanelDemoLoader : PanelInitialDataLoader
     {
         [SerializeField] private StoryTextPanel target;
         [SerializeField] private StoryTextPanelDemoData data;
         [SerializeField] private bool populateOnStart = true;
         [SerializeField] private bool clearBeforePopulate = true;
 
-        private void Start()
+        public override bool HasInitialData => populateOnStart && target != null && data != null;
+
+        public override Task<PanelLoadResult> LoadAndApplyAsync(CancellationToken cancellationToken)
         {
-            if (populateOnStart)
-            {
-                Populate();
-            }
+            cancellationToken.ThrowIfCancellationRequested();
+            PopulateInternal();
+            return Task.FromResult(PanelLoadResult.Success);
         }
 
         [ContextMenu("Populate Demo Messages")]
@@ -32,6 +35,13 @@ namespace TxTRPG.UI
                 Debug.LogError("StoryTextPanel demo loader requires both a target and demo data.", this);
                 return;
             }
+
+            PopulateInternal();
+        }
+
+        private void PopulateInternal()
+        {
+            if (target == null || data == null) return;
 
             if (clearBeforePopulate)
             {

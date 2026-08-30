@@ -13,6 +13,7 @@ namespace TxTRPG.UI.Editor
         private const string AppearancePath = DemoFolder + "/DemoCharacterAppearance.asset";
         private const string DemoDataPath = DemoFolder + "/CharacterDisplayPanelDemoData.asset";
         private const string DemoPrefabPath = DemoFolder + "/CharacterDisplayPanelDemo.prefab";
+        private const string BackgroundStylePath = DemoFolder + "/CharacterDisplayBackgroundDemoStyle.asset";
 
         [MenuItem("Tools/TxT RPG/Rebuild Character Display Panel Demo")]
         public static void CreateOrUpdateDemo()
@@ -21,7 +22,8 @@ namespace TxTRPG.UI.Editor
             var sprite = CreateOrUpdateDemoSprite();
             var appearance = CreateOrUpdateAppearance(sprite);
             var data = CreateOrUpdateData(appearance);
-            BuildDemoPrefab(data, appearance);
+            var backgroundStyle = CreateOrUpdateBackgroundStyle();
+            BuildDemoPrefab(data, appearance, backgroundStyle);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             Debug.Log($"Character display demo created at {DemoFolder}.");
@@ -128,7 +130,8 @@ namespace TxTRPG.UI.Editor
 
         private static void BuildDemoPrefab(
             CharacterDisplayPanelDemoData data,
-            CharacterAppearanceDefinition appearance)
+            CharacterAppearanceDefinition appearance,
+            PanelBackgroundStyle backgroundStyle)
         {
             var panelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PanelPrefabPath);
             if (panelPrefab == null)
@@ -136,18 +139,19 @@ namespace TxTRPG.UI.Editor
                 throw new UnityException($"Character display panel prefab was not found at {PanelPrefabPath}.");
             }
 
-            var root = new GameObject("CharacterDisplayPanelDemo", typeof(RectTransform));
+            var root = new GameObject("CharacterDisplayPanelDemo", typeof(RectTransform), typeof(CanvasGroup));
             try
             {
                 var rootRect = (RectTransform)root.transform;
                 rootRect.sizeDelta = new Vector2(760f, 520f);
-                var background = root.AddComponent<Image>();
-                background.color = new Color32(15, 18, 24, 255);
-                background.raycastTarget = false;
-
                 var panelObject = (GameObject)PrefabUtility.InstantiatePrefab(panelPrefab, root.transform);
                 Stretch((RectTransform)panelObject.transform);
                 var panel = panelObject.GetComponent<CharacterDisplayPanel>();
+                var backgroundRenderer = panel.BackgroundRenderer;
+                var backgroundProperties = new SerializedObject(backgroundRenderer);
+                backgroundProperties.FindProperty("initialStyle").objectReferenceValue = backgroundStyle;
+                backgroundProperties.ApplyModifiedPropertiesWithoutUndo();
+                panel.ApplyBackground(backgroundStyle);
                 var view = panelObject.GetComponentInChildren<Character2DView>(true);
                 view.SetAppearanceDefinitions(new[] { appearance });
 
@@ -164,6 +168,7 @@ namespace TxTRPG.UI.Editor
                 loaderProperties.FindProperty("characterView").objectReferenceValue = view;
                 loaderProperties.FindProperty("data").objectReferenceValue = data;
                 loaderProperties.ApplyModifiedPropertiesWithoutUndo();
+                PanelStartupPrefabUtility.Configure(root, loader, (RectTransform)panelObject.transform);
 
                 PrefabUtility.SaveAsPrefabAsset(root, DemoPrefabPath);
             }
@@ -171,6 +176,21 @@ namespace TxTRPG.UI.Editor
             {
                 Object.DestroyImmediate(root);
             }
+        }
+
+        private static PanelBackgroundStyle CreateOrUpdateBackgroundStyle()
+        {
+            var style = AssetDatabase.LoadAssetAtPath<PanelBackgroundStyle>(BackgroundStylePath);
+            if (style == null)
+            {
+                style = ScriptableObject.CreateInstance<PanelBackgroundStyle>();
+                AssetDatabase.CreateAsset(style, BackgroundStylePath);
+            }
+            style.Configure(null, new Color32(15, 18, 30, 255),
+                FlexibleLayoutBackgroundScaleMode.Stretch, 1f,
+                FlexibleLayoutBackgroundOverflowMode.ClipToPanel);
+            EditorUtility.SetDirty(style);
+            return style;
         }
 
         private static void Stretch(RectTransform rect)

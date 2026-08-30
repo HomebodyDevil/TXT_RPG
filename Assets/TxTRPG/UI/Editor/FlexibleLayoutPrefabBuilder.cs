@@ -10,6 +10,7 @@ namespace TxTRPG.UI.Editor
         private const string DemoFolder = "Assets/TxTRPG/UI/DEMO/FlexibleLayoutPanel";
         private const string PanelPrefabPath = PrefabFolder + "/FlexibleLayoutPanel.prefab";
         private const string DemoPrefabPath = DemoFolder + "/FlexibleLayoutPanelDemo.prefab";
+        private const string SampleMainDemoPrefabPath = DemoFolder + "/Sample_Main_FlexibleLayoutPanelDemo.prefab";
         private const string DemoStylePath = DemoFolder + "/FlexibleLayoutBackgroundDemoStyle.asset";
         private const string StoryDemoPath = "Assets/TxTRPG/UI/DEMO/StoryTextPanelDemo.prefab";
         private const string CharacterDemoPath = "Assets/TxTRPG/UI/DEMO/CharacterDisplayPanel/CharacterDisplayPanelDemo.prefab";
@@ -117,6 +118,50 @@ namespace TxTRPG.UI.Editor
             }
         }
 
+        [MenuItem("Tools/TxT RPG/Rebuild Sample Main Flexible Layout Demo")]
+        public static void CreateOrUpdateSampleMainDemo()
+        {
+            EnsureFolder(DemoFolder);
+            var actionPrefab = LoadRequiredPrefab(ActionDemoPath);
+            var storyPrefab = LoadRequiredPrefab(StoryDemoPath);
+            var characterPrefab = LoadRequiredPrefab(CharacterDemoPath);
+            var backgroundStyle = CreateOrUpdateDemoStyle();
+            var root = CreateLayoutObject("Sample_Main_FlexibleLayoutPanelDemo", "sample-main-layout-root");
+            try
+            {
+                var rootRect = (RectTransform)root.transform;
+                rootRect.sizeDelta = new Vector2(1920f, 1080f);
+                ConfigureBackground(root, backgroundStyle, new Color32(8, 10, 14, 255));
+                ConfigureLayout(root.GetComponent<FlexibleLayoutPanel>(), FlexibleLayoutAxis.Horizontal,
+                    FlexibleLayoutAxisPolicy.VerticalWhenNarrow, 720f, 12f,
+                    new RectOffset(12, 12, 12, 12), FlexibleLayoutOverflow.ShrinkBelowMinimum,
+                    false, TextAnchor.MiddleCenter);
+                AddSampleColumn(root, "TMP_FlexibleLayoutPanel", "sample-main-actions", actionPrefab, "ActionGridPanelDemo", 1f, 280f);
+                AddSampleColumn(root, "Text_FlexibleLayoutPanel", "sample-main-story", storyPrefab, "StoryTextPanelDemo", 3f, 560f);
+                AddSampleColumn(root, "Character_FlexibleLayoutPanel", "sample-main-character", characterPrefab, "CharacterDisplayPanelDemo", 1f, 280f);
+                Canvas.ForceUpdateCanvases();
+                LayoutRebuilder.ForceRebuildLayoutImmediate(rootRect);
+                PrefabUtility.SaveAsPrefabAsset(root, SampleMainDemoPrefabPath);
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+                Debug.Log($"Sample main flexible layout demo created at {SampleMainDemoPrefabPath}.");
+            }
+            finally { Object.DestroyImmediate(root); }
+        }
+
+        private static void AddSampleColumn(GameObject root, string columnName, string nodeId,
+            GameObject demoPrefab, string demoName, float weight, float minimumSize)
+        {
+            var column = CreateLayoutObject(columnName, nodeId, root.GetComponent<FlexibleLayoutPanel>().ContentRoot);
+            ConfigureLayout(column.GetComponent<FlexibleLayoutPanel>(), FlexibleLayoutAxis.Vertical,
+                FlexibleLayoutAxisPolicy.Fixed, 720f, 0f, new RectOffset(0, 0, 0, 0),
+                FlexibleLayoutOverflow.ShrinkBelowMinimum, false, TextAnchor.MiddleCenter);
+            column.AddComponent<FlexibleLayoutItem>().Configure(
+                FlexibleLayoutSizeMode.Weighted, weight, newMinimumSize: minimumSize);
+            var demo = InstantiatePanel(demoPrefab, column.GetComponent<FlexibleLayoutPanel>().ContentRoot, demoName);
+            demo.AddComponent<FlexibleLayoutItem>().Configure(FlexibleLayoutSizeMode.Weighted, 1f);
+        }
+
         private static GameObject InstantiatePanel(GameObject prefab, Transform parent, string name)
         {
             var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
@@ -157,12 +202,17 @@ namespace TxTRPG.UI.Editor
             backgroundProperties.ApplyModifiedPropertiesWithoutUndo();
 
             var contentLayer = CreateLayer("ContentLayer", gameObject.transform);
+            var contentMask = contentLayer.AddComponent<RectMask2D>();
+            contentMask.enabled = false;
+            var contentLayout = contentLayer.AddComponent<FlexibleContentLayoutGroup>();
             var foregroundLayer = CreateLayer("ForegroundLayer", gameObject.transform);
             CreateImage("Border", foregroundLayer.transform, Color.clear);
 
             var serialized = new SerializedObject(layout);
             serialized.FindProperty("nodeId").stringValue = nodeId;
             serialized.FindProperty("contentRoot").objectReferenceValue = contentLayer.transform;
+            serialized.FindProperty("contentLayout").objectReferenceValue = contentLayout;
+            serialized.FindProperty("contentMask").objectReferenceValue = contentMask;
             serialized.ApplyModifiedPropertiesWithoutUndo();
             return gameObject;
         }
@@ -243,6 +293,8 @@ namespace TxTRPG.UI.Editor
         {
             layout.padding = padding;
             layout.childAlignment = alignment;
+            layout.ContentLayout.Configure(axis, policy, breakpoint, spacing, padding, overflow,
+                includeInactive, alignment);
             var serialized = new SerializedObject(layout);
             serialized.FindProperty("fixedAxis").enumValueIndex = (int)axis;
             serialized.FindProperty("axisPolicy").enumValueIndex = (int)policy;

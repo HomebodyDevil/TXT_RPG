@@ -14,23 +14,33 @@ FlexibleLayoutPanel
 │       ├── BackgroundB
 │       └── BackgroundEffectOverlay
 ├── ContentLayer
+│   └── FlexibleContentLayoutGroup
 └── ForegroundLayer
     └── Border
 ```
 
-`FlexibleLayoutPanel`은 `ContentLayer`의 자식만 배치합니다. 배경과 전경에는 `LayoutElement.ignoreLayout`도 설정되어 있으므로 시각 계층이 크기 계산에 참여하지 않습니다. 이전 자산처럼 Content Root 참조가 비어 있으면 하위 호환을 위해 루트의 직계 자식을 배치합니다.
+루트의 `FlexibleLayoutPanel`은 외부 API와 기존 직렬화 설정을 유지하고, `ContentLayer`의 `FlexibleContentLayoutGroup`이 자신의 직계 자식만 실제로 배치합니다. 배경과 전경에는 `LayoutElement.ignoreLayout`도 설정되어 있으므로 시각 계층이 크기 계산에 참여하지 않습니다.
 
 ## 런타임 구성
 
 | 형식 | 책임 |
 | --- | --- |
-| `FlexibleLayoutPanel` | 축, 반응형 정책, 간격, Padding, Overflow를 해석하고 직계 자식의 크기와 위치를 결정합니다. |
+| `FlexibleLayoutPanel` | 외부 API, Node ID, ContentLayer 참조와 기존 직렬화 설정을 관리합니다. |
+| `FlexibleContentLayoutGroup` | ContentLayer의 실제 크기를 기준으로 직계 자식의 크기와 위치를 결정합니다. |
 | `FlexibleLayoutItem` | 부모의 주축에서 사용할 `Weighted` 또는 `Fixed` 크기 정책과 최소·최대 크기를 정의합니다. |
 | `FlexibleLayoutSizeRequest` | Unity 오브젝트에 의존하지 않는 크기 계산 입력을 표현합니다. |
 | `FlexibleLayoutBackground` | 배경 슬롯, 효과 Overlay, 표시·숨김, 즉시 교체와 교차 페이드를 관리합니다. |
 | `FlexibleLayoutBackgroundStyle` | Sprite, Tint, Opacity, Material, 표시 방식과 클리핑 정책을 재사용 가능한 자산으로 정의합니다. |
 
-`FlexibleLayoutPanel`은 `LayoutGroup`을 상속하므로 중첩된 패널도 일반 자식처럼 계산됩니다. 각 패널은 자신의 `ContentLayer` 직계 자식만 관리하며, 자식 패널은 자신의 하위 계층을 별도로 계산합니다. `Add`, `Remove`와 `SetWeight`도 Content Root를 기준으로 동작합니다.
+중첩된 패널은 부모의 `FlexibleContentLayoutGroup`에서 일반 자식처럼 계산됩니다. 각 패널의 내부 레이아웃 그룹은 자신의 `ContentLayer` 직계 자식만 관리합니다. `Add`, `Remove`와 `SetWeight`도 Content Root를 기준으로 동작합니다.
+
+ContentLayer의 RectTransform Offset은 배경과 테두리에 대한 콘텐츠 전체의 외부 여백입니다. `FlexibleContentLayoutGroup.Padding`은 그 영역 안의 내부 여백이며, Spacing은 자식 사이의 간격입니다. 외부 Offset과 내부 Padding은 의도적으로 합산됩니다. 반응형 Breakpoint는 Padding을 제외하기 전의 실제 ContentLayer 너비를 기준으로 판단합니다.
+
+Inspector의 `Override Content Margins`를 활성화하면 `Content Margins`의 Left, Right, Top, Bottom 값이 ContentLayer Offset에 적용됩니다. 비활성화하면 Prefab이나 씬에서 직접 편집한 ContentLayer RectTransform Offset을 보존합니다. 런타임에서는 `SetPadding`과 `SetContentMargins`를 사용하며, 직접 편집한 Offset으로 돌아갈 때는 `UseAuthoredContentOffsets`를 사용합니다.
+
+`Overflow = Clip`은 최소 크기를 보존하는 크기 계산 정책이며 실제 렌더링 클리핑을 의미하지 않습니다. `Clip Content`를 활성화해야 ContentLayer의 `RectMask2D`가 켜져 넘친 콘텐츠가 잘립니다.
+
+`Sample_Main_FlexibleLayoutPanelDemo.prefab`은 `SampleScene`의 주 레이아웃을 독립적으로 확인하기 위한 샘플입니다. 1920×1080 기준으로 Action, Story Text, Character 열을 1:3:1 가중치로 배치하며, 각 열에는 해당 기능의 Demo Prefab 인스턴스가 들어갑니다. 원본 씬과의 결합을 피하기 위해 생성기는 `SampleScene.unity`를 변경하지 않습니다.
 
 ## 배경 표현과 전환
 

@@ -18,8 +18,7 @@ MonoBehaviour:
   - m_GUID: 1e6139a56e0fe9047b80aed750788479
     m_Address: ui/backgrounds/flexible-demo-style
     m_ReadOnly: 0
-    m_SerializedLabels:
-    - SharedUI
+    m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 95492e7bfb154e24a97284174956661d
     m_Address: ui/action-icons/demo-atlas

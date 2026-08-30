@@ -5,24 +5,29 @@ using UnityEngine;
 
 namespace TxTRPG.UI
 {
-    public sealed class ActionGridPanelDemoController : MonoBehaviour,
+    public sealed class ActionGridPanelDemoController : PanelInitialDataLoader,
         IActionMenuProvider,
         IActionCommandExecutor
     {
         [SerializeField] private ActionGridPanel target;
         [SerializeField] private ActionGridPanelDemoData data;
 
-        private void Start()
+        public override bool HasInitialData => target != null && data != null;
+
+        public override async Task<PanelLoadResult> LoadAndApplyAsync(CancellationToken cancellationToken)
         {
             if (target == null || data == null)
             {
                 Debug.LogWarning("Action grid demo references are incomplete.", this);
-                return;
+                return new PanelLoadResult(false, errorCode: "missing-action-grid-demo-references");
             }
 
             target.CloseContextMenu();
             target.SetServices(this, this);
             target.SetEntries(data.CreateEntries());
+            await target.WhenAssetsReady;
+            cancellationToken.ThrowIfCancellationRequested();
+            return PanelLoadResult.Success;
         }
 
         public IReadOnlyList<ActionMenuOption> GetOptions(string entryId)

@@ -18,44 +18,37 @@ MonoBehaviour:
   - m_GUID: 5483e2472d03fb54bb04b1ccef0905d3
     m_Address: ui/prefabs/character-display-panel
     m_ReadOnly: 0
-    m_SerializedLabels:
-    - Gameplay_Common
+    m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 59120f5c39c0eaf4ebfde0f33233436e
     m_Address: ui/prefabs/action-grid-cell
     m_ReadOnly: 0
-    m_SerializedLabels:
-    - Gameplay_Common
+    m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6fc79b8f9fd5236499cfca7ab6827177
     m_Address: ui/prefabs/flexible-layout-panel
     m_ReadOnly: 0
-    m_SerializedLabels:
-    - Gameplay_Common
+    m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 7b88da086e32a7f408ed963364be6e8d
     m_Address: ui/prefabs/story-message-item
     m_ReadOnly: 0
-    m_SerializedLabels:
-    - Gameplay_Common
+    m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 850780af00c70114795b79eee1eec091
     m_Address: ui/prefabs/action-context-menu
     m_ReadOnly: 0
-    m_SerializedLabels:
-    - Gameplay_Common
+    m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 949c1e50d6be96a4b8a1e794af8c8cce
     m_Address: ui/prefabs/action-grid-panel
     m_ReadOnly: 0
-    m_SerializedLabels:
-    - Gameplay_Common
+    m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: d8f967a3d71718d499dace08047e2f3b
     m_Address: ui/prefabs/story-text-panel
     m_ReadOnly: 0
-    m_SerializedLabels:
-    - Gameplay_Common
+    m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: 70c68a77bc85ecf449155ec8e42288c1, type: 2}

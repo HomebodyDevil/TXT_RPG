@@ -31,6 +31,29 @@ namespace TxTRPG.UI
         ExecuteDefaultAction
     }
 
+    public enum ActionGridPackingMode { CompactForward, PreserveSlots }
+    public enum CapacityReductionPolicy { RejectIfOccupied, MoveOverflow, RemoveOverflow }
+    public enum ScrollbarVisibilityMode { Hidden, Auto, Always }
+    public enum ScrollbarSpaceMode { ReserveAlways, ReserveWhenVisible, Overlay }
+    public enum ScrollbarSide { Left, Right }
+    public enum ScrollbarHandleSizeMode { ContentRatio, FixedNormalized, FixedPixels, MinimumPixels }
+
+    public readonly struct CapacityChangeResult
+    {
+        public CapacityChangeResult(bool succeeded, int previousCapacity, int capacity, int overflowCount)
+        {
+            Succeeded = succeeded;
+            PreviousCapacity = previousCapacity;
+            Capacity = capacity;
+            OverflowCount = overflowCount;
+        }
+
+        public bool Succeeded { get; }
+        public int PreviousCapacity { get; }
+        public int Capacity { get; }
+        public int OverflowCount { get; }
+    }
+
     public readonly struct ActionGridEntry
     {
         public ActionGridEntry(
@@ -67,6 +90,7 @@ namespace TxTRPG.UI
         public float CooldownNormalized { get; }
         public string ShortcutLabel { get; }
         public string IconAssetId { get; }
+        public string EntryInstanceId => Id;
 
         public ActionGridEntry WithIcon(Sprite icon)
         {

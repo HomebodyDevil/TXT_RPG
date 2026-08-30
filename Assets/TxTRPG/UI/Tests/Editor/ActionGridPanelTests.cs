@@ -56,6 +56,53 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        public void Capacity_RejectsOccupiedOverflowByDefault()
+        {
+            ActionGridPrefabBuilder.CreateOrUpdatePrefabs();
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/TxTRPG/UI/Prefabs/ActionGridPanel.prefab");
+            var instance = Object.Instantiate(prefab);
+            try
+            {
+                var panel = instance.GetComponent<ActionGridPanel>();
+                panel.SetEntries(CreateEntries(4), 4);
+                var result = panel.SetCapacity(2);
+                Assert.That(result.Succeeded, Is.False);
+                Assert.That(result.OverflowCount, Is.EqualTo(2));
+                Assert.That(panel.Capacity, Is.EqualTo(4));
+            }
+            finally { Object.DestroyImmediate(instance); }
+        }
+
+        [Test]
+        public void RemoveEntry_CompactsEntriesAndKeepsCapacityCells()
+        {
+            ActionGridPrefabBuilder.CreateOrUpdatePrefabs();
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/TxTRPG/UI/Prefabs/ActionGridPanel.prefab");
+            var instance = Object.Instantiate(prefab);
+            try
+            {
+                var panel = instance.GetComponent<ActionGridPanel>();
+                panel.SetEntries(CreateEntries(3), 5);
+                Assert.That(panel.RemoveEntry("entry-1"), Is.True);
+                Assert.That(panel.EntryCount, Is.EqualTo(2));
+                Assert.That(panel.Capacity, Is.EqualTo(5));
+                var cells = instance.GetComponentsInChildren<ActionGridCell>(true);
+                Assert.That(cells[0].HasEntry, Is.True);
+                Assert.That(cells[1].HasEntry, Is.True);
+                Assert.That(cells[2].HasEntry, Is.False);
+            }
+            finally { Object.DestroyImmediate(instance); }
+        }
+
+        [Test]
+        public void GeneratedPanel_HasConfigurableScrollbar()
+        {
+            ActionGridPrefabBuilder.CreateOrUpdatePrefabs();
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/TxTRPG/UI/Prefabs/ActionGridPanel.prefab");
+            Assert.That(prefab.GetComponentInChildren<ConfigurableScrollbarController>(true), Is.Not.Null);
+        }
+
+        [Test]
         public void ContextMenuPosition_PrefersRightOfAnchor()
         {
             var position = ActionContextMenu.CalculatePosition(
@@ -153,11 +200,21 @@ namespace TxTRPG.UI.Tests
             Assert.That(entries, Has.Some.Matches<ActionGridEntry>(entry => entry.Kind == ActionGridEntryKind.Item));
             Assert.That(entries, Has.Some.Matches<ActionGridEntry>(entry => entry.Kind == ActionGridEntryKind.Skill));
             Assert.That(prefab.GetComponent<ActionGridPanelDemoController>(), Is.Not.Null);
-            Assert.That(prefab.GetComponentsInChildren<ActionGridCell>(true).Length, Is.EqualTo(entries.Count));
+            var demoCells = prefab.GetComponentsInChildren<ActionGridCell>(true);
+            Assert.That(demoCells.Length, Is.EqualTo(12));
+            Assert.That(demoCells.Count(cell => cell.gameObject.name.EndsWith(": Empty")), Is.EqualTo(2));
             var contextMenu = prefab.GetComponentInChildren<ActionContextMenu>(true);
             Assert.That(contextMenu.gameObject.activeSelf, Is.True);
             Assert.That(contextMenu.GetComponentsInChildren<Button>(true).Count(button => button.gameObject.activeSelf),
                 Is.GreaterThanOrEqualTo(3));
         }
+
+        private static ActionGridEntry[] CreateEntries(int count)
+        {
+            return Enumerable.Range(0, count)
+                .Select(index => new ActionGridEntry($"entry-{index}", ActionGridEntryKind.Item, null, $"Entry {index}"))
+                .ToArray();
+        }
+
     }
 }

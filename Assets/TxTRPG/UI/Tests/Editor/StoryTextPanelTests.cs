@@ -2,6 +2,7 @@ using NUnit.Framework;
 using TxTRPG.UI.Editor;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace TxTRPG.UI.Tests
 {
@@ -41,7 +42,9 @@ namespace TxTRPG.UI.Tests
             StoryTextPanelPrefabBuilder.CreateOrUpdatePrefabs();
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/TxTRPG/UI/Prefabs/StoryTextPanel.prefab");
             Assert.That(prefab, Is.Not.Null);
-            Assert.That(prefab.GetComponent<StoryTextPanel>(), Is.Not.Null);
+            var panel = prefab.GetComponent<StoryTextPanel>();
+            Assert.That(panel, Is.Not.Null);
+            Assert.That(panel.HasRequiredReferences, Is.True);
             Assert.That(prefab.GetComponent<UnityEngine.UI.ScrollRect>(), Is.Not.Null);
             Assert.That(prefab.GetComponentInChildren<UnityEngine.UI.Scrollbar>(true), Is.Not.Null);
 
@@ -51,6 +54,28 @@ namespace TxTRPG.UI.Tests
             Assert.That(
                 messagePrefab.transform.Find("Separator/Visual").GetComponent<UnityEngine.UI.Image>(),
                 Is.Not.Null);
+        }
+
+        [Test]
+        public void ActiveUnconfiguredPanel_ReportsMissingReferencesWithoutException()
+        {
+            var gameObject = new GameObject("Unconfigured StoryTextPanel");
+            try
+            {
+                var panel = gameObject.AddComponent<StoryTextPanel>();
+                LogAssert.Expect(
+                    LogType.Warning,
+                    new System.Text.RegularExpressions.Regex(
+                        "StoryTextPanel is disabled because required references are missing:.*scrollRect.*"));
+                typeof(StoryTextPanel)
+                    .GetMethod("OnEnable", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                    ?.Invoke(panel, null);
+                Assert.That(panel.HasRequiredReferences, Is.False);
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+            }
         }
     }
 }
