@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: TxTRPG.UI::TxTRPG.UI.PanelBackgroundStyle
   sprite: {fileID: 0}
   spriteAssetId: 
-  tint: {r: 0.05882353, g: 0.07058824, b: 0.11764706, a: 1}
+  tint: {r: 0.25858846, g: 0.28045568, b: 0.3679245, a: 1}
   opacity: 1
   material: {fileID: 0}
   materialAssetId: 

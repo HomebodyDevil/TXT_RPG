@@ -3,6 +3,7 @@ using NUnit.Framework;
 using TxTRPG.UI.Editor;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.TestTools;
 using UnityEngine.UI;
 
 namespace TxTRPG.UI.Tests
@@ -55,6 +56,300 @@ namespace TxTRPG.UI.Tests
             Assert.That(columns, Is.EqualTo(6));
         }
 
+        [TestCase(ActionGridHorizontalAlignment.Left, 0f)]
+        [TestCase(ActionGridHorizontalAlignment.Center, 52f)]
+        [TestCase(ActionGridHorizontalAlignment.Right, 104f)]
+        public void TrailingRow_UsesConfiguredHorizontalAlignment(
+            ActionGridHorizontalAlignment alignment,
+            float expectedOffset)
+        {
+            var offset = ActionGridLayoutGroup.CalculateTrailingRowOffset(
+                alignment,
+                3,
+                2,
+                96f,
+                8f);
+
+            Assert.That(offset, Is.EqualTo(expectedOffset));
+        }
+
+        [TestCase(3, 3)]
+        [TestCase(3, 0)]
+        [TestCase(1, 1)]
+        public void TrailingRow_CompleteOrSingleColumn_HasNoOffset(
+            int columns,
+            int trailingCellCount)
+        {
+            var offset = ActionGridLayoutGroup.CalculateTrailingRowOffset(
+                ActionGridHorizontalAlignment.Right,
+                columns,
+                trailingCellCount,
+                96f,
+                8f);
+
+            Assert.That(offset, Is.Zero);
+        }
+
+        [Test]
+        public void TrailingRowOffset_IncludesHorizontalSpacing()
+        {
+            var withoutSpacing = ActionGridLayoutGroup.CalculateTrailingRowOffset(
+                ActionGridHorizontalAlignment.Right, 3, 2, 96f, 0f);
+            var withSpacing = ActionGridLayoutGroup.CalculateTrailingRowOffset(
+                ActionGridHorizontalAlignment.Right, 3, 2, 96f, 8f);
+
+            Assert.That(withoutSpacing, Is.EqualTo(96f));
+            Assert.That(withSpacing, Is.EqualTo(104f));
+        }
+
+        [Test]
+        public void GridAlignment_PreservesFormerSlotAlignmentSerializationName()
+        {
+            var field = typeof(ActionGridPanel).GetField(
+                "gridAlignment",
+                System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.NonPublic);
+            var attribute = field?.GetCustomAttributes(
+                    typeof(UnityEngine.Serialization.FormerlySerializedAsAttribute),
+                    false)
+                .Cast<UnityEngine.Serialization.FormerlySerializedAsAttribute>()
+                .SingleOrDefault();
+
+            Assert.That(attribute, Is.Not.Null);
+            Assert.That(attribute.oldName, Is.EqualTo("slotAlignment"));
+        }
+
+        [Test]
+        public void RuntimeAlignmentSetters_UpdateIndependentLayoutResponsibilities()
+        {
+            ActionGridPrefabBuilder.CreateOrUpdatePrefabs();
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/TxTRPG/UI/Prefabs/ActionGridPanel.prefab");
+            var instance = Object.Instantiate(prefab);
+            try
+            {
+                var panel = instance.GetComponent<ActionGridPanel>();
+                var grid = instance.GetComponentInChildren<ActionGridLayoutGroup>(true);
+
+                panel.SetGridAlignment(ActionGridHorizontalAlignment.Right);
+                Assert.That(panel.GridAlignment, Is.EqualTo(ActionGridHorizontalAlignment.Right));
+                Assert.That(panel.IncompleteRowAlignment,
+                    Is.EqualTo(ActionGridHorizontalAlignment.Left));
+                Assert.That(grid.childAlignment, Is.EqualTo(TextAnchor.UpperRight));
+                Assert.That(grid.IncompleteRowAlignment,
+                    Is.EqualTo(ActionGridHorizontalAlignment.Left));
+
+                panel.SetIncompleteRowAlignment(ActionGridHorizontalAlignment.Center);
+                Assert.That(panel.GridAlignment, Is.EqualTo(ActionGridHorizontalAlignment.Right));
+                Assert.That(panel.IncompleteRowAlignment,
+                    Is.EqualTo(ActionGridHorizontalAlignment.Center));
+                Assert.That(grid.childAlignment, Is.EqualTo(TextAnchor.UpperRight));
+                Assert.That(grid.IncompleteRowAlignment,
+                    Is.EqualTo(ActionGridHorizontalAlignment.Center));
+            }
+            finally { Object.DestroyImmediate(instance); }
+        }
+
+        [TestCase(ScrollbarVisibilityMode.Hidden, ScrollbarSpaceMode.ReserveWhenVisible, false, 0f)]
+        [TestCase(ScrollbarVisibilityMode.Hidden, ScrollbarSpaceMode.ReserveAlways, false, 0f)]
+        [TestCase(ScrollbarVisibilityMode.Auto, ScrollbarSpaceMode.ReserveWhenVisible, false, 0f)]
+        [TestCase(ScrollbarVisibilityMode.Auto, ScrollbarSpaceMode.ReserveWhenVisible, true, 24f)]
+        [TestCase(ScrollbarVisibilityMode.Always, ScrollbarSpaceMode.ReserveWhenVisible, true, 24f)]
+        [TestCase(ScrollbarVisibilityMode.Always, ScrollbarSpaceMode.Overlay, true, 0f)]
+        [TestCase(ScrollbarVisibilityMode.Auto, ScrollbarSpaceMode.ReserveAlways, false, 24f)]
+        [TestCase(ScrollbarVisibilityMode.Hidden, ScrollbarSpaceMode.ReserveSymmetricallyAlways, false, 24f)]
+        [TestCase(ScrollbarVisibilityMode.Auto, ScrollbarSpaceMode.ReserveSymmetricallyAlways, false, 24f)]
+        [TestCase(ScrollbarVisibilityMode.Auto, ScrollbarSpaceMode.ReserveSymmetricallyAlways, true, 24f)]
+        [TestCase(ScrollbarVisibilityMode.Always, ScrollbarSpaceMode.ReserveSymmetricallyAlways, true, 24f)]
+        public void ScrollbarInset_FollowsVisibilityAndSpaceMode(
+            ScrollbarVisibilityMode visibility,
+            ScrollbarSpaceMode spaceMode,
+            bool overflows,
+            float expectedInset)
+        {
+            var visible = ConfigurableScrollbarController.CalculateVisibility(visibility, overflows);
+            var inset = ConfigurableScrollbarController.CalculateReservedInset(
+                visibility,
+                spaceMode,
+                visible,
+                16f,
+                8f);
+
+            Assert.That(inset, Is.EqualTo(expectedInset));
+        }
+
+        [TestCase(ScrollbarSide.Left, 24f, 0f)]
+        [TestCase(ScrollbarSide.Right, 0f, -24f)]
+        public void RuntimeScrollbarSettings_UpdateViewportOffsets(
+            ScrollbarSide side,
+            float expectedMinX,
+            float expectedMaxX)
+        {
+            ActionGridPrefabBuilder.CreateOrUpdatePrefabs();
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/TxTRPG/UI/Prefabs/ActionGridPanel.prefab");
+            var instance = Object.Instantiate(prefab);
+            try
+            {
+                var controller = instance.GetComponentInChildren<ConfigurableScrollbarController>(true);
+                var viewport = instance.GetComponentInChildren<ScrollRect>(true).viewport;
+                controller.Side = side;
+                controller.SpaceMode = ScrollbarSpaceMode.ReserveWhenVisible;
+                controller.Visibility = ScrollbarVisibilityMode.Always;
+
+                Assert.That(controller.IsVisible, Is.True);
+                Assert.That(controller.ReservedInset, Is.EqualTo(24f));
+                Assert.That(viewport.offsetMin.x, Is.EqualTo(expectedMinX));
+                Assert.That(viewport.offsetMax.x, Is.EqualTo(expectedMaxX));
+
+                controller.SpaceMode = ScrollbarSpaceMode.Overlay;
+                Assert.That(viewport.offsetMin.x, Is.Zero);
+                Assert.That(viewport.offsetMax.x, Is.Zero);
+
+                controller.Visibility = ScrollbarVisibilityMode.Hidden;
+                Assert.That(controller.IsVisible, Is.False);
+                Assert.That(controller.ReservedInset, Is.Zero);
+            }
+            finally { Object.DestroyImmediate(instance); }
+        }
+
+        [Test]
+        public void AutoScrollbar_UpdatesVisibilityAndViewportWhenContentOverflowChanges()
+        {
+            ActionGridPrefabBuilder.CreateOrUpdatePrefabs();
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/TxTRPG/UI/Prefabs/ActionGridPanel.prefab");
+            var instance = Object.Instantiate(prefab);
+            try
+            {
+                var controller = instance.GetComponentInChildren<ConfigurableScrollbarController>(true);
+                var scrollRect = instance.GetComponentInChildren<ScrollRect>(true);
+                var fitter = scrollRect.content.GetComponent<ContentSizeFitter>();
+                if (fitter != null) fitter.enabled = false;
+                controller.Side = ScrollbarSide.Right;
+                controller.SpaceMode = ScrollbarSpaceMode.ReserveWhenVisible;
+                controller.Visibility = ScrollbarVisibilityMode.Auto;
+
+                scrollRect.content.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 1f);
+                controller.Refresh();
+                Assert.That(controller.IsVisible, Is.False);
+                Assert.That(controller.ReservedInset, Is.Zero);
+                Assert.That(scrollRect.viewport.offsetMax.x, Is.Zero);
+
+                scrollRect.content.SetSizeWithCurrentAnchors(
+                    RectTransform.Axis.Vertical,
+                    scrollRect.viewport.rect.height + 100f);
+                controller.Refresh();
+                Assert.That(controller.IsVisible, Is.True);
+                Assert.That(controller.ReservedInset, Is.EqualTo(24f));
+                Assert.That(scrollRect.viewport.offsetMax.x, Is.EqualTo(-24f));
+            }
+            finally { Object.DestroyImmediate(instance); }
+        }
+
+        [TestCase(ScrollbarSide.Left)]
+        [TestCase(ScrollbarSide.Right)]
+        public void SymmetricReservation_UsesSameViewportForEitherScrollbarSide(
+            ScrollbarSide side)
+        {
+            ActionGridPrefabBuilder.CreateOrUpdatePrefabs();
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/TxTRPG/UI/Prefabs/ActionGridPanel.prefab");
+            var instance = Object.Instantiate(prefab);
+            try
+            {
+                var controller = instance.GetComponentInChildren<ConfigurableScrollbarController>(true);
+                var scrollRect = instance.GetComponentInChildren<ScrollRect>(true);
+                var scrollbar = instance.GetComponentInChildren<Scrollbar>(true);
+                controller.Side = side;
+                controller.Width = 16f;
+                controller.Gap = 8f;
+                controller.SpaceMode = ScrollbarSpaceMode.ReserveSymmetricallyAlways;
+                controller.Visibility = ScrollbarVisibilityMode.Hidden;
+
+                Assert.That(scrollbar.gameObject.activeSelf, Is.False);
+                Assert.That(controller.OppositeScrollbarArea, Is.Not.Null);
+                Assert.That(controller.OppositeScrollbarArea.gameObject.activeSelf, Is.True);
+                Assert.That(((RectTransform)scrollbar.transform).rect.width, Is.EqualTo(16f));
+                Assert.That(controller.OppositeScrollbarArea.rect.width, Is.EqualTo(16f));
+                Assert.That(scrollRect.viewport.offsetMin.x, Is.EqualTo(24f));
+                Assert.That(scrollRect.viewport.offsetMax.x, Is.EqualTo(-24f));
+
+                controller.Width = 20f;
+                Assert.That(((RectTransform)scrollbar.transform).rect.width, Is.EqualTo(20f));
+                Assert.That(controller.OppositeScrollbarArea.rect.width, Is.EqualTo(20f));
+                controller.Gap = 5f;
+                Assert.That(((RectTransform)scrollbar.transform).rect.width, Is.EqualTo(20f));
+                Assert.That(controller.OppositeScrollbarArea.rect.width, Is.EqualTo(20f));
+                Assert.That(scrollRect.viewport.offsetMin.x, Is.EqualTo(25f));
+                Assert.That(scrollRect.viewport.offsetMax.x, Is.EqualTo(-25f));
+
+                var scrollbarRect = (RectTransform)scrollbar.transform;
+                if (side == ScrollbarSide.Right)
+                {
+                    Assert.That(scrollbarRect.anchorMin.x, Is.EqualTo(1f));
+                    Assert.That(controller.OppositeScrollbarArea.anchorMin.x, Is.EqualTo(0f));
+                }
+                else
+                {
+                    Assert.That(scrollbarRect.anchorMin.x, Is.EqualTo(0f));
+                    Assert.That(controller.OppositeScrollbarArea.anchorMin.x, Is.EqualTo(1f));
+                }
+
+                controller.Visibility = ScrollbarVisibilityMode.Always;
+                Assert.That(scrollbar.gameObject.activeSelf, Is.True);
+                Assert.That(scrollRect.viewport.offsetMin.x, Is.EqualTo(25f));
+                Assert.That(scrollRect.viewport.offsetMax.x, Is.EqualTo(-25f));
+            }
+            finally { Object.DestroyImmediate(instance); }
+        }
+
+        [Test]
+        public void SymmetricReservation_WithoutOppositeArea_KeepsInsetsWithoutException()
+        {
+            ActionGridPrefabBuilder.CreateOrUpdatePrefabs();
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/TxTRPG/UI/Prefabs/ActionGridPanel.prefab");
+            var instance = Object.Instantiate(prefab);
+            try
+            {
+                var controller = instance.GetComponentInChildren<ConfigurableScrollbarController>(true);
+                var scrollRect = instance.GetComponentInChildren<ScrollRect>(true);
+                var serialized = new SerializedObject(controller);
+                serialized.FindProperty("oppositeScrollbarArea").objectReferenceValue = null;
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+                LogAssert.Expect(
+                    LogType.Warning,
+                    new System.Text.RegularExpressions.Regex(
+                        "ConfigurableScrollbarController.*without an OppositeScrollbarArea reference"));
+
+                Assert.DoesNotThrow(() =>
+                {
+                    controller.SpaceMode = ScrollbarSpaceMode.ReserveSymmetricallyAlways;
+                    controller.Refresh();
+                });
+                Assert.That(scrollRect.viewport.offsetMin.x, Is.EqualTo(24f));
+                Assert.That(scrollRect.viewport.offsetMax.x, Is.EqualTo(-24f));
+            }
+            finally { Object.DestroyImmediate(instance); }
+        }
+
+        [TestCase(ScrollbarSide.Left, 24f, -24f)]
+        [TestCase(ScrollbarSide.Right, 24f, -24f)]
+        public void SymmetricOffsetCalculation_IgnoresScrollbarSide(
+            ScrollbarSide side,
+            float expectedMin,
+            float expectedMax)
+        {
+            var offsets = ConfigurableScrollbarController.CalculateHorizontalOffsets(
+                ScrollbarSpaceMode.ReserveSymmetricallyAlways,
+                side,
+                16f + 8f);
+
+            Assert.That(offsets.x, Is.EqualTo(expectedMin));
+            Assert.That(offsets.y, Is.EqualTo(expectedMax));
+        }
+
         [Test]
         public void Capacity_RejectsOccupiedOverflowByDefault()
         {
@@ -100,6 +395,68 @@ namespace TxTRPG.UI.Tests
             ActionGridPrefabBuilder.CreateOrUpdatePrefabs();
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/TxTRPG/UI/Prefabs/ActionGridPanel.prefab");
             Assert.That(prefab.GetComponentInChildren<ConfigurableScrollbarController>(true), Is.Not.Null);
+        }
+
+        [Test]
+        public void GeneratedPanel_InitiallyShowsCapacityAsEmptySlots()
+        {
+            ActionGridPrefabBuilder.CreateOrUpdatePrefabs();
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/TxTRPG/UI/Prefabs/ActionGridPanel.prefab");
+            var instance = Object.Instantiate(prefab);
+            try
+            {
+                var panel = instance.GetComponent<ActionGridPanel>();
+                var activeCells = instance.GetComponentsInChildren<ActionGridCell>(false);
+
+                Assert.That(panel.PopulationMode,
+                    Is.EqualTo(ActionGridPopulationMode.FillCapacityWithEmptySlots));
+                Assert.That(panel.GridAlignment,
+                    Is.EqualTo(ActionGridHorizontalAlignment.Center));
+                Assert.That(panel.IncompleteRowAlignment,
+                    Is.EqualTo(ActionGridHorizontalAlignment.Left));
+                var grid = instance.GetComponentInChildren<ActionGridLayoutGroup>(true);
+                Assert.That(grid, Is.Not.Null);
+                Assert.That(grid.startCorner, Is.EqualTo(GridLayoutGroup.Corner.UpperLeft));
+                Assert.That(grid.startAxis, Is.EqualTo(GridLayoutGroup.Axis.Horizontal));
+                Assert.That(panel.PackingMode, Is.EqualTo(ActionGridPackingMode.CompactForward));
+                var scrollbarController =
+                    instance.GetComponentInChildren<ConfigurableScrollbarController>(true);
+                Assert.That(scrollbarController.OppositeScrollbarArea, Is.Not.Null);
+                Assert.That(
+                    scrollbarController.OppositeScrollbarArea.GetComponent<Graphic>(),
+                    Is.Null);
+                Assert.That(scrollbarController.Visibility, Is.EqualTo(ScrollbarVisibilityMode.Hidden));
+                Assert.That(scrollbarController.SpaceMode,
+                    Is.EqualTo(ScrollbarSpaceMode.ReserveWhenVisible));
+                Assert.That(activeCells.Length, Is.EqualTo(panel.Capacity));
+                Assert.That(activeCells, Has.All.Matches<ActionGridCell>(cell => !cell.HasEntry));
+            }
+            finally { Object.DestroyImmediate(instance); }
+        }
+
+        [Test]
+        public void AddingEntry_ReplacesFirstEmptySlotAndPreservesCapacitySlots()
+        {
+            ActionGridPrefabBuilder.CreateOrUpdatePrefabs();
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/TxTRPG/UI/Prefabs/ActionGridPanel.prefab");
+            var instance = Object.Instantiate(prefab);
+            try
+            {
+                var panel = instance.GetComponent<ActionGridPanel>();
+                panel.SetCapacity(4);
+                panel.ClearEntries();
+                var entry = new ActionGridEntry(
+                    "registered-item", ActionGridEntryKind.Item, null, "Registered Item");
+
+                Assert.That(panel.TryAddEntry(entry), Is.True);
+                var activeCells = instance.GetComponentsInChildren<ActionGridCell>(false);
+                Assert.That(activeCells.Length, Is.EqualTo(4));
+                Assert.That(activeCells.Count(cell => cell.HasEntry), Is.EqualTo(1));
+                Assert.That(activeCells[0].HasEntry, Is.True);
+            }
+            finally { Object.DestroyImmediate(instance); }
         }
 
         [Test]

@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace TxTRPG.UI
@@ -16,10 +17,18 @@ namespace TxTRPG.UI
         [SerializeField] private RectTransform content;
         [SerializeField] private GridLayoutGroup gridLayout;
         [SerializeField] private ScrollRect scrollRect;
+        [SerializeField] private ConfigurableScrollbarController scrollbarController;
         [SerializeField] private GameObject emptyState;
         [SerializeField] private ActionContextMenu contextMenu;
 
         [Header("Layout")]
+        [FormerlySerializedAs("slotAlignment")]
+        [SerializeField, Tooltip("Aligns the complete grid block within the viewport.")]
+        private ActionGridHorizontalAlignment gridAlignment =
+            ActionGridHorizontalAlignment.Center;
+        [SerializeField, Tooltip("Aligns only the final row when it contains fewer cells than the current column count.")]
+        private ActionGridHorizontalAlignment incompleteRowAlignment =
+            ActionGridHorizontalAlignment.Left;
         [SerializeField] private ActionGridLayoutMode layoutMode = ActionGridLayoutMode.FixedColumns;
         [SerializeField, Min(1)] private int fixedColumns = 5;
         [SerializeField] private Vector2 minimumCellSize = new(72f, 72f);
@@ -29,7 +38,8 @@ namespace TxTRPG.UI
 
         [Header("Behavior")]
         [SerializeField] private GridActivationBehavior activationBehavior = GridActivationBehavior.OpenContextMenu;
-        [SerializeField] private ActionGridPopulationMode populationMode = ActionGridPopulationMode.EntriesOnly;
+        [SerializeField] private ActionGridPopulationMode populationMode =
+            ActionGridPopulationMode.FillCapacityWithEmptySlots;
         [SerializeField] private ActionGridPackingMode packingMode = ActionGridPackingMode.CompactForward;
         [SerializeField, Min(0)] private int initialCapacity = 20;
         [SerializeField, Min(0)] private int capacity = 20;
@@ -59,12 +69,34 @@ namespace TxTRPG.UI
         public int CurrentColumns => currentColumns;
         public int Capacity => capacity;
         public int EntryCount => CountOccupiedEntries();
+        public int VisibleCellCount => GetDisplayedCount();
+        public ActionGridPopulationMode PopulationMode => populationMode;
         public ActionGridPackingMode PackingMode => packingMode;
+        public ActionGridHorizontalAlignment GridAlignment => gridAlignment;
+        public ActionGridHorizontalAlignment IncompleteRowAlignment => incompleteRowAlignment;
+
+        [Obsolete("Use GridAlignment and IncompleteRowAlignment.")]
+        public ActionGridHorizontalAlignment SlotAlignment => gridAlignment;
 
         private void OnEnable()
         {
             padding ??= new RectOffset(8, 8, 8, 8);
+            ResolveScrollbarController();
+            if (scrollbarController != null)
+            {
+                scrollbarController.ViewportLayoutChanged -= OnViewportLayoutChanged;
+                scrollbarController.ViewportLayoutChanged += OnViewportLayoutChanged;
+            }
             ApplyLayout();
+            RefreshScrollbarLayout();
+        }
+
+        private void OnDisable()
+        {
+            if (scrollbarController != null)
+            {
+                scrollbarController.ViewportLayoutChanged -= OnViewportLayoutChanged;
+            }
         }
 
         private void Awake()
@@ -85,6 +117,7 @@ namespace TxTRPG.UI
 
             capacity = Mathf.Max(capacity, initialCapacity);
             EnsurePool(capacity);
+            RefreshVisibleCells(string.Empty, 0, false);
         }
 
         private void OnDestroy()
@@ -102,7 +135,45 @@ namespace TxTRPG.UI
         private void OnRectTransformDimensionsChange()
         {
             ApplyLayout();
+            RefreshScrollbarLayout();
             ConfigureNavigation();
+        }
+
+#if UNITY_EDITOR
+        private void OnValidate()
+        {
+            padding ??= new RectOffset(8, 8, 8, 8);
+            ApplyLayout();
+        }
+#endif
+
+        public void SetGridAlignment(ActionGridHorizontalAlignment alignment)
+        {
+            gridAlignment = alignment;
+            RebuildGridLayout();
+        }
+
+        public void SetIncompleteRowAlignment(ActionGridHorizontalAlignment alignment)
+        {
+            incompleteRowAlignment = alignment;
+            RebuildGridLayout();
+        }
+
+        [Obsolete("Use SetGridAlignment and SetIncompleteRowAlignment.")]
+        public void SetSlotAlignment(ActionGridHorizontalAlignment alignment)
+        {
+            gridAlignment = alignment;
+            incompleteRowAlignment = alignment;
+            RebuildGridLayout();
+        }
+
+        private void RebuildGridLayout()
+        {
+            ApplyLayout();
+            if (content != null)
+            {
+                LayoutRebuilder.ForceRebuildLayoutImmediate(content);
+            }
         }
 
         public void SetServices(IActionMenuProvider options, IActionCommandExecutor executor)
@@ -137,9 +208,24 @@ namespace TxTRPG.UI
                 entries.RemoveAll(entry => string.IsNullOrEmpty(entry.EntryInstanceId));
             }
 
-            var displayedCount = populationMode == ActionGridPopulationMode.FillCapacityWithEmptySlots
-                ? Mathf.Max(entries.Count, capacity)
-                : entries.Count;
+            RefreshVisibleCells(selectedId, 0, true);
+        }
+
+        public void InitializeVisibleSlots()
+        {
+            capacity = Mathf.Max(capacity, entries.Count);
+            RefreshVisibleCells(
+                IsOccupied(selectedIndex) ? entries[selectedIndex].EntryInstanceId : string.Empty,
+                Mathf.Max(0, selectedIndex),
+                false);
+        }
+
+        private void RefreshVisibleCells(
+            string selectedId,
+            int preferredIndex,
+            bool loadIcons)
+        {
+            var displayedCount = GetDisplayedCount();
             EnsurePool(displayedCount);
             for (var i = 0; i < cellPool.Count; i++)
             {
@@ -163,18 +249,26 @@ namespace TxTRPG.UI
 
             emptyState?.SetActive(CountOccupiedEntries() == 0 && displayedCount == 0);
             ApplyLayout();
+            RefreshScrollbarLayout();
             ConfigureNavigation();
             selectedIndex = FindEntryIndex(selectedId);
             if (selectedIndex < 0)
             {
-                selectedIndex = FindNearestOccupiedIndex(0);
+                selectedIndex = FindNearestOccupiedIndex(preferredIndex);
             }
 
             RefreshSelection(false);
-            if (Application.isPlaying)
+            if (loadIcons && Application.isPlaying)
             {
                 currentIconLoadTask = ObserveIconLoadsAsync(LoadIconsAsync());
             }
+        }
+
+        private int GetDisplayedCount()
+        {
+            return populationMode == ActionGridPopulationMode.FillCapacityWithEmptySlots
+                ? Mathf.Max(entries.Count, capacity)
+                : entries.Count;
         }
 
         public void Select(int index, bool moveFocus = true)
@@ -426,7 +520,43 @@ namespace TxTRPG.UI
                 Mathf.Clamp(width * aspect, minimumCellSize.y, maximumCellSize.y));
             gridLayout.spacing = spacing;
             gridLayout.padding = padding;
-            gridLayout.childAlignment = TextAnchor.UpperCenter;
+            gridLayout.childAlignment = gridAlignment switch
+            {
+                ActionGridHorizontalAlignment.Left => TextAnchor.UpperLeft,
+                ActionGridHorizontalAlignment.Right => TextAnchor.UpperRight,
+                _ => TextAnchor.UpperCenter
+            };
+            if (gridLayout is ActionGridLayoutGroup alignedGrid)
+            {
+                alignedGrid.IncompleteRowAlignment = incompleteRowAlignment;
+            }
+        }
+
+        private void ResolveScrollbarController()
+        {
+            if (scrollbarController == null && scrollRect != null)
+            {
+                scrollbarController = scrollRect.GetComponent<ConfigurableScrollbarController>();
+            }
+        }
+
+        private void RefreshScrollbarLayout()
+        {
+            ResolveScrollbarController();
+            if (content != null)
+            {
+                LayoutRebuilder.ForceRebuildLayoutImmediate(content);
+            }
+            scrollbarController?.Refresh();
+        }
+
+        private void OnViewportLayoutChanged()
+        {
+            ApplyLayout();
+            if (content != null)
+            {
+                LayoutRebuilder.ForceRebuildLayoutImmediate(content);
+            }
         }
 
         public static int CalculateColumnCount(

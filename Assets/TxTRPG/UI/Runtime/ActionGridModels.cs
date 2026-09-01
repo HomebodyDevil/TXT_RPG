@@ -18,6 +18,13 @@ namespace TxTRPG.UI
         AdaptiveCellSize
     }
 
+    public enum ActionGridHorizontalAlignment
+    {
+        Left,
+        Center,
+        Right
+    }
+
     public enum ActionGridPopulationMode
     {
         EntriesOnly,
@@ -34,7 +41,13 @@ namespace TxTRPG.UI
     public enum ActionGridPackingMode { CompactForward, PreserveSlots }
     public enum CapacityReductionPolicy { RejectIfOccupied, MoveOverflow, RemoveOverflow }
     public enum ScrollbarVisibilityMode { Hidden, Auto, Always }
-    public enum ScrollbarSpaceMode { ReserveAlways, ReserveWhenVisible, Overlay }
+    public enum ScrollbarSpaceMode
+    {
+        ReserveAlways,
+        ReserveWhenVisible,
+        Overlay,
+        ReserveSymmetricallyAlways
+    }
     public enum ScrollbarSide { Left, Right }
     public enum ScrollbarHandleSizeMode { ContentRatio, FixedNormalized, FixedPixels, MinimumPixels }
 

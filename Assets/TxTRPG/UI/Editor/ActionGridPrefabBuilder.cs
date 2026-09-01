@@ -181,6 +181,14 @@ namespace TxTRPG.UI.Editor
 
                 var scrollView = CreateUiObject("Scroll View", root.transform);
                 Stretch((RectTransform)scrollView.transform, 18f, 18f, 30f, 66f);
+                var oppositeScrollbarArea = CreateUiObject("OppositeScrollbarArea", scrollView.transform);
+                var oppositeRect = (RectTransform)oppositeScrollbarArea.transform;
+                oppositeRect.anchorMin = new Vector2(0f, 0f);
+                oppositeRect.anchorMax = new Vector2(0f, 1f);
+                oppositeRect.pivot = new Vector2(0f, 0.5f);
+                oppositeRect.anchoredPosition = Vector2.zero;
+                oppositeRect.sizeDelta = new Vector2(16f, 0f);
+                oppositeScrollbarArea.SetActive(false);
                 var viewport = CreateUiObject("Viewport", scrollView.transform);
                 Stretch((RectTransform)viewport.transform, 0f, 0f, 18f, 0f);
                 var viewportImage = viewport.AddComponent<Image>();
@@ -193,7 +201,7 @@ namespace TxTRPG.UI.Editor
                 contentRect.anchorMax = Vector2.one;
                 contentRect.pivot = new Vector2(0.5f, 1f);
                 contentRect.sizeDelta = Vector2.zero;
-                var grid = content.AddComponent<GridLayoutGroup>();
+                var grid = content.AddComponent<ActionGridLayoutGroup>();
                 grid.startCorner = GridLayoutGroup.Corner.UpperLeft;
                 grid.startAxis = GridLayoutGroup.Axis.Horizontal;
                 grid.childAlignment = TextAnchor.UpperCenter;
@@ -221,9 +229,15 @@ namespace TxTRPG.UI.Editor
                 scrollbarProperties.FindProperty("scrollRect").objectReferenceValue = scrollRect;
                 scrollbarProperties.FindProperty("viewport").objectReferenceValue = viewport.transform;
                 scrollbarProperties.FindProperty("scrollbar").objectReferenceValue = scrollbar;
+                scrollbarProperties.FindProperty("oppositeScrollbarArea").objectReferenceValue =
+                    oppositeRect;
                 scrollbarProperties.FindProperty("background").objectReferenceValue = scrollbar.GetComponent<Image>();
                 scrollbarProperties.FindProperty("handle").objectReferenceValue =
                     scrollbar.handleRect.GetComponent<Image>();
+                scrollbarProperties.FindProperty("visibility").enumValueIndex =
+                    (int)ScrollbarVisibilityMode.Hidden;
+                scrollbarProperties.FindProperty("spaceMode").enumValueIndex =
+                    (int)ScrollbarSpaceMode.ReserveWhenVisible;
                 scrollbarProperties.ApplyModifiedPropertiesWithoutUndo();
 
                 var emptyState = CreateText("EmptyState", root.transform, 22f, new Color32(150, 156, 169, 255), TextAlignmentOptions.Center);
@@ -248,11 +262,18 @@ namespace TxTRPG.UI.Editor
 
                 var panel = root.AddComponent<ActionGridPanel>();
                 var properties = new SerializedObject(panel);
+                properties.FindProperty("gridAlignment").enumValueIndex =
+                    (int)ActionGridHorizontalAlignment.Center;
+                properties.FindProperty("incompleteRowAlignment").enumValueIndex =
+                    (int)ActionGridHorizontalAlignment.Left;
+                properties.FindProperty("populationMode").enumValueIndex =
+                    (int)ActionGridPopulationMode.FillCapacityWithEmptySlots;
                 properties.FindProperty("cellPrefab").objectReferenceValue = cellPrefab;
                 properties.FindProperty("viewport").objectReferenceValue = viewport.transform;
                 properties.FindProperty("content").objectReferenceValue = contentRect;
                 properties.FindProperty("gridLayout").objectReferenceValue = grid;
                 properties.FindProperty("scrollRect").objectReferenceValue = scrollRect;
+                properties.FindProperty("scrollbarController").objectReferenceValue = scrollbarController;
                 properties.FindProperty("emptyState").objectReferenceValue = emptyState.gameObject;
                 properties.FindProperty("contextMenu").objectReferenceValue = menuObject.GetComponent<ActionContextMenu>();
                 properties.ApplyModifiedPropertiesWithoutUndo();

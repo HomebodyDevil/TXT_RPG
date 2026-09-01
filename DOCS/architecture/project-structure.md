@@ -69,7 +69,7 @@ TxT-RPG/
 | `ActionGridModels.cs` | 공통 항목, 메뉴 옵션, 결과와 외부 Provider·Executor 경계를 정의합니다. |
 | `ActionGridCell.cs` | 아이콘, 수량, 쿨다운, 비활성, 선택과 빈 슬롯 상태를 표시합니다. |
 | `ActionGridPanel.cs` | 셀 풀, 반응형 레이아웃, 선택, Navigation과 명령 실행 흐름을 관리합니다. |
-| `ConfigurableScrollbarController.cs` | ScrollRect와 스크롤바 동기화, 가시성, 공간과 핸들 크기 정책을 관리합니다. |
+| `ConfigurableScrollbarController.cs` | ScrollRect와 스크롤바 동기화, 가시성, 공간과 핸들 크기 정책 및 대칭 OppositeScrollbarArea를 관리합니다. |
 | `ScrollbarStyle.cs` | 여러 UI에서 재사용할 스크롤바 Sprite, Color와 Material을 정의합니다. |
 | `ActionContextMenu.cs` | 외부에서 제공된 명령 옵션 Button을 풀링하고 포커스를 복원합니다. |
 | `ActionGridPanelDemoData.cs` | 아이템과 스킬이 혼합된 데모 표시 데이터를 보관합니다. |
@@ -117,7 +117,7 @@ TxT-RPG/
 | `CharacterDisplayPanel.prefab` | 교체 가능한 2D View를 포함하는 운영용 캐릭터 표시 패널입니다. |
 | `ActionGridCell.prefab` | 공통 행동 항목 하나의 표시와 선택 상태를 담당합니다. |
 | `ActionContextMenu.prefab` | 선택 항목의 동적 명령 목록을 표시합니다. |
-| `ActionGridPanel.prefab` | 아이템과 스킬을 표시하는 반응형 선택 그리드입니다. |
+| `ActionGridPanel.prefab` | 아이템과 스킬을 표시하며 Scroll View 아래에 비상호작용 `OppositeScrollbarArea`를 포함하는 반응형 선택 그리드입니다. |
 | `FlexibleLayoutPanel.prefab` | Background·Content·Foreground 계층과 빈 ContentLayer를 제공하는 운영용 레이아웃 컨테이너입니다. |
 
 ### `Assets/TxTRPG/UI/DEMO`

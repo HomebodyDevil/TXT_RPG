@@ -57,8 +57,18 @@ Story, Character와 Action Grid Demo는 동일한 `PanelStartupController` 경�
 1. `Assets/TxTRPG/UI/Prefabs/ActionGridPanel.prefab`을 Canvas 아래에 배치합니다.
 2. 아이템과 스킬 도메인 데이터를 `ActionGridEntry` 목록으로 변환하여 `SetEntries`에 전달합니다.
 3. `IActionMenuProvider`와 `IActionCommandExecutor` 구현을 `SetServices`로 연결합니다.
-4. `Layout Mode`, 최대 열 수, 셀 최소·최대 크기, `Spacing (X, Y)`와 Padding을 화면 정책에 맞게 설정합니다. `Fixed Columns`의 열 수는 최대값이며 좁은 화면에서는 자동으로 감소합니다.
+4. `Grid Alignment`, `Incomplete Row Alignment`, `Layout Mode`, 최대 열 수, 셀 최소·최대 크기, `Spacing (X, Y)`와 Padding을 화면 정책에 맞게 설정합니다. Grid Alignment 기본값은 Center이며 전체 열 묶음을 정렬합니다. Incomplete Row Alignment 기본값은 Left이며 덜 찬 마지막 행만 정렬합니다. `Fixed Columns`의 열 수는 최대값이며 좁은 화면에서는 자동으로 감소합니다.
 5. 제한된 슬롯을 표시할 때만 `Fill Capacity With Empty Slots`와 `Capacity`를 사용합니다.
+
+운영용 ActionGridPanel Prefab은 기본적으로 `Fill Capacity With Empty Slots`를 사용합니다. Play Mode가 시작되면 초기 데이터가 없어도 Capacity만큼 빈 슬롯이 활성화됩니다. 이후 도메인 시스템은 `TryAddEntry`, `TryInsertEntry` 또는 `SetEntries`로 아이템과 스킬을 등록합니다. 데이터가 있는 셀만 표시하려는 목록 UI에서는 `Population Mode = Entries Only`로 명시적으로 변경합니다.
+
+기본 스크롤바 정책은 `Visibility = Hidden`, `Space Mode = Reserve When Visible`입니다. 런타임 변경에는 `ConfigurableScrollbarController.Visibility`, `SpaceMode`, `Side`, `Width`, `Gap` 속성을 사용합니다. 속성 변경은 Viewport offset과 ActionGridPanel 슬롯 레이아웃을 즉시 갱신합니다.
+
+스크롤바 Side와 관계없이 슬롯 영역의 시각적 중심을 고정하려면 Inspector에서 `Space Mode = Reserve Symmetrically Always`를 선택합니다. 이 모드는 Visibility가 Hidden이어도 Viewport 좌우에 각각 `Width + Gap`을 예약합니다. SampleScene의 `Main_FlexibleLayoutPanel/ActionGridPanel`에는 이 설정과 `Grid Alignment = Center`, `Incomplete Row Alignment = Left`가 적용되어 있습니다. 화면 너비에 따른 자동 모드 전환은 현재 지원하지 않으므로 필요한 경우 런타임 구성 코드에서 명시적으로 `SpaceMode`를 변경합니다.
+
+대칭 모드의 `OppositeScrollbarArea`는 Builder가 자동 생성하고 컨트롤러에 연결합니다. Width는 Scrollbar 루트와 Opposite 영역에 동일하게 적용되며 Gap은 두 영역의 너비가 아니라 Viewport 간격입니다. 수동 Prefab을 구성할 때에는 Graphic이나 입력 컴포넌트가 없는 RectTransform을 Scroll View 아래에 추가하고 `Opposite Scrollbar Area` 참조에 연결합니다.
+
+런타임 정렬 변경에는 `SetGridAlignment`와 `SetIncompleteRowAlignment`를 사용합니다. 이 옵션은 데이터 채움 방향과 무관하므로 Right를 선택해도 Entry 순서는 역전되지 않습니다. ActionGridPanel Demo는 Capacity 12와 최대 5열을 사용하므로 넓은 화면에서 불완전한 마지막 행을 확인할 수 있으며, Inspector에서 Incomplete Row Alignment를 바꾸어 세 결과를 비교할 수 있습니다.
 
 `Initial Capacity`와 `Population Mode`로 초기 셀 풀과 빈 슬롯 표시를 설정합니다. 런타임 변경은 `SetCapacity`, `TryAddEntry`, `TryInsertEntry`, `RemoveEntry`, `UpdateEntry` API를 사용합니다. 공통 스크롤바 외형은 `Assets > Create > TxT RPG > UI > Scrollbar Style`에서 생성하고 Scroll View의 `ConfigurableScrollbarController`에 연결합니다.
 
