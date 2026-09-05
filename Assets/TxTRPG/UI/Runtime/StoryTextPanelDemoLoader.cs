@@ -14,11 +14,13 @@ namespace TxTRPG.UI
 
         public override bool HasInitialData => populateOnStart && target != null && data != null;
 
-        public override Task<PanelLoadResult> LoadAndApplyAsync(CancellationToken cancellationToken)
+        public override async Task<PanelLoadResult> LoadAndApplyAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
             PopulateInternal();
-            return Task.FromResult(PanelLoadResult.Success);
+            await target.WhenBackgroundReady;
+            cancellationToken.ThrowIfCancellationRequested();
+            return PanelLoadResult.Success;
         }
 
         [ContextMenu("Populate Demo Messages")]

@@ -9,15 +9,20 @@ namespace TxTRPG.UI.Editor
     public static class StoryTextPanelPrefabBuilder
     {
         private const string PrefabFolder = "Assets/TxTRPG/UI/Prefabs";
+        private const string StyleFolder = "Assets/TxTRPG/UI/Styles";
         private const string MessagePrefabPath = PrefabFolder + "/StoryMessageItem.prefab";
         private const string PanelPrefabPath = PrefabFolder + "/StoryTextPanel.prefab";
+        public const string DefaultBackgroundStylePath =
+            StyleFolder + "/StoryTextPanelDefaultBackgroundStyle.asset";
 
         [MenuItem("Tools/TxT RPG/Rebuild Story Text Panel Prefabs")]
         public static void CreateOrUpdatePrefabs()
         {
             EnsureFolder(PrefabFolder);
+            EnsureFolder(StyleFolder);
+            var defaultBackgroundStyle = CreateOrUpdateDefaultBackgroundStyle();
             var messagePrefab = BuildMessagePrefab();
-            BuildPanelPrefab(messagePrefab);
+            BuildPanelPrefab(messagePrefab, defaultBackgroundStyle);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             Debug.Log($"Story text prefabs created at {PrefabFolder}.");
@@ -100,7 +105,29 @@ namespace TxTRPG.UI.Editor
             }
         }
 
-        private static void BuildPanelPrefab(StoryMessageItem messagePrefab)
+        private static PanelBackgroundStyle CreateOrUpdateDefaultBackgroundStyle()
+        {
+            var style = AssetDatabase.LoadAssetAtPath<PanelBackgroundStyle>(
+                DefaultBackgroundStylePath);
+            if (style == null)
+            {
+                style = ScriptableObject.CreateInstance<PanelBackgroundStyle>();
+                AssetDatabase.CreateAsset(style, DefaultBackgroundStylePath);
+            }
+
+            style.Configure(
+                null,
+                new Color32(15, 18, 24, 255),
+                FlexibleLayoutBackgroundScaleMode.Stretch,
+                235f / 255f,
+                FlexibleLayoutBackgroundOverflowMode.ClipToPanel);
+            EditorUtility.SetDirty(style);
+            return style;
+        }
+
+        private static void BuildPanelPrefab(
+            StoryMessageItem messagePrefab,
+            PanelBackgroundStyle defaultBackgroundStyle)
         {
             var root = CreateUiObject("StoryTextPanel");
             root.SetActive(false);
@@ -109,8 +136,35 @@ namespace TxTRPG.UI.Editor
                 var rootRect = (RectTransform)root.transform;
                 rootRect.sizeDelta = new Vector2(760f, 520f);
 
-                var background = root.AddComponent<Image>();
-                background.color = new Color32(15, 18, 24, 235);
+                var backgroundLayer = CreateUiObject("BackgroundLayer", root.transform);
+                Stretch((RectTransform)backgroundLayer.transform);
+                backgroundLayer.AddComponent<CanvasGroup>();
+                var backgroundViewport = CreateUiObject("BackgroundViewport", backgroundLayer.transform);
+                Stretch((RectTransform)backgroundViewport.transform);
+                var backgroundMask = backgroundViewport.AddComponent<RectMask2D>();
+                var backgroundVisualRoot = CreateUiObject(
+                    "BackgroundVisualRoot",
+                    backgroundViewport.transform);
+                Stretch((RectTransform)backgroundVisualRoot.transform);
+                var backgroundA = CreateImage("BackgroundA", backgroundVisualRoot.transform);
+                var backgroundB = CreateImage("BackgroundB", backgroundVisualRoot.transform);
+                var backgroundEffect = CreateImage(
+                    "BackgroundEffectOverlay",
+                    backgroundVisualRoot.transform);
+                backgroundB.gameObject.SetActive(false);
+                backgroundEffect.gameObject.SetActive(false);
+
+                var backgroundRenderer = backgroundLayer.AddComponent<PanelBackgroundRenderer>();
+                var backgroundProperties = new SerializedObject(backgroundRenderer);
+                backgroundProperties.FindProperty("visualRoot").objectReferenceValue =
+                    backgroundVisualRoot.transform;
+                backgroundProperties.FindProperty("backgroundA").objectReferenceValue = backgroundA;
+                backgroundProperties.FindProperty("backgroundB").objectReferenceValue = backgroundB;
+                backgroundProperties.FindProperty("effectOverlay").objectReferenceValue = backgroundEffect;
+                backgroundProperties.FindProperty("clipMask").objectReferenceValue = backgroundMask;
+                backgroundProperties.FindProperty("initialStyle").objectReferenceValue =
+                    defaultBackgroundStyle;
+                backgroundProperties.ApplyModifiedPropertiesWithoutUndo();
 
                 var viewport = CreateUiObject("Viewport", root.transform);
                 var viewportRect = (RectTransform)viewport.transform;
@@ -160,7 +214,15 @@ namespace TxTRPG.UI.Editor
                 serialized.FindProperty("scrollRect").objectReferenceValue = scrollRect;
                 serialized.FindProperty("scrollbar").objectReferenceValue = scrollbar;
                 serialized.FindProperty("scrollbarBackground").objectReferenceValue = scrollbarBackground;
+                serialized.FindProperty("backgroundRenderer").objectReferenceValue = backgroundRenderer;
                 serialized.ApplyModifiedPropertiesWithoutUndo();
+
+                var foregroundEffectLayer = CreateImage("ForegroundEffectLayer", root.transform);
+                foregroundEffectLayer.color = Color.clear;
+                foregroundEffectLayer.enabled = false;
+                var transitionOverlay = CreateImage("TransitionOverlay", root.transform);
+                transitionOverlay.color = Color.clear;
+                transitionOverlay.enabled = false;
 
                 root.SetActive(true);
                 PrefabUtility.SaveAsPrefabAsset(root, PanelPrefabPath);
@@ -201,6 +263,18 @@ namespace TxTRPG.UI.Editor
             scrollbar.size = 0.18f;
             scrollbar.value = 0f;
             return scrollbar;
+        }
+
+        private static Image CreateImage(string name, Transform parent)
+        {
+            var imageObject = CreateUiObject(name, parent);
+            Stretch((RectTransform)imageObject.transform);
+            var image = imageObject.AddComponent<Image>();
+            image.color = Color.white;
+            image.preserveAspect = true;
+            image.raycastTarget = false;
+            image.enabled = false;
+            return image;
         }
 
         private static TextMeshProUGUI CreateText(

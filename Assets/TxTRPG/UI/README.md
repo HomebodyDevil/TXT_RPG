@@ -8,6 +8,8 @@ Place `Assets/TxTRPG/UI/Prefabs/StoryTextPanel.prefab` under a Canvas. The prefa
 
 If the prefab needs to be regenerated, use `Tools > TxT RPG > Rebuild Story Text Panel Prefabs`.
 
+The prefab uses `Assets/TxTRPG/UI/Styles/StoryTextPanelDefaultBackgroundStyle.asset` through `PanelBackgroundRenderer`. Edit that style for the shared default, or use `ApplyBackground`, `ChangeBackground`, `ClearBackground`, and `ResetBackgroundToDefault` for a specific panel.
+
 ## Runtime API
 
 ```csharp

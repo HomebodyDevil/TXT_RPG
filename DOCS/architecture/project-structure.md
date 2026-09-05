@@ -40,6 +40,7 @@ TxT-RPG/
 │           ├── Runtime/
 │           ├── Editor/
 │           ├── Prefabs/
+│           ├── Styles/
 │           ├── DEMO/
 │           └── Tests/Editor/
 ├── Packages/
@@ -132,6 +133,12 @@ TxT-RPG/
 | `ActionContextMenu.prefab` | 선택 항목의 동적 명령 목록을 표시합니다. |
 | `ActionGridPanel.prefab` | 아이템과 스킬을 표시하며 Scroll View 아래에 비상호작용 `OppositeScrollbarArea`를 포함하는 반응형 선택 그리드입니다. |
 | `FlexibleLayoutPanel.prefab` | Background·Content·Foreground 계층과 빈 ContentLayer를 제공하는 운영용 레이아웃 컨테이너입니다. |
+
+### `Assets/TxTRPG/UI/Styles`
+
+| 자산 | 역할 |
+| --- | --- |
+| `StoryTextPanelDefaultBackgroundStyle.asset` | StoryTextPanel 운영 Prefab이 별도 설정 없이 표시하는 기본 배경 Tint와 표현 정책입니다. |
 
 ### `Assets/TxTRPG/UI/DEMO`
 

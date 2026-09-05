@@ -16,6 +16,7 @@ namespace TxTRPG.UI.Editor
             EnsureFolder(DemoFolder);
             var demoData = BuildDemoData();
             BuildDemoPrefab(demoData);
+            StoryTextPanelEditModePreview.RebuildPreviewPrefab();
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             Debug.Log($"StoryTextPanel demo created at {DemoFolder}.");

@@ -21,6 +21,7 @@ namespace TxTRPG.UI.Editor
             Register("Assets/TxTRPG/UI/Prefabs/ActionGridCell.prefab", "ui/prefabs/action-grid-cell", "Gameplay_Common");
             Register("Assets/TxTRPG/UI/Prefabs/ActionContextMenu.prefab", "ui/prefabs/action-context-menu", "Gameplay_Common");
             Register("Assets/TxTRPG/UI/Prefabs/FlexibleLayoutPanel.prefab", "ui/prefabs/flexible-layout-panel", "Gameplay_Common");
+            Register("Assets/TxTRPG/UI/Styles/StoryTextPanelDefaultBackgroundStyle.asset", "ui/styles/story-text-panel-default-background", "SharedUI");
             Register("Assets/TxTRPG/UI/DEMO/FlexibleLayoutPanel/FlexibleLayoutBackgroundDemoStyle.asset", "ui/backgrounds/flexible-demo-style", "SharedUI");
             Register("Assets/TxTRPG/UI/DEMO/CharacterDisplayPanel/CharacterDisplayBackgroundDemoStyle.asset", "ui/backgrounds/character-demo-style", "SharedUI");
             Register("Assets/TxTRPG/UI/DEMO/EnemyDisplayPanel/EnemyDisplayBackgroundDemoStyle.asset", "ui/backgrounds/enemy-demo-style", "SharedUI");

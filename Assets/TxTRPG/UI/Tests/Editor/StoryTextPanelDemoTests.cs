@@ -25,7 +25,10 @@ namespace TxTRPG.UI.Tests
                 "Assets/TxTRPG/UI/Demo/StoryTextPanelDemo.prefab");
             Assert.That(prefab, Is.Not.Null);
             Assert.That(prefab.GetComponent<StoryTextPanelDemoLoader>(), Is.Not.Null);
-            Assert.That(prefab.GetComponentInChildren<StoryTextPanel>(true), Is.Not.Null);
+            var panel = prefab.GetComponentInChildren<StoryTextPanel>(true);
+            Assert.That(panel, Is.Not.Null);
+            Assert.That(panel.BackgroundRenderer, Is.Not.Null);
+            Assert.That(panel.BackgroundRenderer.InitialStyle, Is.Not.Null);
         }
     }
 }

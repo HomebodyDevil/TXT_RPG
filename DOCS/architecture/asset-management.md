@@ -26,6 +26,7 @@ UI 및 화면
 | 사용처 | Addressables 필드와 수명 |
 | --- | --- |
 | `CharacterAppearanceDefinition` | 외형별 또는 fallback Sprite ID를 보관하고 `Character2DView`가 현재 캐릭터 Lease를 소유합니다. |
+| `PanelBackgroundStyle` | 배경·효과 Sprite와 Material ID를 보관하고 `PanelBackgroundRenderer`가 현재 Style Scope와 Material 인스턴스를 소유합니다. |
 | `ActionGridEntry` | `IconAssetId`를 보관하고 `ActionGridPanel`의 목록 Scope가 모든 아이콘 Lease를 소유합니다. |
 | `FlexibleLayoutBackgroundStyle` | 배경·효과 Sprite와 Material ID를 보관하고 `FlexibleLayoutBackground`가 현재 스타일 Scope를 소유합니다. |
 | UI Prefab | `Gameplay_Common` 그룹에 등록하며 화면 조합 시스템이 `IAssetProvider`로 로드해야 합니다. |
@@ -36,7 +37,7 @@ UI 및 화면
 
 | 그룹 | 현재 용도 |
 | --- | --- |
-| `SharedUI` | Action 아이콘 Atlas와 공통 배경 스타일입니다. |
+| `SharedUI` | Action 아이콘 Atlas, Story 기본 배경과 공통 배경 스타일입니다. |
 | `Gameplay_Common` | Story, Character, Action과 Flexible Layout 운영용 Prefab입니다. |
 | `Character_Demo` | 데모 캐릭터 일러스트입니다. 실제 콘텐츠는 캐릭터 또는 챕터별 그룹으로 분리합니다. |
 
@@ -49,6 +50,8 @@ Addressables 그룹과 주소는 `AddressableAssetEditor`가 생성합니다. �
 `ActionGridPanel`은 동일한 `IconAssetId`를 하나의 요청으로 통합하고 Inspector의 `Max Concurrent Icon Loads` 한도 안에서 병렬 로드합니다. 결과는 같은 ID를 사용하는 현재 Entry 모두에 적용합니다. 개별 아이콘 실패는 경고 후 건너뛰며 다른 아이콘 로드를 계속합니다.
 
 `FlexibleLayoutBackground`은 배경과 효과의 Sprite·Material을 동시에 요청합니다. 선택 에셋 하나가 실패하면 Editor fallback 또는 기본 표현을 사용하고 나머지 에셋은 계속 적용합니다. 캐릭터 이미지는 실패 시 기존 표시를 유지합니다.
+
+`PanelBackgroundRenderer`는 Addressables 요청 전에 Style Tint와 fallback을 즉시 표시합니다. Effect Material은 Sprite 없이도 흰색 UI 기본 입력을 사용하여 표시할 수 있습니다. `Effect Material Mode = Instance`인 경우 Renderer가 Panel 전용 Material을 만들고 Style 교체·비활성화·파괴 시 정리하므로, 런타임 Shader 값 변경이 다른 Panel에 전파되지 않습니다.
 
 Lease를 해제하기 전에 `Image.sprite`와 `Image.material` 참조를 먼저 제거합니다. 참조 횟수가 0이어도 같은 번들의 다른 에셋이나 Unity 내부 캐시 때문에 메모리가 즉시 감소한다고 가정하지 않습니다.
 

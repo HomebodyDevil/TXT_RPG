@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -22,6 +23,9 @@ namespace TxTRPG.UI
         [SerializeField] private RectTransform viewport;
         [SerializeField] private RectTransform content;
         [SerializeField] private ScrollRect scrollRect;
+
+        [Header("Background")]
+        [SerializeField] private PanelBackgroundRenderer backgroundRenderer;
 
         [Header("User Scrolling")]
         [SerializeField] private bool allowUserScrolling = true;
@@ -99,6 +103,8 @@ namespace TxTRPG.UI
         }
 
         public int MessageCount => items.Count;
+        public PanelBackgroundRenderer BackgroundRenderer => backgroundRenderer;
+        public Task WhenBackgroundReady => backgroundRenderer?.WhenAssetsReady ?? Task.CompletedTask;
 
         public bool RevealInitialMessages
         {
@@ -147,6 +153,22 @@ namespace TxTRPG.UI
             get => initialRevealDuration;
             set => initialRevealDuration = Mathf.Max(0f, value);
         }
+
+        public void ApplyBackground(PanelBackgroundStyle style) =>
+            backgroundRenderer?.ApplyStyle(style);
+
+        public void ChangeBackground(PanelBackgroundStyle style, float duration = -1f) =>
+            backgroundRenderer?.Change(style, duration);
+
+        public void ResetBackgroundToDefault() => backgroundRenderer?.ResetToInitialStyle();
+
+        public void ClearBackground() => backgroundRenderer?.Clear();
+
+        public void SetBackgroundEffectsEnabled(bool enabled) =>
+            backgroundRenderer?.SetEffectsEnabled(enabled);
+
+        public void SetBackgroundAssetProvider(IAssetProvider provider) =>
+            backgroundRenderer?.SetAssetProvider(provider);
 
         public bool HasRequiredReferences =>
             messagePrefab != null &&

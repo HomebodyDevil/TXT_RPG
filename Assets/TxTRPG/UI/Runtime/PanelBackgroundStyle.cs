@@ -51,6 +51,8 @@ namespace TxTRPG.UI
         [SerializeField] private Material effectMaterial;
 #endif
         [SerializeField] private string effectMaterialAssetId;
+        [SerializeField] private FlexibleLayoutMaterialMode effectMaterialMode =
+            FlexibleLayoutMaterialMode.Shared;
 
 #if UNITY_EDITOR
         public Sprite Sprite => sprite;
@@ -82,6 +84,7 @@ namespace TxTRPG.UI
         public Material EffectMaterial => null;
 #endif
         public string EffectMaterialAssetId => effectMaterialAssetId;
+        public FlexibleLayoutMaterialMode EffectMaterialMode => effectMaterialMode;
         public bool HasAddressableAssets =>
             !string.IsNullOrWhiteSpace(spriteAssetId) ||
             !string.IsNullOrWhiteSpace(materialAssetId) ||

@@ -36,6 +36,11 @@ MonoBehaviour:
     m_SerializedLabels:
     - SharedUI
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a87a4e275ae1ddd40949b108e75dddfa
+    m_Address: ui/styles/story-text-panel-default-background
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: 70c68a77bc85ecf449155ec8e42288c1, type: 2}
   m_SchemaSet:

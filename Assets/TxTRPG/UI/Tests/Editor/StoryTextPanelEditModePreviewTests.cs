@@ -10,6 +10,8 @@ namespace TxTRPG.UI.Tests
         [Test]
         public void RebuiltDemoPrefab_ContainsOnePreviewItemPerDemoEntry()
         {
+            StoryTextPanelDemoBuilder.CreateOrUpdateDemo();
+
             var data = AssetDatabase.LoadAssetAtPath<StoryTextPanelDemoData>(
                 "Assets/TxTRPG/UI/Demo/StoryTextPanelDemoData.asset");
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(

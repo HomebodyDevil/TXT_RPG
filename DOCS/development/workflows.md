@@ -7,6 +7,7 @@
 3. 앵커와 크기는 부모 화면 레이아웃 정책에 맞게 설정합니다.
 4. 게임 또는 스토리 컴포넌트에서 `StoryTextPanel` 참조를 직렬화합니다.
 5. 현지화가 완료된 문자열로 `StoryMessage`를 생성하여 `AddMessage`를 호출합니다.
+6. 기본 배경은 `Assets/TxTRPG/UI/Styles/StoryTextPanelDefaultBackgroundStyle.asset`에서 수정합니다. 특정 화면만 다른 배경이 필요하면 별도의 `PanelBackgroundStyle`을 연결하거나 런타임 API를 사용합니다.
 
 ```csharp
 [SerializeField] private StoryTextPanel storyTextPanel;
@@ -21,6 +22,8 @@ public void ShowDialogue(string localizedSpeaker, string localizedBody)
     storyTextPanel.AddMessage(new StoryMessage(localizedBody, localizedSpeaker));
 }
 ```
+
+배경을 즉시 바꾸려면 `ApplyBackground`, 교차 페이드로 바꾸려면 `ChangeBackground`를 사용합니다. `ClearBackground`는 투명 상태를 유지하며, `ResetBackgroundToDefault`는 Prefab의 `initialStyle`로 돌아갑니다. 배경 전용 효과는 `SetBackgroundEffectsEnabled`, 테스트용 또는 플랫폼별 자산 공급자는 `SetBackgroundAssetProvider`로 제어합니다.
 
 ## Edit Mode에서 설정 확인하기
 
@@ -146,7 +149,7 @@ Inspector에서 자식 사이 간격은 `Spacing`, ContentLayer 내부 상·하�
 5. 새 Scope가 준비된 뒤 화면을 교체하고 이전 Scope를 Dispose합니다.
 6. Player 빌드 전에 `Build Player Content` 메뉴를 실행합니다.
 
-Editor fallback Sprite는 미리보기 용도로만 사용합니다. 새 런타임 콘텐츠에 Addressables ID 없이 직접 Sprite만 설정하지 않습니다. Prefab 생성 또는 Demo 재생성 후에는 `Register UI Assets`를 다시 실행하여 주소와 그룹을 동기화합니다.
+Editor fallback Sprite는 미리보기 용도로만 사용합니다. 새 런타임 콘텐츠에 Addressables ID 없이 직접 Sprite만 설정하지 않습니다. 배경 Style에는 Addressables 로딩 전에도 표시할 수 있도록 투명하지 않은 Tint 또는 경량 fallback Sprite를 설정합니다. Panel마다 Shader 속성 값을 변경할 Effect Material은 `Effect Material Mode = Instance`를 사용합니다. Prefab 생성 또는 Demo 재생성 후에는 `Register UI Assets`를 다시 실행하여 주소와 그룹을 동기화합니다.
 
 운영용 프리팹 재생성은 수동으로 적용한 프리팹 변경을 덮어쓸 수 있습니다. 생성기 코드가 권위 있는 구조인지 확인한 뒤 실행하십시오.
 
@@ -158,8 +161,8 @@ Edit Mode 테스트는 `Assets/TxTRPG/UI/Tests/Editor`에 있습니다.
 
 | 테스트 클래스 | 검증 범위 |
 | --- | --- |
-| `StoryTextPanelTests` | 투명도 경계값과 운영용 프리팹 필수 참조를 검증합니다. |
-| `StoryTextPanelDemoTests` | 데모 데이터의 양, 발화자 조합, 로더와 패널 연결을 검증합니다. |
+| `StoryTextPanelTests` | 투명도 경계값, 운영용 프리팹 필수 참조, 기본 배경 Reset과 Effect Material 인스턴스를 검증합니다. |
+| `StoryTextPanelDemoTests` | 데모 데이터의 양, 발화자 조합, 로더·패널·기본 배경 연결을 검증합니다. |
 | `StoryTextPanelEditModePreviewTests` | 데모 데이터 개수와 직렬화된 미리보기 항목 개수가 일치하는지 검증합니다. |
 | `CharacterDisplayPanelTests` | 표시 요청의 null 정규화, 2D 패널 계층과 데모 미리보기·로더 연결을 검증합니다. |
 | `EnemyDisplayPanelTests` | 적 종류와 인스턴스 식별, 반응형 포메이션, View 풀 재사용과 운영·Demo Prefab 연결을 검증합니다. |

@@ -4,6 +4,8 @@
 
 `StoryTextPanel`은 텍스트 RPG의 시간순 메시지 기록을 표시합니다. 최신 메시지는 아래쪽에 배치되고, 화면 위쪽의 오래된 메시지는 설정에 따라 점차 투명해집니다. 사용자 스크롤과 스크롤바 표현은 Inspector에서 선택할 수 있습니다.
 
+배경 표현은 `StoryTextPanel`이 직접 렌더링하지 않습니다. 공통 `PanelBackgroundRenderer`와 `PanelBackgroundStyle`을 조합하며, 패널은 배경 변경 요청만 위임합니다.
+
 이 컴포넌트는 스토리 규칙이나 현지화 키를 해석하지 않습니다. 호출자는 현지화가 완료된 문자열과 발화자를 `StoryMessage`로 전달해야 합니다.
 
 ## 초기화와 필수 참조
@@ -31,6 +33,10 @@ classDiagram
         +Clear()
         +ScrollToOldest()
         +ScrollToLatest()
+        +ApplyBackground(PanelBackgroundStyle)
+        +ChangeBackground(PanelBackgroundStyle, float)
+        +ResetBackgroundToDefault()
+        +ClearBackground()
         +CalculateOpacity(...)
     }
 
@@ -52,6 +58,7 @@ classDiagram
     }
 
     StoryTextPanel --> StoryMessageItem : 인스턴스 생성·보관
+    StoryTextPanel --> PanelBackgroundRenderer : 배경 요청 위임
     StoryMessageItem --> StoryMessage : 표시 데이터 바인딩
     StoryTextPanelDemoData --> StoryMessage : Entry.ToMessage
     StoryTextPanelDemoLoader --> StoryTextPanelDemoData : 메시지 순회
@@ -63,15 +70,27 @@ classDiagram
 
 ```text
 StoryTextPanel
+├── BackgroundLayer         PanelBackgroundRenderer
+│   └── BackgroundViewport  RectMask2D
+│       └── BackgroundVisualRoot
+│           ├── BackgroundA
+│           ├── BackgroundB
+│           └── BackgroundEffectOverlay
 ├── Viewport                 RectMask2D
 │   └── Content              VerticalLayoutGroup, ContentSizeFitter
 │       └── StoryMessageItem 런타임에 순서대로 생성됨
-└── Scrollbar
+├── Scrollbar
     └── Sliding Area
         └── Handle
+├── ForegroundEffectLayer
+└── TransitionOverlay
 ```
 
-`StoryTextPanel` 루트에는 `Image`, `ScrollRect`, `StoryTextPanel` 컴포넌트가 있습니다.
+`StoryTextPanel` 루트에는 `ScrollRect`와 `StoryTextPanel` 컴포넌트가 있습니다. 이전 Root `Image`의 정적 배경 책임은 제거했습니다. 포인터 입력은 투명한 Viewport Image가 수신하며, 실제 배경은 `PanelBackgroundRenderer`만 표시합니다.
+
+운영 Prefab은 `Assets/TxTRPG/UI/Styles/StoryTextPanelDefaultBackgroundStyle.asset`을 `initialStyle`로 참조합니다. 따라서 별도 설정 없이도 기존과 같은 기본 색상과 불투명도를 즉시 표시합니다. `ClearBackground`는 투명 상태를 유지하고, `ResetBackgroundToDefault`는 이 직렬화된 기본 Style을 다시 적용합니다.
+
+Addressables 배경을 적용하면 Renderer는 먼저 Style의 Tint와 Editor fallback을 표시한 뒤 자산 로드를 시작합니다. 로드가 성공하면 실제 Sprite와 Material로 교체하고, 실패하면 fallback 표현을 유지합니다. Effect는 Sprite 또는 Material 중 하나만 있어도 활성화할 수 있습니다. Panel별 Shader 값을 변경해야 하는 Effect Material은 `Effect Material Mode = Instance`로 설정하며, 생성된 인스턴스는 Style 교체와 파괴 시 정리됩니다.
 
 `StoryMessageItem` 프리팹은 다음 구조를 사용합니다.
 
@@ -165,6 +184,9 @@ flowchart LR
 | `Separator Spacing Above`, `Separator Spacing Below` | 구분선 이미지의 위쪽과 아래쪽 여백을 각각 설정합니다. |
 | `Reveal Initial Messages` | 초기 레이아웃과 투명도 계산이 끝날 때까지 메시지를 숨긴 뒤 점진적으로 표시합니다. 비활성화하면 기존처럼 즉시 표시합니다. |
 | `Initial Reveal Duration` | 초기 메시지가 최종 위치별 투명도까지 나타나는 시간을 초 단위로 설정합니다. `0`이면 준비가 끝난 직후 표시합니다. |
+| `Background Renderer` | 기본 Style, 배경 교차 페이드, Addressables 수명과 배경 전용 Effect를 담당하는 공통 컴포넌트 참조입니다. |
+
+배경 노이즈·모자이크·글리치는 `BackgroundEffectOverlay`, 텍스트보다 앞에 표시할 효과는 `ForegroundEffectLayer`, 패널 전체 등장·퇴장은 `TransitionOverlay`에 적용합니다. 글자별 효과는 이 계층이 아니라 `StoryMessageItem` 또는 별도 TMP 효과 시스템에서 처리합니다.
 
 ## 데모와 Edit Mode 미리보기
 

@@ -24,6 +24,7 @@ namespace TxTRPG.UI
         private Coroutine transition;
         private Material backgroundAInstance;
         private Material backgroundBInstance;
+        private Material effectMaterialInstance;
         private IAssetProvider assetProvider;
         private CancellationTokenSource assetCancellation;
         private AssetScope loadedAssets;
@@ -31,6 +32,7 @@ namespace TxTRPG.UI
         public Task WhenAssetsReady => currentLoadTask;
 
         public bool IsVisible => gameObject.activeSelf;
+        public PanelBackgroundStyle InitialStyle => initialStyle;
         public PanelBackgroundStyle CurrentStyle { get; private set; }
 
         private void Awake()
@@ -50,10 +52,25 @@ namespace TxTRPG.UI
 
         private void OnEnable()
         {
-            if (Application.isPlaying && CurrentStyle != null && CurrentStyle.HasAddressableAssets &&
+            if (CurrentStyle == null)
+            {
+                return;
+            }
+
+            if (Application.isPlaying && CurrentStyle.HasAddressableAssets &&
                 loadedAssets == null && assetCancellation == null)
             {
                 currentLoadTask = ObserveAssetLoadAsync(LoadAndApplyAsync(CurrentStyle, -1f));
+            }
+            else if (!CurrentStyle.HasAddressableAssets)
+            {
+                ApplyResolvedStyle(
+                    CurrentStyle,
+                    CurrentStyle.Sprite,
+                    CurrentStyle.Material,
+                    CurrentStyle.EffectSprite,
+                    CurrentStyle.EffectMaterial,
+                    -1f);
             }
         }
 
@@ -65,18 +82,33 @@ namespace TxTRPG.UI
 
         public void SetAssetProvider(IAssetProvider provider)
         {
+            var style = CurrentStyle;
             ReleaseLoadedAssets();
             assetProvider = provider;
+            if (style != null)
+            {
+                ApplyStyle(style);
+            }
         }
 
         public void ApplyStyle(PanelBackgroundStyle style)
         {
             if (Application.isPlaying && style != null && style.HasAddressableAssets)
             {
+                // Present the configured tint and Editor fallback immediately while Addressables load.
+                ApplyResolvedStyle(
+                    style,
+                    style.Sprite,
+                    style.Material,
+                    style.EffectSprite,
+                    style.EffectMaterial,
+                    -1f);
                 currentLoadTask = ObserveAssetLoadAsync(LoadAndApplyAsync(style, -1f));
                 return;
             }
 
+            ReleaseLoadedAssets();
+            currentLoadTask = Task.CompletedTask;
             ApplyResolvedStyle(style, style?.Sprite, style?.Material, style?.EffectSprite, style?.EffectMaterial, -1f);
         }
 
@@ -158,9 +190,13 @@ namespace TxTRPG.UI
             effectsEnabled = enabled;
             if (effectOverlay != null)
             {
-                effectOverlay.gameObject.SetActive(enabled && effectOverlay.sprite != null);
+                var hasEffect = effectOverlay.sprite != null || effectOverlay.material != null;
+                effectOverlay.enabled = hasEffect;
+                effectOverlay.gameObject.SetActive(enabled && hasEffect);
             }
         }
+
+        public void ResetToInitialStyle() => ApplyStyle(initialStyle);
 
         public void Clear()
         {
@@ -262,8 +298,23 @@ namespace TxTRPG.UI
 
             effectOverlay.sprite = sprite;
             effectOverlay.color = style.EffectTint;
-            effectOverlay.material = material;
-            effectOverlay.gameObject.SetActive(effectsEnabled && sprite != null);
+            ReleaseMaterialInstance(effectOverlay);
+            if (material != null && style.EffectMaterialMode == FlexibleLayoutMaterialMode.Instance)
+            {
+                effectMaterialInstance = new Material(material)
+                {
+                    name = material.name + " (Panel Background Effect Instance)"
+                };
+                effectOverlay.material = effectMaterialInstance;
+            }
+            else
+            {
+                effectOverlay.material = material;
+            }
+
+            var hasEffect = sprite != null || material != null;
+            effectOverlay.enabled = hasEffect;
+            effectOverlay.gameObject.SetActive(effectsEnabled && hasEffect);
             ConfigureRaycast(effectOverlay);
         }
 
@@ -484,6 +535,7 @@ namespace TxTRPG.UI
         {
             ReleaseMaterialInstance(backgroundA);
             ReleaseMaterialInstance(backgroundB);
+            ReleaseMaterialInstance(effectOverlay);
         }
 
         private void ReleaseMaterialInstance(Image image)
@@ -498,6 +550,11 @@ namespace TxTRPG.UI
             {
                 instance = backgroundBInstance;
                 backgroundBInstance = null;
+            }
+            else if (image == effectOverlay)
+            {
+                instance = effectMaterialInstance;
+                effectMaterialInstance = null;
             }
 
             if (instance == null)
