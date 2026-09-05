@@ -25,6 +25,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 66c993d9c497a3649a923c7c31ba8c6d
+    m_Address: ui/prefabs/enemy-display-panel
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6fc79b8f9fd5236499cfca7ab6827177
     m_Address: ui/prefabs/flexible-layout-panel
     m_ReadOnly: 0

@@ -20,6 +20,16 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 7ac496343c952ca4f9b30d99f58865b1
+    m_Address: ui/backgrounds/enemy-demo-style
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 950df701fba361a45a9351e325ff2a67
+    m_Address: ui/backgrounds/character-demo-style
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 95492e7bfb154e24a97284174956661d
     m_Address: ui/action-icons/demo-atlas
     m_ReadOnly: 0

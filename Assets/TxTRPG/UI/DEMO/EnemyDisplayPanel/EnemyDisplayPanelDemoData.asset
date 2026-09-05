@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c823fdcfacb48e9a91a22c24cd6bf17, type: 3}
+  m_Name: EnemyDisplayPanelDemoData
+  m_EditorClassIdentifier: TxTRPG.UI::TxTRPG.UI.EnemyDisplayPanelDemoData
+  appearanceDefinition: {fileID: 11400000, guid: 7f190a42a6b5e1a41a3991cb19c66d87, type: 2}
+  enemies:
+  - instanceId: demo-slime-a
+    enemyId: demo-slime
+    appearanceId: 
+    poseId: 
+    animationId: 
+    formationIndex: 0
+    mirrored: 0
+    targeted: 0
+    defeated: 0
+  - instanceId: demo-slime-b
+    enemyId: demo-slime
+    appearanceId: 
+    poseId: 
+    animationId: 
+    formationIndex: 1
+    mirrored: 1
+    targeted: 1
+    defeated: 0
+  - instanceId: demo-slime-c
+    enemyId: demo-slime
+    appearanceId: 
+    poseId: 
+    animationId: 
+    formationIndex: 2
+    mirrored: 0
+    targeted: 0
+    defeated: 0

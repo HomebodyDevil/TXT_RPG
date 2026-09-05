@@ -52,23 +52,40 @@ Tools > TxT RPG > Refresh Story Text Panel Edit Mode Preview
 
 Story, Character와 Action Grid Demo는 동일한 `PanelStartupController` 경로를 사용합니다. Demo 루트의 `CanvasGroup`, 구체적인 `PanelInitialDataLoader`, `FadePanelRevealTransition`과 `PanelStartupController` 참조를 함께 유지해야 합니다. Fade Duration은 기본 0.35초이며, 모션 감소가 필요하면 `Reduce Motion`을 활성화합니다. Loader를 교체할 때는 동기 `Start()`를 추가하지 않고 `LoadAndApplyAsync`가 모든 자산 준비를 기다리도록 구현합니다.
 
+## EnemyDisplayPanel을 씬에서 사용하기
+
+1. `Assets/TxTRPG/UI/Prefabs/EnemyDisplayPanel.prefab`을 Canvas 또는 `FlexibleLayoutPanel.ContentLayer` 아래에 배치합니다.
+2. `Enemy2DDisplayBackend.Appearance Definitions`에 전투에서 사용할 `EnemyAppearanceDefinition`을 등록합니다.
+3. `InstanceId`는 전투 내에서 고유하게, `EnemyId`는 같은 적 종류끼리 동일하게 구성하여 `EnemyPresentation` 목록을 만듭니다.
+4. 전체 목록 교체에는 `SetEnemies`, 부분 변경에는 `AddEnemy`, `UpdateEnemy`, `RemoveEnemy`를 사용합니다.
+5. 타깃, 애니메이션과 효과 API에는 `EnemyId`가 아니라 `InstanceId`를 전달합니다.
+6. 화면별 최대 표시 수와 `ResponsiveHorizontalEnemyLayoutStrategy`의 최대 열 수, 기준 View 크기, 간격과 최소·최대 배율을 설정합니다.
+
+외형 정의는 `Assets > Create > TxT RPG > UI > Enemy Appearance Definition`에서 생성합니다. Editor fallback Sprite는 미리보기용이며, Player에서 사용할 Sprite는 `Fallback Sprite Asset Id` 또는 Variant의 `Sprite Asset Id`에 Addressables 주소를 설정해야 합니다.
+
+`Assets/TxTRPG/UI/DEMO/EnemyDisplayPanel/EnemyDisplayPanelDemo.prefab`을 Prefab Mode로 열면 같은 `EnemyId`를 가진 세 개의 고유 인스턴스, 행 중앙 정렬과 타깃 표시를 확인할 수 있습니다. Play Mode에서는 `PanelStartupController`가 초기 자산과 배경을 기다린 뒤 패널을 표시합니다. 좁은 화면에서는 최소 배율을 침범하지 않는지와 여러 행의 각 행이 중앙에 배치되는지를 확인합니다.
+
 ## ActionGridPanel을 씬에서 사용하기
 
 1. `Assets/TxTRPG/UI/Prefabs/ActionGridPanel.prefab`을 Canvas 아래에 배치합니다.
 2. 아이템과 스킬 도메인 데이터를 `ActionGridEntry` 목록으로 변환하여 `SetEntries`에 전달합니다.
 3. `IActionMenuProvider`와 `IActionCommandExecutor` 구현을 `SetServices`로 연결합니다.
-4. `Grid Alignment`, `Incomplete Row Alignment`, `Layout Mode`, 최대 열 수, 셀 최소·최대 크기, `Spacing (X, Y)`와 Padding을 화면 정책에 맞게 설정합니다. Grid Alignment 기본값은 Center이며 전체 열 묶음을 정렬합니다. Incomplete Row Alignment 기본값은 Left이며 덜 찬 마지막 행만 정렬합니다. `Fixed Columns`의 열 수는 최대값이며 좁은 화면에서는 자동으로 감소합니다.
+4. `Grid Alignment`, `Incomplete Row Alignment`, `Vertical Placement`, `Layout Mode`, 최대 열 수, 셀 최소·최대 크기, `Spacing (X, Y)`와 Padding을 화면 정책에 맞게 설정합니다. Grid Alignment 기본값은 Center이며 전체 열 묶음을 정렬합니다. Incomplete Row Alignment 기본값은 Left이며 덜 찬 마지막 행만 정렬합니다. 운영 Prefab의 Vertical Placement는 Center When Content Fits이므로 슬롯이 모두 들어오면 세로 중앙, 넘치면 상단부터 배치됩니다. `Fixed Columns`의 열 수는 최대값이며 좁은 화면에서는 자동으로 감소합니다.
 5. 제한된 슬롯을 표시할 때만 `Fill Capacity With Empty Slots`와 `Capacity`를 사용합니다.
 
 운영용 ActionGridPanel Prefab은 기본적으로 `Fill Capacity With Empty Slots`를 사용합니다. Play Mode가 시작되면 초기 데이터가 없어도 Capacity만큼 빈 슬롯이 활성화됩니다. 이후 도메인 시스템은 `TryAddEntry`, `TryInsertEntry` 또는 `SetEntries`로 아이템과 스킬을 등록합니다. 데이터가 있는 셀만 표시하려는 목록 UI에서는 `Population Mode = Entries Only`로 명시적으로 변경합니다.
 
 기본 스크롤바 정책은 `Visibility = Hidden`, `Space Mode = Reserve When Visible`입니다. 런타임 변경에는 `ConfigurableScrollbarController.Visibility`, `SpaceMode`, `Side`, `Width`, `Gap` 속성을 사용합니다. 속성 변경은 Viewport offset과 ActionGridPanel 슬롯 레이아웃을 즉시 갱신합니다.
 
-스크롤바 Side와 관계없이 슬롯 영역의 시각적 중심을 고정하려면 Inspector에서 `Space Mode = Reserve Symmetrically Always`를 선택합니다. 이 모드는 Visibility가 Hidden이어도 Viewport 좌우에 각각 `Width + Gap`을 예약합니다. SampleScene의 `Main_FlexibleLayoutPanel/ActionGridPanel`에는 이 설정과 `Grid Alignment = Center`, `Incomplete Row Alignment = Left`가 적용되어 있습니다. 화면 너비에 따른 자동 모드 전환은 현재 지원하지 않으므로 필요한 경우 런타임 구성 코드에서 명시적으로 `SpaceMode`를 변경합니다.
+스크롤바 Side와 관계없이 슬롯 영역의 시각적 중심을 고정하려면 Inspector에서 `Space Mode = Reserve Symmetrically Always`를 선택합니다. 이 모드는 Visibility가 Hidden이어도 Viewport 좌우에 각각 `Width + Gap`을 예약합니다. SampleScene의 `Main_FlexibleLayoutPanel/ActionGridPanel`에는 이 설정과 `Grid Alignment = Center`, `Incomplete Row Alignment = Left`, `Vertical Placement = Center When Content Fits`가 적용되어 있습니다. 화면 너비에 따른 자동 모드 전환은 현재 지원하지 않으므로 필요한 경우 런타임 구성 코드에서 명시적으로 `SpaceMode`를 변경합니다.
 
 대칭 모드의 `OppositeScrollbarArea`는 Builder가 자동 생성하고 컨트롤러에 연결합니다. Width는 Scrollbar 루트와 Opposite 영역에 동일하게 적용되며 Gap은 두 영역의 너비가 아니라 Viewport 간격입니다. 수동 Prefab을 구성할 때에는 Graphic이나 입력 컴포넌트가 없는 RectTransform을 Scroll View 아래에 추가하고 `Opposite Scrollbar Area` 참조에 연결합니다.
 
-런타임 정렬 변경에는 `SetGridAlignment`와 `SetIncompleteRowAlignment`를 사용합니다. 이 옵션은 데이터 채움 방향과 무관하므로 Right를 선택해도 Entry 순서는 역전되지 않습니다. ActionGridPanel Demo는 Capacity 12와 최대 5열을 사용하므로 넓은 화면에서 불완전한 마지막 행을 확인할 수 있으며, Inspector에서 Incomplete Row Alignment를 바꾸어 세 결과를 비교할 수 있습니다.
+ActionGridPanel 전체를 기준으로 슬롯 중심을 유지하려면 `Scroll View`의 외부 Left와 Right offset도 같은 값으로 설정해야 합니다. Builder와 운영 Prefab의 기본값은 각각 18px입니다. Handle을 더 얇게 보이게 하는 `Sliding Area`의 수평 inset은 시각 설정이므로, Opposite 영역이나 외부 여백을 Handle 너비에 맞추지 않습니다. Builder를 수정한 뒤에는 `Tools > TxT RPG > Rebuild Action Grid Prefabs`를 실행하여 운영 Prefab과 이를 상속하는 Demo 구성을 갱신합니다.
+
+런타임 정렬 변경에는 `SetGridAlignment`, `SetIncompleteRowAlignment`와 `SetVerticalPlacement`를 사용합니다. 이 옵션은 데이터 채움 방향과 무관하므로 Right를 선택해도 Entry 순서는 역전되지 않습니다. Center When Content Fits의 판정은 화면에 활성화되는 Cell 수를 기준으로 하므로, Fill Capacity With Empty Slots에서는 Entry 수가 적어도 Capacity 전체가 높이 계산에 포함됩니다. ActionGridPanel Demo는 Capacity 12와 최대 5열을 사용하므로 넓은 화면에서 불완전한 마지막 행과 세로 중앙 배치를 확인할 수 있습니다. Inspector에서 Capacity나 패널 높이를 변경하면 상단 스크롤 배치로 전환되는 결과도 확인할 수 있습니다.
+
+ActionGridPanel의 Content 높이는 패널이 직접 계산하므로 Content에 `ContentSizeFitter`를 추가하지 않습니다. 이전에 직접 제작한 Prefab에 ContentSizeFitter가 남아 있어도 런타임에는 비활성화되지만, Editor 계층에서도 제거하여 레이아웃 책임을 명확하게 유지하는 것이 좋습니다.
 
 `Initial Capacity`와 `Population Mode`로 초기 셀 풀과 빈 슬롯 표시를 설정합니다. 런타임 변경은 `SetCapacity`, `TryAddEntry`, `TryInsertEntry`, `RemoveEntry`, `UpdateEntry` API를 사용합니다. 공통 스크롤바 외형은 `Assets > Create > TxT RPG > UI > Scrollbar Style`에서 생성하고 Scroll View의 `ConfigurableScrollbarController`에 연결합니다.
 
@@ -109,6 +126,8 @@ Inspector에서 자식 사이 간격은 `Spacing`, ContentLayer 내부 상·하�
 | `Tools > TxT RPG > Refresh Story Text Panel Edit Mode Preview` | 현재 데모 데이터로 미리보기 항목을 다시 생성합니다. |
 | `Tools > TxT RPG > Rebuild Character Display Panel Prefab` | 운영용 2D 캐릭터 표시 패널 프리팹을 기본 구조로 다시 생성합니다. |
 | `Tools > TxT RPG > Rebuild Character Display Panel Demo` | 샘플 Sprite, 외형 정의, 데이터와 캐릭터 표시 데모 Prefab을 다시 생성합니다. |
+| `Tools > TxT RPG > Rebuild Enemy Display Panel Prefab` | 운영용 적 표시 패널, 2D View Template과 풀 계층을 다시 생성합니다. |
+| `Tools > TxT RPG > Rebuild Enemy Display Panel Demo` | 샘플 적 Sprite, 외형 정의, 다중 적 데이터와 Demo Prefab을 다시 생성합니다. |
 | `Tools > TxT RPG > Rebuild Action Grid Prefabs` | 셀, 컨텍스트 메뉴와 ActionGridPanel 운영용 Prefab을 다시 생성합니다. |
 | `Tools > TxT RPG > Rebuild Action Grid Demo` | 샘플 아이콘, 혼합 항목 데이터와 ActionGridPanel Demo를 다시 생성합니다. |
 | `Tools > TxT RPG > Rebuild Flexible Layout Prefab` | 자식 없는 운영용 FlexibleLayoutPanel Prefab을 다시 생성합니다. |
@@ -143,7 +162,8 @@ Edit Mode 테스트는 `Assets/TxTRPG/UI/Tests/Editor`에 있습니다.
 | `StoryTextPanelDemoTests` | 데모 데이터의 양, 발화자 조합, 로더와 패널 연결을 검증합니다. |
 | `StoryTextPanelEditModePreviewTests` | 데모 데이터 개수와 직렬화된 미리보기 항목 개수가 일치하는지 검증합니다. |
 | `CharacterDisplayPanelTests` | 표시 요청의 null 정규화, 2D 패널 계층과 데모 미리보기·로더 연결을 검증합니다. |
-| `ActionGridPanelTests` | 표시 모델 정규화, 열 수, 컨텍스트 메뉴 방향 전환·경계 제한, 운영용 Prefab 경계와 혼합 항목 Demo 상태를 검증합니다. |
+| `EnemyDisplayPanelTests` | 적 종류와 인스턴스 식별, 반응형 포메이션, View 풀 재사용과 운영·Demo Prefab 연결을 검증합니다. |
+| `ActionGridPanelTests` | 표시 모델 정규화, 열 수와 필요 높이, 세로 중앙·상단 전환, 스크롤 위치 복구, 컨텍스트 메뉴 방향 전환·경계 제한, 운영용 Prefab 경계와 혼합 항목 Demo 상태를 검증합니다. |
 | `FlexibleLayoutPanelTests` | 가중치·고정 크기, 최소·최대 크기, Overflow 계산, 배경 스타일 정책과 생성된 계층형 Prefab 구조를 검증합니다. |
 | `AssetManagementTests` | AssetScope의 중복 없는 Lease 해제와 Addressables 주소·그룹 등록을 검증합니다. |
 
@@ -170,6 +190,7 @@ Edit Mode 테스트는 `Assets/TxTRPG/UI/Tests/Editor`에 있습니다.
 | Editor 생성기 경로·메뉴 | 이 문서와 `DOCS/architecture/story-text-panel.md` |
 | 어셈블리 정의 | 프로젝트 구조 문서, 플레이어 빌드 포함 여부, 테스트 참조 |
 | `CharacterDisplayPanel` 또는 View | 2D Prefab, 외형 정의, 페이드 수명 주기, 향후 3D 교체 경계 |
+| `EnemyDisplayPanel` 또는 Backend | InstanceId 안정성, View 풀, 포메이션, Addressables Lease와 타깃 상태 |
 | `ActionGridPanel` 또는 Cell | 셀 풀, Navigation, 반응형 열 수, 컨텍스트 메뉴와 외부 명령 경계 |
 | `FlexibleLayoutPanel` 또는 Item | 크기 계산, Overflow, 반응형 축, 중첩 Demo, 동일 축의 다른 Layout 컴포넌트 충돌 |
 

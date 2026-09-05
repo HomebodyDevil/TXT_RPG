@@ -24,6 +24,7 @@ TxT-RPG/
 │   │   ├── project-structure.md
 │   │   ├── story-text-panel.md
 │   │   ├── character-display-panel.md
+│   │   ├── enemy-display-panel.md
 │   │   ├── action-grid-panel.md
 │   │   ├── flexible-layout-panel.md
 │   │   └── asset-management.md
@@ -66,6 +67,15 @@ TxT-RPG/
 | `CharacterEffectPlayer.cs` | 선택적인 Animator 기반 캐릭터 효과를 재생합니다. |
 | `CharacterDisplayPanelDemoData.cs` | 데모 외형 정의와 ID 기반 표시 요청을 보관합니다. |
 | `CharacterDisplayPanelDemoLoader.cs` | Play Mode에서 데모 캐릭터와 등장 전환을 실행합니다. |
+| `EnemyPresentation.cs` | 적 종류와 개별 전투 인스턴스를 분리하여 전달하는 불변 값 객체입니다. |
+| `EnemyDisplayPanel.cs` | 다중 적 목록, 단일 타깃 정책과 교체 가능한 표시 Backend를 조율합니다. |
+| `Enemy2DDisplayBackend.cs` | 개별 적 View 풀과 반응형 포메이션을 관리합니다. |
+| `Enemy2DView.cs` | 적 Sprite, 프레이밍, 타깃·패배 상태와 의미 기반 연출을 표시합니다. |
+| `EnemyAppearanceDefinition.cs` | 적 ID 조합과 Addressables Sprite를 연결하는 ScriptableObject입니다. |
+| `EnemyLayoutStrategyBase.cs` | 적 배치 전략의 교체 가능한 계산 계약을 제공합니다. |
+| `ResponsiveHorizontalEnemyLayoutStrategy.cs` | 행별 중앙 정렬과 화면 크기에 따른 축소·개행을 계산합니다. |
+| `EnemyDisplayPanelDemoData.cs` | 같은 적 종류의 서로 다른 인스턴스를 포함하는 Demo 데이터를 보관합니다. |
+| `EnemyDisplayPanelDemoLoader.cs` | Demo 적 자산을 준비하고 목록을 적용합니다. |
 | `ActionGridModels.cs` | 공통 항목, 메뉴 옵션, 결과와 외부 Provider·Executor 경계를 정의합니다. |
 | `ActionGridCell.cs` | 아이콘, 수량, 쿨다운, 비활성, 선택과 빈 슬롯 상태를 표시합니다. |
 | `ActionGridPanel.cs` | 셀 풀, 반응형 레이아웃, 선택, Navigation과 명령 실행 흐름을 관리합니다. |
@@ -102,6 +112,8 @@ TxT-RPG/
 | `StoryTextPanelEditModePreview.cs` | 데모 데이터를 미리보기 항목으로 직렬화하고 열린 미리보기의 레이아웃·투명도를 갱신합니다. |
 | `CharacterDisplayPanelPrefabBuilder.cs` | 운영용 `CharacterDisplayPanel` 2D Prefab을 생성합니다. |
 | `CharacterDisplayPanelDemoBuilder.cs` | 데모 Sprite, 외형 정의, 데이터와 미리보기 Prefab을 생성합니다. |
+| `EnemyDisplayPanelPrefabBuilder.cs` | 운영용 다중 적 패널, 2D View Template과 풀 계층을 생성합니다. |
+| `EnemyDisplayPanelDemoBuilder.cs` | 샘플 적 Sprite, 외형 정의, 데이터와 Demo Prefab을 생성합니다. |
 | `ActionGridPrefabBuilder.cs` | 셀, 컨텍스트 메뉴와 그리드 패널 운영용 Prefab을 생성합니다. |
 | `ActionGridPanelDemoBuilder.cs` | 데모 아이콘, 데이터와 Edit Mode 미리보기 Prefab을 생성합니다. |
 | `FlexibleLayoutPrefabBuilder.cs` | 빈 운영용 레이아웃 Prefab과 세 제품 UI를 조합한 재귀 Demo를 생성합니다. |
@@ -115,6 +127,7 @@ TxT-RPG/
 | `StoryMessageItem.prefab` | 본문과 선택적 발화자를 표시하는 메시지 항목입니다. |
 | `StoryTextPanel.prefab` | 실제 게임 화면에 배치하는 운영용 텍스트 패널입니다. |
 | `CharacterDisplayPanel.prefab` | 교체 가능한 2D View를 포함하는 운영용 캐릭터 표시 패널입니다. |
+| `EnemyDisplayPanel.prefab` | 풀링되는 2D 적 View와 반응형 포메이션을 포함하는 운영용 적 표시 패널입니다. |
 | `ActionGridCell.prefab` | 공통 행동 항목 하나의 표시와 선택 상태를 담당합니다. |
 | `ActionContextMenu.prefab` | 선택 항목의 동적 명령 목록을 표시합니다. |
 | `ActionGridPanel.prefab` | 아이템과 스킬을 표시하며 Scroll View 아래에 비상호작용 `OppositeScrollbarArea`를 포함하는 반응형 선택 그리드입니다. |
@@ -127,6 +140,7 @@ TxT-RPG/
 | `StoryTextPanelDemoData.asset` | 길이와 발화자 유무가 다른 기본 메시지 16개를 보관합니다. |
 | `StoryTextPanelDemo.prefab` | 운영용 패널, 런타임 로더, Edit Mode 미리보기 항목을 조합한 검증용 프리팹입니다. |
 | `CharacterDisplayPanel/CharacterDisplayPanelDemo.prefab` | 운영용 캐릭터 패널, 샘플 외형과 런타임 로더를 조합한 검증용 프리팹입니다. |
+| `EnemyDisplayPanel/EnemyDisplayPanelDemo.prefab` | 같은 종류의 적 세 인스턴스, 타깃 표시와 런타임 로더를 조합한 검증용 프리팹입니다. |
 | `ActionGridPanel/ActionGridPanelDemo.prefab` | 혼합 항목, 셀 상태와 컨텍스트 메뉴를 조합한 검증용 프리팹입니다. |
 | `FlexibleLayoutPanel/FlexibleLayoutPanelDemo.prefab` | Story, Action과 Character Demo를 가중치 기반 중첩 레이아웃으로 조합한 검증용 프리팹입니다. |
 | `FlexibleLayoutPanel/FlexibleLayoutBackgroundDemoStyle.asset` | Demo 루트의 정적 배경 색상과 클리핑 정책을 정의합니다. |
@@ -137,7 +151,7 @@ TxT-RPG/
 
 ### `Assets/AddressableAssetsData`
 
-Addressables 프로필, 빌드 스크립트와 `SharedUI`, `Gameplay_Common`, `Character_Demo` 그룹 설정을 보관합니다. 이 디렉터리는 재현 가능한 빌드 설정이므로 버전 관리 대상입니다. 생성된 실제 Bundle 출력은 소스 구조로 취급하지 않습니다.
+Addressables 프로필, 빌드 스크립트와 `SharedUI`, `Gameplay_Common`, `Character_Demo`, `Enemy_Demo` 그룹 설정을 보관합니다. 이 디렉터리는 재현 가능한 빌드 설정이므로 버전 관리 대상입니다. 생성된 실제 Bundle 출력은 소스 구조로 취급하지 않습니다.
 
 ## 어셈블리 의존 관계
 
@@ -169,7 +183,7 @@ flowchart TD
 
 - 스토리 진행 및 선택지 결정 시스템
 - 현지화 서비스와 문자열 테이블
-- 3D 캐릭터·적 표시, 동적 전투 슬롯과 자산 비동기 로딩
+- 3D 캐릭터·적 표시와 동적 전투 슬롯
 - 저장 데이터와 마이그레이션
 - Steam 및 모바일 플랫폼 서비스
 - 모바일 Safe Area를 포함한 최종 화면 조합과 기기별 레이아웃 검증

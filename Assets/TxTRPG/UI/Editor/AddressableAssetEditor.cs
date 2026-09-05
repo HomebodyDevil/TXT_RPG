@@ -16,12 +16,14 @@ namespace TxTRPG.UI.Editor
             Register("Assets/TxTRPG/UI/Prefabs/StoryTextPanel.prefab", "ui/prefabs/story-text-panel", "Gameplay_Common");
             Register("Assets/TxTRPG/UI/Prefabs/StoryMessageItem.prefab", "ui/prefabs/story-message-item", "Gameplay_Common");
             Register("Assets/TxTRPG/UI/Prefabs/CharacterDisplayPanel.prefab", "ui/prefabs/character-display-panel", "Gameplay_Common");
+            Register("Assets/TxTRPG/UI/Prefabs/EnemyDisplayPanel.prefab", "ui/prefabs/enemy-display-panel", "Gameplay_Common");
             Register("Assets/TxTRPG/UI/Prefabs/ActionGridPanel.prefab", "ui/prefabs/action-grid-panel", "Gameplay_Common");
             Register("Assets/TxTRPG/UI/Prefabs/ActionGridCell.prefab", "ui/prefabs/action-grid-cell", "Gameplay_Common");
             Register("Assets/TxTRPG/UI/Prefabs/ActionContextMenu.prefab", "ui/prefabs/action-context-menu", "Gameplay_Common");
             Register("Assets/TxTRPG/UI/Prefabs/FlexibleLayoutPanel.prefab", "ui/prefabs/flexible-layout-panel", "Gameplay_Common");
             Register("Assets/TxTRPG/UI/DEMO/FlexibleLayoutPanel/FlexibleLayoutBackgroundDemoStyle.asset", "ui/backgrounds/flexible-demo-style", "SharedUI");
             Register("Assets/TxTRPG/UI/DEMO/CharacterDisplayPanel/CharacterDisplayBackgroundDemoStyle.asset", "ui/backgrounds/character-demo-style", "SharedUI");
+            Register("Assets/TxTRPG/UI/DEMO/EnemyDisplayPanel/EnemyDisplayBackgroundDemoStyle.asset", "ui/backgrounds/enemy-demo-style", "SharedUI");
             AssetDatabase.SaveAssets();
             Debug.Log("TxT RPG UI assets registered with Addressables.");
         }
