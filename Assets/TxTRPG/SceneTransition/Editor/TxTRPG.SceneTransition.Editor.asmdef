@@ -1,0 +1,19 @@
+{
+  "name": "TxTRPG.SceneTransition.Editor",
+  "rootNamespace": "TxTRPG.SceneTransition.Editor",
+  "references": [
+    "TxTRPG.SceneTransition",
+    "Unity.ugui"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

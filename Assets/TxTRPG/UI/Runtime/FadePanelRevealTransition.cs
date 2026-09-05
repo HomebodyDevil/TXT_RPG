@@ -7,6 +7,7 @@ namespace TxTRPG.UI
     [DisallowMultipleComponent]
     public sealed class FadePanelRevealTransition : PanelRevealTransition
     {
+        [SerializeField] private bool animateReveal;
         [SerializeField, Min(0f)] private float duration = 0.35f;
         [SerializeField, Range(0.001f, 0.1f)] private float maximumFrameDelta = 0.05f;
         [SerializeField] private bool useUnscaledTime = true;
@@ -19,7 +20,7 @@ namespace TxTRPG.UI
         {
             if (target == null) return;
             target.alpha = 0f;
-            if (reduceMotion || duration <= 0f) { target.alpha = 1f; return; }
+            if (!animateReveal || reduceMotion || duration <= 0f) { target.alpha = 1f; return; }
             await Task.Yield();
             var elapsed = 0f;
             while (elapsed < duration)

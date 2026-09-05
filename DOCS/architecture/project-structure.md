@@ -9,7 +9,7 @@
 | 입력 | Unity Input System 1.20.0 |
 | UI | uGUI와 TextMeshPro |
 | 테스트 | Unity Test Framework 1.6.0 |
-| 기본 빌드 씬 | `Assets/Scenes/SampleScene.unity` |
+| 기본 빌드 씬 | `Assets/Scenes/TMP_MainScene.unity` |
 
 `StoryTextPanel`은 특정 씬에 직접 연결되어 있지 않습니다. 필요한 씬의 Canvas 아래에 프리팹을 배치하여 사용합니다.
 
@@ -27,15 +27,22 @@ TxT-RPG/
 │   │   ├── enemy-display-panel.md
 │   │   ├── action-grid-panel.md
 │   │   ├── flexible-layout-panel.md
+│   │   ├── scene-transition.md
 │   │   └── asset-management.md
 │   └── development/
 │       └── workflows.md
 ├── Assets/
 │   ├── Scenes/
-│   │   └── SampleScene.unity
+│   │   └── TMP_MainScene.unity
 │   ├── TextMesh Pro/
 │   │   └── Resources, Fonts, Shaders, Sprites
 │   └── TxTRPG/
+│       ├── SceneTransition/
+│       │   ├── Runtime/
+│       │   ├── Editor/
+│       │   ├── Profiles/
+│       │   ├── Resources/TxTRPG/
+│       │   └── Tests/Editor/
 │       └── UI/
 │           ├── Runtime/
 │           ├── Editor/
@@ -46,6 +53,10 @@ TxT-RPG/
 ├── Packages/
 └── ProjectSettings/
 ```
+
+### `Assets/TxTRPG/SceneTransition`
+
+`TxTRPG.SceneTransition`은 UI Panel과 독립적으로 영속적인 Scene 교체 흐름을 담당합니다. Runtime 어셈블리는 `ISceneLoader`, `IScreenTransitionEffect`, 준비 신호와 기본 Fade를 포함합니다. Editor 어셈블리는 기본 Profile 및 `PersistentAppRoot.prefab` 생성기를, Tests 어셈블리는 중복 요청·실패 복구·준비 대기를 검증합니다.
 
 ### `Assets/TxTRPG/UI/Runtime`
 

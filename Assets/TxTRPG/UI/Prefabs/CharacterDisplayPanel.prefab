@@ -645,7 +645,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TxTRPG.UI::TxTRPG.UI.Character2DView
   canvasGroup: {fileID: 9125751138931637206}
-  animateVisibility: 1
+  animateVisibility: 0
   showDuration: 0.35
   hideDuration: 0.2
   maximumFrameDelta: 0.05

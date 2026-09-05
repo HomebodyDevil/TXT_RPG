@@ -84,12 +84,12 @@ ID 비교는 대소문자를 구분합니다. 스토리 데이터와 외형 정�
 
 | 항목 | 동작 |
 | --- | --- |
-| `Animate Visibility` | 등장·퇴장 페이드 사용 여부를 결정합니다. |
+| `Animate Visibility` | 등장·퇴장 Fade 사용 여부를 결정합니다. 기본값은 `false`이며 Scene 시작 Fade는 `SceneTransitionService`가 담당합니다. |
 | `Show Duration` | 완전히 투명한 상태에서 완전히 표시될 때까지의 시간입니다. |
 | `Hide Duration` | 현재 투명도에서 완전히 숨겨질 때까지의 시간입니다. |
 | `Maximum Frame Delta` | 한 프레임이 비정상적으로 길 때 전환이 건너뛰지 않도록 누적 시간의 상한을 정합니다. |
 
-등장 페이드는 View를 활성화한 즉시 투명도를 0으로 설정하고 첫 렌더링 프레임을 진행률 0으로 유지합니다. 다음 프레임부터 `Time.unscaledDeltaTime`을 제한하여 누적하므로 게임 일시 정지의 영향을 받지 않으며 시작 시점의 불투명도 튐을 방지합니다.
+`Animate Visibility`를 활성화한 경우 등장 Fade는 View를 활성화한 즉시 투명도를 0으로 설정하고 첫 렌더링 프레임을 진행률 0으로 유지합니다. 다음 프레임부터 `Time.unscaledDeltaTime`을 제한하여 누적하므로 게임 일시 정지의 영향을 받지 않으며 시작 시점의 불투명도 튐을 방지합니다.
 
 ## 3D 확장 경계
 
@@ -122,4 +122,4 @@ public void ChangeLocation(PanelBackgroundStyle locationStyle)
 
 `Assets/TxTRPG/UI/DEMO/CharacterDisplayPanel/CharacterDisplayPanelDemo.prefab`은 운영용 패널 Prefab을 중첩하고 전용 샘플 Sprite와 외형 정의를 연결합니다. Prefab Mode에서 열면 Play Mode를 시작하지 않아도 캐릭터 영역의 앵커, 종횡비와 기본 배치를 확인할 수 있습니다.
 
-Play Mode에서는 `CharacterDisplayPanelDemoLoader`가 동일한 데모 데이터를 `CharacterPresentation`으로 변환하여 실제 표시 API와 등장 페이드를 실행합니다. 샘플 Texture와 Sprite는 데모 검증 전용이며 운영 캐릭터 자산으로 사용하지 않습니다.
+Play Mode에서는 `CharacterDisplayPanelDemoLoader`가 동일한 데모 데이터를 `CharacterPresentation`으로 변환하여 실제 표시 API를 실행합니다. 기본 설정에서는 즉시 표시하며, `Animate Visibility`를 활성화한 경우에만 캐릭터 자체의 등장 Fade를 실행합니다. 샘플 Texture와 Sprite는 데모 검증 전용이며 운영 캐릭터 자산으로 사용하지 않습니다.

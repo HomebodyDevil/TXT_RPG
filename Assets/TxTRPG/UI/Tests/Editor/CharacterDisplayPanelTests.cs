@@ -34,7 +34,10 @@ namespace TxTRPG.UI.Tests
             Assert.That(prefab.transform.Find("BackgroundLayer/BackgroundViewport/BackgroundVisualRoot/BackgroundB"), Is.Not.Null);
             Assert.That(prefab.transform.Find("BackgroundLayer/BackgroundViewport/BackgroundVisualRoot/BackgroundEffectOverlay"), Is.Not.Null);
             Assert.That(prefab.transform.Find("DisplayRoot/Character2DView"), Is.Not.Null);
-            Assert.That(prefab.GetComponentInChildren<Character2DView>(true), Is.Not.Null);
+            var characterView = prefab.GetComponentInChildren<Character2DView>(true);
+            Assert.That(characterView, Is.Not.Null);
+            Assert.That(new SerializedObject(characterView)
+                .FindProperty("animateVisibility").boolValue, Is.False);
             Assert.That(prefab.transform.Find(
                 "DisplayRoot/Character2DView/FrameViewport/VisualRoot/ArtworkRoot/BaseImage")
                 .GetComponent<Image>(), Is.Not.Null);

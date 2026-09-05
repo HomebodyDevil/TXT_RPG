@@ -49,11 +49,21 @@ Tools > TxT RPG > Refresh Story Text Panel Edit Mode Preview
 
 외형 정의 자산은 `Assets > Create > TxT RPG > UI > Character Appearance Definition`에서 생성할 수 있습니다.
 
-캐릭터 표시 데모는 `Assets/TxTRPG/UI/DEMO/CharacterDisplayPanel/CharacterDisplayPanelDemo.prefab`을 Prefab Mode로 열어 확인합니다. Edit Mode에서는 생성된 샘플 캐릭터가 완전히 표시되며, Play Mode에서는 실제 `ShowCharacter` 호출과 등장 페이드가 실행됩니다.
+캐릭터 표시 데모는 `Assets/TxTRPG/UI/DEMO/CharacterDisplayPanel/CharacterDisplayPanelDemo.prefab`을 Prefab Mode로 열어 확인합니다. Edit Mode와 Play Mode에서는 준비된 샘플 캐릭터가 즉시 완전히 표시됩니다. 캐릭터 교체 Fade를 확인하려면 `Animate Visibility`를 명시적으로 활성화합니다.
 
 같은 Demo의 `CharacterDisplayBackgroundDemoStyle.asset`은 공통 `PanelBackgroundStyle` 제작 예시입니다. CharacterDisplayPanel의 배경은 `ApplyBackground`, `ChangeBackground`, `ClearBackground`로 캐릭터 표시와 독립적으로 제어합니다. 배경 전용 효과는 `BackgroundEffectOverlay`, 캐릭터 전용 효과는 Character2DView의 `EffectOverlay`, 전경 효과는 `ForegroundEffectLayer`, 전체 화면 전환은 `TransitionOverlay`에 적용합니다.
 
-Story, Character와 Action Grid Demo는 동일한 `PanelStartupController` 경로를 사용합니다. Demo 루트의 `CanvasGroup`, 구체적인 `PanelInitialDataLoader`, `FadePanelRevealTransition`과 `PanelStartupController` 참조를 함께 유지해야 합니다. Fade Duration은 기본 0.35초이며, 모션 감소가 필요하면 `Reduce Motion`을 활성화합니다. Loader를 교체할 때는 동기 `Start()`를 추가하지 않고 `LoadAndApplyAsync`가 모든 자산 준비를 기다리도록 구현합니다.
+Story, Character, Enemy와 Action Grid Demo는 동일한 `PanelStartupController` 경로를 사용합니다. Demo 루트의 `CanvasGroup`, 구체적인 `PanelInitialDataLoader`, `FadePanelRevealTransition`과 `PanelStartupController` 참조를 함께 유지해야 합니다. `Animate Reveal` 기본값은 꺼져 있으며, Scene 시작 연출은 영속적인 `SceneTransitionService`가 담당합니다. Loader를 교체할 때는 동기 `Start()`를 추가하지 않고 `LoadAndApplyAsync`가 모든 자산 준비를 기다리도록 구현합니다.
+
+## Scene 전환 사용하기
+
+1. `Tools > TxT RPG > Rebuild Persistent App Root`를 실행하여 기본 Profile과 Resource Prefab을 생성합니다.
+2. 전환할 때 `PersistentAppRoot.EnsureExists().SceneTransitions.LoadSceneAsync(sceneName, profile, cancellationToken)`을 호출합니다.
+3. 대상 Scene의 필수 초기화 관리자는 `ISceneReadySource`를 구현하거나 `SceneReadySignal`을 연결하고 모든 필수 Addressables·세이브·카메라·초기 포커스 준비 후 `MarkReady()`를 호출합니다.
+4. 접근성 설정이 모션 감소를 요청하면 `SceneTransitionService.ReduceMotion`을 활성화합니다.
+5. 호출자는 로드 예외를 처리하고 `TransitionFailed` 또는 `ErrorFallback`을 이용하여 재시도 경로를 제공합니다.
+
+`SceneReadySignal.Mark Ready On Start`가 켜져 있으면 Start 시점에 자동으로 준비됩니다. 비동기 초기화가 있는 제품 Scene에서는 이 옵션을 끄고 외부 초기화 완료 시 명시적으로 호출합니다. 준비 신호가 하나도 없는 Scene은 첫 프레임과 Canvas 레이아웃 갱신 후 준비된 것으로 처리합니다.
 
 ## EnemyDisplayPanel을 씬에서 사용하기
 
@@ -139,6 +149,7 @@ Inspector에서 자식 사이 간격은 `Spacing`, ContentLayer 내부 상·하�
 | `Tools > TxT RPG > Addressables > Register UI Assets` | 기존 운영용 UI Prefab과 공통 스타일을 수명 기반 Addressables 그룹에 등록합니다. |
 | `Tools > TxT RPG > Addressables > Validate Settings` | 빈 주소, 대소문자 중복, 누락 GUID와 그룹 스키마를 검사합니다. |
 | `Tools > TxT RPG > Addressables > Build Player Content` | 현재 프로필과 그룹 설정으로 Addressables Player Content를 빌드합니다. |
+| `Tools > TxT RPG > Rebuild Persistent App Root` | 기본 Scene Transition Profile과 영속 Resource Prefab을 다시 생성합니다. |
 
 ## Addressables 콘텐츠 제작
 
@@ -157,7 +168,7 @@ Editor fallback Sprite는 미리보기 용도로만 사용합니다. 새 런타�
 
 ## 테스트
 
-Edit Mode 테스트는 `Assets/TxTRPG/UI/Tests/Editor`에 있습니다.
+Edit Mode 테스트는 `Assets/TxTRPG/UI/Tests/Editor`와 `Assets/TxTRPG/SceneTransition/Tests/Editor`에 있습니다.
 
 | 테스트 클래스 | 검증 범위 |
 | --- | --- |
@@ -169,10 +180,11 @@ Edit Mode 테스트는 `Assets/TxTRPG/UI/Tests/Editor`에 있습니다.
 | `ActionGridPanelTests` | 표시 모델 정규화, 열 수와 필요 높이, 세로 중앙·상단 전환, 스크롤 위치 복구, 컨텍스트 메뉴 방향 전환·경계 제한, 운영용 Prefab 경계와 혼합 항목 Demo 상태를 검증합니다. |
 | `FlexibleLayoutPanelTests` | 가중치·고정 크기, 최소·최대 크기, Overflow 계산, 배경 스타일 정책과 생성된 계층형 Prefab 구조를 검증합니다. |
 | `AssetManagementTests` | AssetScope의 중복 없는 Lease 해제와 Addressables 주소·그룹 등록을 검증합니다. |
+| `SceneTransitionTests` | 영속 Prefab 구조, 중복 요청 차단, 명시적 Scene 준비 대기와 실패·취소 시 화면·입력 복구를 검증합니다. |
 
 관련 변경 후에는 다음 항목을 확인합니다.
 
-1. `TxTRPG.UI`, `TxTRPG.UI.Editor`, `TxTRPG.UI.Tests.Editor` 어셈블리가 오류 없이 컴파일되는지 확인합니다.
+1. `TxTRPG.UI`, `TxTRPG.UI.Editor`, `TxTRPG.UI.Tests.Editor`, `TxTRPG.SceneTransition`, `TxTRPG.SceneTransition.Editor`, `TxTRPG.SceneTransition.Tests.Editor` 어셈블리가 오류 없이 컴파일되는지 확인합니다.
 2. 관련 Edit Mode 테스트를 실행합니다.
 3. 데모 프리팹을 Prefab Mode에서 열어 최신 메시지 하단 정렬과 상단 투명도 감쇠를 확인합니다.
 4. Play Mode에서 미리보기 항목이 제거되고 런타임 메시지만 생성되는지 확인합니다.

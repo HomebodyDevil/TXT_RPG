@@ -31,6 +31,7 @@ namespace TxTRPG.UI.Tests
                 var loader = root.AddComponent<PanelStartupTestLoader>();
                 var transition = root.AddComponent<FadePanelRevealTransition>();
                 var transitionProperties = new SerializedObject(transition);
+                transitionProperties.FindProperty("animateReveal").boolValue = false;
                 transitionProperties.FindProperty("duration").floatValue = 0f;
                 transitionProperties.ApplyModifiedPropertiesWithoutUndo();
                 var controller = root.AddComponent<PanelStartupController>();
@@ -55,6 +56,37 @@ namespace TxTRPG.UI.Tests
                 Assert.That(group.blocksRaycasts, Is.True);
             }
             finally { Object.DestroyImmediate(root); }
+        }
+
+        [Test]
+        public async Task RevealAnimation_DisabledByDefault_CompletesImmediatelyAfterPreparation()
+        {
+            var root = new GameObject("Reveal", typeof(RectTransform), typeof(CanvasGroup));
+            try
+            {
+                var group = root.GetComponent<CanvasGroup>();
+                var transition = root.AddComponent<FadePanelRevealTransition>();
+                transition.PrepareHidden(group);
+
+                Assert.That(group.alpha, Is.Zero);
+                await transition.RevealAsync(group, CancellationToken.None);
+                Assert.That(group.alpha, Is.EqualTo(1f));
+            }
+            finally { Object.DestroyImmediate(root); }
+        }
+
+        [TestCase("Assets/TxTRPG/UI/Demo/StoryTextPanelDemo.prefab")]
+        [TestCase("Assets/TxTRPG/UI/DEMO/CharacterDisplayPanel/CharacterDisplayPanelDemo.prefab")]
+        [TestCase("Assets/TxTRPG/UI/DEMO/EnemyDisplayPanel/EnemyDisplayPanelDemo.prefab")]
+        [TestCase("Assets/TxTRPG/UI/DEMO/ActionGridPanel/ActionGridPanelDemo.prefab")]
+        public void DemoPrefab_LocalRevealAnimationIsDisabled(string prefabPath)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            Assert.That(prefab, Is.Not.Null, prefabPath);
+            var transition = prefab.GetComponent<FadePanelRevealTransition>();
+            Assert.That(transition, Is.Not.Null, prefabPath);
+            var properties = new SerializedObject(transition);
+            Assert.That(properties.FindProperty("animateReveal").boolValue, Is.False, prefabPath);
         }
     }
 }

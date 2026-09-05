@@ -7,7 +7,7 @@ namespace TxTRPG.UI
     {
         [Header("Visibility Transition")]
         [SerializeField] private CanvasGroup canvasGroup;
-        [SerializeField] private bool animateVisibility = true;
+        [SerializeField] private bool animateVisibility;
         [SerializeField, Min(0f)] private float showDuration = 0.35f;
         [SerializeField, Min(0f)] private float hideDuration = 0.2f;
         [SerializeField, Min(0.001f)] private float maximumFrameDelta = 0.05f;

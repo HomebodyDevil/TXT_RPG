@@ -215,6 +215,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4a8c668e1c88aaa4f9d322466683ea2f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TxTRPG.UI::TxTRPG.UI.FadePanelRevealTransition
+  animateReveal: 0
   duration: 0.35
   maximumFrameDelta: 0.05
   useUnscaledTime: 1

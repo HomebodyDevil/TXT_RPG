@@ -66,6 +66,7 @@ namespace TxTRPG.UI.Editor
                 var view = viewObject.AddComponent<Character2DView>();
                 var viewProperties = new SerializedObject(view);
                 viewProperties.FindProperty("canvasGroup").objectReferenceValue = viewCanvasGroup;
+                viewProperties.FindProperty("animateVisibility").boolValue = false;
                 viewProperties.FindProperty("frameViewport").objectReferenceValue = frameViewport.transform;
                 viewProperties.FindProperty("visualRoot").objectReferenceValue = visualRoot.transform;
                 viewProperties.FindProperty("artworkRoot").objectReferenceValue = artworkRoot.transform;

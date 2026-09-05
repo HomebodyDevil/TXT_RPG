@@ -1,0 +1,25 @@
+{
+  "name": "TxTRPG.SceneTransition.Tests.Editor",
+  "rootNamespace": "TxTRPG.SceneTransition.Tests",
+  "references": [
+    "TxTRPG.SceneTransition",
+    "TxTRPG.SceneTransition.Editor",
+    "Unity.ugui"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}
