@@ -180,7 +180,7 @@ namespace TxTRPG.UI.Editor
                 tabs.AddComponent<HorizontalLayoutGroup>().spacing = 6f;
 
                 var scrollView = CreateUiObject("Scroll View", root.transform);
-                Stretch((RectTransform)scrollView.transform, 18f, 18f, 30f, 66f);
+                Stretch((RectTransform)scrollView.transform, 18f, 18f, 18f, 66f);
                 var oppositeScrollbarArea = CreateUiObject("OppositeScrollbarArea", scrollView.transform);
                 var oppositeRect = (RectTransform)oppositeScrollbarArea.transform;
                 oppositeRect.anchorMin = new Vector2(0f, 0f);
@@ -210,10 +210,6 @@ namespace TxTRPG.UI.Editor
                 grid.cellSize = new Vector2(96f, 96f);
                 grid.spacing = new Vector2(8f, 8f);
                 grid.padding = new RectOffset(8, 8, 8, 8);
-                var fitter = content.AddComponent<ContentSizeFitter>();
-                fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
-                fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
                 var scrollbar = BuildScrollbar(scrollView.transform);
                 var scrollRect = scrollView.AddComponent<ScrollRect>();
                 scrollRect.viewport = viewport.transform as RectTransform;
@@ -266,6 +262,8 @@ namespace TxTRPG.UI.Editor
                     (int)ActionGridHorizontalAlignment.Center;
                 properties.FindProperty("incompleteRowAlignment").enumValueIndex =
                     (int)ActionGridHorizontalAlignment.Left;
+                properties.FindProperty("verticalPlacement").enumValueIndex =
+                    (int)ActionGridVerticalPlacement.CenterWhenContentFits;
                 properties.FindProperty("populationMode").enumValueIndex =
                     (int)ActionGridPopulationMode.FillCapacityWithEmptySlots;
                 properties.FindProperty("cellPrefab").objectReferenceValue = cellPrefab;

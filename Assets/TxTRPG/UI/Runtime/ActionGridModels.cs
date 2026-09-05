@@ -25,6 +25,12 @@ namespace TxTRPG.UI
         Right
     }
 
+    public enum ActionGridVerticalPlacement
+    {
+        Top,
+        CenterWhenContentFits
+    }
+
     public enum ActionGridPopulationMode
     {
         EntriesOnly,

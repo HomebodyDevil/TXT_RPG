@@ -87,15 +87,23 @@ ActionGridCell
 
 `Grid Alignment`는 완성된 전체 열 묶음을 Viewport 안에서 Left, Center, Right로 정렬하며 기본값은 Center입니다. `Incomplete Row Alignment`는 현재 열 수보다 활성 Cell이 적은 마지막 행만 정렬하며 기본값은 Left입니다. 두 설정은 Entry 순서나 Fill Direction을 변경하지 않습니다. Start Corner는 Upper Left, Start Axis는 Horizontal로 유지되므로 데이터 순서는 왼쪽에서 오른쪽, 위에서 아래로 유지됩니다.
 
+`Vertical Placement`는 `Top`과 `Center When Content Fits`를 제공합니다. Top은 슬롯 수와 관계없이 위쪽부터 배치합니다. Center When Content Fits는 실제 표시 Cell이 Viewport 안에 모두 들어오면 전체 슬롯 묶음을 세로 중앙에 배치하고, 필요한 높이가 Viewport를 0.5px보다 많이 초과하면 자동으로 상단 배치와 아래 방향 스크롤로 전환합니다. 수평 Grid Alignment와 Incomplete Row Alignment는 이 세로 정책과 독립적으로 유지됩니다.
+
+ActionGridPanel은 표시 Cell 수, 현재 열 수, Cell 높이, 세로 Spacing과 Padding으로 필요한 그리드 높이를 계산하고 Content 높이를 `max(Viewport 높이, 필요한 그리드 높이)` 정책으로 직접 관리합니다. 운영 Prefab의 Content에는 `ContentSizeFitter`를 두지 않습니다. 이전 Prefab 인스턴스에 충돌하는 ContentSizeFitter가 남아 있으면 런타임 초기화 시 비활성화하여 높이 소유권이 중복되지 않도록 합니다. `Entries Only`는 Entry 수를, `Fill Capacity With Empty Slots`는 빈 슬롯을 포함한 Capacity를 높이 계산에 사용합니다.
+
+슬롯 제거나 화면 확장으로 overflow 상태에서 fitting 상태로 전환되면 ScrollRect의 관성과 스크롤 위치를 상단으로 초기화한 뒤 가운데 정렬합니다. Content의 상단 Anchor와 Pivot은 변경하지 않으며 GridLayoutGroup의 `Upper*`와 `Middle*` 정렬만 전환하므로, 런타임 중 Anchor 변경으로 인한 위치 이동을 방지합니다.
+
 `Compact Forward`는 Entry 제거 후 데이터 인덱스를 먼저 압축하며, 불완전 행 정렬은 압축된 활성 Cell 결과에만 적용됩니다. `Entries Only`에서는 Entry Cell 수를 기준으로 마지막 행을 판단합니다. `Fill Capacity With Empty Slots`에서는 빈 슬롯도 활성 Cell이므로 Capacity까지 포함한 수를 기준으로 판단하며, 마지막 행이 열 수만큼 차 있으면 추가 offset을 적용하지 않습니다.
 
 `ConfigurableScrollbarController`는 스크롤바 표시 상태와 Viewport 예약 영역이 실제로 변경될 때 `ViewportLayoutChanged`를 발생시킵니다. `ActionGridPanel`은 이 알림을 구독하여 같은 호출 흐름에서 열 수와 슬롯 정렬을 다시 계산하므로 한 프레임 지연에 의존하지 않습니다. 공용 컨트롤러는 StoryTextPanel 같은 기존 사용처의 Auto 동작을 유지하기 위해 콘텐츠 높이와 Viewport 크기 변화를 감시하지만, 값이 실제로 달라진 경우에만 `Refresh()`를 호출하며 매 프레임 레이아웃을 재계산하지 않습니다.
 
 ActionGridPanel Prefab의 기본 스크롤바 설정은 `Hidden + ReserveWhenVisible`입니다. 기존 세 Space Mode에서는 Hidden이 스크롤바와 예약 공간을 모두 제거합니다. 새 `ReserveSymmetricallyAlways`만 Visibility와 관계없이 대칭 공간을 유지합니다. Auto는 overflow가 있을 때만 표시되며, ReserveWhenVisible에서는 전체 폭으로 overflow를 먼저 평가한 뒤 실제 표시 시에만 Width + Gap을 예약합니다. Always는 항상 표시하고, ReserveAlways와 ReserveWhenVisible은 공간을 예약하며 Overlay는 Viewport 위에 겹쳐 표시합니다.
 
-`ReserveSymmetricallyAlways`는 기존 세 enum 값 뒤에 추가된 대칭 예약 정책입니다. Visibility와 Side에 관계없이 Viewport의 왼쪽에는 `Width + Gap`, 오른쪽에는 `-(Width + Gap)`을 적용합니다. 스크롤바가 Hidden 또는 Auto 비표시 상태여도 양쪽 여백을 유지하며, Left와 Right는 실제 스크롤바의 위치만 결정합니다. SampleScene의 `Main_FlexibleLayoutPanel/ActionGridPanel`은 `Hidden + ReserveSymmetricallyAlways + Center`를 사용합니다.
+`ReserveSymmetricallyAlways`는 기존 세 enum 값 뒤에 추가된 대칭 예약 정책입니다. Visibility와 Side에 관계없이 Viewport의 왼쪽에는 `Width + Gap`, 오른쪽에는 `-(Width + Gap)`을 적용합니다. 스크롤바가 Hidden 또는 Auto 비표시 상태여도 양쪽 여백을 유지하며, Left와 Right는 실제 스크롤바의 위치만 결정합니다. SampleScene의 `Main_FlexibleLayoutPanel/ActionGridPanel`은 `Hidden + ReserveSymmetricallyAlways + Grid Center + Center When Content Fits`를 사용합니다.
 
 `Scroll View/OppositeScrollbarArea`는 RectTransform만 가진 비상호작용 공간 표현입니다. 대칭 모드에서 실제 Scrollbar 반대편에 배치되며 두 RectTransform의 너비는 항상 `Width`로 같습니다. `Gap`은 영역 너비에 포함되지 않고 각 영역과 Viewport 사이의 간격으로만 사용되므로 전체 좌우 inset은 각각 `Width + Gap`입니다. Hidden과 Auto 비표시 상태에서도 Opposite 영역과 대칭 inset은 유지됩니다. 다른 Space Mode에서는 Opposite 영역을 비활성화합니다.
+
+운영 Prefab의 `Scroll View` 외부 수평 여백은 왼쪽과 오른쪽 모두 18px입니다. 따라서 기본 `Width = 16`, `Gap = 8`인 대칭 모드에서는 ActionGridPanel 전체 기준 좌우 공간이 각각 `18 + 16 + 8 = 42px`로 같고, Viewport와 슬롯 영역의 중심도 패널 중심과 일치합니다. `Sliding Area`의 수평 inset은 Handle의 시각적 두께만 결정하며 Scrollbar 루트와 Opposite 영역의 레이아웃 너비에는 영향을 주지 않습니다.
 
 Width 변경은 Scrollbar 루트와 Opposite 영역의 너비를 함께 바꾸며, Gap 변경은 두 너비를 유지하고 Viewport offset만 변경합니다. Side 변경은 두 영역의 좌우 위치만 교환합니다. 기존 Prefab에 Opposite 참조가 없어도 대칭 Viewport inset은 유지되며 Editor와 Development Build에서는 누락 경고를 한 번 출력합니다.
 

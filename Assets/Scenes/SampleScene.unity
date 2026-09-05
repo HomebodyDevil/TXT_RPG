@@ -1646,15 +1646,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1859257855745382576, guid: 5ab35b947c24cc641a44639c3eda9990, type: 3}
       propertyPath: m_CellSize.x
-      value: 85.100006
+      value: 72.48
       objectReference: {fileID: 0}
     - target: {fileID: 1859257855745382576, guid: 5ab35b947c24cc641a44639c3eda9990, type: 3}
       propertyPath: m_CellSize.y
-      value: 85.100006
+      value: 72.48
+      objectReference: {fileID: 0}
+    - target: {fileID: 1859257855745382576, guid: 5ab35b947c24cc641a44639c3eda9990, type: 3}
+      propertyPath: m_ChildAlignment
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1859257855745382576, guid: 5ab35b947c24cc641a44639c3eda9990, type: 3}
       propertyPath: m_ConstraintCount
-      value: 4
+      value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 1908885659906062135, guid: 5ab35b947c24cc641a44639c3eda9990, type: 3}
       propertyPath: m_AnchorMax.x
@@ -2850,7 +2854,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5879859812112322873, guid: 5ab35b947c24cc641a44639c3eda9990, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 400
+      value: 972
       objectReference: {fileID: 0}
     - target: {fileID: 5879859812112322873, guid: 5ab35b947c24cc641a44639c3eda9990, type: 3}
       propertyPath: m_AnchoredPosition.y
@@ -4065,9 +4069,17 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 405219222788398994, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
+      propertyPath: m_Size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 901234567890123456, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 2753455743794963697, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 0
+      value: 256
       objectReference: {fileID: 0}
     - target: {fileID: 2753455743794963697, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       propertyPath: m_AnchoredPosition.y
@@ -4077,9 +4089,13 @@ PrefabInstance:
       propertyPath: m_Name
       value: ActionGridPanel
       objectReference: {fileID: 0}
+    - target: {fileID: 2799687139059118830, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: -48
+      objectReference: {fileID: 0}
     - target: {fileID: 4923355288798784966, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       propertyPath: capacity
-      value: 8
+      value: 12
       objectReference: {fileID: 0}
     - target: {fileID: 4923355288798784966, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       propertyPath: spacing.x
@@ -4099,7 +4115,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4923355288798784966, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       propertyPath: initialCapacity
-      value: 8
+      value: 12
       objectReference: {fileID: 0}
     - target: {fileID: 4923355288798784966, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       propertyPath: maximumCellSize.x
@@ -4141,13 +4157,29 @@ PrefabInstance:
       propertyPath: m_AnchorMax.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7079409601597286129, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7953956291639668088, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
+      propertyPath: m_Spacing.x
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 7953956291639668088, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
+      propertyPath: m_Spacing.y
+      value: 15
+      objectReference: {fileID: 0}
     - target: {fileID: 7953956291639668088, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       propertyPath: m_CellSize.x
-      value: 74.05556
+      value: 64.30556
       objectReference: {fileID: 0}
     - target: {fileID: 7953956291639668088, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       propertyPath: m_CellSize.y
-      value: 74.05556
+      value: 64.30556
+      objectReference: {fileID: 0}
+    - target: {fileID: 7953956291639668088, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
+      propertyPath: m_ChildAlignment
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 7953956291639668088, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       propertyPath: m_ConstraintCount

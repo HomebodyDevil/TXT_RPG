@@ -11881,6 +11881,14 @@ PrefabInstance:
       propertyPath: m_AnchorMax.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2753455743794963697, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 436
+      objectReference: {fileID: 0}
+    - target: {fileID: 7953956291639668088, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
+      propertyPath: m_ChildAlignment
+      value: 4
+      objectReference: {fileID: 0}
     - target: {fileID: 7953956291639668088, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       propertyPath: m_CellSize.x
       value: 128

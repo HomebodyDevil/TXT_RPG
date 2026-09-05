@@ -157,6 +157,8 @@ namespace TxTRPG.UI.Editor
                 var panelProperties = new SerializedObject(panel);
                 panelProperties.FindProperty("populationMode").enumValueIndex =
                     (int)ActionGridPopulationMode.FillCapacityWithEmptySlots;
+                panelProperties.FindProperty("verticalPlacement").enumValueIndex =
+                    (int)ActionGridVerticalPlacement.CenterWhenContentFits;
                 panelProperties.FindProperty("initialCapacity").intValue = 12;
                 panelProperties.FindProperty("capacity").intValue = 12;
                 panelProperties.ApplyModifiedPropertiesWithoutUndo();

@@ -11,6 +11,8 @@ namespace TxTRPG.UI
 {
     public sealed class ActionGridPanel : MonoBehaviour
     {
+        private const float LayoutEpsilon = 0.5f;
+
         [Header("References")]
         [SerializeField] private ActionGridCell cellPrefab;
         [SerializeField] private RectTransform viewport;
@@ -29,6 +31,9 @@ namespace TxTRPG.UI
         [SerializeField, Tooltip("Aligns only the final row when it contains fewer cells than the current column count.")]
         private ActionGridHorizontalAlignment incompleteRowAlignment =
             ActionGridHorizontalAlignment.Left;
+        [SerializeField, Tooltip("Keeps fitting content at the top or centers it vertically. Overflowing content always starts at the top.")]
+        private ActionGridVerticalPlacement verticalPlacement =
+            ActionGridVerticalPlacement.Top;
         [SerializeField] private ActionGridLayoutMode layoutMode = ActionGridLayoutMode.FixedColumns;
         [SerializeField, Min(1)] private int fixedColumns = 5;
         [SerializeField] private Vector2 minimumCellSize = new(72f, 72f);
@@ -74,6 +79,7 @@ namespace TxTRPG.UI
         public ActionGridPackingMode PackingMode => packingMode;
         public ActionGridHorizontalAlignment GridAlignment => gridAlignment;
         public ActionGridHorizontalAlignment IncompleteRowAlignment => incompleteRowAlignment;
+        public ActionGridVerticalPlacement VerticalPlacement => verticalPlacement;
 
         [Obsolete("Use GridAlignment and IncompleteRowAlignment.")]
         public ActionGridHorizontalAlignment SlotAlignment => gridAlignment;
@@ -81,6 +87,7 @@ namespace TxTRPG.UI
         private void OnEnable()
         {
             padding ??= new RectOffset(8, 8, 8, 8);
+            DisableConflictingContentSizeFitter();
             ResolveScrollbarController();
             if (scrollbarController != null)
             {
@@ -105,6 +112,8 @@ namespace TxTRPG.UI
             {
                 return;
             }
+
+            DisableConflictingContentSizeFitter();
 
             var existingCells = content.GetComponentsInChildren<ActionGridCell>(true);
             foreach (var cell in existingCells)
@@ -157,6 +166,18 @@ namespace TxTRPG.UI
         {
             incompleteRowAlignment = alignment;
             RebuildGridLayout();
+        }
+
+        public void SetVerticalPlacement(ActionGridVerticalPlacement placement)
+        {
+            if (verticalPlacement == placement)
+            {
+                return;
+            }
+
+            verticalPlacement = placement;
+            RebuildGridLayout();
+            RefreshScrollbarLayout();
         }
 
         [Obsolete("Use SetGridAlignment and SetIncompleteRowAlignment.")]
@@ -497,11 +518,12 @@ namespace TxTRPG.UI
 
         private void ApplyLayout()
         {
-            if (viewport == null || gridLayout == null)
+            if (viewport == null || content == null || gridLayout == null)
             {
                 return;
             }
 
+            padding ??= new RectOffset();
             var availableWidth = Mathf.Max(1f, viewport.rect.width - padding.horizontal);
             currentColumns = CalculateColumnCount(
                 layoutMode,
@@ -513,22 +535,92 @@ namespace TxTRPG.UI
             width = Mathf.Clamp(width, minimumCellSize.x, maximumCellSize.x);
             var aspect = minimumCellSize.x > 0f ? minimumCellSize.y / minimumCellSize.x : 1f;
 
+            var cellHeight = Mathf.Clamp(
+                width * aspect,
+                minimumCellSize.y,
+                maximumCellSize.y);
+            var viewportHeight = Mathf.Max(0f, viewport.rect.height);
+            var requiredGridHeight = CalculateRequiredGridHeight(
+                GetDisplayedCount(),
+                currentColumns,
+                cellHeight,
+                spacing.y,
+                padding);
+            var contentFits = requiredGridHeight <= viewportHeight + LayoutEpsilon;
+            var wasOverflowing = content.rect.height > viewportHeight + LayoutEpsilon;
+            var targetContentHeight = contentFits ? viewportHeight : requiredGridHeight;
+
             gridLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             gridLayout.constraintCount = currentColumns;
-            gridLayout.cellSize = new Vector2(
-                width,
-                Mathf.Clamp(width * aspect, minimumCellSize.y, maximumCellSize.y));
+            gridLayout.cellSize = new Vector2(width, cellHeight);
             gridLayout.spacing = spacing;
             gridLayout.padding = padding;
-            gridLayout.childAlignment = gridAlignment switch
+            gridLayout.childAlignment = ResolveChildAlignment(
+                gridAlignment,
+                verticalPlacement == ActionGridVerticalPlacement.CenterWhenContentFits && contentFits);
+            if (gridLayout is ActionGridLayoutGroup alignedGrid)
+            {
+                alignedGrid.IncompleteRowAlignment = incompleteRowAlignment;
+            }
+
+            if (!Mathf.Approximately(content.rect.height, targetContentHeight))
+            {
+                content.SetSizeWithCurrentAnchors(
+                    RectTransform.Axis.Vertical,
+                    targetContentHeight);
+            }
+
+            if (wasOverflowing && contentFits)
+            {
+                ResetScrollToTop();
+            }
+        }
+
+        private static TextAnchor ResolveChildAlignment(
+            ActionGridHorizontalAlignment horizontalAlignment,
+            bool centerVertically)
+        {
+            if (centerVertically)
+            {
+                return horizontalAlignment switch
+                {
+                    ActionGridHorizontalAlignment.Left => TextAnchor.MiddleLeft,
+                    ActionGridHorizontalAlignment.Right => TextAnchor.MiddleRight,
+                    _ => TextAnchor.MiddleCenter
+                };
+            }
+
+            return horizontalAlignment switch
             {
                 ActionGridHorizontalAlignment.Left => TextAnchor.UpperLeft,
                 ActionGridHorizontalAlignment.Right => TextAnchor.UpperRight,
                 _ => TextAnchor.UpperCenter
             };
-            if (gridLayout is ActionGridLayoutGroup alignedGrid)
+        }
+
+        private void ResetScrollToTop()
+        {
+            if (scrollRect != null)
             {
-                alignedGrid.IncompleteRowAlignment = incompleteRowAlignment;
+                scrollRect.StopMovement();
+                scrollRect.verticalNormalizedPosition = 1f;
+            }
+
+            var anchoredPosition = content.anchoredPosition;
+            if (Mathf.Abs(anchoredPosition.y) <= LayoutEpsilon)
+            {
+                return;
+            }
+
+            anchoredPosition.y = 0f;
+            content.anchoredPosition = anchoredPosition;
+        }
+
+        private void DisableConflictingContentSizeFitter()
+        {
+            if (content != null && content.TryGetComponent<ContentSizeFitter>(out var fitter))
+            {
+                fitter.enabled = false;
             }
         }
 
@@ -575,6 +667,22 @@ namespace TxTRPG.UI
             return mode == ActionGridLayoutMode.FixedColumns
                 ? Mathf.Min(Mathf.Max(1, maximumColumns), columnsThatFit)
                 : columnsThatFit;
+        }
+
+        public static float CalculateRequiredGridHeight(
+            int visibleCellCount,
+            int columns,
+            float cellHeight,
+            float verticalSpacing,
+            RectOffset layoutPadding)
+        {
+            columns = Mathf.Max(1, columns);
+            visibleCellCount = Mathf.Max(0, visibleCellCount);
+            var rows = Mathf.CeilToInt(visibleCellCount / (float)columns);
+            var paddingHeight = layoutPadding?.vertical ?? 0;
+            return paddingHeight +
+                   rows * Mathf.Max(0f, cellHeight) +
+                   Mathf.Max(0, rows - 1) * Mathf.Max(0f, verticalSpacing);
         }
 
         private void ConfigureNavigation()

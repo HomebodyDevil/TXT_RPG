@@ -56,6 +56,24 @@ namespace TxTRPG.UI.Tests
             Assert.That(columns, Is.EqualTo(6));
         }
 
+        [TestCase(0, 5, 16f)]
+        [TestCase(5, 5, 88f)]
+        [TestCase(6, 5, 168f)]
+        public void RequiredGridHeight_UsesDisplayedRowsSpacingAndPadding(
+            int visibleCellCount,
+            int columns,
+            float expectedHeight)
+        {
+            var height = ActionGridPanel.CalculateRequiredGridHeight(
+                visibleCellCount,
+                columns,
+                72f,
+                8f,
+                new RectOffset(8, 8, 8, 8));
+
+            Assert.That(height, Is.EqualTo(expectedHeight));
+        }
+
         [TestCase(ActionGridHorizontalAlignment.Left, 0f)]
         [TestCase(ActionGridHorizontalAlignment.Center, 52f)]
         [TestCase(ActionGridHorizontalAlignment.Right, 104f)]
@@ -398,6 +416,108 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        public void GeneratedPanel_ActionGridOwnsContentHeight()
+        {
+            ActionGridPrefabBuilder.CreateOrUpdatePrefabs();
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/TxTRPG/UI/Prefabs/ActionGridPanel.prefab");
+            var panel = prefab.GetComponent<ActionGridPanel>();
+            var content = prefab.GetComponentInChildren<ScrollRect>(true).content;
+
+            Assert.That(panel.VerticalPlacement,
+                Is.EqualTo(ActionGridVerticalPlacement.CenterWhenContentFits));
+            Assert.That(content.GetComponent<ContentSizeFitter>(), Is.Null);
+        }
+
+        [Test]
+        public void VerticalPlacement_CentersFittingContentAndTopsOverflowingContent()
+        {
+            ActionGridPrefabBuilder.CreateOrUpdatePrefabs();
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/TxTRPG/UI/Prefabs/ActionGridPanel.prefab");
+            var instance = Object.Instantiate(prefab);
+            try
+            {
+                var panel = instance.GetComponent<ActionGridPanel>();
+                var scrollRect = instance.GetComponentInChildren<ScrollRect>(true);
+                var grid = scrollRect.content.GetComponent<ActionGridLayoutGroup>();
+
+                panel.SetCapacity(4);
+                panel.SetVerticalPlacement(ActionGridVerticalPlacement.CenterWhenContentFits);
+                Canvas.ForceUpdateCanvases();
+
+                Assert.That(grid.childAlignment, Is.EqualTo(TextAnchor.MiddleCenter));
+                Assert.That(scrollRect.content.rect.height,
+                    Is.EqualTo(scrollRect.viewport.rect.height).Within(0.5f));
+
+                panel.SetGridAlignment(ActionGridHorizontalAlignment.Left);
+                Assert.That(grid.childAlignment, Is.EqualTo(TextAnchor.MiddleLeft));
+                panel.SetGridAlignment(ActionGridHorizontalAlignment.Right);
+                Assert.That(grid.childAlignment, Is.EqualTo(TextAnchor.MiddleRight));
+                panel.SetGridAlignment(ActionGridHorizontalAlignment.Center);
+                Assert.That(grid.childAlignment, Is.EqualTo(TextAnchor.MiddleCenter));
+
+                panel.SetCapacity(20);
+                Canvas.ForceUpdateCanvases();
+
+                Assert.That(grid.childAlignment, Is.EqualTo(TextAnchor.UpperCenter));
+                Assert.That(scrollRect.content.rect.height,
+                    Is.GreaterThan(scrollRect.viewport.rect.height + 0.5f));
+
+                scrollRect.verticalNormalizedPosition = 0f;
+                var scrolledPosition = scrollRect.content.anchoredPosition;
+                scrolledPosition.y = 80f;
+                scrollRect.content.anchoredPosition = scrolledPosition;
+
+                panel.SetCapacity(4);
+                Canvas.ForceUpdateCanvases();
+
+                Assert.That(grid.childAlignment, Is.EqualTo(TextAnchor.MiddleCenter));
+                Assert.That(scrollRect.verticalNormalizedPosition, Is.EqualTo(1f).Within(0.001f));
+                Assert.That(scrollRect.content.anchoredPosition.y, Is.Zero.Within(0.5f));
+
+                panel.SetVerticalPlacement(ActionGridVerticalPlacement.Top);
+                Assert.That(grid.childAlignment, Is.EqualTo(TextAnchor.UpperCenter));
+                Assert.That(scrollRect.content.rect.height,
+                    Is.EqualTo(scrollRect.viewport.rect.height).Within(0.5f));
+            }
+            finally { Object.DestroyImmediate(instance); }
+        }
+
+        [Test]
+        public void GeneratedPanel_ScrollViewOuterMarginsPreservePanelCenter()
+        {
+            ActionGridPrefabBuilder.CreateOrUpdatePrefabs();
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/TxTRPG/UI/Prefabs/ActionGridPanel.prefab");
+            var instance = Object.Instantiate(prefab);
+            try
+            {
+                var scrollRect = instance.GetComponentInChildren<ScrollRect>(true);
+                var scrollView = (RectTransform)scrollRect.transform;
+                var controller = scrollView.GetComponent<ConfigurableScrollbarController>();
+
+                Assert.That(scrollView.anchorMin.x, Is.EqualTo(0f));
+                Assert.That(scrollView.anchorMax.x, Is.EqualTo(1f));
+                Assert.That(scrollView.offsetMin.x, Is.EqualTo(18f).Within(0.01f));
+                Assert.That(-scrollView.offsetMax.x, Is.EqualTo(18f).Within(0.01f));
+
+                controller.Visibility = ScrollbarVisibilityMode.Hidden;
+                controller.SpaceMode = ScrollbarSpaceMode.ReserveSymmetricallyAlways;
+                controller.Width = 16f;
+                controller.Gap = 8f;
+                Canvas.ForceUpdateCanvases();
+                controller.Refresh();
+
+                var leftSpace = scrollView.offsetMin.x + scrollRect.viewport.offsetMin.x;
+                var rightSpace = -scrollView.offsetMax.x - scrollRect.viewport.offsetMax.x;
+                Assert.That(leftSpace, Is.EqualTo(42f).Within(0.01f));
+                Assert.That(rightSpace, Is.EqualTo(leftSpace).Within(0.01f));
+            }
+            finally { Object.DestroyImmediate(instance); }
+        }
+
+        [Test]
         public void GeneratedPanel_InitiallyShowsCapacityAsEmptySlots()
         {
             ActionGridPrefabBuilder.CreateOrUpdatePrefabs();
@@ -557,6 +677,12 @@ namespace TxTRPG.UI.Tests
             Assert.That(entries, Has.Some.Matches<ActionGridEntry>(entry => entry.Kind == ActionGridEntryKind.Item));
             Assert.That(entries, Has.Some.Matches<ActionGridEntry>(entry => entry.Kind == ActionGridEntryKind.Skill));
             Assert.That(prefab.GetComponent<ActionGridPanelDemoController>(), Is.Not.Null);
+            var demoPanel = prefab.GetComponentInChildren<ActionGridPanel>(true);
+            Assert.That(demoPanel.VerticalPlacement,
+                Is.EqualTo(ActionGridVerticalPlacement.CenterWhenContentFits));
+            Assert.That(
+                demoPanel.GetComponentInChildren<ActionGridLayoutGroup>(true).childAlignment,
+                Is.EqualTo(TextAnchor.MiddleCenter));
             var demoCells = prefab.GetComponentsInChildren<ActionGridCell>(true);
             Assert.That(demoCells.Length, Is.EqualTo(12));
             Assert.That(demoCells.Count(cell => cell.gameObject.name.EndsWith(": Empty")), Is.EqualTo(2));
