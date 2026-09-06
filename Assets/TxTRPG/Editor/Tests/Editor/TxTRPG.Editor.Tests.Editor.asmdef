@@ -1,0 +1,26 @@
+{
+  "name": "TxTRPG.Editor.Tests.Editor",
+  "rootNamespace": "TxTRPG.Editor.Tests",
+  "references": [
+    "TxTRPG.Editor.Common",
+    "TxTRPG.Content.Editor",
+    "TxTRPG.UI.Editor",
+    "TxTRPG.SceneTransition.Editor"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

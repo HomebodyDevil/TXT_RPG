@@ -7,7 +7,9 @@ using UnityEngine.UI;
 
 namespace TxTRPG.UI
 {
-    public sealed class Character2DView : CharacterViewBase
+    public sealed class Character2DView : CharacterViewBase,
+        ICharacterAppearanceDefinitionReceiver,
+        ICharacterAssetReadySource
     {
         [Header("Visuals")]
         [SerializeField] private RectTransform frameViewport;
@@ -28,12 +30,15 @@ namespace TxTRPG.UI
         private CancellationTokenSource artworkCancellation;
         private AssetLease<Sprite> artworkLease;
         private Task currentArtworkTask = Task.CompletedTask;
+        private CharacterPresentation currentPresentation;
+        private bool hasPresentation;
         public Task WhenAssetsReady => currentArtworkTask;
 
         public void SetAssetProvider(IAssetProvider provider)
         {
             ReleaseArtwork();
             assetProvider = provider;
+            ReloadArtworkIfBound();
         }
 
         public void SetAppearanceDefinitions(IEnumerable<CharacterAppearanceDefinition> definitions)
@@ -51,11 +56,25 @@ namespace TxTRPG.UI
                     appearanceDefinitions.Add(definition);
                 }
             }
+            ReloadArtworkIfBound();
         }
 
         protected override void ApplyPresentation(in CharacterPresentation presentation)
         {
-            currentArtworkTask = ObserveArtworkLoadAsync(ApplyArtworkAsync(presentation));
+            var artworkChanged = !hasPresentation ||
+                !UsesSameArtwork(currentPresentation, presentation);
+            var animationChanged = !hasPresentation ||
+                !string.Equals(
+                    currentPresentation.AnimationId,
+                    presentation.AnimationId,
+                    StringComparison.Ordinal);
+            currentPresentation = presentation;
+            hasPresentation = true;
+
+            if (artworkChanged)
+            {
+                currentArtworkTask = ObserveArtworkLoadAsync(ApplyArtworkAsync(presentation));
+            }
 
             if (visualRoot != null)
             {
@@ -64,7 +83,10 @@ namespace TxTRPG.UI
                 visualRoot.localScale = scale;
             }
 
-            PlayAnimation(presentation.AnimationId);
+            if (animationChanged)
+            {
+                PlayAnimation(presentation.AnimationId);
+            }
         }
 
         public override void PlayAnimation(string animationId)
@@ -87,6 +109,8 @@ namespace TxTRPG.UI
             ClearImage(skinOverlay);
             ClearImage(effectOverlay);
             currentSprite = null;
+            currentPresentation = default;
+            hasPresentation = false;
             effectPlayer?.Clear();
         }
 
@@ -94,19 +118,21 @@ namespace TxTRPG.UI
             CharacterPresentation presentation,
             CancellationToken cancellationToken = default)
         {
+            CancelArtworkRequest();
             if (!TryResolveArtwork(presentation, out var artwork))
             {
+                ReleaseArtworkLease();
                 SetArtwork(null, default);
                 return;
             }
 
             if (!Application.isPlaying || string.IsNullOrWhiteSpace(artwork.AssetId))
             {
+                ReleaseArtworkLease();
                 SetArtwork(artwork.EditorFallback, artwork.Framing);
                 return;
             }
 
-            CancelArtworkRequest();
             var cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             artworkCancellation = cancellation;
             AssetLease<Sprite> pendingLease = null;
@@ -185,6 +211,31 @@ namespace TxTRPG.UI
             artworkLease?.Dispose();
             artworkLease = null;
         }
+
+        private void ReleaseArtworkLease()
+        {
+            artworkLease?.Dispose();
+            artworkLease = null;
+        }
+
+        private void ReloadArtworkIfBound()
+        {
+            if (!hasPresentation)
+            {
+                return;
+            }
+            currentArtworkTask = ObserveArtworkLoadAsync(
+                ApplyArtworkAsync(currentPresentation));
+        }
+
+        private static bool UsesSameArtwork(
+            in CharacterPresentation left,
+            in CharacterPresentation right) =>
+            string.Equals(left.CharacterId, right.CharacterId, StringComparison.Ordinal) &&
+            string.Equals(left.AppearanceId, right.AppearanceId, StringComparison.Ordinal) &&
+            string.Equals(left.VisualStateId, right.VisualStateId, StringComparison.Ordinal) &&
+            string.Equals(left.PoseId, right.PoseId, StringComparison.Ordinal) &&
+            string.Equals(left.ExpressionId, right.ExpressionId, StringComparison.Ordinal);
 
         private void CancelArtworkRequest()
         {

@@ -1,4 +1,5 @@
 using UnityEditor;
+using TxTRPG.Editor.Common.Menu;
 using UnityEngine;
 
 namespace TxTRPG.UI.Editor
@@ -10,7 +11,10 @@ namespace TxTRPG.UI.Editor
         private const string DemoDataPath = DemoFolder + "/StoryTextPanelDemoData.asset";
         private const string DemoPrefabPath = DemoFolder + "/StoryTextPanelDemo.prefab";
 
-        [MenuItem("Tools/TxT RPG/Rebuild Story Text Panel Demo")]
+        [MenuItem(
+            TxTRPGEditorMenuPaths.UiDemos + "Rebuild Story Text Panel Demo",
+            false,
+            TxTRPGEditorMenuPriorities.Rebuild)]
         public static void CreateOrUpdateDemo()
         {
             EnsureFolder(DemoFolder);

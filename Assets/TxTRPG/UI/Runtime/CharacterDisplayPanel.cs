@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace TxTRPG.UI
@@ -9,6 +11,10 @@ namespace TxTRPG.UI
 
         public bool IsVisible => activeView != null && activeView.IsVisible;
         public PanelBackgroundRenderer BackgroundRenderer => backgroundRenderer;
+        public Task WhenAssetsReady =>
+            activeView is ICharacterAssetReadySource readySource
+                ? readySource.WhenAssetsReady
+                : Task.CompletedTask;
 
         public void ShowCharacter(in CharacterPresentation presentation)
         {
@@ -82,6 +88,15 @@ namespace TxTRPG.UI
             }
 
             activeView = view;
+        }
+
+        public void SetAppearanceDefinitions(
+            IEnumerable<CharacterAppearanceDefinition> definitions)
+        {
+            if (activeView is ICharacterAppearanceDefinitionReceiver receiver)
+            {
+                receiver.SetAppearanceDefinitions(definitions);
+            }
         }
     }
 }

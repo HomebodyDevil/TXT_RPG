@@ -115,6 +115,64 @@ namespace TxTRPG.Content.Tests
             Assert.That(presentation.Mirrored, Is.True);
         }
 
+        [Test]
+        public void VisualStatePolicy_ResolvesHealthBoundaries()
+        {
+            var policy = Create<CharacterVisualStatePolicy>();
+            policy.ConfigureForEditor(0.2f, 0.5f);
+
+            Assert.That(policy.TryValidate(out var error), Is.True, error);
+            Assert.That(policy.Resolve(100, 100), Is.EqualTo("normal"));
+            Assert.That(policy.Resolve(50, 100), Is.EqualTo("injured"));
+            Assert.That(policy.Resolve(20, 100), Is.EqualTo("critical"));
+            Assert.That(policy.Resolve(0, 100), Is.EqualTo("defeated"));
+        }
+
+        [Test]
+        public void PresentationFactory_TemporaryStateOverridesHealthPolicy()
+        {
+            var state = CreateContent("character.knight", "characters/knight/default")
+                .CreateRuntimeState("knight-1");
+            state.Health.ApplyDamage(90);
+            var policy = Create<CharacterVisualStatePolicy>();
+            policy.ConfigureForEditor(0.2f, 0.5f);
+            var factory = new CharacterPresentationFactory();
+
+            var resolved = factory.Create(state, policy);
+            var temporary = factory.Create(
+                state,
+                policy,
+                temporaryVisualStateId: "hit");
+
+            Assert.That(resolved.VisualStateId, Is.EqualTo("critical"));
+            Assert.That(temporary.VisualStateId, Is.EqualTo("hit"));
+        }
+
+        [Test]
+        public void AppearanceDefinition_RejectsAmbiguousEqualSpecificityVariants()
+        {
+            var appearance = Create<CharacterAppearanceDefinition>();
+            var framing = new CharacterArtworkFraming(
+                CharacterFramingPreset.ThighUp);
+            appearance.ConfigureForEditor(
+                "character.knight",
+                null,
+                "characters/knight/default",
+                framing,
+                new[]
+                {
+                    CharacterAppearanceDefinition.Variant.CreateForEditor(
+                        string.Empty, "critical", string.Empty, string.Empty,
+                        null, "characters/knight/critical", framing),
+                    CharacterAppearanceDefinition.Variant.CreateForEditor(
+                        string.Empty, string.Empty, "battle", string.Empty,
+                        null, "characters/knight/battle", framing)
+                });
+
+            Assert.That(appearance.TryValidateVariantSelection(out var error), Is.False);
+            Assert.That(error, Does.Contain("overlap"));
+        }
+
         private CharacterContentDefinition CreateContent(
             string definitionId,
             string artworkAssetId,

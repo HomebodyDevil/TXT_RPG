@@ -123,3 +123,5 @@ public void ChangeLocation(PanelBackgroundStyle locationStyle)
 `Assets/TxTRPG/UI/DEMO/CharacterDisplayPanel/CharacterDisplayPanelDemo.prefab`은 운영용 패널 Prefab을 중첩하고 전용 샘플 Sprite와 외형 정의를 연결합니다. Prefab Mode에서 열면 Play Mode를 시작하지 않아도 캐릭터 영역의 앵커, 종횡비와 기본 배치를 확인할 수 있습니다.
 
 Play Mode에서는 `CharacterDisplayPanelDemoLoader`가 동일한 데모 데이터를 `CharacterPresentation`으로 변환하여 실제 표시 API를 실행합니다. 기본 설정에서는 즉시 표시하며, `Animate Visibility`를 활성화한 경우에만 캐릭터 자체의 등장 Fade를 실행합니다. 샘플 Texture와 Sprite는 데모 검증 전용이며 운영 캐릭터 자산으로 사용하지 않습니다.
+
+`Assets/Scenes/TMP_MainScene.unity`의 운영 패널은 Demo Loader를 사용하지 않습니다. `ActiveCharacterDisplayBinder`가 AppScene의 `PlayerSessionHost`에서 `PlayerState.ActiveCharacter`를 가져오고, `CharacterContentCatalog`를 통해 `CharacterDisplayPresenter`만 갱신합니다. 표시 Sprite의 Addressables 로드가 완료될 때까지 Binder의 Scene readiness도 완료되지 않으므로, Scene 전환 화면이 불완전한 첫 표시를 드러내지 않습니다. 이름과 Health 같은 선택적 상태 표시는 `ActiveCharacterStatusBinder`가 별도의 `CharacterStatusPanel`에 전달합니다.

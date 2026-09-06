@@ -29,6 +29,8 @@ TxT-RPG/
 │   │   ├── flexible-layout-panel.md
 │   │   ├── scene-transition.md
 │   │   ├── character-content.md
+│   │   ├── player-session.md
+│   │   ├── character-status-ui.md
 │   │   └── asset-management.md
 │   └── development/
 │       └── workflows.md
@@ -42,10 +44,16 @@ TxT-RPG/
 │       ├── Gameplay/
 │       │   ├── Runtime/Characters/
 │       │   └── Tests/Editor/
-│       ├── Content/
-│       │   ├── Runtime/Characters/
+│       ├── Application/
+│       │   ├── Configuration/
+│       │   ├── Runtime/
 │       │   ├── Editor/
 │       │   └── Tests/Editor/
+│       ├── Content/
+│       │   ├── Runtime/Characters/
+│       │   ├── Editor/CharacterAuthoring/
+│       │   └── Tests/Editor/
+│       ├── Editor/Common/Addressables/
 │       ├── SceneTransition/
 │       │   ├── Runtime/
 │       │   ├── Editor/
@@ -59,7 +67,9 @@ TxT-RPG/
 │           ├── Prefabs/
 │           ├── Styles/
 │           ├── DEMO/
-│           └── Tests/Editor/
+│           └── Tests/
+│               ├── Editor/
+│               └── PlayMode/
 ├── Packages/
 └── ProjectSettings/
 ```
@@ -74,7 +84,17 @@ TxT-RPG/
 
 ### `Assets/TxTRPG/Content`
 
-`TxTRPG.Content`는 Gameplay의 `CharacterDefinition`과 UI의 `CharacterAppearanceDefinition`을 `CharacterContentDefinition`으로 조합하는 콘텐츠 계층입니다. `CharacterContentCatalog`는 로드된 가벼운 정의를 안정적인 Definition ID로 조회하며, `TxTRPG.Content.Editor`는 `Tools > TxT RPG > Validate Character Content`에서 누락 참조, ID 불일치, 기본 Addressable artwork ID와 프로젝트 전체 중복 ID를 검사합니다. 고해상도 Sprite는 Content 에셋이 직접 소유하지 않고 기존 `Character2DView`가 ID로 지연 로드합니다.
+`TxTRPG.Content`는 Gameplay의 `CharacterDefinition`, UI의 `CharacterAppearanceDefinition`과 체력 기반 `CharacterVisualStatePolicy`를 `CharacterContentDefinition`으로 조합하는 콘텐츠 계층입니다. `CharacterDisplayPresenter`는 Health 이벤트를 Presentation 갱신으로 변환하며, `CharacterContentCatalog`는 로드된 가벼운 정의를 안정적인 Definition ID로 조회합니다. `TxTRPG.Content.Editor`는 `Tools > TxT RPG > Content > Characters > Open Authoring`에서 네 에셋 생성·연결, 상태별 Sprite, 카탈로그 및 선택적 Addressables 등록을 수행하고, `Tools > TxT RPG > Content > Characters > Validate All`에서 누락 참조, ID 불일치, 상태 정책, Variant 모호성, Addressable artwork ID와 프로젝트 전체 중복 ID를 검사합니다. 고해상도 Sprite는 Content 에셋이 직접 소유하지 않고 기존 `Character2DView`가 ID로 지연 로드합니다.
+
+`Assets/TxTRPG/Editor/Common/Menu`는 `Tools > TxT RPG` 아래의 공통 메뉴 경로와 의미별 우선순위를 소유합니다. 각 기능의 Editor 어셈블리는 이 상수를 참조하므로 메뉴 계층과 정렬 정책을 개별 문자열로 중복하지 않습니다. `Assets/TxTRPG/Editor/Tests/Editor/EditorMenuTests.cs`는 Content, UI와 Scene Transition Editor 어셈블리에서 등록한 메뉴 계약을 한 곳에서 검증합니다.
+
+### `Assets/TxTRPG/Application`
+
+`TxTRPG.Application`은 Content와 Gameplay를 실제 실행 상태로 조립합니다. `DefaultNewGameProfile.asset`은 기본 카탈로그와 `DefaultCharacterContent`를 새 게임 초기값으로 연결합니다. `PlayerSession`은 저장 유무에 따라 `PlayerState`를 복원하거나 새로 생성하고, AppScene의 `PlayerSessionHost`가 이 상태를 콘텐츠 Scene 교체와 무관하게 소유합니다. `ActiveCharacterDisplayBinder`는 외형 표시와 Addressables readiness를 담당하며, 선택적인 `ActiveCharacterStatusBinder`는 상태 표시 모델만 조합형 상태 UI에 전달합니다. Editor 어셈블리는 Profile, AppRoot와 `TMP_MainScene` 연결을 재현 가능하게 생성하고, Tests 어셈블리는 새 게임·복원·손상 저장 및 Prefab·Scene 계약을 검증합니다.
+
+### `Assets/TxTRPG/Editor/Common`
+
+`TxTRPG.Editor.Common`은 여러 Editor 어셈블리가 공유하는 제작 지원 기능을 보관합니다. 현재 `AddressableAssetRegistration`은 Addressables 그룹 생성, 주소 충돌 검사, Sprite 하위 에셋 주소 생성과 미완료 등록 복구를 담당합니다. 기존 `AddressableAssetEditor` 공개 API는 이 공용 계층에 위임하므로 UI 제작 도구의 호출 계약을 유지합니다.
 
 ### `Assets/TxTRPG/UI/Runtime`
 
@@ -88,14 +108,18 @@ TxT-RPG/
 | `StoryTextPanelDemoData.cs` | Editor와 런타임 데모가 공유하는 메시지 목록 ScriptableObject입니다. |
 | `StoryTextPanelDemoLoader.cs` | Play Mode 시작 시 데모 데이터를 실제 패널 메시지로 추가합니다. |
 | `StoryTextPanelDemoPreviewItem.cs` | Edit Mode 전용 미리보기 항목을 표시하고 Play Mode에서 해당 오브젝트를 제거합니다. |
-| `CharacterPresentation.cs` | Unity 자산 참조 없이 캐릭터 표시 상태를 전달하는 불변 값 객체입니다. |
-| `Characters/CharacterPresentationFactory.cs` | Gameplay 캐릭터 상태와 요청한 외형 ID를 UI용 `CharacterPresentation`으로 변환합니다. |
+| `CharacterPresentation.cs` | Unity 자산 참조 없이 외형·시각 상태·자세·표정을 전달하는 불변 값 객체입니다. |
+| `Characters/ICharacterVisualStateResolver.cs` | UI가 구체적인 Content 정책 형식에 의존하지 않고 시각 상태를 요청하는 경계입니다. |
+| `Characters/CharacterPresentationFactory.cs` | Gameplay 캐릭터 상태, 상태 Resolver와 요청한 외형 ID를 UI용 `CharacterPresentation`으로 변환합니다. |
 | `ICharacterView.cs` | 2D와 향후 3D View의 최소 공통 API를 정의합니다. |
 | `CharacterViewBase.cs` | View의 표시 상태와 등장·퇴장 페이드를 관리합니다. |
 | `CharacterDisplayPanel.cs` | 활성 캐릭터 View의 표시, 교체, 숨김과 초기화를 조율합니다. |
-| `Character2DView.cs` | 외형 Sprite, Overlay, 좌우 반전과 2D 애니메이션을 처리합니다. |
-| `CharacterAppearanceDefinition.cs` | 캐릭터별 ID 조합과 Sprite를 연결하는 ScriptableObject입니다. |
+| `Character2DView.cs` | 상태별 외형 Sprite의 취소 가능한 지연 로드, Overlay, 좌우 반전과 2D 애니메이션을 처리합니다. |
+| `CharacterAppearanceDefinition.cs` | 캐릭터별 외형·시각 상태·자세·표정 조합과 Sprite를 연결하는 ScriptableObject입니다. |
 | `CharacterEffectPlayer.cs` | 선택적인 Animator 기반 캐릭터 효과를 재생합니다. |
+| `Characters/CharacterStatusPanel.cs` | 선택적인 `CharacterStatusElement`를 모아 동일한 상태 표시 모델을 전달합니다. |
+| `Characters/CharacterNamePanel.cs` | 현지화가 완료된 캐릭터 이름을 선택적으로 표시합니다. |
+| `Characters/HealthBarPanel.cs` | 비상호작용 Slider, 선택적 문구와 교체 가능한 Health 효과를 관리합니다. |
 | `CharacterDisplayPanelDemoData.cs` | 데모 외형 정의와 ID 기반 표시 요청을 보관합니다. |
 | `CharacterDisplayPanelDemoLoader.cs` | Play Mode에서 데모 캐릭터와 등장 전환을 실행합니다. |
 | `EnemyPresentation.cs` | 적 종류와 개별 전투 인스턴스를 분리하여 전달하는 불변 값 객체입니다. |
@@ -141,7 +165,8 @@ TxT-RPG/
 | `StoryTextPanelPrefabBuilder.cs` | 운영용 `StoryMessageItem`과 `StoryTextPanel` 프리팹을 생성합니다. |
 | `StoryTextPanelDemoBuilder.cs` | 기본 데모 데이터와 `StoryTextPanelDemo` 프리팹을 생성합니다. |
 | `StoryTextPanelEditModePreview.cs` | 데모 데이터를 미리보기 항목으로 직렬화하고 열린 미리보기의 레이아웃·투명도를 갱신합니다. |
-| `CharacterDisplayPanelPrefabBuilder.cs` | 운영용 `CharacterDisplayPanel` 2D Prefab을 생성합니다. |
+| `CharacterDisplayPanelPrefabBuilder.cs` | 운영용 `CharacterDisplayPanel` 2D Prefab과 상태 UI Prefab 생성을 조율합니다. |
+| `CharacterStatusPrefabBuilder.cs` | `HealthBarPanel.prefab`과 조합형 `CharacterStatusPanel.prefab`을 생성합니다. |
 | `CharacterDisplayPanelDemoBuilder.cs` | 데모 Sprite, 외형 정의, 데이터와 미리보기 Prefab을 생성합니다. |
 | `EnemyDisplayPanelPrefabBuilder.cs` | 운영용 다중 적 패널, 2D View Template과 풀 계층을 생성합니다. |
 | `EnemyDisplayPanelDemoBuilder.cs` | 샘플 적 Sprite, 외형 정의, 데이터와 Demo Prefab을 생성합니다. |
@@ -158,6 +183,8 @@ TxT-RPG/
 | `StoryMessageItem.prefab` | 본문과 선택적 발화자를 표시하는 메시지 항목입니다. |
 | `StoryTextPanel.prefab` | 실제 게임 화면에 배치하는 운영용 텍스트 패널입니다. |
 | `CharacterDisplayPanel.prefab` | 교체 가능한 2D View를 포함하는 운영용 캐릭터 표시 패널입니다. |
+| `HealthBarPanel.prefab` | 표시 전용 Slider와 선택적 문구·효과 계층을 포함하는 Health 요소입니다. |
+| `CharacterStatusPanel.prefab` | HealthBarPanel을 기본 요소로 포함하는 선택적 상태 UI 컨테이너입니다. |
 | `EnemyDisplayPanel.prefab` | 풀링되는 2D 적 View와 반응형 포메이션을 포함하는 운영용 적 표시 패널입니다. |
 | `ActionGridCell.prefab` | 공통 행동 항목 하나의 표시와 선택 상태를 담당합니다. |
 | `ActionContextMenu.prefab` | 선택 항목의 동적 명령 목록을 표시합니다. |
@@ -186,6 +213,10 @@ TxT-RPG/
 
 투명도 계산, 캐릭터 표시 요청, 운영용 프리팹 참조, 데모 데이터 구성, Edit Mode 미리보기 항목 수와 Flexible Layout의 순수 크기 계산·재귀 Demo 구조를 검증합니다. 테스트 어셈블리는 플레이어 빌드에 포함되지 않습니다.
 
+### `Assets/TxTRPG/UI/Tests/PlayMode`
+
+빠른 캐릭터 시각 상태 변경이 이전 Addressables 로드를 취소하고 마지막 Sprite만 적용하는지 검증합니다. 테스트 어셈블리는 제품 플레이어 빌드에 포함되지 않습니다.
+
 ### `Assets/AddressableAssetsData`
 
 Addressables 프로필, 빌드 스크립트와 `SharedUI`, `Gameplay_Common`, `Character_Demo`, `Enemy_Demo` 그룹 설정을 보관합니다. 이 디렉터리는 재현 가능한 빌드 설정이므로 버전 관리 대상입니다. 생성된 실제 Bundle 출력은 소스 구조로 취급하지 않습니다.
@@ -199,11 +230,21 @@ flowchart TD
     Content[TxTRPG.Content] --> Gameplay
     Content --> Runtime
 
+    Application[TxTRPG.Application] --> Gameplay
+    Application --> Content
+    Application --> Runtime
+    Application --> SceneTransition[TxTRPG.SceneTransition]
+
+    CommonEditor[TxTRPG.Editor.Common] --> AddressablesEditor[Unity.Addressables.Editor]
+    ContentEditor[TxTRPG.Content.Editor] --> Content
+    ContentEditor --> CommonEditor
+    EditorAssembly[TxTRPG.UI.Editor] --> CommonEditor
+
     Runtime[TxTRPG.UI] --> Gameplay
     Runtime[TxTRPG.UI] --> TMP[Unity.TextMeshPro]
     Runtime --> UGUI[Unity.ugui]
 
-    EditorAssembly[TxTRPG.UI.Editor] --> Runtime
+    EditorAssembly --> Runtime
     EditorAssembly --> TMP
     EditorAssembly --> UGUI
 
@@ -227,7 +268,7 @@ flowchart TD
 - 스토리 진행 및 선택지 결정 시스템
 - 현지화 서비스와 문자열 테이블
 - 3D 캐릭터·적 표시와 동적 전투 슬롯
-- 플랫폼 저장소, 원자적 파일 교체와 전체 게임 저장 마이그레이션
+- 플랫폼 Cloud 저장소와 전체 게임 저장 마이그레이션
 - Steam 및 모바일 플랫폼 서비스
 - 모바일 Safe Area를 포함한 최종 화면 조합과 기기별 레이아웃 검증
 

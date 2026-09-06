@@ -47,6 +47,43 @@ namespace TxTRPG.Content.Characters
             EnsureIndex();
         }
 
+#if UNITY_EDITOR
+        public bool AddForEditor(CharacterContentDefinition definition)
+        {
+            if (definition == null)
+            {
+                return false;
+            }
+
+            definitions ??= new List<CharacterContentDefinition>();
+            foreach (var existing in definitions)
+            {
+                if (existing == definition ||
+                    (existing != null && string.Equals(
+                        existing.DefinitionId,
+                        definition.DefinitionId,
+                        StringComparison.Ordinal)))
+                {
+                    return false;
+                }
+            }
+
+            definitions.Add(definition);
+            definitionsById = null;
+            return true;
+        }
+
+        public bool RemoveForEditor(CharacterContentDefinition definition)
+        {
+            if (definitions == null || !definitions.Remove(definition))
+            {
+                return false;
+            }
+            definitionsById = null;
+            return true;
+        }
+#endif
+
         private void EnsureIndex()
         {
             if (definitionsById != null)

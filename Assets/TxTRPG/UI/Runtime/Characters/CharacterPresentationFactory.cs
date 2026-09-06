@@ -26,5 +26,33 @@ namespace TxTRPG.UI
                 animationId,
                 mirrored);
         }
+
+        public CharacterPresentation Create(
+            CharacterRuntimeState state,
+            ICharacterVisualStateResolver visualStateResolver,
+            string temporaryVisualStateId = "",
+            string appearanceId = "",
+            string poseId = "",
+            string expressionId = "",
+            string animationId = "",
+            bool mirrored = false)
+        {
+            if (state == null)
+            {
+                throw new ArgumentNullException(nameof(state));
+            }
+
+            var visualStateId = !string.IsNullOrWhiteSpace(temporaryVisualStateId)
+                ? temporaryVisualStateId.Trim()
+                : visualStateResolver?.Resolve(state) ?? string.Empty;
+            return new CharacterPresentation(
+                state.CharacterDefinitionId,
+                appearanceId,
+                visualStateId,
+                poseId,
+                expressionId,
+                animationId,
+                mirrored);
+        }
     }
 }

@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEditor;
+using TxTRPG.Editor.Common.Menu;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -12,7 +13,10 @@ namespace TxTRPG.UI.Editor
         private const string ContextMenuPath = PrefabFolder + "/ActionContextMenu.prefab";
         private const string PanelPath = PrefabFolder + "/ActionGridPanel.prefab";
 
-        [MenuItem("Tools/TxT RPG/Rebuild Action Grid Prefabs")]
+        [MenuItem(
+            TxTRPGEditorMenuPaths.UiPrefabs + "Rebuild Action Grid",
+            false,
+            TxTRPGEditorMenuPriorities.Rebuild)]
         public static void CreateOrUpdatePrefabs()
         {
             EnsureFolder(PrefabFolder);

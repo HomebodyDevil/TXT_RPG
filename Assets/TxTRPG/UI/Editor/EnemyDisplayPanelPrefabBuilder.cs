@@ -1,4 +1,5 @@
 using UnityEditor;
+using TxTRPG.Editor.Common.Menu;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -9,7 +10,10 @@ namespace TxTRPG.UI.Editor
         public const string PrefabPath = "Assets/TxTRPG/UI/Prefabs/EnemyDisplayPanel.prefab";
         private const string PrefabFolder = "Assets/TxTRPG/UI/Prefabs";
 
-        [MenuItem("Tools/TxT RPG/Rebuild Enemy Display Panel Prefab")]
+        [MenuItem(
+            TxTRPGEditorMenuPaths.UiPrefabs + "Rebuild Enemy Display Panel",
+            false,
+            TxTRPGEditorMenuPriorities.Rebuild)]
         public static void CreateOrUpdatePrefab()
         {
             EnsureFolder(PrefabFolder);

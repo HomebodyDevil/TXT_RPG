@@ -6,6 +6,6 @@ Select the nested `StoryTextPanel` and change its serialized options. Scrollbar 
 
 After changing `StoryTextPanelDemoData.asset`, run:
 
-`Tools > TxT RPG > Refresh Story Text Panel Edit Mode Preview`
+`Tools > TxT RPG > UI > Preview > Refresh Story Text Panel`
 
 The preview-only message objects disable and remove themselves before runtime messages are populated, so they are not counted as gameplay history.

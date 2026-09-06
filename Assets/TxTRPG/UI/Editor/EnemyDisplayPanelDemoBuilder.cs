@@ -1,5 +1,6 @@
 using System.Linq;
 using UnityEditor;
+using TxTRPG.Editor.Common.Menu;
 using UnityEngine;
 
 namespace TxTRPG.UI.Editor
@@ -13,7 +14,10 @@ namespace TxTRPG.UI.Editor
         private const string DemoDataPath = DemoFolder + "/EnemyDisplayPanelDemoData.asset";
         private const string BackgroundStylePath = DemoFolder + "/EnemyDisplayBackgroundDemoStyle.asset";
 
-        [MenuItem("Tools/TxT RPG/Rebuild Enemy Display Panel Demo")]
+        [MenuItem(
+            TxTRPGEditorMenuPaths.UiDemos + "Rebuild Enemy Display Panel Demo",
+            false,
+            TxTRPGEditorMenuPriorities.Rebuild)]
         public static void CreateOrUpdateDemo()
         {
             EnsureFolder(DemoFolder);

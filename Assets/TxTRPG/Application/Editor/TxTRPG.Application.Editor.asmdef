@@ -1,0 +1,22 @@
+{
+  "name": "TxTRPG.Application.Editor",
+  "rootNamespace": "TxTRPG.Application.Editor",
+  "references": [
+    "TxTRPG.Application",
+    "TxTRPG.Content",
+    "TxTRPG.UI",
+    "Unity.TextMeshPro",
+    "Unity.ugui"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

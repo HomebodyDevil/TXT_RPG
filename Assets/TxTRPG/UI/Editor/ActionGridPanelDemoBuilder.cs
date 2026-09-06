@@ -1,6 +1,7 @@
 using System.Linq;
 using TMPro;
 using UnityEditor;
+using TxTRPG.Editor.Common.Menu;
 using UnityEngine;
 
 namespace TxTRPG.UI.Editor
@@ -13,7 +14,10 @@ namespace TxTRPG.UI.Editor
         private const string DataPath = DemoFolder + "/ActionGridPanelDemoData.asset";
         private const string PrefabPath = DemoFolder + "/ActionGridPanelDemo.prefab";
 
-        [MenuItem("Tools/TxT RPG/Rebuild Action Grid Demo")]
+        [MenuItem(
+            TxTRPGEditorMenuPaths.UiDemos + "Rebuild Action Grid Demo",
+            false,
+            TxTRPGEditorMenuPriorities.Rebuild)]
         public static void CreateOrUpdateDemo()
         {
             EnsureFolder(DemoFolder);

@@ -11,4 +11,4 @@ The demo loads 16 messages with mixed speaker and paragraph lengths. This is eno
 - newest-message alignment at the lower scrollbar endpoint;
 - messages with and without a speaker.
 
-Edit `StoryTextPanelDemoData.asset` to change the sample content without modifying runtime code. Use `Tools > TxT RPG > Rebuild Story Text Panel Demo` to restore the default sample data and rebuild the demo prefab.
+Edit `StoryTextPanelDemoData.asset` to change the sample content without modifying runtime code. Use `Tools > TxT RPG > UI > Demos > Rebuild Story Text Panel Demo` to restore the default sample data and rebuild the demo prefab.

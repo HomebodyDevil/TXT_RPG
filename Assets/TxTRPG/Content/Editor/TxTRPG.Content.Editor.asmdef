@@ -2,7 +2,13 @@
   "name": "TxTRPG.Content.Editor",
   "rootNamespace": "TxTRPG.Content.Editor",
   "references": [
-    "TxTRPG.Content"
+    "TxTRPG.Content",
+    "TxTRPG.Gameplay",
+    "TxTRPG.UI",
+    "TxTRPG.Editor.Common",
+    "Unity.Addressables",
+    "Unity.ResourceManager",
+    "Unity.Addressables.Editor"
   ],
   "includePlatforms": [
     "Editor"

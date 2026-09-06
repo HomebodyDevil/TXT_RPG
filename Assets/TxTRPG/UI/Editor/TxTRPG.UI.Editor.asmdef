@@ -3,6 +3,7 @@
   "rootNamespace": "TxTRPG.UI.Editor",
   "references": [
     "TxTRPG.UI",
+    "TxTRPG.Editor.Common",
     "Unity.TextMeshPro",
     "Unity.ugui",
     "Unity.Addressables",

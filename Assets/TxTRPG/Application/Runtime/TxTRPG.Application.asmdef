@@ -1,0 +1,19 @@
+{
+  "name": "TxTRPG.Application",
+  "rootNamespace": "TxTRPG.Application",
+  "references": [
+    "TxTRPG.Gameplay",
+    "TxTRPG.Content",
+    "TxTRPG.UI",
+    "TxTRPG.SceneTransition"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

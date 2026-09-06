@@ -1,6 +1,7 @@
 using System.IO;
 using TMPro;
 using UnityEditor;
+using TxTRPG.Editor.Common.Menu;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -15,7 +16,10 @@ namespace TxTRPG.UI.Editor
         public const string DefaultBackgroundStylePath =
             StyleFolder + "/StoryTextPanelDefaultBackgroundStyle.asset";
 
-        [MenuItem("Tools/TxT RPG/Rebuild Story Text Panel Prefabs")]
+        [MenuItem(
+            TxTRPGEditorMenuPaths.UiPrefabs + "Rebuild Story Text Panel",
+            false,
+            TxTRPGEditorMenuPriorities.Rebuild)]
         public static void CreateOrUpdatePrefabs()
         {
             EnsureFolder(PrefabFolder);

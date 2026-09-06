@@ -1,0 +1,92 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7f39900330a95948a6193fb0b840ce3, type: 3}
+  m_Name: DefaultCharacterAppearance
+  m_EditorClassIdentifier: TxTRPG.UI::TxTRPG.UI.CharacterAppearanceDefinition
+  characterId: character.default
+  fallbackSprite: {fileID: -6597163473028556987, guid: 71d7b2466b4d41b45a3cfd21bce63e12, type: 2}
+  fallbackSpriteAssetId: 'characters/default/artwork/states[DefaultCharacterPlaceholder]'
+  fallbackFraming:
+    preset: 1
+    customVisibleRect:
+      serializedVersion: 2
+      x: 0
+      y: 0
+      width: 0
+      height: 0
+    additionalScale: 1
+    pixelOffset: {x: 0, y: 0}
+  variants:
+  - appearanceId: 
+    visualStateId: normal
+    poseId: 
+    expressionId: 
+    sprite: {fileID: -6597163473028556987, guid: 71d7b2466b4d41b45a3cfd21bce63e12, type: 2}
+    spriteAssetId: 'characters/default/artwork/states[DefaultCharacterPlaceholder]'
+    framing:
+      preset: 1
+      customVisibleRect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 0
+        height: 0
+      additionalScale: 1
+      pixelOffset: {x: 0, y: 0}
+  - appearanceId: 
+    visualStateId: injured
+    poseId: 
+    expressionId: 
+    sprite: {fileID: -6597163473028556987, guid: 71d7b2466b4d41b45a3cfd21bce63e12, type: 2}
+    spriteAssetId: 'characters/default/artwork/states[DefaultCharacterPlaceholder]'
+    framing:
+      preset: 1
+      customVisibleRect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 0
+        height: 0
+      additionalScale: 1
+      pixelOffset: {x: 0, y: 0}
+  - appearanceId: 
+    visualStateId: critical
+    poseId: 
+    expressionId: 
+    sprite: {fileID: -6597163473028556987, guid: 71d7b2466b4d41b45a3cfd21bce63e12, type: 2}
+    spriteAssetId: 'characters/default/artwork/states[DefaultCharacterPlaceholder]'
+    framing:
+      preset: 1
+      customVisibleRect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 0
+        height: 0
+      additionalScale: 1
+      pixelOffset: {x: 0, y: 0}
+  - appearanceId: 
+    visualStateId: defeated
+    poseId: 
+    expressionId: 
+    sprite: {fileID: -6597163473028556987, guid: 71d7b2466b4d41b45a3cfd21bce63e12, type: 2}
+    spriteAssetId: 'characters/default/artwork/states[DefaultCharacterPlaceholder]'
+    framing:
+      preset: 1
+      customVisibleRect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 0
+        height: 0
+      additionalScale: 1
+      pixelOffset: {x: 0, y: 0}

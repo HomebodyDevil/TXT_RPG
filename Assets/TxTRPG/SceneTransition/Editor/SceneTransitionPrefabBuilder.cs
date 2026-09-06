@@ -2,6 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
+using TxTRPG.Application.Configuration;
+using TxTRPG.Application.Editor;
+using TxTRPG.Application.Players;
+using TxTRPG.Editor.Common.Menu;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -18,16 +22,26 @@ namespace TxTRPG.SceneTransition.Editor
         public const string AppScenePath = "Assets/Scenes/AppScene.unity";
         public const string InitialContentScenePath = "Assets/Scenes/TMP_MainScene.unity";
 
-        [MenuItem("Tools/TxT RPG/Rebuild App Scene")]
+        [MenuItem(
+            TxTRPGEditorMenuPaths.Application + "Rebuild App Scene",
+            false,
+            TxTRPGEditorMenuPriorities.Rebuild)]
         public static void CreateOrUpdateAssets()
         {
             EnsureFolder("Assets/TxTRPG/SceneTransition/Profiles");
             EnsureFolder("Assets/TxTRPG/SceneTransition/Prefabs");
             EnsureFolder("Assets/Scenes");
+            var newGameProfile =
+                ApplicationProjectBuilder.CreateOrUpdateNewGameProfile();
             var profile = CreateOrUpdateProfile();
             var settings = ResolveAppRootSettings();
-            var appRootPrefab = BuildAppRoot(profile, settings);
+            var appRootPrefab = BuildAppRoot(
+                profile,
+                settings,
+                newGameProfile);
             BuildAppScene(appRootPrefab);
+            ApplicationProjectBuilder.ConfigureInitialContentScene(
+                settings.InitialContentScenePath);
             UpdateBuildSettings(settings.InitialContentScenePath);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -91,7 +105,8 @@ namespace TxTRPG.SceneTransition.Editor
 
         private static GameObject BuildAppRoot(
             SceneTransitionProfile profile,
-            AppRootSettings settings)
+            AppRootSettings settings,
+            NewGameProfile newGameProfile)
         {
             var root = new GameObject("AppRoot");
             try
@@ -99,6 +114,11 @@ namespace TxTRPG.SceneTransition.Editor
                 var appRoot = root.AddComponent<AppSceneRoot>();
                 var loader = root.AddComponent<UnitySceneLoader>();
                 var service = root.AddComponent<SceneTransitionService>();
+
+                var sessionObject = new GameObject("PlayerSessionHost");
+                sessionObject.transform.SetParent(root.transform, false);
+                var sessionHost = sessionObject.AddComponent<PlayerSessionHost>();
+                sessionHost.Configure(newGameProfile);
 
                 var canvasObject = CreateUiObject("TransitionCanvas", root.transform);
                 var canvas = canvasObject.AddComponent<Canvas>();
@@ -167,13 +187,14 @@ namespace TxTRPG.SceneTransition.Editor
         private static void BuildAppScene(GameObject appRootPrefab)
         {
             var previousActiveScene = SceneManager.GetActiveScene();
-            if (!Application.isBatchMode && string.IsNullOrEmpty(previousActiveScene.path))
+            if (!UnityEngine.Application.isBatchMode &&
+                string.IsNullOrEmpty(previousActiveScene.path))
             {
                 throw new InvalidOperationException(
                     "Save the current scene before rebuilding AppScene.");
             }
 
-            var isBatchExecuteMethod = Application.isBatchMode &&
+            var isBatchExecuteMethod = UnityEngine.Application.isBatchMode &&
                 Environment.GetCommandLineArgs().Any(argument =>
                     string.Equals(argument, "-executeMethod", StringComparison.OrdinalIgnoreCase));
             var creationMode = isBatchExecuteMethod
@@ -191,7 +212,7 @@ namespace TxTRPG.SceneTransition.Editor
             }
             finally
             {
-                if (!Application.isBatchMode)
+                if (!UnityEngine.Application.isBatchMode)
                 {
                     EditorSceneManager.CloseScene(appScene, true);
                     if (previousActiveScene.IsValid() && previousActiveScene.isLoaded)

@@ -35,7 +35,7 @@ public void ShowDialogue(string localizedSpeaker, string localizedBody)
 데모 데이터의 문구를 수정한 뒤 다음 메뉴를 실행하면 미리보기 항목이 다시 생성됩니다.
 
 ```text
-Tools > TxT RPG > Refresh Story Text Panel Edit Mode Preview
+Tools > TxT RPG > UI > Preview > Refresh Story Text Panel
 ```
 
 ## CharacterDisplayPanel을 씬에서 사용하기
@@ -55,9 +55,31 @@ Tools > TxT RPG > Refresh Story Text Panel Edit Mode Preview
 
 Story, Character, Enemy와 Action Grid Demo는 동일한 `PanelStartupController` 경로를 사용합니다. Demo 루트의 `CanvasGroup`, 구체적인 `PanelInitialDataLoader`, `FadePanelRevealTransition`과 `PanelStartupController` 참조를 함께 유지해야 합니다. `Animate Reveal` 기본값은 꺼져 있으며, Scene 시작 연출은 `AppScene`의 `SceneTransitionService`가 담당합니다. Loader를 교체할 때는 동기 `Start()`를 추가하지 않고 `LoadAndApplyAsync`가 모든 자산 준비를 기다리도록 구현합니다.
 
+## 기본 플레이어와 운영 캐릭터 UI 구성하기
+
+1. `Tools > TxT RPG > Content > Characters > Create Default Placeholder Content`를 실행하여 `CharacterContentCatalog.asset`과 `DefaultCharacterContent.asset`을 준비합니다.
+2. 현재 열어 둔 `TMP_MainScene`에 저장하지 않은 변경이 있다면 먼저 저장합니다.
+3. `Tools > TxT RPG > Application > Rebuild App Scene`을 실행합니다.
+4. 생성된 `Assets/TxTRPG/Application/Configuration/DefaultNewGameProfile.asset`에서 Catalog와 Initial Character가 올바른지 확인합니다.
+5. `Assets/TxTRPG/SceneTransition/Prefabs/AppRoot.prefab`의 `PlayerSessionHost`와 `Assets/Scenes/TMP_MainScene.unity`의 `ActiveCharacterDisplayBinder` 참조를 확인합니다.
+
+재생성 과정은 `TMP_MainScene`의 캐릭터 Demo 인스턴스를 운영용 `CharacterDisplayPanel.prefab`으로 교체하고 `CharacterDisplayPresenter`와 외형 전용 `ActiveCharacterDisplayBinder`를 구성합니다. 상태 UI는 자동 생성하지 않습니다. 이미 로드된 Scene에 저장하지 않은 변경이 있으면 덮어쓰지 않고 실패합니다. 운영 Scene에는 `CharacterDisplayPanelDemoLoader`, `PanelStartupController`, `CharacterStatusPanel`, `ActiveCharacterStatusBinder` 또는 Demo 데이터가 남지 않아야 합니다.
+
+정식 실행은 `Assets/Scenes/AppScene.unity`에서 시작합니다. 저장 파일이 없으면 `character.default`가 생성되고, 파일이 있으면 기존 `PlayerState`가 복원됩니다. 기본 저장 경로는 `Application.persistentDataPath/player-save.json`입니다. 손상된 저장 파일은 자동으로 새 게임으로 교체되지 않으므로 Console 오류와 원본 파일을 확인한 뒤 사용자에게 복구 또는 초기화 선택을 제공해야 합니다. 캐릭터 이름은 현지화 서비스가 `ICharacterNameLocalizer`로 연결되기 전까지 숨겨집니다.
+
+## 선택적 CharacterStatusPanel 사용하기
+
+1. `Tools > TxT RPG > UI > Prefabs > Rebuild Character Display Panel`을 실행하여 `HealthBarPanel.prefab`과 `CharacterStatusPanel.prefab`을 함께 생성합니다.
+2. 상태 정보가 필요한 Scene에 `Assets/TxTRPG/UI/Prefabs/CharacterStatusPanel.prefab`을 배치합니다.
+3. 같은 Scene의 적절한 오브젝트에 `ActiveCharacterStatusBinder`를 추가하고 Status Panel과 `CharacterContentCatalog.asset`을 연결합니다.
+4. 이름이 필요하면 `CharacterNamePanel`을 상태 컨테이너 자식으로 추가하고 TMP Text를 연결합니다.
+5. 현지화 조립 코드에서 `SetNameLocalizer`와 `SetHealthTextFormatter`를 호출합니다.
+
+기본 CharacterStatusPanel Prefab에는 HealthBarPanel만 포함됩니다. Health Label과 Value Text는 선택적이며 참조를 제거해도 오류가 발생하지 않습니다. 점멸, 피해 흔들림 또는 글리치 효과는 `HealthBarEffect`를 상속한 별도 컴포넌트로 구현하고 HealthBarPanel의 Effects에 등록합니다. 공격력과 다른 일반 Stat은 이 패널에 추가하지 않고 추후 별도 CharacterStatWindow에서 표시합니다.
+
 ## Scene 전환 사용하기
 
-1. 현재 작업 Scene을 저장한 뒤 `Tools > TxT RPG > Rebuild App Scene`을 실행합니다. 이 메뉴는 기본 Profile, `AppRoot.prefab`, `AppScene.unity`를 생성하고 AppScene을 Build Settings의 0번으로 등록합니다.
+1. 현재 작업 Scene을 저장한 뒤 `Tools > TxT RPG > Application > Rebuild App Scene`을 실행합니다. 이 메뉴는 기본 Scene Transition Profile, `DefaultNewGameProfile.asset`, PlayerSessionHost가 포함된 `AppRoot.prefab`, 운영 캐릭터 UI가 연결된 최초 콘텐츠 Scene과 `AppScene.unity`를 생성하고 AppScene을 Build Settings의 0번으로 등록합니다.
 2. `AppRoot`의 `AppSceneRoot.Initial Content Scene Path` 목록에서 최초로 로드할 Scene을 선택합니다. 목록에는 활성화된 Build Settings Scene이 `Scene 이름 (Assets/.../*.unity)` 형식으로 표시되며 AppScene은 제외됩니다. 기본값은 `Assets/Scenes/TMP_MainScene.unity`입니다.
 3. 이후 전환에는 `AppSceneRoot.Instance.SceneTransitions.LoadContentSceneAsync(scenePath, profile, cancellationToken)`을 호출합니다. `scenePath`에는 Build Settings에 등록된 전체 프로젝트 경로를 전달하고, 콘텐츠 Scene에서 Unity의 `LoadScene`을 직접 호출하지 않습니다.
 4. 서비스가 시작해야 하는 초기화는 `ISceneInitializer`로 구현하고, Addressables·세이브·현지화처럼 의존성이 있는 작업은 `InitializationOrder`를 지정합니다.
@@ -69,7 +91,7 @@ Story, Character, Enemy와 Action Grid Demo는 동일한 `PanelStartupController
 
 정식 실행과 Play Mode 검증은 `Assets/Scenes/AppScene.unity`에서 시작합니다. Content Scene만 직접 실행하면 AppScene과 전환 서비스가 존재하지 않으며, 이는 숨겨진 런타임 Bootstrap을 다시 만들지 않기 위한 의도된 제약입니다. 초기 콘텐츠를 바꿔 확인하려면 AppRoot Prefab의 `Initial Content Scene Path` 목록을 변경합니다. 목록에 Scene이 없다면 먼저 `File > Build Settings`에서 해당 Scene을 추가하고 활성화합니다. `<Invalid>` 경고가 표시되면 값을 자동 교체하지 않으므로 올바른 항목을 다시 선택해야 합니다.
 
-Player 빌드 전에 `Tools > TxT RPG > Validate App Scene Configuration`을 실행하면 빌드 전처리와 동일한 검증을 수동으로 수행할 수 있습니다. Scene 자산 이동이나 이름 변경, Build Settings 변경 뒤에는 이 검증을 실행합니다. `Tools > TxT RPG > Rebuild App Scene`은 유효한 기존 전체 경로와 `Load Initial Content On Start` 값을 보존하며, 기존 Scene 이름은 유일하게 해석할 수 있을 때에만 전체 경로로 마이그레이션합니다.
+Player 빌드 전에 `Tools > TxT RPG > Application > Validate App Scene Configuration`을 실행하면 빌드 전처리와 동일한 검증을 수동으로 수행할 수 있습니다. Scene 자산 이동이나 이름 변경, Build Settings 변경 뒤에는 이 검증을 실행합니다. `Tools > TxT RPG > Application > Rebuild App Scene`은 유효한 기존 전체 경로와 `Load Initial Content On Start` 값을 보존하며, 기존 Scene 이름은 유일하게 해석할 수 있을 때에만 전체 경로로 마이그레이션합니다.
 
 기본 `Scene Swap Mode = Load Then Unload`는 실패 시 이전 Scene 복구를 우선합니다. 모바일 메모리 한계 때문에 `Unload Before Load`를 선택한 경우에는 이전 화면 복구가 불가능할 수 있으므로 `ErrorFallback`과 재시도 흐름을 반드시 확인합니다.
 
@@ -102,7 +124,7 @@ Player 빌드 전에 `Tools > TxT RPG > Validate App Scene Configuration`을 실
 
 대칭 모드의 `OppositeScrollbarArea`는 Builder가 자동 생성하고 컨트롤러에 연결합니다. Width는 Scrollbar 루트와 Opposite 영역에 동일하게 적용되며 Gap은 두 영역의 너비가 아니라 Viewport 간격입니다. 수동 Prefab을 구성할 때에는 Graphic이나 입력 컴포넌트가 없는 RectTransform을 Scroll View 아래에 추가하고 `Opposite Scrollbar Area` 참조에 연결합니다.
 
-ActionGridPanel 전체를 기준으로 슬롯 중심을 유지하려면 `Scroll View`의 외부 Left와 Right offset도 같은 값으로 설정해야 합니다. Builder와 운영 Prefab의 기본값은 각각 18px입니다. Handle을 더 얇게 보이게 하는 `Sliding Area`의 수평 inset은 시각 설정이므로, Opposite 영역이나 외부 여백을 Handle 너비에 맞추지 않습니다. Builder를 수정한 뒤에는 `Tools > TxT RPG > Rebuild Action Grid Prefabs`를 실행하여 운영 Prefab과 이를 상속하는 Demo 구성을 갱신합니다.
+ActionGridPanel 전체를 기준으로 슬롯 중심을 유지하려면 `Scroll View`의 외부 Left와 Right offset도 같은 값으로 설정해야 합니다. Builder와 운영 Prefab의 기본값은 각각 18px입니다. Handle을 더 얇게 보이게 하는 `Sliding Area`의 수평 inset은 시각 설정이므로, Opposite 영역이나 외부 여백을 Handle 너비에 맞추지 않습니다. Builder를 수정한 뒤에는 `Tools > TxT RPG > UI > Prefabs > Rebuild Action Grid`를 실행하여 운영 Prefab과 이를 상속하는 Demo 구성을 갱신합니다.
 
 런타임 정렬 변경에는 `SetGridAlignment`, `SetIncompleteRowAlignment`와 `SetVerticalPlacement`를 사용합니다. 이 옵션은 데이터 채움 방향과 무관하므로 Right를 선택해도 Entry 순서는 역전되지 않습니다. Center When Content Fits의 판정은 화면에 활성화되는 Cell 수를 기준으로 하므로, Fill Capacity With Empty Slots에서는 Entry 수가 적어도 Capacity 전체가 높이 계산에 포함됩니다. ActionGridPanel Demo는 Capacity 12와 최대 5열을 사용하므로 넓은 화면에서 불완전한 마지막 행과 세로 중앙 배치를 확인할 수 있습니다. Inspector에서 Capacity나 패널 높이를 변경하면 상단 스크롤 배치로 전환되는 결과도 확인할 수 있습니다.
 
@@ -142,23 +164,23 @@ Inspector에서 자식 사이 간격은 `Spacing`, ContentLayer 내부 상·하�
 
 | 메뉴 | 효과 |
 | --- | --- |
-| `Tools > TxT RPG > Rebuild Story Text Panel Prefabs` | 운영용 메시지와 패널 프리팹을 기본 구조로 다시 생성합니다. |
-| `Tools > TxT RPG > Rebuild Story Text Panel Demo` | 데모 데이터와 데모 프리팹을 기본 상태로 다시 생성합니다. |
-| `Tools > TxT RPG > Refresh Story Text Panel Edit Mode Preview` | 현재 데모 데이터로 미리보기 항목을 다시 생성합니다. |
-| `Tools > TxT RPG > Rebuild Character Display Panel Prefab` | 운영용 2D 캐릭터 표시 패널 프리팹을 기본 구조로 다시 생성합니다. |
-| `Tools > TxT RPG > Rebuild Character Display Panel Demo` | 샘플 Sprite, 외형 정의, 데이터와 캐릭터 표시 데모 Prefab을 다시 생성합니다. |
-| `Tools > TxT RPG > Rebuild Enemy Display Panel Prefab` | 운영용 적 표시 패널, 2D View Template과 풀 계층을 다시 생성합니다. |
-| `Tools > TxT RPG > Rebuild Enemy Display Panel Demo` | 샘플 적 Sprite, 외형 정의, 다중 적 데이터와 Demo Prefab을 다시 생성합니다. |
-| `Tools > TxT RPG > Rebuild Action Grid Prefabs` | 셀, 컨텍스트 메뉴와 ActionGridPanel 운영용 Prefab을 다시 생성합니다. |
-| `Tools > TxT RPG > Rebuild Action Grid Demo` | 샘플 아이콘, 혼합 항목 데이터와 ActionGridPanel Demo를 다시 생성합니다. |
-| `Tools > TxT RPG > Rebuild Flexible Layout Prefab` | 자식 없는 운영용 FlexibleLayoutPanel Prefab을 다시 생성합니다. |
-| `Tools > TxT RPG > Rebuild Flexible Layout Demo` | 세 제품 UI Demo를 중첩한 반응형 Flexible Layout Demo를 다시 생성합니다. |
-| `Tools > TxT RPG > Rebuild Sample Main Flexible Layout Demo` | SampleScene의 1:3:1 주 레이아웃과 세 Demo Prefab을 조합한 샘플을 다시 생성합니다. |
+| `Tools > TxT RPG > UI > Prefabs > Rebuild Story Text Panel` | 운영용 메시지와 패널 프리팹을 기본 구조로 다시 생성합니다. |
+| `Tools > TxT RPG > UI > Demos > Rebuild Story Text Panel Demo` | 데모 데이터와 데모 프리팹을 기본 상태로 다시 생성합니다. |
+| `Tools > TxT RPG > UI > Preview > Refresh Story Text Panel` | 현재 데모 데이터로 미리보기 항목을 다시 생성합니다. |
+| `Tools > TxT RPG > UI > Prefabs > Rebuild Character Display Panel` | 운영용 2D 캐릭터 표시 패널과 HealthBar·CharacterStatus 프리팹을 기본 구조로 다시 생성합니다. |
+| `Tools > TxT RPG > UI > Demos > Rebuild Character Display Panel Demo` | 샘플 Sprite, 외형 정의, 데이터와 캐릭터 표시 데모 Prefab을 다시 생성합니다. |
+| `Tools > TxT RPG > UI > Prefabs > Rebuild Enemy Display Panel` | 운영용 적 표시 패널, 2D View Template과 풀 계층을 다시 생성합니다. |
+| `Tools > TxT RPG > UI > Demos > Rebuild Enemy Display Panel Demo` | 샘플 적 Sprite, 외형 정의, 다중 적 데이터와 Demo Prefab을 다시 생성합니다. |
+| `Tools > TxT RPG > UI > Prefabs > Rebuild Action Grid` | 셀, 컨텍스트 메뉴와 ActionGridPanel 운영용 Prefab을 다시 생성합니다. |
+| `Tools > TxT RPG > UI > Demos > Rebuild Action Grid Demo` | 샘플 아이콘, 혼합 항목 데이터와 ActionGridPanel Demo를 다시 생성합니다. |
+| `Tools > TxT RPG > UI > Prefabs > Rebuild Flexible Layout` | 자식 없는 운영용 FlexibleLayoutPanel Prefab을 다시 생성합니다. |
+| `Tools > TxT RPG > UI > Demos > Rebuild Flexible Layout Demo` | 세 제품 UI Demo를 중첩한 반응형 Flexible Layout Demo를 다시 생성합니다. |
+| `Tools > TxT RPG > UI > Demos > Rebuild Sample Main Layout Demo` | SampleScene의 1:3:1 주 레이아웃과 세 Demo Prefab을 조합한 샘플을 다시 생성합니다. |
 | `Tools > TxT RPG > Addressables > Register UI Assets` | 기존 운영용 UI Prefab과 공통 스타일을 수명 기반 Addressables 그룹에 등록합니다. |
 | `Tools > TxT RPG > Addressables > Validate Settings` | 빈 주소, 대소문자 중복, 누락 GUID와 그룹 스키마를 검사합니다. |
 | `Tools > TxT RPG > Addressables > Build Player Content` | 현재 프로필과 그룹 설정으로 Addressables Player Content를 빌드합니다. |
-| `Tools > TxT RPG > Rebuild App Scene` | 기본 Scene Transition Profile, AppRoot Prefab, AppScene과 Build Settings 시작 순서를 다시 생성합니다. |
-| `Tools > TxT RPG > Validate App Scene Configuration` | AppScene 시작 순서, 전체 Scene 경로, 활성화 상태와 중복 등록을 Player 빌드 전에 검사합니다. |
+| `Tools > TxT RPG > Application > Rebuild App Scene` | 기본 Scene Transition Profile, AppRoot Prefab, AppScene과 Build Settings 시작 순서를 다시 생성합니다. |
+| `Tools > TxT RPG > Application > Validate App Scene Configuration` | AppScene 시작 순서, 전체 Scene 경로, 활성화 상태와 중복 등록을 Player 빌드 전에 검사합니다. |
 
 ## Addressables 콘텐츠 제작
 
@@ -177,7 +199,7 @@ Editor fallback Sprite는 미리보기 용도로만 사용합니다. 새 런타�
 
 ## 테스트
 
-Edit Mode 테스트는 `Assets/TxTRPG/UI/Tests/Editor`와 `Assets/TxTRPG/SceneTransition/Tests/Editor`에 있습니다.
+Edit Mode 테스트는 `Assets/TxTRPG/UI/Tests/Editor`, `Assets/TxTRPG/Application/Tests/Editor`, `Assets/TxTRPG/SceneTransition/Tests/Editor`와 `Assets/TxTRPG/Editor/Tests/Editor`에 있습니다. `EditorMenuTests`는 등록된 20개 메뉴의 전체 경로, 우선순위와 중복 여부를 검증합니다.
 캐릭터 Gameplay 도메인 테스트는 `Assets/TxTRPG/Gameplay/Tests/Editor`에 있습니다.
 
 - `CharacterDomainTests`는 Stat, Health, 피해 계산과 단일 캐릭터 저장 호환성을 검증합니다.
@@ -185,27 +207,43 @@ Edit Mode 테스트는 `Assets/TxTRPG/UI/Tests/Editor`와 `Assets/TxTRPG/SceneTr
 
 ## 캐릭터 콘텐츠 제작과 검사
 
-1. `Assets > Create > TxT RPG > Characters > Character Definition`에서 Gameplay 원본을 만듭니다.
-2. `Assets > Create > TxT RPG > UI > Character Appearance Definition`에서 같은 Character ID를 사용하는 외형 원본을 만듭니다.
-3. 외형 원본의 기본 또는 빈 조건 Variant에 Addressable Sprite Asset ID를 설정합니다.
-4. `Assets > Create > TxT RPG > Characters > Character Content Definition`에서 두 원본을 연결합니다.
-5. `Assets > Create > TxT RPG > Characters > Character Content Catalog`를 만들고 Content Definition을 등록합니다.
-6. `Tools > TxT RPG > Validate Character Content`를 실행합니다.
+1. 프로젝트에 저장된 `CharacterContentCatalog`와 기본 Sprite를 준비합니다.
+2. `Tools > TxT RPG > Content > Characters > Open Authoring`을 엽니다.
+3. 공백 없는 Definition ID, 유효한 파일명, `Assets/` 아래 출력 폴더, 공격력과 최대 체력을 입력합니다.
+4. Default Sprite, Framing Preset, 추가 배율과 Pixel Offset을 설정합니다.
+5. Visual State Policy에서 Critical과 Injured 체력 비율을 설정합니다.
+6. `Add Standard Health States`로 `normal`, `injured`, `critical`, `defeated` 행을 추가하고 각 Sprite·프레이밍·주소를 설정합니다. 필요하면 Appearance·Pose·Expression 조건도 지정합니다.
+7. 카탈로그를 선택하고 기본 Sprite Address, Addressables Group과 등록 여부를 설정합니다.
+8. Health Preview와 Preview State로 fallback 및 상태별 Sprite를 확인합니다.
+9. Validation 영역에 오류가 없고 생성될 네 경로가 올바른지 확인합니다.
+10. `Create Character Content`를 누릅니다.
+11. 생성된 Content Definition이 선택되면 `Tools > TxT RPG > Content > Characters > Validate All`을 실행합니다.
 
-검사기는 누락된 Gameplay·Appearance 참조, 빈 Definition ID, Gameplay와 Appearance ID 불일치, 모든 Variant와 기본 외형의 Addressable artwork ID 누락 및 프로젝트 전체 Definition ID 중복을 Console에 보고합니다. 관련 Edit Mode 테스트는 `Assets/TxTRPG/Content/Tests/Editor/CharacterContentTests.cs`에 있습니다.
+도구는 `<AssetName>Gameplay.asset`, `<AssetName>Appearance.asset`, `<AssetName>VisualStatePolicy.asset`, `<AssetName>Content.asset`을 생성하고 서로 연결합니다. 명시적으로 추가한 Variant에는 Sprite가 필요하지만, 추가하지 않은 상태는 Default Sprite로 대체됩니다. 기존 경로나 Definition ID, 모호한 Variant 또는 Addressables 주소가 충돌하면 쓰기 전에 중단합니다. 생성 도중 실패하면 이번 실행에서 생성한 에셋과 폴더, 카탈로그 항목과 모든 새 Addressables 엔트리만 역순으로 복구합니다.
+
+`Register Addressables`를 끄면 Sprite Address에는 이미 사용할 수 있는 런타임 주소를 직접 입력해야 합니다. 켜면 입력 주소가 Sprite 에셋 주소가 되고 실제 하위 Sprite 로드 주소는 `<주소>[<Sprite 이름>]`으로 Appearance Definition에 저장됩니다.
+
+Sprite Sheet의 여러 상태 Sprite를 선택했다면 모든 행에 같은 Texture base address를 입력합니다. Factory는 Texture GUID를 한 번만 등록하고 각 Variant에 `baseAddress[SpriteName]`을 저장합니다. 서로 다른 Texture에는 각각 다른 base address를 지정합니다.
+
+런타임에서 체력 상태를 자동 반영하려면 `CharacterDisplayPresenter.Bind(runtimeState, contentDefinition)`을 호출합니다. 일시적인 피격·회복 상태는 `SetTemporaryVisualState`로 우선 적용하고 연출이 끝나면 `ClearTemporaryVisualState`를 호출합니다.
+
+기본 캐릭터 원화가 준비되지 않은 초기 프로젝트에서는 `Tools > TxT RPG > Content > Characters > Create Default Placeholder Content`를 실행합니다. 이 메뉴는 Demo 에셋과 독립된 `DefaultCharacterPlaceholder.asset`, 네 캐릭터 정의 에셋과 `CharacterContentCatalog.asset`을 생성하고 `character.default`를 등록합니다. 네 체력 상태는 처음에는 같은 Placeholder Sprite를 사용합니다. 실제 원화를 준비한 뒤 `DefaultCharacterAppearance.asset`의 상태별 Variant만 교체합니다.
+
+검사기는 누락된 Gameplay·Appearance 참조, 빈 Definition ID, Gameplay와 Appearance ID 불일치, 상태 임계값, Variant 모호성, 모든 Variant와 기본 외형의 Addressable artwork ID 누락 및 프로젝트 전체 Definition ID 중복을 Console에 보고합니다. 런타임 Content 테스트는 `Assets/TxTRPG/Content/Tests/Editor/CharacterContentTests.cs`에 있으며, 생성·재임포트·Sprite Sheet 등록·덮어쓰기 방지와 다중 Addressables 실패 복구 테스트는 `CharacterContentAssetFactoryTests.cs`에 있습니다. 빠른 상태 변경 중 비동기 Sprite 로드 취소는 `Assets/TxTRPG/UI/Tests/PlayMode/Character2DViewPlayModeTests.cs`에서 검증합니다.
 
 | 테스트 클래스 | 검증 범위 |
 | --- | --- |
 | `StoryTextPanelTests` | 투명도 경계값, 운영용 프리팹 필수 참조, 기본 배경 Reset과 Effect Material 인스턴스를 검증합니다. |
 | `StoryTextPanelDemoTests` | 데모 데이터의 양, 발화자 조합, 로더·패널·기본 배경 연결을 검증합니다. |
 | `StoryTextPanelEditModePreviewTests` | 데모 데이터 개수와 직렬화된 미리보기 항목 개수가 일치하는지 검증합니다. |
-| `CharacterDisplayPanelTests` | 표시 요청의 null 정규화, 2D 패널 계층과 데모 미리보기·로더 연결을 검증합니다. |
+| `CharacterDisplayPanelTests` | 표시 요청, 2D 패널 계층, 조합형 상태 UI, 비상호작용 Health Slider, 선택적 참조와 데모 연결을 검증합니다. |
 | `EnemyDisplayPanelTests` | 적 종류와 인스턴스 식별, 반응형 포메이션, View 풀 재사용과 운영·Demo Prefab 연결을 검증합니다. |
 | `ActionGridPanelTests` | 표시 모델 정규화, 열 수와 필요 높이, 세로 중앙·상단 전환, 스크롤 위치 복구, 컨텍스트 메뉴 방향 전환·경계 제한, 운영용 Prefab 경계와 혼합 항목 Demo 상태를 검증합니다. |
 | `FlexibleLayoutPanelTests` | 가중치·고정 크기, 최소·최대 크기, Overflow 계산, 배경 스타일 정책과 생성된 계층형 Prefab 구조를 검증합니다. |
 | `AssetManagementTests` | AssetScope의 중복 없는 Lease 해제와 Addressables 주소·그룹 등록을 검증합니다. |
 | `SceneTransitionTests` | AppScene 구조와 빌드 순서, Scene 경로 선택·마이그레이션·중복 이름 구분, Additive 로드, 초기 가림, Initializer 순서, 커밋 전 롤백, 커밋 후 대상 Scene 보존과 실패·취소 시 화면·입력 복구를 검증합니다. |
 | `CharacterDomainTests` | 기본 스탯 생성과 검증, 피해·회복 제한, 전투 불능 이벤트, 최대 체력 보정, 저장 Round Trip, 구버전 마이그레이션과 누락 ID 처리를 검증합니다. |
+| `PlayerSessionTests` | 기본 Profile, 새 게임 생성, 저장 복원, 손상 파일 보존, AppRoot Host와 운영 Scene Binder 계약을 검증합니다. |
 
 관련 변경 후에는 다음 항목을 확인합니다.
 

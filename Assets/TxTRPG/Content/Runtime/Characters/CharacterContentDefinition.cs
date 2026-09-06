@@ -13,6 +13,7 @@ namespace TxTRPG.Content.Characters
     {
         [SerializeField] private CharacterDefinition gameplayDefinition;
         [SerializeField] private CharacterAppearanceDefinition appearanceDefinition;
+        [SerializeField] private CharacterVisualStatePolicy visualStatePolicy;
         [SerializeField] private string displayNameLocalizationKey = string.Empty;
         [SerializeField] private string[] tags = Array.Empty<string>();
 
@@ -21,8 +22,36 @@ namespace TxTRPG.Content.Characters
             : string.Empty;
         public CharacterDefinition GameplayDefinition => gameplayDefinition;
         public CharacterAppearanceDefinition AppearanceDefinition => appearanceDefinition;
+        public CharacterVisualStatePolicy VisualStatePolicy => visualStatePolicy;
         public string DisplayNameLocalizationKey => displayNameLocalizationKey;
         public IReadOnlyList<string> Tags => tags ?? Array.Empty<string>();
+
+#if UNITY_EDITOR
+        public void ConfigureForEditor(
+            CharacterDefinition gameplay,
+            CharacterAppearanceDefinition appearance,
+            string localizationKey,
+            IEnumerable<string> contentTags = null)
+        {
+            gameplayDefinition = gameplay;
+            appearanceDefinition = appearance;
+            displayNameLocalizationKey = localizationKey?.Trim() ?? string.Empty;
+            tags = contentTags == null
+                ? Array.Empty<string>()
+                : new List<string>(contentTags).ToArray();
+        }
+
+        public void ConfigureForEditor(
+            CharacterDefinition gameplay,
+            CharacterAppearanceDefinition appearance,
+            CharacterVisualStatePolicy statePolicy,
+            string localizationKey,
+            IEnumerable<string> contentTags = null)
+        {
+            ConfigureForEditor(gameplay, appearance, localizationKey, contentTags);
+            visualStatePolicy = statePolicy;
+        }
+#endif
 
         public CharacterRuntimeState CreateRuntimeState(string characterInstanceId)
         {
@@ -63,6 +92,13 @@ namespace TxTRPG.Content.Characters
             if (!appearanceDefinition.TryValidateAddressableReferences(out var appearanceError))
             {
                 error = $"Character content '{name}' is invalid: {appearanceError}";
+                return false;
+            }
+
+            if (visualStatePolicy != null &&
+                !visualStatePolicy.TryValidate(out var policyError))
+            {
+                error = $"Character content '{name}' is invalid: {policyError}";
                 return false;
             }
 

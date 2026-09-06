@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7bb4f806c90f401cbba2d041f8c2b89e, type: 3}
+  m_Name: DefaultCharacterContent
+  m_EditorClassIdentifier: TxTRPG.Content::TxTRPG.Content.Characters.CharacterContentDefinition
+  gameplayDefinition: {fileID: 11400000, guid: 400fdba4e80cc05488aef9f99536d25d, type: 2}
+  appearanceDefinition: {fileID: 11400000, guid: 9b3ebfa00a1ba504eb39fbb39bd71b4c, type: 2}
+  visualStatePolicy: {fileID: 11400000, guid: b82f19ce662dd5544bf00de02a68fae9, type: 2}
+  displayNameLocalizationKey: characters.default.name
+  tags: []

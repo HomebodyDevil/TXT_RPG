@@ -1,12 +1,16 @@
 using System.Collections.Generic;
 using UnityEditor;
+using TxTRPG.Editor.Common.Menu;
 using UnityEngine;
 
 namespace TxTRPG.Content.Characters.Editor
 {
     public static class CharacterContentProjectValidator
     {
-        [MenuItem("Tools/TxT RPG/Validate Character Content")]
+        [MenuItem(
+            TxTRPGEditorMenuPaths.CharacterContent + "Validate All",
+            false,
+            TxTRPGEditorMenuPriorities.Validate)]
         public static void ValidateFromMenu()
         {
             var definitions = LoadAllDefinitions();

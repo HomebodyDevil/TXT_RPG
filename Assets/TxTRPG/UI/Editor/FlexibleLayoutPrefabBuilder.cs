@@ -1,4 +1,5 @@
 using UnityEditor;
+using TxTRPG.Editor.Common.Menu;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -16,7 +17,10 @@ namespace TxTRPG.UI.Editor
         private const string CharacterDemoPath = "Assets/TxTRPG/UI/DEMO/CharacterDisplayPanel/CharacterDisplayPanelDemo.prefab";
         private const string ActionDemoPath = "Assets/TxTRPG/UI/DEMO/ActionGridPanel/ActionGridPanelDemo.prefab";
 
-        [MenuItem("Tools/TxT RPG/Rebuild Flexible Layout Prefab")]
+        [MenuItem(
+            TxTRPGEditorMenuPaths.UiPrefabs + "Rebuild Flexible Layout",
+            false,
+            TxTRPGEditorMenuPriorities.Rebuild)]
         public static void CreateOrUpdatePrefab()
         {
             EnsureFolder(PrefabFolder);
@@ -45,7 +49,10 @@ namespace TxTRPG.UI.Editor
             }
         }
 
-        [MenuItem("Tools/TxT RPG/Rebuild Flexible Layout Demo")]
+        [MenuItem(
+            TxTRPGEditorMenuPaths.UiDemos + "Rebuild Flexible Layout Demo",
+            false,
+            TxTRPGEditorMenuPriorities.Rebuild)]
         public static void CreateOrUpdateDemo()
         {
             EnsureFolder(DemoFolder);
@@ -118,7 +125,10 @@ namespace TxTRPG.UI.Editor
             }
         }
 
-        [MenuItem("Tools/TxT RPG/Rebuild Sample Main Flexible Layout Demo")]
+        [MenuItem(
+            TxTRPGEditorMenuPaths.UiDemos + "Rebuild Sample Main Layout Demo",
+            false,
+            TxTRPGEditorMenuPriorities.Rebuild)]
         public static void CreateOrUpdateSampleMainDemo()
         {
             EnsureFolder(DemoFolder);

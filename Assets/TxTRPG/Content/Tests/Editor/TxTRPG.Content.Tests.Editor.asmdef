@@ -3,8 +3,10 @@
   "rootNamespace": "TxTRPG.Content.Tests",
   "references": [
     "TxTRPG.Content",
+    "TxTRPG.Content.Editor",
     "TxTRPG.Gameplay",
-    "TxTRPG.UI"
+    "TxTRPG.UI",
+    "Unity.Addressables.Editor"
   ],
   "includePlatforms": [
     "Editor"

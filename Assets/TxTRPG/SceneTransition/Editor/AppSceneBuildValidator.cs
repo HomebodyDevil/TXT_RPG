@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using UnityEditor;
+using TxTRPG.Editor.Common.Menu;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
@@ -16,7 +17,10 @@ namespace TxTRPG.SceneTransition.Editor
             ValidateOrThrow();
         }
 
-        [MenuItem("Tools/TxT RPG/Validate App Scene Configuration")]
+        [MenuItem(
+            TxTRPGEditorMenuPaths.Application + "Validate App Scene Configuration",
+            false,
+            TxTRPGEditorMenuPriorities.Validate)]
         public static void ValidateFromMenu()
         {
             ValidateOrThrow();

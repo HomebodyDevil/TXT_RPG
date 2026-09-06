@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEditor;
+using TxTRPG.Editor.Common.Menu;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -17,7 +18,10 @@ namespace TxTRPG.UI.Editor
             EditorApplication.update += RefreshOpenPreviews;
         }
 
-        [MenuItem("Tools/TxT RPG/Refresh Story Text Panel Edit Mode Preview")]
+        [MenuItem(
+            TxTRPGEditorMenuPaths.UiPreview + "Refresh Story Text Panel",
+            false,
+            TxTRPGEditorMenuPriorities.Refresh)]
         public static void RebuildPreviewPrefab()
         {
             var data = AssetDatabase.LoadAssetAtPath<StoryTextPanelDemoData>(DemoDataPath);

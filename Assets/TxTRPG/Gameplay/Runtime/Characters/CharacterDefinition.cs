@@ -45,6 +45,21 @@ namespace TxTRPG.Gameplay.Characters
                 CreateStatBlock());
         }
 
+#if UNITY_EDITOR
+        public void ConfigureForEditor(
+            string definitionId,
+            IEnumerable<BaseStatEntry> stats)
+        {
+            if (stats == null)
+            {
+                throw new ArgumentNullException(nameof(stats));
+            }
+
+            characterId = definitionId?.Trim() ?? string.Empty;
+            baseStats = new List<BaseStatEntry>(stats);
+        }
+#endif
+
         private void OnValidate()
         {
             characterId = characterId?.Trim() ?? string.Empty;

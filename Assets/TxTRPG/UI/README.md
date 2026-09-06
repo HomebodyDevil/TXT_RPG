@@ -6,7 +6,7 @@
 
 Place `Assets/TxTRPG/UI/Prefabs/StoryTextPanel.prefab` under a Canvas. The prefab has a default size of 760 by 520 reference pixels and should be anchored by its parent layout.
 
-If the prefab needs to be regenerated, use `Tools > TxT RPG > Rebuild Story Text Panel Prefabs`.
+If the prefab needs to be regenerated, use `Tools > TxT RPG > UI > Prefabs > Rebuild Story Text Panel`.
 
 The prefab uses `Assets/TxTRPG/UI/Styles/StoryTextPanelDefaultBackgroundStyle.asset` through `PanelBackgroundRenderer`. Edit that style for the shared default, or use `ApplyBackground`, `ChangeBackground`, `ClearBackground`, and `ResetBackgroundToDefault` for a specific panel.
 

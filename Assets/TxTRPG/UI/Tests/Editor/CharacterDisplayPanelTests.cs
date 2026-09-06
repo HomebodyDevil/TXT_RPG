@@ -18,6 +18,24 @@ namespace TxTRPG.UI.Tests
             Assert.That(presentation.PoseId, Is.Empty);
             Assert.That(presentation.ExpressionId, Is.Empty);
             Assert.That(presentation.AnimationId, Is.Empty);
+            Assert.That(presentation.VisualStateId, Is.Empty);
+        }
+
+        [Test]
+        public void Presentation_WithVisualStatePreservesExistingSelectionAxes()
+        {
+            var presentation = new CharacterPresentation(
+                "character.hero",
+                "armor.blue",
+                "critical",
+                "battle",
+                "focused",
+                "idle",
+                true);
+
+            Assert.That(presentation.VisualStateId, Is.EqualTo("critical"));
+            Assert.That(presentation.PoseId, Is.EqualTo("battle"));
+            Assert.That(presentation.Mirrored, Is.True);
         }
 
         [Test]
@@ -47,6 +65,76 @@ namespace TxTRPG.UI.Tests
             Assert.That(prefab.transform.Find("ForegroundEffectLayer"), Is.Not.Null);
             foreach (var image in prefab.GetComponentsInChildren<Image>(true))
                 Assert.That(image.raycastTarget, Is.False, image.name);
+        }
+
+        [Test]
+        public void GeneratedStatusPrefabs_UseComposableNonInteractiveHealthBar()
+        {
+            CharacterStatusPrefabBuilder.CreateOrUpdatePrefabs();
+
+            var healthPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                CharacterStatusPrefabBuilder.HealthBarPrefabPath);
+            var statusPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                CharacterStatusPrefabBuilder.StatusPanelPrefabPath);
+            Assert.That(healthPrefab, Is.Not.Null);
+            Assert.That(statusPrefab, Is.Not.Null);
+            Assert.That(
+                healthPrefab.transform.Find("BarRoot/Slider/Fill Area/Fill"),
+                Is.Not.Null);
+            Assert.That(
+                healthPrefab.transform.Find("BarRoot/BarEffectOverlay"),
+                Is.Not.Null);
+            Assert.That(healthPrefab.transform.Find("TextLayer/LabelText"), Is.Not.Null);
+            Assert.That(healthPrefab.transform.Find("TextLayer/ValueText"), Is.Not.Null);
+            Assert.That(healthPrefab.transform.Find("ForegroundEffectLayer"), Is.Not.Null);
+            Assert.That(healthPrefab.transform.Find("TransitionOverlay"), Is.Not.Null);
+
+            var slider = healthPrefab.GetComponentInChildren<Slider>(true);
+            Assert.That(slider, Is.Not.Null);
+            Assert.That(slider.interactable, Is.False);
+            Assert.That(slider.navigation.mode, Is.EqualTo(Navigation.Mode.None));
+            Assert.That(slider.handleRect, Is.Null);
+            Assert.That(slider.wholeNumbers, Is.True);
+
+            var instance = Object.Instantiate(statusPrefab);
+            try
+            {
+                var panel = instance.GetComponent<CharacterStatusPanel>();
+                var healthBar = instance.GetComponentInChildren<HealthBarPanel>(true);
+                Assert.That(panel, Is.Not.Null);
+                Assert.That(healthBar, Is.Not.Null);
+                Assert.That(panel.Elements, Has.Count.EqualTo(1));
+
+                var name = new CharacterNamePresentation(string.Empty);
+                var health = new HealthPresentation(37, 100, "HP", "37 / 100");
+                panel.Apply(new CharacterStatusPresentation(name, health));
+                Assert.That(healthBar.Slider.minValue, Is.Zero);
+                Assert.That(healthBar.Slider.maxValue, Is.EqualTo(100));
+                Assert.That(healthBar.Slider.value, Is.EqualTo(37));
+            }
+            finally
+            {
+                Object.DestroyImmediate(instance);
+            }
+        }
+
+        [Test]
+        public void HealthBarPanel_AllowsEveryOptionalVisualReferenceToBeMissing()
+        {
+            var instance = new GameObject("HealthBar", typeof(HealthBarPanel));
+            try
+            {
+                var panel = instance.GetComponent<HealthBarPanel>();
+                var name = new CharacterNamePresentation(string.Empty);
+                var health = new HealthPresentation(1, 2, string.Empty, string.Empty);
+                Assert.DoesNotThrow(() =>
+                    panel.Apply(new CharacterStatusPresentation(name, health)));
+                Assert.DoesNotThrow(panel.Clear);
+            }
+            finally
+            {
+                Object.DestroyImmediate(instance);
+            }
         }
 
         [Test]

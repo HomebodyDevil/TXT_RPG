@@ -19,6 +19,18 @@ namespace TxTRPG.UI
         [SerializeField, Min(0.1f)] private float additionalScale;
         [SerializeField] private Vector2 pixelOffset;
 
+        public CharacterArtworkFraming(
+            CharacterFramingPreset preset,
+            float additionalScale = 1f,
+            Vector2 pixelOffset = default,
+            Rect customVisibleRect = default)
+        {
+            this.preset = preset;
+            this.customVisibleRect = customVisibleRect;
+            this.additionalScale = Mathf.Max(0.1f, additionalScale);
+            this.pixelOffset = pixelOffset;
+        }
+
         public Rect VisibleRect
         {
             get
@@ -67,6 +79,7 @@ namespace TxTRPG.UI
         public sealed class Variant
         {
             [SerializeField] private string appearanceId = string.Empty;
+            [SerializeField] private string visualStateId = string.Empty;
             [SerializeField] private string poseId = string.Empty;
             [SerializeField] private string expressionId = string.Empty;
 #if UNITY_EDITOR
@@ -76,6 +89,7 @@ namespace TxTRPG.UI
             [SerializeField] private CharacterArtworkFraming framing;
 
             public string AppearanceId => appearanceId;
+            public string VisualStateId => visualStateId;
             public string PoseId => poseId;
             public string ExpressionId => expressionId;
 #if UNITY_EDITOR
@@ -85,6 +99,29 @@ namespace TxTRPG.UI
 #endif
             public string SpriteAssetId => spriteAssetId;
             public CharacterArtworkFraming Framing => framing;
+
+#if UNITY_EDITOR
+            public static Variant CreateForEditor(
+                string configuredAppearanceId,
+                string configuredVisualStateId,
+                string configuredPoseId,
+                string configuredExpressionId,
+                Sprite configuredSprite,
+                string configuredSpriteAssetId,
+                CharacterArtworkFraming configuredFraming)
+            {
+                return new Variant
+                {
+                    appearanceId = configuredAppearanceId?.Trim() ?? string.Empty,
+                    visualStateId = configuredVisualStateId?.Trim() ?? string.Empty,
+                    poseId = configuredPoseId?.Trim() ?? string.Empty,
+                    expressionId = configuredExpressionId?.Trim() ?? string.Empty,
+                    sprite = configuredSprite,
+                    spriteAssetId = configuredSpriteAssetId?.Trim() ?? string.Empty,
+                    framing = configuredFraming
+                };
+            }
+#endif
         }
 
         [SerializeField] private string characterId = string.Empty;
@@ -97,11 +134,44 @@ namespace TxTRPG.UI
 
         public string CharacterId => characterId;
 
+#if UNITY_EDITOR
+        public void ConfigureForEditor(
+            string definitionId,
+            Sprite defaultSprite,
+            string defaultSpriteAssetId,
+            CharacterArtworkFraming framing)
+        {
+            characterId = definitionId?.Trim() ?? string.Empty;
+            fallbackSprite = defaultSprite;
+            fallbackSpriteAssetId = defaultSpriteAssetId?.Trim() ?? string.Empty;
+            fallbackFraming = framing;
+            variants ??= new List<Variant>();
+        }
+
+        public void ConfigureForEditor(
+            string definitionId,
+            Sprite defaultSprite,
+            string defaultSpriteAssetId,
+            CharacterArtworkFraming framing,
+            IEnumerable<Variant> configuredVariants)
+        {
+            ConfigureForEditor(definitionId, defaultSprite, defaultSpriteAssetId, framing);
+            variants = configuredVariants == null
+                ? new List<Variant>()
+                : new List<Variant>(configuredVariants);
+        }
+#endif
+
         public bool TryValidateAddressableReferences(out string error)
         {
             if (variants == null)
             {
                 error = $"Character appearance '{name}' has a null variant collection.";
+                return false;
+            }
+
+            if (!TryValidateVariantSelection(out error))
+            {
                 return false;
             }
 
@@ -150,13 +220,15 @@ namespace TxTRPG.UI
                 if (variant == null ||
                     (string.IsNullOrWhiteSpace(variant.SpriteAssetId) && variant.Sprite == null) ||
                     !Matches(variant.AppearanceId, presentation.AppearanceId) ||
+                    !Matches(variant.VisualStateId, presentation.VisualStateId) ||
                     !Matches(variant.PoseId, presentation.PoseId) ||
                     !Matches(variant.ExpressionId, presentation.ExpressionId))
                 {
                     continue;
                 }
 
-                var score = Specificity(variant.AppearanceId) + Specificity(variant.PoseId) +
+                var score = Specificity(variant.AppearanceId) +
+                            Specificity(variant.VisualStateId) + Specificity(variant.PoseId) +
                             Specificity(variant.ExpressionId);
                 if (score > bestScore)
                 {
@@ -201,6 +273,7 @@ namespace TxTRPG.UI
             {
                 if (variant == null || variant.Sprite == null ||
                     !Matches(variant.AppearanceId, presentation.AppearanceId) ||
+                    !Matches(variant.VisualStateId, presentation.VisualStateId) ||
                     !Matches(variant.PoseId, presentation.PoseId) ||
                     !Matches(variant.ExpressionId, presentation.ExpressionId))
                 {
@@ -208,6 +281,7 @@ namespace TxTRPG.UI
                 }
 
                 var score = Specificity(variant.AppearanceId) +
+                            Specificity(variant.VisualStateId) +
                             Specificity(variant.PoseId) +
                             Specificity(variant.ExpressionId);
                 if (score <= bestScore)
@@ -230,6 +304,44 @@ namespace TxTRPG.UI
             return sprite != null;
         }
 
+        public bool TryValidateVariantSelection(out string error)
+        {
+            if (variants == null)
+            {
+                error = $"Character appearance '{name}' has a null variant collection.";
+                return false;
+            }
+
+            for (var leftIndex = 0; leftIndex < variants.Count; leftIndex++)
+            {
+                var left = variants[leftIndex];
+                if (left == null)
+                {
+                    continue;
+                }
+
+                for (var rightIndex = leftIndex + 1; rightIndex < variants.Count; rightIndex++)
+                {
+                    var right = variants[rightIndex];
+                    if (right == null || Specificity(left) != Specificity(right) ||
+                        !Overlaps(left.AppearanceId, right.AppearanceId) ||
+                        !Overlaps(left.VisualStateId, right.VisualStateId) ||
+                        !Overlaps(left.PoseId, right.PoseId) ||
+                        !Overlaps(left.ExpressionId, right.ExpressionId))
+                    {
+                        continue;
+                    }
+
+                    error = $"Character appearance '{name}' variants {leftIndex} and " +
+                            $"{rightIndex} overlap with equal specificity.";
+                    return false;
+                }
+            }
+
+            error = string.Empty;
+            return true;
+        }
+
         private static bool Matches(string configuredId, string requestedId)
         {
             return string.IsNullOrEmpty(configuredId) ||
@@ -240,5 +352,13 @@ namespace TxTRPG.UI
         {
             return string.IsNullOrEmpty(id) ? 0 : 1;
         }
+
+        private static int Specificity(Variant variant) =>
+            Specificity(variant.AppearanceId) + Specificity(variant.VisualStateId) +
+            Specificity(variant.PoseId) + Specificity(variant.ExpressionId);
+
+        private static bool Overlaps(string left, string right) =>
+            string.IsNullOrEmpty(left) || string.IsNullOrEmpty(right) ||
+            string.Equals(left, right, StringComparison.Ordinal);
     }
 }

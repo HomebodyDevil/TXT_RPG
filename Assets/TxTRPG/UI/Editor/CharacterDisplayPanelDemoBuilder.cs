@@ -1,5 +1,6 @@
 using System.Linq;
 using UnityEditor;
+using TxTRPG.Editor.Common.Menu;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -15,7 +16,10 @@ namespace TxTRPG.UI.Editor
         private const string DemoPrefabPath = DemoFolder + "/CharacterDisplayPanelDemo.prefab";
         private const string BackgroundStylePath = DemoFolder + "/CharacterDisplayBackgroundDemoStyle.asset";
 
-        [MenuItem("Tools/TxT RPG/Rebuild Character Display Panel Demo")]
+        [MenuItem(
+            TxTRPGEditorMenuPaths.UiDemos + "Rebuild Character Display Panel Demo",
+            false,
+            TxTRPGEditorMenuPriorities.Rebuild)]
         public static void CreateOrUpdateDemo()
         {
             EnsureFolder(DemoFolder);
