@@ -28,6 +28,7 @@ TxT-RPG/
 │   │   ├── action-grid-panel.md
 │   │   ├── flexible-layout-panel.md
 │   │   ├── scene-transition.md
+│   │   ├── character-content.md
 │   │   └── asset-management.md
 │   └── development/
 │       └── workflows.md
@@ -38,6 +39,13 @@ TxT-RPG/
 │   ├── TextMesh Pro/
 │   │   └── Resources, Fonts, Shaders, Sprites
 │   └── TxTRPG/
+│       ├── Gameplay/
+│       │   ├── Runtime/Characters/
+│       │   └── Tests/Editor/
+│       ├── Content/
+│       │   ├── Runtime/Characters/
+│       │   ├── Editor/
+│       │   └── Tests/Editor/
 │       ├── SceneTransition/
 │       │   ├── Runtime/
 │       │   ├── Editor/
@@ -60,6 +68,14 @@ TxT-RPG/
 
 `TxTRPG.SceneTransition`은 UI Panel과 독립적으로 `AppScene` 및 Additive Content Scene 교체 흐름을 담당합니다. Runtime 어셈블리는 `AppSceneRoot`, `ScenePathAttribute`, `ISceneInitializer`, `ISceneReadySource`, `ISceneLoader`, `IScreenTransitionEffect`와 기본 Fade를 포함합니다. Editor 어셈블리는 기본 Profile, `AppRoot.prefab`, `AppScene.unity`와 Build Settings를 재현 가능하게 생성하고, Build Settings 기반 Scene 경로 선택기와 빌드 전 검증을 제공합니다. Tests 어셈블리는 AppScene 구조, Scene 경로 정책, Additive 로드, 초기화 순서, 중복 요청과 실패·취소 복구를 검증합니다.
 
+### `Assets/TxTRPG/Gameplay`
+
+`TxTRPG.Gameplay`은 UI와 Scene 수명에서 독립된 게임 규칙 어셈블리입니다. `Runtime/Characters`에는 안정적인 Stat ID, 기본 스탯 Definition, 캐릭터 인스턴스 상태, 체력, 피해 계산 계약과 버전 저장 DTO가 있습니다. `Runtime/Players`에는 플레이어가 소유한 캐릭터 목록, 활성 캐릭터 선택, 복수 캐릭터 저장 DTO와 기존 단일 캐릭터 저장 변환 기능이 있습니다. `Tests/Editor`는 기본값 검증, 피해·회복 경계, 플레이어 불변 조건, 저장 Round Trip과 마이그레이션을 검증합니다. UI의 `CharacterPresentation`은 이 어셈블리로 이동하지 않으며 계속 외형 표현만 담당합니다.
+
+### `Assets/TxTRPG/Content`
+
+`TxTRPG.Content`는 Gameplay의 `CharacterDefinition`과 UI의 `CharacterAppearanceDefinition`을 `CharacterContentDefinition`으로 조합하는 콘텐츠 계층입니다. `CharacterContentCatalog`는 로드된 가벼운 정의를 안정적인 Definition ID로 조회하며, `TxTRPG.Content.Editor`는 `Tools > TxT RPG > Validate Character Content`에서 누락 참조, ID 불일치, 기본 Addressable artwork ID와 프로젝트 전체 중복 ID를 검사합니다. 고해상도 Sprite는 Content 에셋이 직접 소유하지 않고 기존 `Character2DView`가 ID로 지연 로드합니다.
+
 ### `Assets/TxTRPG/UI/Runtime`
 
 플레이어 빌드에 포함되는 UI 모델과 MonoBehaviour가 있습니다. Editor API를 직접 사용하지 않습니다.
@@ -73,6 +89,7 @@ TxT-RPG/
 | `StoryTextPanelDemoLoader.cs` | Play Mode 시작 시 데모 데이터를 실제 패널 메시지로 추가합니다. |
 | `StoryTextPanelDemoPreviewItem.cs` | Edit Mode 전용 미리보기 항목을 표시하고 Play Mode에서 해당 오브젝트를 제거합니다. |
 | `CharacterPresentation.cs` | Unity 자산 참조 없이 캐릭터 표시 상태를 전달하는 불변 값 객체입니다. |
+| `Characters/CharacterPresentationFactory.cs` | Gameplay 캐릭터 상태와 요청한 외형 ID를 UI용 `CharacterPresentation`으로 변환합니다. |
 | `ICharacterView.cs` | 2D와 향후 3D View의 최소 공통 API를 정의합니다. |
 | `CharacterViewBase.cs` | View의 표시 상태와 등장·퇴장 페이드를 관리합니다. |
 | `CharacterDisplayPanel.cs` | 활성 캐릭터 View의 표시, 교체, 숨김과 초기화를 조율합니다. |
@@ -177,6 +194,12 @@ Addressables 프로필, 빌드 스크립트와 `SharedUI`, `Gameplay_Common`, `C
 
 ```mermaid
 flowchart TD
+    Gameplay[TxTRPG.Gameplay] --> UnityRuntime[UnityEngine]
+
+    Content[TxTRPG.Content] --> Gameplay
+    Content --> Runtime
+
+    Runtime[TxTRPG.UI] --> Gameplay
     Runtime[TxTRPG.UI] --> TMP[Unity.TextMeshPro]
     Runtime --> UGUI[Unity.ugui]
 
@@ -189,7 +212,7 @@ flowchart TD
     Tests --> TestFramework[Unity Test Assemblies]
 ```
 
-의존 방향은 Editor와 테스트에서 런타임으로만 향해야 합니다. 런타임 어셈블리가 Editor 또는 테스트 어셈블리를 참조하면 플레이어 빌드 경계가 훼손됩니다.
+의존 방향은 Editor와 테스트에서 런타임으로만 향해야 합니다. `TxTRPG.Gameplay`은 `TxTRPG.UI`와 `TxTRPG.Content`를 참조하지 않습니다. `TxTRPG.UI`는 표시 모델 변환을 위해 Gameplay를 참조하고, `TxTRPG.Content`는 두 런타임 정의를 조합하기 위해 Gameplay와 UI를 참조합니다. 런타임 어셈블리가 Editor 또는 테스트 어셈블리를 참조하면 플레이어 빌드 경계가 훼손됩니다.
 
 ## Unity 기본·생성 디렉터리
 
@@ -204,7 +227,7 @@ flowchart TD
 - 스토리 진행 및 선택지 결정 시스템
 - 현지화 서비스와 문자열 테이블
 - 3D 캐릭터·적 표시와 동적 전투 슬롯
-- 저장 데이터와 마이그레이션
+- 플랫폼 저장소, 원자적 파일 교체와 전체 게임 저장 마이그레이션
 - Steam 및 모바일 플랫폼 서비스
 - 모바일 Safe Area를 포함한 최종 화면 조합과 기기별 레이아웃 검증
 

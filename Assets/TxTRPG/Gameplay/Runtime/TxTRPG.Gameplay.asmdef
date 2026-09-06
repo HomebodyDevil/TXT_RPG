@@ -1,13 +1,7 @@
 {
-  "name": "TxTRPG.UI",
-  "rootNamespace": "TxTRPG.UI",
-  "references": [
-    "TxTRPG.Gameplay",
-    "Unity.TextMeshPro",
-    "Unity.ugui",
-    "Unity.Addressables",
-    "Unity.ResourceManager"
-  ],
+  "name": "TxTRPG.Gameplay",
+  "rootNamespace": "TxTRPG.Gameplay",
+  "references": [],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,

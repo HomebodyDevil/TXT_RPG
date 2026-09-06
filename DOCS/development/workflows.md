@@ -178,6 +178,21 @@ Editor fallback Sprite는 미리보기 용도로만 사용합니다. 새 런타�
 ## 테스트
 
 Edit Mode 테스트는 `Assets/TxTRPG/UI/Tests/Editor`와 `Assets/TxTRPG/SceneTransition/Tests/Editor`에 있습니다.
+캐릭터 Gameplay 도메인 테스트는 `Assets/TxTRPG/Gameplay/Tests/Editor`에 있습니다.
+
+- `CharacterDomainTests`는 Stat, Health, 피해 계산과 단일 캐릭터 저장 호환성을 검증합니다.
+- `PlayerStateTests`는 Definition ID와 Instance ID 분리, 활성 캐릭터 변경, 제거 규칙, 복수 캐릭터 저장과 기존 단일 저장 변환을 검증합니다.
+
+## 캐릭터 콘텐츠 제작과 검사
+
+1. `Assets > Create > TxT RPG > Characters > Character Definition`에서 Gameplay 원본을 만듭니다.
+2. `Assets > Create > TxT RPG > UI > Character Appearance Definition`에서 같은 Character ID를 사용하는 외형 원본을 만듭니다.
+3. 외형 원본의 기본 또는 빈 조건 Variant에 Addressable Sprite Asset ID를 설정합니다.
+4. `Assets > Create > TxT RPG > Characters > Character Content Definition`에서 두 원본을 연결합니다.
+5. `Assets > Create > TxT RPG > Characters > Character Content Catalog`를 만들고 Content Definition을 등록합니다.
+6. `Tools > TxT RPG > Validate Character Content`를 실행합니다.
+
+검사기는 누락된 Gameplay·Appearance 참조, 빈 Definition ID, Gameplay와 Appearance ID 불일치, 모든 Variant와 기본 외형의 Addressable artwork ID 누락 및 프로젝트 전체 Definition ID 중복을 Console에 보고합니다. 관련 Edit Mode 테스트는 `Assets/TxTRPG/Content/Tests/Editor/CharacterContentTests.cs`에 있습니다.
 
 | 테스트 클래스 | 검증 범위 |
 | --- | --- |
@@ -190,6 +205,7 @@ Edit Mode 테스트는 `Assets/TxTRPG/UI/Tests/Editor`와 `Assets/TxTRPG/SceneTr
 | `FlexibleLayoutPanelTests` | 가중치·고정 크기, 최소·최대 크기, Overflow 계산, 배경 스타일 정책과 생성된 계층형 Prefab 구조를 검증합니다. |
 | `AssetManagementTests` | AssetScope의 중복 없는 Lease 해제와 Addressables 주소·그룹 등록을 검증합니다. |
 | `SceneTransitionTests` | AppScene 구조와 빌드 순서, Scene 경로 선택·마이그레이션·중복 이름 구분, Additive 로드, 초기 가림, Initializer 순서, 커밋 전 롤백, 커밋 후 대상 Scene 보존과 실패·취소 시 화면·입력 복구를 검증합니다. |
+| `CharacterDomainTests` | 기본 스탯 생성과 검증, 피해·회복 제한, 전투 불능 이벤트, 최대 체력 보정, 저장 Round Trip, 구버전 마이그레이션과 누락 ID 처리를 검증합니다. |
 
 관련 변경 후에는 다음 항목을 확인합니다.
 

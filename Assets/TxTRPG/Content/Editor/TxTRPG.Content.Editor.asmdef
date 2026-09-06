@@ -1,14 +1,12 @@
 {
-  "name": "TxTRPG.UI",
-  "rootNamespace": "TxTRPG.UI",
+  "name": "TxTRPG.Content.Editor",
+  "rootNamespace": "TxTRPG.Content.Editor",
   "references": [
-    "TxTRPG.Gameplay",
-    "Unity.TextMeshPro",
-    "Unity.ugui",
-    "Unity.Addressables",
-    "Unity.ResourceManager"
+    "TxTRPG.Content"
   ],
-  "includePlatforms": [],
+  "includePlatforms": [
+    "Editor"
+  ],
   "excludePlatforms": [],
   "allowUnsafeCode": false,
   "overrideReferences": false,

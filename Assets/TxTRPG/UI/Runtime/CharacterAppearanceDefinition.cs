@@ -97,6 +97,42 @@ namespace TxTRPG.UI
 
         public string CharacterId => characterId;
 
+        public bool TryValidateAddressableReferences(out string error)
+        {
+            if (variants == null)
+            {
+                error = $"Character appearance '{name}' has a null variant collection.";
+                return false;
+            }
+
+            for (var index = 0; index < variants.Count; index++)
+            {
+                var variant = variants[index];
+                if (variant == null)
+                {
+                    error = $"Character appearance '{name}' has a null variant at index {index}.";
+                    return false;
+                }
+                if (string.IsNullOrWhiteSpace(variant.SpriteAssetId))
+                {
+                    error = $"Character appearance '{name}' variant {index} has no " +
+                            "Addressable artwork ID.";
+                    return false;
+                }
+            }
+
+            var defaultPresentation = new CharacterPresentation(characterId);
+            if (!TryResolveReference(defaultPresentation, out var artwork) ||
+                string.IsNullOrWhiteSpace(artwork.AssetId))
+            {
+                error = $"Character appearance '{name}' has no default Addressable artwork ID.";
+                return false;
+            }
+
+            error = string.Empty;
+            return true;
+        }
+
         public bool TryResolveReference(
             in CharacterPresentation presentation,
             out CharacterArtworkReference artwork)
