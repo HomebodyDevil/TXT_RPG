@@ -13,8 +13,12 @@ MonoBehaviour:
   m_Name: DefaultSceneTransitionProfile
   m_EditorClassIdentifier: TxTRPG.SceneTransition::TxTRPG.SceneTransition.SceneTransitionProfile
   color: {r: 0, g: 0, b: 0, a: 1}
+  fadeOutEnabled: 1
   coverDuration: 0.25
+  fadeInEnabled: 1
   revealDuration: 0.25
+  coverDuringLoad: 1
+  sceneSwapMode: 0
   minimumCoveredTime: 0.1
   readinessTimeout: 30
   maximumFrameDelta: 0.05

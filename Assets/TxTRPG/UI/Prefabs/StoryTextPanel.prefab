@@ -708,7 +708,7 @@ MonoBehaviour:
   separatorSpacingBelow: 10
   followLatestMessage: 1
   maximumRetainedMessages: 0
-  revealInitialMessages: 1
+  revealInitialMessages: 0
   initialRevealDuration: 0.35
 --- !u!1 &7037987165530285692
 GameObject:

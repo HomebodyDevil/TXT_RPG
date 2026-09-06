@@ -8,24 +8,21 @@ using UnityEngine.SceneManagement;
 namespace TxTRPG.SceneTransition
 {
     [DisallowMultipleComponent]
-    public sealed class UnitySceneLoader : MonoBehaviour, ISceneLoader
+    public sealed class UnitySceneLoader : MonoBehaviour, ISceneLoader, IScenePathValidator
     {
         public async Task<SceneLoadResult> LoadSceneAsync(
-            string sceneName,
+            string scenePath,
             LoadSceneMode loadMode,
             IProgress<float> progress,
             CancellationToken cancellationToken)
         {
-            if (string.IsNullOrWhiteSpace(sceneName))
-            {
-                throw new ArgumentException("A scene name or build path is required.", nameof(sceneName));
-            }
+            ValidateScenePath(scenePath);
 
             cancellationToken.ThrowIfCancellationRequested();
-            var operation = SceneManager.LoadSceneAsync(sceneName, loadMode);
+            var operation = SceneManager.LoadSceneAsync(scenePath, loadMode);
             if (operation == null)
             {
-                throw new InvalidOperationException($"Scene '{sceneName}' could not be loaded.");
+                throw new InvalidOperationException($"Scene '{scenePath}' could not be loaded.");
             }
 
             // Unity scene operations cannot be cancelled once started. Finish the operation before
@@ -37,7 +34,7 @@ namespace TxTRPG.SceneTransition
             }
 
             progress?.Report(1f);
-            var lookupName = Path.GetFileNameWithoutExtension(sceneName.Replace('\\', '/'));
+            var lookupName = Path.GetFileNameWithoutExtension(scenePath.Replace('\\', '/'));
             var scene = SceneManager.GetSceneByName(lookupName);
             if (!scene.IsValid() && loadMode == LoadSceneMode.Single)
             {
@@ -46,11 +43,63 @@ namespace TxTRPG.SceneTransition
 
             if (!scene.IsValid() || !scene.isLoaded)
             {
-                throw new InvalidOperationException($"Scene '{sceneName}' finished loading but is not valid.");
+                throw new InvalidOperationException($"Scene '{scenePath}' finished loading but is not valid.");
+            }
+
+            return new SceneLoadResult(scene);
+        }
+
+        public async Task UnloadSceneAsync(Scene scene, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!scene.IsValid() || !scene.isLoaded)
+            {
+                return;
+            }
+
+            var operation = SceneManager.UnloadSceneAsync(scene);
+            if (operation == null)
+            {
+                throw new InvalidOperationException($"Scene '{scene.name}' could not be unloaded.");
+            }
+
+            // Unity cannot cancel an unload after it starts. Observe cancellation only after the
+            // operation completes so the caller never assumes that the scene is still loaded.
+            while (!operation.isDone)
+            {
+                await Task.Yield();
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-            return new SceneLoadResult(scene);
+        }
+
+        public bool SetActiveScene(Scene scene)
+        {
+            return scene.IsValid() && scene.isLoaded && SceneManager.SetActiveScene(scene);
+        }
+
+        public void ValidateScenePath(string scenePath)
+        {
+            if (string.IsNullOrWhiteSpace(scenePath))
+            {
+                throw new ArgumentException("A Build Settings scene path is required.", nameof(scenePath));
+            }
+
+            var normalizedPath = scenePath.Replace('\\', '/');
+            if (!normalizedPath.StartsWith("Assets/", StringComparison.Ordinal) ||
+                !normalizedPath.EndsWith(".unity", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException(
+                    $"Scene '{scenePath}' must use a full project path such as " +
+                    "'Assets/Scenes/MainScene.unity'.",
+                    nameof(scenePath));
+            }
+
+            if (!Application.CanStreamedLevelBeLoaded(normalizedPath))
+            {
+                throw new InvalidOperationException(
+                    $"Scene '{normalizedPath}' is not included and enabled in Build Settings.");
+            }
         }
     }
 }

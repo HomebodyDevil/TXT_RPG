@@ -5,6 +5,7 @@ using UnityEngine.UI;
 
 namespace TxTRPG.SceneTransition
 {
+    [DefaultExecutionOrder(-12000)]
     [DisallowMultipleComponent]
     public sealed class FadeScreenTransitionEffect : ScreenTransitionEffect
     {
@@ -17,7 +18,7 @@ namespace TxTRPG.SceneTransition
                 transitionImage.raycastTarget = false;
             }
 
-            CompleteImmediately();
+            SetRevealedImmediately();
         }
 
         public void Configure(Image image)
@@ -43,7 +44,18 @@ namespace TxTRPG.SceneTransition
             return AnimateAsync(1f, 0f, ResolveDuration(context, false), context, cancellationToken);
         }
 
-        public override void CompleteImmediately()
+        public override void SetCoveredImmediately(Color color)
+        {
+            if (transitionImage == null)
+            {
+                return;
+            }
+
+            transitionImage.gameObject.SetActive(true);
+            SetAlpha(1f, color);
+        }
+
+        public override void SetRevealedImmediately()
         {
             SetAlpha(0f, Color.black);
             if (transitionImage != null)

@@ -2,77 +2,141 @@
 
 ## 목적
 
-`SceneTransitionService`는 Scene 교체 과정 전체를 영속적인 전체 화면 Canvas로 가립니다. 개별 Panel은 데이터·Addressables·레이아웃 준비 책임을 계속 유지하지만, Scene 시작 시 Fade를 중복 실행하지 않습니다.
+`SceneTransitionService`는 항상 로드되어 있는 실제 `AppScene`에서 콘텐츠 Scene 교체를 조율합니다. 전역 화면 전환 UI는 `DontDestroyOnLoad`의 숨겨진 런타임 Scene이나 `Resources.Load` 자동 생성에 의존하지 않습니다. Hierarchy와 Build Settings에서 수명과 소유권을 직접 확인할 수 있습니다.
 
 ```text
-전환 요청
-→ 중복 요청 거부
+AppScene                                      항상 유지
+└── AppRoot                                   AppRoot.prefab 인스턴스
+    ├── AppSceneRoot
+    ├── SceneTransitionService
+    ├── UnitySceneLoader
+    └── TransitionCanvas                      Screen Space - Overlay, Order 32760
+        ├── InputBlocker
+        ├── TransitionImage                   FadeScreenTransitionEffect
+        ├── EffectLayer
+        ├── LoadingIndicator
+        └── ErrorFallback
+
+Content Scene                                 Additive로 하나씩 교체
+└── ISceneInitializer / ISceneReadySource
+```
+
+제품 실행 경로는 Build Settings 0번인 `Assets/Scenes/AppScene.unity`에서 시작합니다. `AppSceneRoot`는 기본 콘텐츠인 `Assets/Scenes/TMP_MainScene.unity`를 로드합니다. 런타임 데이터는 Scene 이름이 아니라 전체 프로젝트 경로를 사용하므로, 같은 이름을 가진 Scene이 여러 폴더에 있어도 대상을 모호하지 않게 식별합니다.
+
+## Scene 경로 작성과 검증
+
+`AppSceneRoot.initialContentScenePath`에는 `[ScenePath(excludeAppScene: true)]`가 적용되어 있습니다. Inspector에서는 직접 문자열을 입력하는 대신 Build Settings에 등록되어 있고 활성화된 Scene을 `Scene 이름 (전체 경로)` 형식의 목록에서 선택합니다. AppScene은 콘텐츠 대상으로 선택할 수 없습니다.
+
+잘못된 기존 값은 자동으로 다른 Scene으로 바꾸지 않습니다. Inspector가 원래 문자열을 `<Invalid>`로 보존하고 원인을 표시하므로, 개발자가 누락되거나 비활성화된 Scene을 확인할 수 있습니다. 기존 `initialContentScene` 직렬화 필드는 `FormerlySerializedAs`로 마이그레이션하며, Prefab Builder는 과거의 Scene 이름이 활성화된 Build Settings Scene 하나와 유일하게 일치할 때에만 전체 경로로 변환합니다. 유일하게 결정할 수 없는 값은 기본 콘텐츠 경로로 복구합니다.
+
+빌드 전 `AppSceneBuildValidator`는 다음 구성을 검사하며, 오류가 있으면 빌드를 중단합니다.
+
+- AppScene이 Build Settings의 첫 번째 활성 Scene인지 확인합니다.
+- Scene 경로가 실제 `.unity` 자산이고 Build Settings에 정확히 한 번 등록되어 활성화되었는지 확인합니다.
+- 최초 콘텐츠 Scene이 AppScene과 다른지 확인합니다.
+- Build Settings에 중복 Scene 경로가 없는지 확인합니다.
+
+`UnitySceneLoader`도 로드 직전에 전체 `Assets/.../*.unity` 경로와 Player에서 로드 가능한지를 검사합니다. 이 검사는 Editor 작성 오류가 빌드를 통과하지 못하게 하는 검증을 대체하지 않으며, 손상되거나 외부에서 바뀐 런타임 구성에 대한 마지막 방어선입니다. Addressables Scene은 Build Settings 경로와 수명 규칙이 다르므로 현재 문자열 필드에 혼합하지 않습니다. 향후 별도의 참조 형식과 `ISceneLoader` 구현으로 추가합니다.
+
+## 전환 흐름
+
+최초 콘텐츠 Scene은 첫 화면이 렌더링되기 전에 완전히 가려진 상태로 준비합니다.
+
+```text
+AppScene Awake
+→ TransitionImage 즉시 불투명
 → 입력 차단
-→ 화면 Cover
-→ Scene 비동기 로드 및 활성화
-→ 대상 Scene의 ISceneReadySource 대기
-→ 최소 가림 시간 보장
-→ 화면 Reveal
+→ 최초 Content Scene Additive 로드
+→ Content Scene 활성화
+→ ISceneInitializer 실행
+→ ISceneReadySource 대기
+→ Canvas 레이아웃 확정과 한 프레임 대기
+→ Fade In
 → 입력 차단 해제
 ```
 
-## 런타임 구조
+이후 전환은 다음 순서를 사용합니다.
 
 ```text
-PersistentAppRoot                         DontDestroyOnLoad
-├── PersistentAppRoot
-├── SceneTransitionService
-├── UnitySceneLoader
-└── TransitionCanvas                     Screen Space - Overlay, Order 32760
-    ├── InputBlocker
-    ├── TransitionImage                  FadeScreenTransitionEffect
-    ├── EffectLayer                      향후 Wipe·Material 효과용
-    ├── LoadingIndicator                 향후 로딩 표시용
-    └── ErrorFallback
+Fade Out 또는 즉시 Cover
+→ 새 Content Scene Additive 로드
+→ SceneManager.SetActiveScene
+→ ISceneInitializer를 InitializationOrder 순서로 실행
+→ ISceneReadySource 대기
+→ 이전 Content Scene 언로드
+→ Canvas.ForceUpdateCanvases
+→ 한 프레임 대기 후 다시 레이아웃 확정
+→ Fade In 또는 즉시 Reveal
 ```
 
-`PersistentAppRoot`는 `RuntimeInitializeOnLoadMethod(BeforeSceneLoad)`에서 `Resources/TxTRPG/PersistentAppRoot`를 한 번만 생성합니다. 개발자가 임의의 Scene부터 직접 실행해도 같은 경로가 동작합니다. Resource Prefab이 누락되면 동일한 기본 계층을 런타임에 구성하므로 게임 시작 자체가 차단되지는 않습니다. 중복 인스턴스는 파괴하며 `DontDestroyOnLoad`는 루트 하나에만 적용합니다.
+`ContentSceneSwapMode.LoadThenUnload`가 기본값입니다. 이전 Scene을 유지한 채 새 Scene을 준비하므로 실패 시 기존 화면으로 복구할 수 있지만, 전환 중 두 Scene의 메모리가 일시적으로 함께 필요합니다. 모바일처럼 메모리 상한이 더 중요한 화면은 `UnloadBeforeLoad`를 선택할 수 있습니다. 이 모드에서는 로드 실패 후 복구할 이전 Scene이 없을 수 있으므로 제품 수준의 오류 화면과 재시도 경로가 필요합니다.
 
-현재 프로젝트에는 별도의 Bootstrap Scene을 추가하지 않았습니다. 정식 시작 Scene을 도입할 때에도 Bootstrap에는 같은 Persistent Prefab만 배치하며, 자동 생성된 인스턴스가 이미 있으면 중복 인스턴스가 제거됩니다.
+## 초기화와 준비 완료 계약
+
+Scene 파일의 로드 완료와 콘텐츠 준비 완료는 별개의 상태입니다.
+
+| 형식 | 책임 |
+| --- | --- |
+| `ISceneInitializer` | Addressables, 저장 데이터, 현지화, 동적 UI 생성처럼 서비스가 시작해야 하는 초기화를 수행합니다. |
+| `InitializationOrder` | 초기화 실행 순서를 결정합니다. 값이 작은 구현부터 순차 실행하므로 명시적인 의존 관계를 구성할 수 있습니다. |
+| `SceneInitializationContext` | 새 Scene, 이전 Scene, 최초 로드 여부와 진행률 보고 대상을 제공합니다. |
+| `ISceneReadySource` | 다른 시스템이 이미 시작한 필수 비동기 작업의 완료 Task를 제공합니다. |
+| `SceneReadySignal` | 외부 관리자가 `MarkReady()`로 완료하는 기본 준비 신호입니다. |
+
+서비스는 대상 Scene의 비활성 GameObject도 검색합니다. 초기화 구현은 전달된 `CancellationToken`을 지켜야 하며 `InitializeAsync`에서 `null` Task를 반환하면 구성 오류로 처리됩니다. 모든 Initializer와 Ready Source에는 Profile의 `Readiness Timeout`이 적용됩니다.
+
+비동기 초기화가 없는 Scene도 로드 직후 한 프레임을 기다려 `Start`가 실행되게 하고, Canvas 레이아웃을 갱신한 뒤 표시합니다.
 
 ## 책임과 확장 지점
 
 | 형식 | 책임 |
 | --- | --- |
-| `SceneTransitionService` | 전환 상태, 중복 요청, 취소, 입력 차단, 준비 대기와 실패 복구를 조율합니다. |
-| `ISceneLoader` | Scene 로딩 방식을 분리합니다. 기본 구현은 `UnitySceneLoader`입니다. |
-| `IScreenTransitionEffect` | Cover, Reveal, 즉시 복구 계약을 정의합니다. |
-| `FadeScreenTransitionEffect` | 전체 화면 Image의 알파를 Unscaled Time 기준으로 변경합니다. |
-| `SceneTransitionProfile` | 색상, 시간, 입력 차단, 준비 제한 시간과 Reduce Motion 대체 동작을 설정합니다. |
-| `ISceneReadySource` | 대상 Scene의 필수 초기화가 완료되는 Task를 제공합니다. |
-| `SceneReadySignal` | 외부 초기화 관리자가 명시적으로 완료할 수 있는 기본 준비 신호입니다. |
+| `AppSceneRoot` | AppScene 인스턴스의 유일성을 확인하고 최초 콘텐츠 로드를 시작합니다. |
+| `SceneTransitionService` | 전환 상태, 중복 요청, 활성 Scene, 초기화, 언로드, 취소와 실패 복구를 조율합니다. |
+| `ISceneLoader` | Additive 로드, 언로드와 활성 Scene 지정을 추상화합니다. |
+| `UnitySceneLoader` | Unity `LoadSceneAsync`, `UnloadSceneAsync`, `SetActiveScene`을 구현합니다. |
+| `ScenePathAttribute` | 런타임에는 전체 Scene 경로 문자열을 유지하면서 Editor 선택 정책을 선언합니다. |
+| `BuildScenePathUtility` | Build Settings Scene 목록, 기존 이름 마이그레이션과 경로 검증을 제공합니다. |
+| `AppSceneBuildValidator` | Player 빌드 전에 AppScene과 최초 콘텐츠 Scene 구성을 검증합니다. |
+| `IScreenTransitionEffect` | Cover, Reveal, 즉시 가림과 즉시 표시 계약을 정의합니다. |
+| `FadeScreenTransitionEffect` | 전체 화면 Image의 알파를 프레임 시간 상한과 Unscaled Time 정책으로 변경합니다. |
+| `SceneTransitionProfile` | Fade 사용 여부, 색상, 시간, 로드 중 가림, Scene 교체 순서, 입력 차단, Timeout과 Reduce Motion을 설정합니다. |
 
-다른 효과는 `ScreenTransitionEffect`를 상속하여 추가합니다. Scene 로딩 코드는 Fade, Wipe, Material 또는 로딩 화면 구현을 직접 참조하지 않습니다.
+다른 화면 효과는 `ScreenTransitionEffect`를 상속하여 추가합니다. Scene 흐름은 Fade, Wipe, Material 또는 Sprite Animation 구현을 직접 참조하지 않습니다.
+
+## Profile 옵션
+
+- `Fade Out Enabled`를 끄고 `Cover During Load`를 켜면 로드 전에 설정 색상으로 즉시 가립니다.
+- `Fade In Enabled`를 끄면 준비 완료 후 즉시 표시합니다.
+- `Cover During Load`와 `Fade Out Enabled`를 모두 끄면 로딩 과정을 화면에 노출합니다.
+- `Block Input`은 전환 동안 전체 화면 Raycast를 차단합니다.
+- `Maximum Frame Delta`는 비정상적으로 큰 한 프레임이 Fade를 건너뛰지 않게 합니다.
+- `Reduced Motion Mode`는 짧은 Fade 또는 즉시 전환으로 대체합니다.
+
+Fade는 첫 애니메이션 프레임을 정확한 진행률 0으로 한 번 렌더링한 뒤 경과 시간을 누적합니다.
 
 ## 실패와 취소
 
-- 전환 중 두 번째 요청은 `InvalidOperationException`으로 거부합니다. 요청 대기열은 현재 구현 범위에 포함하지 않습니다.
-- 모든 실패와 취소 경로는 `finally`에서 전환 효과를 투명 상태로 복구하고 `InputBlocker`를 해제합니다.
-- 로드 실패 시 `ErrorFallback`을 표시하고 예외를 호출자에게 다시 전달합니다. 호출자는 재시도, 이전 화면 유지 또는 타이틀 복귀 정책을 결정합니다.
-- 준비 신호가 `Readiness Timeout` 안에 완료되지 않으면 영구적인 검은 화면을 방지하기 위해 실패 처리합니다.
-- Unity의 `LoadSceneAsync`는 시작 후 취소할 수 없습니다. `UnitySceneLoader`는 요청이 취소되어도 실제 로드가 끝날 때까지 관찰한 뒤 취소를 보고하므로, 나중에 Scene이 예고 없이 활성화되는 상태를 만들지 않습니다.
-
-## 시간과 접근성
-
-Fade는 첫 애니메이션 프레임을 정확한 진행률 0으로 렌더링한 뒤 시간을 누적합니다. 프레임별 증가량은 `Maximum Frame Delta`로 제한하며 기본적으로 Unscaled Time을 사용합니다. `SceneTransitionService.ReduceMotion`이 활성화되면 Profile의 `ShortFade` 또는 `Instant` 정책을 적용합니다.
+- 전환 중 두 번째 요청은 `InvalidOperationException`으로 거부합니다. 현재 구현에는 요청 대기열이 없습니다.
+- 새 Scene을 로드한 뒤 초기화가 실패하거나 취소되었고 이전 Scene이 아직 로드되어 있으면, 이전 Scene을 다시 활성화하고 실패한 새 Scene을 언로드합니다.
+- `UnloadBeforeLoad`에서 이전 Scene을 이미 제거했거나 로드 자체가 실패하면 `ErrorFallback`을 표시하고 예외를 호출자에게 전달합니다.
+- 모든 실패와 취소 경로는 Transition Image를 투명 상태로 복구하고 입력 차단을 해제합니다.
+- Unity Scene 비동기 연산은 시작 후 취소할 수 없습니다. 로더는 연산이 끝날 때까지 기다리고, 서비스가 결과 Scene을 정리할 기회를 가진 뒤 취소를 관찰합니다.
 
 ## Panel Fade와의 관계
 
-`PanelStartupController`는 준비 전 숨김, 데이터 로드, 레이아웃 갱신, 입력 제어와 실패 정책을 계속 담당합니다. `FadePanelRevealTransition.animateReveal`의 기본값만 `false`로 변경했기 때문에 준비가 끝나면 즉시 표시됩니다. 필요한 대화 연출에서는 Inspector에서 해당 옵션을 다시 활성화할 수 있습니다.
+Scene 전체 Fade가 초기 표시를 담당하므로 `StoryTextPanel.revealInitialMessages`, `FadePanelRevealTransition.animateReveal`, `CharacterViewBase.animateVisibility`의 기본값은 꺼져 있습니다. 새 문장, 캐릭터 교체와 같은 Scene 내부의 국소 연출에는 필요한 옵션만 다시 켤 수 있습니다. `PanelBackgroundRenderer`의 배경 교차 Fade와 StoryTextPanel의 위치 기반 투명도는 Scene 전환과 목적이 다르므로 유지합니다.
 
-`CharacterViewBase.animateVisibility`도 기본값이 `false`입니다. 캐릭터 교체 연출이 필요한 화면에서는 개별적으로 활성화합니다. `PanelBackgroundRenderer`의 Cross Fade와 StoryTextPanel의 위치 기반 투명도는 Scene 전환과 목적이 다르므로 기존 동작을 유지합니다.
+## 직렬화 호환성과 레거시 자산
+
+기존 `PersistentAppRoot` 클래스와 `Assets/TxTRPG/SceneTransition/Resources/TxTRPG/PersistentAppRoot.prefab`은 기존 GUID 참조를 깨뜨리지 않기 위한 레거시 호환 자산으로 남아 있습니다. 클래스에는 자동 Bootstrap과 `DontDestroyOnLoad` 동작이 없으므로 새 실행 경로에서는 사용되지 않습니다. 기존 Scene에 수동 배치된 인스턴스가 있다면 AppScene 전환 후 제거해야 합니다.
 
 ## 향후 작업
 
-- Addressables 기반 Scene Loader 구현
+- Addressables 기반 Content Scene Loader
 - EffectLayer를 사용하는 Wipe·Material·Sprite Sheet 효과
 - LoadingIndicator와 ErrorFallback의 제품 UI
-- 정식 Bootstrap Scene과 실제 두 Scene 사이의 Play Mode 전환 테스트
+- 실제 두 제품 Scene 사이의 Play Mode 전환 테스트
 - 플랫폼 설정과 연동된 Reduce Motion Provider
 
-이 항목들은 현재 구현된 기본 Image Fade 및 복구 경로와 구분되는 후속 확장 범위입니다.
+이 항목들은 현재 구현된 AppScene, Additive 교체, 초기화 Pipeline과 구분되는 후속 확장 범위입니다.

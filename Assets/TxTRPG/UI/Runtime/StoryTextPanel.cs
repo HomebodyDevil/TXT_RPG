@@ -70,7 +70,7 @@ namespace TxTRPG.UI
 
         [Header("Initial Reveal")]
         [Tooltip("Keeps messages hidden until their initial layout is ready, then gradually reveals them with their position-based opacity applied.")]
-        [SerializeField] private bool revealInitialMessages = true;
+        [SerializeField] private bool revealInitialMessages;
         [Tooltip("Duration in unscaled seconds for the initial message reveal. This setting is used only when Reveal Initial Messages is enabled.")]
         [SerializeField, Min(0f)] private float initialRevealDuration = 0.35f;
 

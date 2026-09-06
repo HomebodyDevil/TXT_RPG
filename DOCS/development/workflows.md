@@ -53,17 +53,25 @@ Tools > TxT RPG > Refresh Story Text Panel Edit Mode Preview
 
 같은 Demo의 `CharacterDisplayBackgroundDemoStyle.asset`은 공통 `PanelBackgroundStyle` 제작 예시입니다. CharacterDisplayPanel의 배경은 `ApplyBackground`, `ChangeBackground`, `ClearBackground`로 캐릭터 표시와 독립적으로 제어합니다. 배경 전용 효과는 `BackgroundEffectOverlay`, 캐릭터 전용 효과는 Character2DView의 `EffectOverlay`, 전경 효과는 `ForegroundEffectLayer`, 전체 화면 전환은 `TransitionOverlay`에 적용합니다.
 
-Story, Character, Enemy와 Action Grid Demo는 동일한 `PanelStartupController` 경로를 사용합니다. Demo 루트의 `CanvasGroup`, 구체적인 `PanelInitialDataLoader`, `FadePanelRevealTransition`과 `PanelStartupController` 참조를 함께 유지해야 합니다. `Animate Reveal` 기본값은 꺼져 있으며, Scene 시작 연출은 영속적인 `SceneTransitionService`가 담당합니다. Loader를 교체할 때는 동기 `Start()`를 추가하지 않고 `LoadAndApplyAsync`가 모든 자산 준비를 기다리도록 구현합니다.
+Story, Character, Enemy와 Action Grid Demo는 동일한 `PanelStartupController` 경로를 사용합니다. Demo 루트의 `CanvasGroup`, 구체적인 `PanelInitialDataLoader`, `FadePanelRevealTransition`과 `PanelStartupController` 참조를 함께 유지해야 합니다. `Animate Reveal` 기본값은 꺼져 있으며, Scene 시작 연출은 `AppScene`의 `SceneTransitionService`가 담당합니다. Loader를 교체할 때는 동기 `Start()`를 추가하지 않고 `LoadAndApplyAsync`가 모든 자산 준비를 기다리도록 구현합니다.
 
 ## Scene 전환 사용하기
 
-1. `Tools > TxT RPG > Rebuild Persistent App Root`를 실행하여 기본 Profile과 Resource Prefab을 생성합니다.
-2. 전환할 때 `PersistentAppRoot.EnsureExists().SceneTransitions.LoadSceneAsync(sceneName, profile, cancellationToken)`을 호출합니다.
-3. 대상 Scene의 필수 초기화 관리자는 `ISceneReadySource`를 구현하거나 `SceneReadySignal`을 연결하고 모든 필수 Addressables·세이브·카메라·초기 포커스 준비 후 `MarkReady()`를 호출합니다.
-4. 접근성 설정이 모션 감소를 요청하면 `SceneTransitionService.ReduceMotion`을 활성화합니다.
-5. 호출자는 로드 예외를 처리하고 `TransitionFailed` 또는 `ErrorFallback`을 이용하여 재시도 경로를 제공합니다.
+1. 현재 작업 Scene을 저장한 뒤 `Tools > TxT RPG > Rebuild App Scene`을 실행합니다. 이 메뉴는 기본 Profile, `AppRoot.prefab`, `AppScene.unity`를 생성하고 AppScene을 Build Settings의 0번으로 등록합니다.
+2. `AppRoot`의 `AppSceneRoot.Initial Content Scene Path` 목록에서 최초로 로드할 Scene을 선택합니다. 목록에는 활성화된 Build Settings Scene이 `Scene 이름 (Assets/.../*.unity)` 형식으로 표시되며 AppScene은 제외됩니다. 기본값은 `Assets/Scenes/TMP_MainScene.unity`입니다.
+3. 이후 전환에는 `AppSceneRoot.Instance.SceneTransitions.LoadContentSceneAsync(scenePath, profile, cancellationToken)`을 호출합니다. `scenePath`에는 Build Settings에 등록된 전체 프로젝트 경로를 전달하고, 콘텐츠 Scene에서 Unity의 `LoadScene`을 직접 호출하지 않습니다.
+4. 서비스가 시작해야 하는 초기화는 `ISceneInitializer`로 구현하고, Addressables·세이브·현지화처럼 의존성이 있는 작업은 `InitializationOrder`를 지정합니다.
+5. 이미 다른 관리자가 시작한 비동기 작업은 `ISceneReadySource` 또는 `SceneReadySignal`로 노출하고, 필수 자산·카메라·초기 포커스가 모두 준비된 뒤 `MarkReady()`를 호출합니다.
+6. 접근성 설정이 모션 감소를 요청하면 `SceneTransitionService.ReduceMotion`을 활성화합니다.
+7. 호출자는 로드 예외를 처리하고 `TransitionFailed` 또는 `ErrorFallback`을 이용하여 재시도 경로를 제공합니다.
 
-`SceneReadySignal.Mark Ready On Start`가 켜져 있으면 Start 시점에 자동으로 준비됩니다. 비동기 초기화가 있는 제품 Scene에서는 이 옵션을 끄고 외부 초기화 완료 시 명시적으로 호출합니다. 준비 신호가 하나도 없는 Scene은 첫 프레임과 Canvas 레이아웃 갱신 후 준비된 것으로 처리합니다.
+`SceneReadySignal.Mark Ready On Start`가 켜져 있으면 Start 시점에 자동으로 준비됩니다. 비동기 초기화가 있는 제품 Scene에서는 이 옵션을 끄고 외부 초기화 완료 시 명시적으로 호출합니다. 준비 참여자가 없는 Scene도 첫 프레임과 Canvas 레이아웃 갱신 후 준비된 것으로 처리합니다.
+
+정식 실행과 Play Mode 검증은 `Assets/Scenes/AppScene.unity`에서 시작합니다. Content Scene만 직접 실행하면 AppScene과 전환 서비스가 존재하지 않으며, 이는 숨겨진 런타임 Bootstrap을 다시 만들지 않기 위한 의도된 제약입니다. 초기 콘텐츠를 바꿔 확인하려면 AppRoot Prefab의 `Initial Content Scene Path` 목록을 변경합니다. 목록에 Scene이 없다면 먼저 `File > Build Settings`에서 해당 Scene을 추가하고 활성화합니다. `<Invalid>` 경고가 표시되면 값을 자동 교체하지 않으므로 올바른 항목을 다시 선택해야 합니다.
+
+Player 빌드 전에 `Tools > TxT RPG > Validate App Scene Configuration`을 실행하면 빌드 전처리와 동일한 검증을 수동으로 수행할 수 있습니다. Scene 자산 이동이나 이름 변경, Build Settings 변경 뒤에는 이 검증을 실행합니다. `Tools > TxT RPG > Rebuild App Scene`은 유효한 기존 전체 경로와 `Load Initial Content On Start` 값을 보존하며, 기존 Scene 이름은 유일하게 해석할 수 있을 때에만 전체 경로로 마이그레이션합니다.
+
+기본 `Scene Swap Mode = Load Then Unload`는 실패 시 이전 Scene 복구를 우선합니다. 모바일 메모리 한계 때문에 `Unload Before Load`를 선택한 경우에는 이전 화면 복구가 불가능할 수 있으므로 `ErrorFallback`과 재시도 흐름을 반드시 확인합니다.
 
 ## EnemyDisplayPanel을 씬에서 사용하기
 
@@ -149,7 +157,8 @@ Inspector에서 자식 사이 간격은 `Spacing`, ContentLayer 내부 상·하�
 | `Tools > TxT RPG > Addressables > Register UI Assets` | 기존 운영용 UI Prefab과 공통 스타일을 수명 기반 Addressables 그룹에 등록합니다. |
 | `Tools > TxT RPG > Addressables > Validate Settings` | 빈 주소, 대소문자 중복, 누락 GUID와 그룹 스키마를 검사합니다. |
 | `Tools > TxT RPG > Addressables > Build Player Content` | 현재 프로필과 그룹 설정으로 Addressables Player Content를 빌드합니다. |
-| `Tools > TxT RPG > Rebuild Persistent App Root` | 기본 Scene Transition Profile과 영속 Resource Prefab을 다시 생성합니다. |
+| `Tools > TxT RPG > Rebuild App Scene` | 기본 Scene Transition Profile, AppRoot Prefab, AppScene과 Build Settings 시작 순서를 다시 생성합니다. |
+| `Tools > TxT RPG > Validate App Scene Configuration` | AppScene 시작 순서, 전체 Scene 경로, 활성화 상태와 중복 등록을 Player 빌드 전에 검사합니다. |
 
 ## Addressables 콘텐츠 제작
 
@@ -180,7 +189,7 @@ Edit Mode 테스트는 `Assets/TxTRPG/UI/Tests/Editor`와 `Assets/TxTRPG/SceneTr
 | `ActionGridPanelTests` | 표시 모델 정규화, 열 수와 필요 높이, 세로 중앙·상단 전환, 스크롤 위치 복구, 컨텍스트 메뉴 방향 전환·경계 제한, 운영용 Prefab 경계와 혼합 항목 Demo 상태를 검증합니다. |
 | `FlexibleLayoutPanelTests` | 가중치·고정 크기, 최소·최대 크기, Overflow 계산, 배경 스타일 정책과 생성된 계층형 Prefab 구조를 검증합니다. |
 | `AssetManagementTests` | AssetScope의 중복 없는 Lease 해제와 Addressables 주소·그룹 등록을 검증합니다. |
-| `SceneTransitionTests` | 영속 Prefab 구조, 중복 요청 차단, 명시적 Scene 준비 대기와 실패·취소 시 화면·입력 복구를 검증합니다. |
+| `SceneTransitionTests` | AppScene 구조와 빌드 순서, Scene 경로 선택·마이그레이션·중복 검증, Additive 로드, 초기 가림, Initializer 순서, 준비 대기와 실패·취소 시 화면·입력 복구를 검증합니다. |
 
 관련 변경 후에는 다음 항목을 확인합니다.
 

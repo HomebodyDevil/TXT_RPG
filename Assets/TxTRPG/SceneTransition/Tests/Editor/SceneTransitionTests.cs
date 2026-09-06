@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using TxTRPG.SceneTransition.Editor;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -12,17 +14,22 @@ namespace TxTRPG.SceneTransition.Tests
     public sealed class SceneTransitionTests
     {
         [Test]
-        public void GeneratedPersistentRoot_HasRequiredHierarchyAndReferences()
+        public void GeneratedAppScene_HasRequiredHierarchyReferencesAndBuildOrder()
         {
             SceneTransitionPrefabBuilder.CreateOrUpdateAssets();
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                SceneTransitionPrefabBuilder.PersistentRootPrefabPath);
+                SceneTransitionPrefabBuilder.AppRootPrefabPath);
+            var appScene = AssetDatabase.LoadAssetAtPath<SceneAsset>(
+                SceneTransitionPrefabBuilder.AppScenePath);
             var profile = AssetDatabase.LoadAssetAtPath<SceneTransitionProfile>(
                 SceneTransitionPrefabBuilder.DefaultProfilePath);
 
             Assert.That(prefab, Is.Not.Null);
+            Assert.That(appScene, Is.Not.Null);
             Assert.That(profile, Is.Not.Null);
-            Assert.That(prefab.GetComponent<PersistentAppRoot>(), Is.Not.Null);
+            Assert.That(prefab.GetComponent<AppSceneRoot>(), Is.Not.Null);
+            Assert.That(prefab.GetComponent<AppSceneRoot>().InitialContentScenePath,
+                Is.EqualTo("Assets/Scenes/TMP_MainScene.unity"));
             Assert.That(prefab.GetComponent<SceneTransitionService>(), Is.Not.Null);
             Assert.That(prefab.GetComponent<UnitySceneLoader>(), Is.Not.Null);
             Assert.That(prefab.transform.Find("TransitionCanvas/InputBlocker"), Is.Not.Null);
@@ -30,6 +37,119 @@ namespace TxTRPG.SceneTransition.Tests
             Assert.That(prefab.transform.Find("TransitionCanvas/EffectLayer"), Is.Not.Null);
             Assert.That(prefab.transform.Find("TransitionCanvas/LoadingIndicator"), Is.Not.Null);
             Assert.That(prefab.transform.Find("TransitionCanvas/ErrorFallback"), Is.Not.Null);
+            Assert.That(EditorBuildSettings.scenes[0].path,
+                Is.EqualTo(SceneTransitionPrefabBuilder.AppScenePath));
+            Assert.That(
+                BuildScenePathUtility.TryValidate(
+                    prefab.GetComponent<AppSceneRoot>().InitialContentScenePath,
+                    true,
+                    out var validationError),
+                Is.True,
+                validationError);
+            Assert.DoesNotThrow(AppSceneBuildValidator.ValidateOrThrow);
+        }
+
+        [Test]
+        public void ScenePathOptions_ExcludeAppSceneAndDisabledScenes()
+        {
+            using var scope = new BuildSettingsScope();
+            EditorBuildSettings.scenes = new[]
+            {
+                new EditorBuildSettingsScene(SceneTransitionPrefabBuilder.AppScenePath, true),
+                new EditorBuildSettingsScene("Assets/Scenes/TMP_MainScene.unity", true)
+            };
+
+            var options = BuildScenePathUtility.GetSelectableScenes(true);
+            Assert.That(options.Count, Is.EqualTo(1));
+            Assert.That(options[0].Path, Is.EqualTo("Assets/Scenes/TMP_MainScene.unity"));
+
+            EditorBuildSettings.scenes = new[]
+            {
+                new EditorBuildSettingsScene(SceneTransitionPrefabBuilder.AppScenePath, true),
+                new EditorBuildSettingsScene("Assets/Scenes/TMP_MainScene.unity", false)
+            };
+
+            Assert.That(BuildScenePathUtility.GetSelectableScenes(true), Is.Empty);
+        }
+
+        [Test]
+        public void LegacySceneName_ResolvesOnlyToUniqueEnabledFullPath()
+        {
+            using var scope = new BuildSettingsScope();
+            EditorBuildSettings.scenes = new[]
+            {
+                new EditorBuildSettingsScene(SceneTransitionPrefabBuilder.AppScenePath, true),
+                new EditorBuildSettingsScene("Assets/Scenes/TMP_MainScene.unity", true)
+            };
+
+            Assert.That(
+                BuildScenePathUtility.TryResolveEnabledScenePath(
+                    "TMP_MainScene", true, out var resolvedPath),
+                Is.True);
+            Assert.That(resolvedPath, Is.EqualTo("Assets/Scenes/TMP_MainScene.unity"));
+        }
+
+        [Test]
+        public void DuplicateBuildScenePath_IsRejected()
+        {
+            using var scope = new BuildSettingsScope();
+            EditorBuildSettings.scenes = new[]
+            {
+                new EditorBuildSettingsScene(SceneTransitionPrefabBuilder.AppScenePath, true),
+                new EditorBuildSettingsScene("Assets/Scenes/TMP_MainScene.unity", true),
+                new EditorBuildSettingsScene("Assets/Scenes/TMP_MainScene.unity", true)
+            };
+
+            Assert.That(
+                BuildScenePathUtility.TryValidate(
+                    "Assets/Scenes/TMP_MainScene.unity", true, out var error),
+                Is.False);
+            StringAssert.Contains("more than once", error);
+            Assert.That(BuildScenePathUtility.GetBuildSettingsErrors(), Is.Not.Empty);
+        }
+
+        [Test]
+        public void UnitySceneLoader_AcceptsEnabledFullPathAndRejectsLegacyName()
+        {
+            using var scope = new BuildSettingsScope();
+            EditorBuildSettings.scenes = new[]
+            {
+                new EditorBuildSettingsScene(SceneTransitionPrefabBuilder.AppScenePath, true),
+                new EditorBuildSettingsScene("Assets/Scenes/TMP_MainScene.unity", true)
+            };
+            var root = new GameObject("Scene Loader Test");
+            try
+            {
+                var loader = root.AddComponent<UnitySceneLoader>();
+                Assert.DoesNotThrow(() =>
+                    loader.ValidateScenePath("Assets/Scenes/TMP_MainScene.unity"));
+                Assert.Throws<ArgumentException>(() =>
+                    loader.ValidateScenePath("TMP_MainScene"));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void InitialLoad_PreparesCoveredScreenAndBlocksInput()
+        {
+            var fixture = CreateServiceFixture();
+            var effect = new RecordingEffect();
+            fixture.Service.Configure(
+                new FailingLoader(), effect, fixture.Profile, fixture.Blocker, fixture.ErrorFallback);
+            try
+            {
+                fixture.Service.PrepareForInitialLoad();
+                Assert.That(effect.CoveredImmediately, Is.True);
+                Assert.That(fixture.Blocker.blocksRaycasts, Is.True);
+                Assert.That(fixture.Blocker.interactable, Is.True);
+            }
+            finally
+            {
+                fixture.Dispose();
+            }
         }
 
         [Test]
@@ -42,8 +162,8 @@ namespace TxTRPG.SceneTransition.Tests
             try
             {
                 Assert.ThrowsAsync<InvalidOperationException>(async () =>
-                    await fixture.Service.LoadSceneAsync("Missing"));
-                Assert.That(effect.CompletedImmediately, Is.True);
+                    await fixture.Service.LoadContentSceneAsync("Missing"));
+                Assert.That(effect.RevealedImmediately, Is.True);
                 Assert.That(fixture.Blocker.blocksRaycasts, Is.False);
                 Assert.That(fixture.Blocker.interactable, Is.False);
                 Assert.That(fixture.ErrorFallback.activeSelf, Is.True);
@@ -56,7 +176,7 @@ namespace TxTRPG.SceneTransition.Tests
         }
 
         [Test]
-        public async Task ConcurrentRequest_IsRejectedUntilActiveTransitionFinishes()
+        public async Task ContentLoad_UsesAdditiveModeAndRejectsConcurrentRequest()
         {
             var fixture = CreateServiceFixture();
             var loader = new ControlledLoader();
@@ -64,13 +184,15 @@ namespace TxTRPG.SceneTransition.Tests
                 loader, new RecordingEffect(), fixture.Profile, fixture.Blocker, fixture.ErrorFallback);
             try
             {
-                var first = fixture.Service.LoadSceneAsync("First");
+                var first = fixture.Service.LoadContentSceneAsync("First");
                 Assert.That(fixture.Service.IsTransitioning, Is.True);
                 Assert.Throws<InvalidOperationException>(() =>
-                    fixture.Service.LoadSceneAsync("Second"));
+                    fixture.Service.LoadContentSceneAsync("Second"));
 
                 loader.Complete(SceneManager.GetActiveScene());
                 await first;
+                Assert.That(loader.LoadMode, Is.EqualTo(LoadSceneMode.Additive));
+                Assert.That(loader.SetActiveCallCount, Is.EqualTo(1));
                 Assert.That(fixture.Service.IsTransitioning, Is.False);
                 Assert.That(fixture.Service.State, Is.EqualTo(SceneTransitionState.Completed));
             }
@@ -89,7 +211,7 @@ namespace TxTRPG.SceneTransition.Tests
                 new CancellableLoader(), effect, fixture.Profile, fixture.Blocker, fixture.ErrorFallback);
             try
             {
-                var transition = fixture.Service.LoadSceneAsync("Cancelled");
+                var transition = fixture.Service.LoadContentSceneAsync("Cancelled");
                 fixture.Service.CancelCurrentTransition();
 
                 try
@@ -100,7 +222,7 @@ namespace TxTRPG.SceneTransition.Tests
                 catch (OperationCanceledException)
                 {
                 }
-                Assert.That(effect.CompletedImmediately, Is.True);
+                Assert.That(effect.RevealedImmediately, Is.True);
                 Assert.That(fixture.Blocker.blocksRaycasts, Is.False);
                 Assert.That(fixture.Blocker.interactable, Is.False);
                 Assert.That(fixture.ErrorFallback.activeSelf, Is.False);
@@ -109,6 +231,59 @@ namespace TxTRPG.SceneTransition.Tests
             finally
             {
                 fixture.Dispose();
+            }
+        }
+
+        [Test]
+        public async Task SceneInitializers_RunInDeclaredOrder()
+        {
+            var scene = EditorSceneManager.NewPreviewScene();
+            var firstObject = new GameObject("First");
+            var secondObject = new GameObject("Second");
+            SceneManager.MoveGameObjectToScene(firstObject, scene);
+            SceneManager.MoveGameObjectToScene(secondObject, scene);
+            var calls = new List<int>();
+            firstObject.AddComponent<TestSceneInitializer>().Configure(20, calls);
+            secondObject.AddComponent<TestSceneInitializer>().Configure(10, calls);
+            try
+            {
+                await SceneTransitionService.InitializeSceneAsync(
+                    scene,
+                    default,
+                    true,
+                    null,
+                    1f,
+                    CancellationToken.None);
+                Assert.That(calls, Is.EqualTo(new[] { 10, 20 }));
+            }
+            finally
+            {
+                EditorSceneManager.ClosePreviewScene(scene);
+            }
+        }
+
+        [Test]
+        public void InitializerFailure_UnloadsFailedInitialContentScene()
+        {
+            var fixture = CreateServiceFixture();
+            var destination = EditorSceneManager.NewPreviewScene();
+            var initializerObject = new GameObject("Failing Initializer");
+            SceneManager.MoveGameObjectToScene(initializerObject, destination);
+            initializerObject.AddComponent<FailingSceneInitializer>();
+            var loader = new CompletedLoader(destination);
+            fixture.Service.Configure(
+                loader, new RecordingEffect(), fixture.Profile, fixture.Blocker, fixture.ErrorFallback);
+            try
+            {
+                Assert.ThrowsAsync<InvalidOperationException>(async () =>
+                    await fixture.Service.LoadInitialContentSceneAsync("Failed Initial Content"));
+                Assert.That(loader.UnloadedScene, Is.EqualTo(destination));
+                Assert.That(fixture.Service.CurrentContentScene.IsValid(), Is.False);
+            }
+            finally
+            {
+                fixture.Dispose();
+                EditorSceneManager.ClosePreviewScene(destination);
             }
         }
 
@@ -153,6 +328,17 @@ namespace TxTRPG.SceneTransition.Tests
                 root, service, blockerObject.GetComponent<CanvasGroup>(), errorFallback, profile);
         }
 
+        private sealed class BuildSettingsScope : IDisposable
+        {
+            private readonly EditorBuildSettingsScene[] originalScenes =
+                EditorBuildSettings.scenes;
+
+            public void Dispose()
+            {
+                EditorBuildSettings.scenes = originalScenes;
+            }
+        }
+
         private sealed class ServiceFixture : IDisposable
         {
             public ServiceFixture(
@@ -184,17 +370,31 @@ namespace TxTRPG.SceneTransition.Tests
 
         private sealed class RecordingEffect : IScreenTransitionEffect
         {
-            public bool CompletedImmediately { get; private set; }
+            public bool CoveredImmediately { get; private set; }
+            public bool RevealedImmediately { get; private set; }
             public Task CoverAsync(TransitionContext context, CancellationToken cancellationToken) =>
                 Task.CompletedTask;
             public Task RevealAsync(TransitionContext context, CancellationToken cancellationToken) =>
                 Task.CompletedTask;
-            public void CompleteImmediately() => CompletedImmediately = true;
+            public void SetCoveredImmediately(Color color) => CoveredImmediately = true;
+            public void SetRevealedImmediately() => RevealedImmediately = true;
         }
 
-        private sealed class FailingLoader : ISceneLoader
+        private abstract class TestLoader : ISceneLoader
         {
-            public Task<SceneLoadResult> LoadSceneAsync(
+            public virtual Task UnloadSceneAsync(Scene scene, CancellationToken cancellationToken) =>
+                Task.CompletedTask;
+            public virtual bool SetActiveScene(Scene scene) => true;
+            public abstract Task<SceneLoadResult> LoadSceneAsync(
+                string sceneName,
+                LoadSceneMode loadMode,
+                IProgress<float> progress,
+                CancellationToken cancellationToken);
+        }
+
+        private sealed class FailingLoader : TestLoader
+        {
+            public override Task<SceneLoadResult> LoadSceneAsync(
                 string sceneName,
                 LoadSceneMode loadMode,
                 IProgress<float> progress,
@@ -202,23 +402,63 @@ namespace TxTRPG.SceneTransition.Tests
                 Task.FromException<SceneLoadResult>(new InvalidOperationException("Load failed."));
         }
 
-        private sealed class ControlledLoader : ISceneLoader
+        private sealed class ControlledLoader : TestLoader
         {
             private readonly TaskCompletionSource<SceneLoadResult> completion =
                 new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            public Task<SceneLoadResult> LoadSceneAsync(
+            public LoadSceneMode LoadMode { get; private set; }
+            public int SetActiveCallCount { get; private set; }
+
+            public override Task<SceneLoadResult> LoadSceneAsync(
                 string sceneName,
                 LoadSceneMode loadMode,
                 IProgress<float> progress,
-                CancellationToken cancellationToken) => completion.Task;
+                CancellationToken cancellationToken)
+            {
+                LoadMode = loadMode;
+                return completion.Task;
+            }
+
+            public override bool SetActiveScene(Scene scene)
+            {
+                SetActiveCallCount++;
+                return true;
+            }
 
             public void Complete(Scene scene) => completion.TrySetResult(new SceneLoadResult(scene));
         }
 
-        private sealed class CancellableLoader : ISceneLoader
+        private sealed class CompletedLoader : TestLoader
         {
-            public Task<SceneLoadResult> LoadSceneAsync(
+            private readonly Scene destination;
+
+            public CompletedLoader(Scene destination)
+            {
+                this.destination = destination;
+            }
+
+            public Scene UnloadedScene { get; private set; }
+
+            public override Task<SceneLoadResult> LoadSceneAsync(
+                string sceneName,
+                LoadSceneMode loadMode,
+                IProgress<float> progress,
+                CancellationToken cancellationToken) =>
+                Task.FromResult(new SceneLoadResult(destination));
+
+            public override Task UnloadSceneAsync(
+                Scene scene,
+                CancellationToken cancellationToken)
+            {
+                UnloadedScene = scene;
+                return Task.CompletedTask;
+            }
+        }
+
+        private sealed class CancellableLoader : TestLoader
+        {
+            public override Task<SceneLoadResult> LoadSceneAsync(
                 string sceneName,
                 LoadSceneMode loadMode,
                 IProgress<float> progress,
@@ -229,6 +469,40 @@ namespace TxTRPG.SceneTransition.Tests
                 cancellationToken.Register(() => completion.TrySetCanceled());
                 return completion.Task;
             }
+        }
+    }
+
+    public sealed class TestSceneInitializer : MonoBehaviour, ISceneInitializer
+    {
+        private List<int> calls;
+
+        public int InitializationOrder { get; private set; }
+
+        public void Configure(int order, List<int> target)
+        {
+            InitializationOrder = order;
+            calls = target;
+        }
+
+        public Task InitializeAsync(
+            SceneInitializationContext context,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            calls.Add(InitializationOrder);
+            return Task.CompletedTask;
+        }
+    }
+
+    public sealed class FailingSceneInitializer : MonoBehaviour, ISceneInitializer
+    {
+        public int InitializationOrder => 0;
+
+        public Task InitializeAsync(
+            SceneInitializationContext context,
+            CancellationToken cancellationToken)
+        {
+            throw new InvalidOperationException("Initialization failed.");
         }
     }
 }

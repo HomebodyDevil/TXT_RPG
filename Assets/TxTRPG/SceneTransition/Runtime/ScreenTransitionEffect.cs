@@ -14,6 +14,8 @@ namespace TxTRPG.SceneTransition
             TransitionContext context,
             CancellationToken cancellationToken);
 
-        public abstract void CompleteImmediately();
+        public abstract void SetCoveredImmediately(Color color);
+
+        public abstract void SetRevealedImmediately();
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace TxTRPG.SceneTransition
@@ -10,20 +11,59 @@ namespace TxTRPG.SceneTransition
         Task WhenReady { get; }
     }
 
+    public interface ISceneInitializer
+    {
+        int InitializationOrder { get; }
+
+        Task InitializeAsync(
+            SceneInitializationContext context,
+            CancellationToken cancellationToken);
+    }
+
     public interface ISceneLoader
     {
         Task<SceneLoadResult> LoadSceneAsync(
-            string sceneName,
+            string scenePath,
             LoadSceneMode loadMode,
             IProgress<float> progress,
             CancellationToken cancellationToken);
+
+        Task UnloadSceneAsync(Scene scene, CancellationToken cancellationToken);
+
+        bool SetActiveScene(Scene scene);
+    }
+
+    public interface IScenePathValidator
+    {
+        void ValidateScenePath(string scenePath);
     }
 
     public interface IScreenTransitionEffect
     {
         Task CoverAsync(TransitionContext context, CancellationToken cancellationToken);
         Task RevealAsync(TransitionContext context, CancellationToken cancellationToken);
-        void CompleteImmediately();
+        void SetCoveredImmediately(Color color);
+        void SetRevealedImmediately();
+    }
+
+    public readonly struct SceneInitializationContext
+    {
+        public SceneInitializationContext(
+            Scene scene,
+            Scene previousScene,
+            bool isInitialLoad,
+            IProgress<float> progress)
+        {
+            Scene = scene;
+            PreviousScene = previousScene;
+            IsInitialLoad = isInitialLoad;
+            Progress = progress;
+        }
+
+        public Scene Scene { get; }
+        public Scene PreviousScene { get; }
+        public bool IsInitialLoad { get; }
+        public IProgress<float> Progress { get; }
     }
 
     public readonly struct SceneLoadResult

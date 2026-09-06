@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -17,9 +18,13 @@ namespace TxTRPG.SceneTransition
         Revealing,
         Completed,
         Cancelled,
-        Failed
+        Failed,
+        Activating,
+        Initializing,
+        Unloading
     }
 
+    [DefaultExecutionOrder(-11000)]
     [DisallowMultipleComponent]
     public sealed class SceneTransitionService : MonoBehaviour
     {
@@ -33,11 +38,15 @@ namespace TxTRPG.SceneTransition
         private IScreenTransitionEffect effect;
         private CancellationTokenSource activeCancellation;
         private SceneTransitionProfile runtimeDefaultProfile;
+        private Scene appScene;
+        private Scene currentContentScene;
 
         public SceneTransitionState State { get; private set; } = SceneTransitionState.Idle;
         public bool IsTransitioning { get; private set; }
         public bool ReduceMotion { get; set; }
         public float Progress { get; private set; }
+        public Scene AppScene => appScene;
+        public Scene CurrentContentScene => currentContentScene;
         public Task CurrentTransition { get; private set; } = Task.CompletedTask;
 
         public event Action<SceneTransitionState> StateChanged;
@@ -46,6 +55,7 @@ namespace TxTRPG.SceneTransition
 
         private void Awake()
         {
+            appScene = gameObject.scene;
             sceneLoader = sceneLoaderBehaviour as ISceneLoader;
             effect = transitionEffect;
             SetInputBlocked(false);
@@ -85,24 +95,36 @@ namespace TxTRPG.SceneTransition
             }
         }
 
-        public Task LoadSceneAsync(
-            string sceneName,
+        public void PrepareForInitialLoad()
+        {
+            ResolveDependencies();
+            var profile = ResolveDefaultProfile();
+            effect.SetCoveredImmediately(profile.Color);
+            SetInputBlocked(profile.BlockInput);
+        }
+
+        public Task LoadInitialContentSceneAsync(
+            string scenePath,
             SceneTransitionProfile profile = null,
             CancellationToken cancellationToken = default)
         {
-            if (IsTransitioning)
-            {
-                throw new InvalidOperationException("A scene transition is already in progress.");
-            }
+            return StartTransition(scenePath, profile, cancellationToken, true);
+        }
 
-            if (string.IsNullOrWhiteSpace(sceneName))
-            {
-                throw new ArgumentException("A scene name or build path is required.", nameof(sceneName));
-            }
+        public Task LoadContentSceneAsync(
+            string scenePath,
+            SceneTransitionProfile profile = null,
+            CancellationToken cancellationToken = default)
+        {
+            return StartTransition(scenePath, profile, cancellationToken, false);
+        }
 
-            var actualProfile = profile != null ? profile : ResolveDefaultProfile();
-            CurrentTransition = RunTransitionAsync(sceneName, actualProfile, cancellationToken);
-            return CurrentTransition;
+        public Task LoadSceneAsync(
+            string scenePath,
+            SceneTransitionProfile profile = null,
+            CancellationToken cancellationToken = default)
+        {
+            return LoadContentSceneAsync(scenePath, profile, cancellationToken);
         }
 
         public void CancelCurrentTransition()
@@ -118,10 +140,36 @@ namespace TxTRPG.SceneTransition
             }
         }
 
-        private async Task RunTransitionAsync(
-            string sceneName,
+        private Task StartTransition(
+            string scenePath,
             SceneTransitionProfile profile,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            bool isInitialLoad)
+        {
+            if (IsTransitioning)
+            {
+                throw new InvalidOperationException("A scene transition is already in progress.");
+            }
+
+            if (string.IsNullOrWhiteSpace(scenePath))
+            {
+                throw new ArgumentException("A full Build Settings scene path is required.", nameof(scenePath));
+            }
+
+            var actualProfile = profile != null ? profile : ResolveDefaultProfile();
+            CurrentTransition = RunTransitionAsync(
+                scenePath,
+                actualProfile,
+                cancellationToken,
+                isInitialLoad);
+            return CurrentTransition;
+        }
+
+        private async Task RunTransitionAsync(
+            string scenePath,
+            SceneTransitionProfile profile,
+            CancellationToken cancellationToken,
+            bool isInitialLoad)
         {
             ResolveDependencies();
             IsTransitioning = true;
@@ -130,48 +178,123 @@ namespace TxTRPG.SceneTransition
             activeCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var token = activeCancellation.Token;
             var completed = false;
+            var sourceScene = ResolveCurrentContentScene();
+            var destinationScene = default(Scene);
             var context = new TransitionContext(
-                SceneManager.GetActiveScene().name,
-                sceneName,
+                sourceScene.IsValid() ? sourceScene.name : string.Empty,
+                scenePath,
                 profile,
                 ReduceMotion,
                 new System.Progress<float>(ReportProgress));
+            var shouldCover = isInitialLoad || profile.FadeOutEnabled || profile.CoverDuringLoad;
+            var coveredAt = Time.realtimeSinceStartupAsDouble;
 
             SetInputBlocked(profile.BlockInput);
             try
             {
+                if (sceneLoader is IScenePathValidator pathValidator)
+                {
+                    pathValidator.ValidateScenePath(scenePath);
+                }
+                ValidateDestination(scenePath, sourceScene);
                 SetState(SceneTransitionState.Covering);
-                await effect.CoverAsync(context, token);
-                var coveredAt = Time.realtimeSinceStartupAsDouble;
+                if (isInitialLoad || !profile.FadeOutEnabled)
+                {
+                    if (shouldCover)
+                    {
+                        effect.SetCoveredImmediately(profile.Color);
+                    }
+                }
+                else
+                {
+                    await effect.CoverAsync(context, token);
+                }
+                coveredAt = Time.realtimeSinceStartupAsDouble;
+
+                if (profile.SceneSwapMode == ContentSceneSwapMode.UnloadBeforeLoad &&
+                    IsUnloadableContentScene(sourceScene))
+                {
+                    SetState(SceneTransitionState.Unloading);
+                    await sceneLoader.UnloadSceneAsync(sourceScene, token);
+                    currentContentScene = default;
+                }
 
                 SetState(SceneTransitionState.Loading);
                 var result = await sceneLoader.LoadSceneAsync(
-                    sceneName,
-                    LoadSceneMode.Single,
+                    scenePath,
+                    LoadSceneMode.Additive,
                     context.Progress,
+                    token);
+                destinationScene = result.Scene;
+                token.ThrowIfCancellationRequested();
+
+                SetState(SceneTransitionState.Activating);
+                if (!sceneLoader.SetActiveScene(destinationScene))
+                {
+                    throw new InvalidOperationException(
+                        $"Scene '{destinationScene.name}' was loaded but could not become active.");
+                }
+                currentContentScene = destinationScene;
+
+                SetState(SceneTransitionState.Initializing);
+                await InitializeSceneAsync(
+                    destinationScene,
+                    sourceScene,
+                    isInitialLoad,
+                    context.Progress,
+                    profile.ReadinessTimeout,
                     token);
 
                 SetState(SceneTransitionState.WaitingForScene);
-                await WaitForSceneReadinessAsync(result.Scene, profile.ReadinessTimeout, token);
-                await WaitForMinimumCoveredTimeAsync(
-                    coveredAt,
-                    profile.MinimumCoveredTime,
-                    profile.MaximumFrameDelta,
+                await WaitForSceneReadinessAsync(
+                    destinationScene,
+                    profile.ReadinessTimeout,
                     token);
 
+                if (profile.SceneSwapMode == ContentSceneSwapMode.LoadThenUnload &&
+                    IsUnloadableContentScene(sourceScene))
+                {
+                    SetState(SceneTransitionState.Unloading);
+                    await sceneLoader.UnloadSceneAsync(sourceScene, token);
+                }
+
+                Canvas.ForceUpdateCanvases();
+                await Task.Yield();
+                token.ThrowIfCancellationRequested();
+                Canvas.ForceUpdateCanvases();
+
+                if (shouldCover)
+                {
+                    await WaitForMinimumCoveredTimeAsync(
+                        coveredAt,
+                        profile.MinimumCoveredTime,
+                        profile.MaximumFrameDelta,
+                        token);
+                }
+
                 SetState(SceneTransitionState.Revealing);
-                await effect.RevealAsync(context, token);
+                if (shouldCover && profile.FadeInEnabled)
+                {
+                    await effect.RevealAsync(context, token);
+                }
+                else
+                {
+                    effect.SetRevealedImmediately();
+                }
+
                 ReportProgress(1f);
                 SetState(SceneTransitionState.Completed);
                 completed = true;
             }
             catch (OperationCanceledException)
             {
+                await TryRestorePreviousSceneAsync(sourceScene, destinationScene);
                 SetState(SceneTransitionState.Cancelled);
                 throw;
             }
             catch (Exception exception)
             {
+                await TryRestorePreviousSceneAsync(sourceScene, destinationScene);
                 SetState(SceneTransitionState.Failed);
                 if (errorFallback != null)
                 {
@@ -184,7 +307,7 @@ namespace TxTRPG.SceneTransition
             {
                 if (!completed)
                 {
-                    effect?.CompleteImmediately();
+                    effect?.SetRevealedImmediately();
                 }
 
                 SetInputBlocked(false);
@@ -194,54 +317,191 @@ namespace TxTRPG.SceneTransition
             }
         }
 
+        public static async Task InitializeSceneAsync(
+            Scene scene,
+            Scene previousScene,
+            bool isInitialLoad,
+            IProgress<float> progress,
+            float timeout,
+            CancellationToken cancellationToken)
+        {
+            ValidateLoadedScene(scene, nameof(scene));
+            await Task.Yield();
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var initializers = FindSceneParticipants<ISceneInitializer>(scene);
+            initializers.Sort((left, right) =>
+                left.InitializationOrder.CompareTo(right.InitializationOrder));
+            var context = new SceneInitializationContext(
+                scene,
+                previousScene,
+                isInitialLoad,
+                progress);
+            var startedAt = Time.realtimeSinceStartupAsDouble;
+            foreach (var initializer in initializers)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var initialization = initializer.InitializeAsync(context, cancellationToken);
+                if (initialization == null)
+                {
+                    throw new InvalidOperationException(
+                        $"{initializer.GetType().FullName}.InitializeAsync returned null.");
+                }
+                await AwaitWithTimeoutAsync(
+                    initialization,
+                    timeout,
+                    startedAt,
+                    scene.name,
+                    "initialize",
+                    cancellationToken);
+            }
+        }
+
         public static async Task WaitForSceneReadinessAsync(
             Scene scene,
             float timeout,
             CancellationToken cancellationToken)
         {
-            if (!scene.IsValid() || !scene.isLoaded)
+            ValidateLoadedScene(scene, nameof(scene));
+            var sources = FindSceneParticipants<ISceneReadySource>(scene);
+            var tasks = new List<Task>(sources.Count);
+            foreach (var source in sources)
             {
-                throw new ArgumentException("The target scene must be valid and loaded.", nameof(scene));
-            }
-
-            // Allow Start methods to create or complete readiness sources before discovery.
-            await Task.Yield();
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var tasks = new List<Task>();
-            foreach (var root in scene.GetRootGameObjects())
-            {
-                foreach (var behaviour in root.GetComponentsInChildren<MonoBehaviour>(true))
+                if (source.WhenReady != null)
                 {
-                    if (behaviour is ISceneReadySource source && source.WhenReady != null)
-                    {
-                        tasks.Add(source.WhenReady);
-                    }
+                    tasks.Add(source.WhenReady);
                 }
             }
 
             Canvas.ForceUpdateCanvases();
-            if (tasks.Count == 0)
+            if (tasks.Count > 0)
             {
-                return;
+                await AwaitWithTimeoutAsync(
+                    Task.WhenAll(tasks),
+                    timeout,
+                    Time.realtimeSinceStartupAsDouble,
+                    scene.name,
+                    "become ready",
+                    cancellationToken);
             }
+            cancellationToken.ThrowIfCancellationRequested();
+            Canvas.ForceUpdateCanvases();
+        }
 
-            var readiness = Task.WhenAll(tasks);
-            var startedAt = Time.realtimeSinceStartupAsDouble;
-            while (!readiness.IsCompleted)
+        private static List<T> FindSceneParticipants<T>(Scene scene) where T : class
+        {
+            var participants = new List<T>();
+            foreach (var root in scene.GetRootGameObjects())
+            {
+                foreach (var behaviour in root.GetComponentsInChildren<MonoBehaviour>(true))
+                {
+                    if (behaviour is T participant)
+                    {
+                        participants.Add(participant);
+                    }
+                }
+            }
+            return participants;
+        }
+
+        private static async Task AwaitWithTimeoutAsync(
+            Task task,
+            float timeout,
+            double startedAt,
+            string sceneName,
+            string operation,
+            CancellationToken cancellationToken)
+        {
+            while (!task.IsCompleted)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (timeout > 0f && Time.realtimeSinceStartupAsDouble - startedAt >= timeout)
                 {
                     throw new TimeoutException(
-                        $"Scene '{scene.name}' did not become ready within {timeout:0.###} seconds.");
+                        $"Scene '{sceneName}' did not {operation} within {timeout:0.###} seconds.");
                 }
                 await Task.Yield();
             }
 
-            await readiness;
+            await task;
             cancellationToken.ThrowIfCancellationRequested();
-            Canvas.ForceUpdateCanvases();
+        }
+
+        private async Task TryRestorePreviousSceneAsync(Scene sourceScene, Scene destinationScene)
+        {
+            if (sourceScene.IsValid() && sourceScene.isLoaded)
+            {
+                sceneLoader.SetActiveScene(sourceScene);
+                currentContentScene = sourceScene;
+            }
+            else if (appScene.IsValid() && appScene.isLoaded)
+            {
+                sceneLoader.SetActiveScene(appScene);
+                currentContentScene = default;
+            }
+
+            if (destinationScene.IsValid() && destinationScene.isLoaded &&
+                destinationScene != sourceScene && destinationScene != appScene)
+            {
+                try
+                {
+                    await sceneLoader.UnloadSceneAsync(destinationScene, CancellationToken.None);
+                }
+                catch (Exception cleanupException)
+                {
+                    Debug.LogException(cleanupException, this);
+                }
+            }
+        }
+
+        private Scene ResolveCurrentContentScene()
+        {
+            if (currentContentScene.IsValid() && currentContentScene.isLoaded)
+            {
+                return currentContentScene;
+            }
+
+            var activeScene = SceneManager.GetActiveScene();
+            if (activeScene.IsValid() && activeScene.isLoaded && activeScene != appScene)
+            {
+                currentContentScene = activeScene;
+                return activeScene;
+            }
+            return default;
+        }
+
+        private void ValidateDestination(string scenePath, Scene sourceScene)
+        {
+            var destinationName = Path.GetFileNameWithoutExtension(scenePath.Replace('\\', '/'));
+            if (appScene.IsValid() &&
+                string.Equals(destinationName, appScene.name, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("AppScene cannot be loaded as a content scene.");
+            }
+            if (sourceScene.IsValid() &&
+                string.Equals(destinationName, sourceScene.name, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException($"Content scene '{scenePath}' is already active.");
+            }
+
+            var loadedDestination = SceneManager.GetSceneByName(destinationName);
+            if (loadedDestination.IsValid() && loadedDestination.isLoaded)
+            {
+                throw new InvalidOperationException($"Scene '{scenePath}' is already loaded.");
+            }
+        }
+
+        private bool IsUnloadableContentScene(Scene scene)
+        {
+            return scene.IsValid() && scene.isLoaded && scene != appScene;
+        }
+
+        private static void ValidateLoadedScene(Scene scene, string parameterName)
+        {
+            if (!scene.IsValid() || !scene.isLoaded)
+            {
+                throw new ArgumentException("The target scene must be valid and loaded.", parameterName);
+            }
         }
 
         private static async Task WaitForMinimumCoveredTimeAsync(
@@ -255,19 +515,15 @@ namespace TxTRPG.SceneTransition
                 return;
             }
 
-            var elapsed = 0f;
             var previous = Time.realtimeSinceStartupAsDouble;
-            while (Time.realtimeSinceStartupAsDouble - coveredAt < minimumCoveredTime)
+            var elapsed = Mathf.Max(0f, (float)(previous - coveredAt));
+            while (elapsed < minimumCoveredTime)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 await Task.Yield();
                 var now = Time.realtimeSinceStartupAsDouble;
                 elapsed += Mathf.Min(Mathf.Max(0f, (float)(now - previous)), maximumFrameDelta);
                 previous = now;
-                if (elapsed >= minimumCoveredTime)
-                {
-                    break;
-                }
             }
         }
 

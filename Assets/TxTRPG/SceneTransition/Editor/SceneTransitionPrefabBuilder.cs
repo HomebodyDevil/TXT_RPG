@@ -1,5 +1,10 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace TxTRPG.SceneTransition.Editor
@@ -8,19 +13,26 @@ namespace TxTRPG.SceneTransition.Editor
     {
         public const string DefaultProfilePath =
             "Assets/TxTRPG/SceneTransition/Profiles/DefaultSceneTransitionProfile.asset";
-        public const string PersistentRootPrefabPath =
-            "Assets/TxTRPG/SceneTransition/Resources/TxTRPG/PersistentAppRoot.prefab";
+        public const string AppRootPrefabPath =
+            "Assets/TxTRPG/SceneTransition/Prefabs/AppRoot.prefab";
+        public const string AppScenePath = "Assets/Scenes/AppScene.unity";
+        public const string InitialContentScenePath = "Assets/Scenes/TMP_MainScene.unity";
 
-        [MenuItem("Tools/TxT RPG/Rebuild Persistent App Root")]
+        [MenuItem("Tools/TxT RPG/Rebuild App Scene")]
         public static void CreateOrUpdateAssets()
         {
             EnsureFolder("Assets/TxTRPG/SceneTransition/Profiles");
-            EnsureFolder("Assets/TxTRPG/SceneTransition/Resources/TxTRPG");
+            EnsureFolder("Assets/TxTRPG/SceneTransition/Prefabs");
+            EnsureFolder("Assets/Scenes");
             var profile = CreateOrUpdateProfile();
-            BuildPersistentRoot(profile);
+            var settings = ResolveAppRootSettings();
+            var appRootPrefab = BuildAppRoot(profile, settings);
+            BuildAppScene(appRootPrefab);
+            UpdateBuildSettings(settings.InitialContentScenePath);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            Debug.Log($"Persistent app root created at {PersistentRootPrefabPath}.");
+            Debug.Log(
+                $"AppScene created at {AppScenePath}; its root prefab is {AppRootPrefabPath}.");
         }
 
         private static SceneTransitionProfile CreateOrUpdateProfile()
@@ -34,8 +46,13 @@ namespace TxTRPG.SceneTransition.Editor
 
             var properties = new SerializedObject(profile);
             properties.FindProperty("color").colorValue = Color.black;
+            properties.FindProperty("fadeOutEnabled").boolValue = true;
             properties.FindProperty("coverDuration").floatValue = 0.25f;
+            properties.FindProperty("fadeInEnabled").boolValue = true;
             properties.FindProperty("revealDuration").floatValue = 0.25f;
+            properties.FindProperty("coverDuringLoad").boolValue = true;
+            properties.FindProperty("sceneSwapMode").enumValueIndex =
+                (int)ContentSceneSwapMode.LoadThenUnload;
             properties.FindProperty("minimumCoveredTime").floatValue = 0.1f;
             properties.FindProperty("readinessTimeout").floatValue = 30f;
             properties.FindProperty("maximumFrameDelta").floatValue = 0.05f;
@@ -49,12 +66,37 @@ namespace TxTRPG.SceneTransition.Editor
             return profile;
         }
 
-        private static void BuildPersistentRoot(SceneTransitionProfile profile)
+        private static AppRootSettings ResolveAppRootSettings()
         {
-            var root = new GameObject("PersistentAppRoot");
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(AppRootPrefabPath);
+            var existingRoot = prefab != null ? prefab.GetComponent<AppSceneRoot>() : null;
+            var loadOnStart = true;
+            var candidate = string.Empty;
+            if (existingRoot != null)
+            {
+                var properties = new SerializedObject(existingRoot);
+                loadOnStart = properties.FindProperty("loadInitialContentOnStart").boolValue;
+                candidate = existingRoot.InitialContentScenePath;
+            }
+
+            if (!BuildScenePathUtility.TryResolveEnabledScenePath(
+                    candidate,
+                    true,
+                    out var resolvedPath))
+            {
+                resolvedPath = InitialContentScenePath;
+            }
+            return new AppRootSettings(loadOnStart, resolvedPath);
+        }
+
+        private static GameObject BuildAppRoot(
+            SceneTransitionProfile profile,
+            AppRootSettings settings)
+        {
+            var root = new GameObject("AppRoot");
             try
             {
-                var persistentRoot = root.AddComponent<PersistentAppRoot>();
+                var appRoot = root.AddComponent<AppSceneRoot>();
                 var loader = root.AddComponent<UnitySceneLoader>();
                 var service = root.AddComponent<SceneTransitionService>();
 
@@ -73,10 +115,14 @@ namespace TxTRPG.SceneTransition.Editor
                 blockerImage.color = Color.clear;
                 blockerImage.raycastTarget = true;
                 var blocker = blockerObject.AddComponent<CanvasGroup>();
+                blocker.interactable = true;
+                blocker.blocksRaycasts = true;
 
                 var transitionObject = CreateUiObject("TransitionImage", canvasObject.transform);
                 var transitionImage = transitionObject.AddComponent<Image>();
-                transitionImage.color = Color.black;
+                var initialColor = profile.Color;
+                initialColor.a = 1f;
+                transitionImage.color = initialColor;
                 transitionImage.raycastTarget = false;
                 var fade = transitionObject.AddComponent<FadeScreenTransitionEffect>();
                 fade.Configure(transitionImage);
@@ -102,16 +148,102 @@ namespace TxTRPG.SceneTransition.Editor
                 serviceProperties.FindProperty("errorFallback").objectReferenceValue = errorObject;
                 serviceProperties.ApplyModifiedPropertiesWithoutUndo();
 
-                var rootProperties = new SerializedObject(persistentRoot);
+                var rootProperties = new SerializedObject(appRoot);
                 rootProperties.FindProperty("sceneTransitionService").objectReferenceValue = service;
+                rootProperties.FindProperty("loadInitialContentOnStart").boolValue =
+                    settings.LoadInitialContentOnStart;
+                rootProperties.FindProperty("initialContentScenePath").stringValue =
+                    settings.InitialContentScenePath;
                 rootProperties.ApplyModifiedPropertiesWithoutUndo();
 
-                PrefabUtility.SaveAsPrefabAsset(root, PersistentRootPrefabPath);
+                return PrefabUtility.SaveAsPrefabAsset(root, AppRootPrefabPath);
             }
             finally
             {
-                Object.DestroyImmediate(root);
+                UnityEngine.Object.DestroyImmediate(root);
             }
+        }
+
+        private static void BuildAppScene(GameObject appRootPrefab)
+        {
+            var previousActiveScene = SceneManager.GetActiveScene();
+            if (!Application.isBatchMode && string.IsNullOrEmpty(previousActiveScene.path))
+            {
+                throw new InvalidOperationException(
+                    "Save the current scene before rebuilding AppScene.");
+            }
+
+            var isBatchExecuteMethod = Application.isBatchMode &&
+                Environment.GetCommandLineArgs().Any(argument =>
+                    string.Equals(argument, "-executeMethod", StringComparison.OrdinalIgnoreCase));
+            var creationMode = isBatchExecuteMethod
+                ? NewSceneMode.Single
+                : NewSceneMode.Additive;
+            var appScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, creationMode);
+            try
+            {
+                var instance = (GameObject)PrefabUtility.InstantiatePrefab(appRootPrefab, appScene);
+                instance.name = "AppRoot";
+                if (!EditorSceneManager.SaveScene(appScene, AppScenePath))
+                {
+                    throw new InvalidOperationException($"Could not save AppScene at '{AppScenePath}'.");
+                }
+            }
+            finally
+            {
+                if (!Application.isBatchMode)
+                {
+                    EditorSceneManager.CloseScene(appScene, true);
+                    if (previousActiveScene.IsValid() && previousActiveScene.isLoaded)
+                    {
+                        EditorSceneManager.SetActiveScene(previousActiveScene);
+                    }
+                }
+            }
+        }
+
+        private static void UpdateBuildSettings(string initialContentScenePath)
+        {
+            var scenes = new List<EditorBuildSettingsScene>
+            {
+                new(AppScenePath, true)
+            };
+            var addedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                BuildScenePathUtility.Normalize(AppScenePath)
+            };
+
+            foreach (var scene in EditorBuildSettings.scenes)
+            {
+                var normalizedPath = BuildScenePathUtility.Normalize(scene.path);
+                if (string.IsNullOrEmpty(normalizedPath) || !addedPaths.Add(normalizedPath))
+                {
+                    continue;
+                }
+                var mustEnable = string.Equals(
+                    normalizedPath,
+                    initialContentScenePath,
+                    StringComparison.OrdinalIgnoreCase);
+                scenes.Add(new EditorBuildSettingsScene(normalizedPath, scene.enabled || mustEnable));
+            }
+
+            if (addedPaths.Add(BuildScenePathUtility.Normalize(initialContentScenePath)))
+            {
+                scenes.Add(new EditorBuildSettingsScene(initialContentScenePath, true));
+            }
+            EditorBuildSettings.scenes = scenes.ToArray();
+        }
+
+        private readonly struct AppRootSettings
+        {
+            public AppRootSettings(bool loadInitialContentOnStart, string initialContentScenePath)
+            {
+                LoadInitialContentOnStart = loadInitialContentOnStart;
+                InitialContentScenePath = initialContentScenePath;
+            }
+
+            public bool LoadInitialContentOnStart { get; }
+            public string InitialContentScenePath { get; }
         }
 
         private static GameObject CreateUiObject(string name, Transform parent)

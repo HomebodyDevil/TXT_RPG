@@ -9,7 +9,7 @@
 | 입력 | Unity Input System 1.20.0 |
 | UI | uGUI와 TextMeshPro |
 | 테스트 | Unity Test Framework 1.6.0 |
-| 기본 빌드 씬 | `Assets/Scenes/TMP_MainScene.unity` |
+| 기본 빌드 씬 | `Assets/Scenes/AppScene.unity` |
 
 `StoryTextPanel`은 특정 씬에 직접 연결되어 있지 않습니다. 필요한 씬의 Canvas 아래에 프리팹을 배치하여 사용합니다.
 
@@ -33,6 +33,7 @@ TxT-RPG/
 │       └── workflows.md
 ├── Assets/
 │   ├── Scenes/
+│   │   ├── AppScene.unity
 │   │   └── TMP_MainScene.unity
 │   ├── TextMesh Pro/
 │   │   └── Resources, Fonts, Shaders, Sprites
@@ -41,7 +42,8 @@ TxT-RPG/
 │       │   ├── Runtime/
 │       │   ├── Editor/
 │       │   ├── Profiles/
-│       │   ├── Resources/TxTRPG/
+│       │   ├── Prefabs/
+│       │   ├── Resources/TxTRPG/       레거시 호환 자산
 │       │   └── Tests/Editor/
 │       └── UI/
 │           ├── Runtime/
@@ -56,7 +58,7 @@ TxT-RPG/
 
 ### `Assets/TxTRPG/SceneTransition`
 
-`TxTRPG.SceneTransition`은 UI Panel과 독립적으로 영속적인 Scene 교체 흐름을 담당합니다. Runtime 어셈블리는 `ISceneLoader`, `IScreenTransitionEffect`, 준비 신호와 기본 Fade를 포함합니다. Editor 어셈블리는 기본 Profile 및 `PersistentAppRoot.prefab` 생성기를, Tests 어셈블리는 중복 요청·실패 복구·준비 대기를 검증합니다.
+`TxTRPG.SceneTransition`은 UI Panel과 독립적으로 `AppScene` 및 Additive Content Scene 교체 흐름을 담당합니다. Runtime 어셈블리는 `AppSceneRoot`, `ScenePathAttribute`, `ISceneInitializer`, `ISceneReadySource`, `ISceneLoader`, `IScreenTransitionEffect`와 기본 Fade를 포함합니다. Editor 어셈블리는 기본 Profile, `AppRoot.prefab`, `AppScene.unity`와 Build Settings를 재현 가능하게 생성하고, Build Settings 기반 Scene 경로 선택기와 빌드 전 검증을 제공합니다. Tests 어셈블리는 AppScene 구조, Scene 경로 정책, Additive 로드, 초기화 순서, 중복 요청과 실패·취소 복구를 검증합니다.
 
 ### `Assets/TxTRPG/UI/Runtime`
 
