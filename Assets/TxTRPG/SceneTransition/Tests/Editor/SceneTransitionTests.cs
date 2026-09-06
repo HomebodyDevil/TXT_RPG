@@ -235,6 +235,109 @@ namespace TxTRPG.SceneTransition.Tests
         }
 
         [Test]
+        public async Task CancellationAfterLoadThenUnloadCommit_KeepsDestinationScene()
+        {
+            var fixture = CreateServiceFixture();
+            var sourceScene = EditorSceneManager.NewPreviewScene();
+            var destinationScene = EditorSceneManager.NewPreviewScene();
+            using var cancellation = new CancellationTokenSource();
+            try
+            {
+                fixture.Service.Configure(
+                    new CompletedLoader(sourceScene),
+                    new RecordingEffect(),
+                    fixture.Profile,
+                    fixture.Blocker,
+                    fixture.ErrorFallback);
+                await fixture.Service.LoadInitialContentSceneAsync("Source Scene");
+
+                var loader = new TrackingLoader(destinationScene);
+                fixture.Service.Configure(
+                    loader,
+                    new CancelOnRevealEffect(cancellation),
+                    fixture.Profile,
+                    fixture.Blocker,
+                    fixture.ErrorFallback);
+
+                try
+                {
+                    await fixture.Service.LoadContentSceneAsync(
+                        "Destination Scene",
+                        fixture.Profile,
+                        cancellation.Token);
+                    Assert.Fail("The transition should be cancelled during reveal.");
+                }
+                catch (OperationCanceledException)
+                {
+                }
+
+                Assert.That(loader.UnloadedScenes, Is.EqualTo(new[] { sourceScene }));
+                Assert.That(fixture.Service.CurrentContentScene, Is.EqualTo(destinationScene));
+                Assert.That(loader.LastActivatedScene, Is.EqualTo(destinationScene));
+                Assert.That(fixture.Service.State, Is.EqualTo(SceneTransitionState.Cancelled));
+                Assert.That(fixture.Blocker.blocksRaycasts, Is.False);
+            }
+            finally
+            {
+                fixture.Dispose();
+                EditorSceneManager.ClosePreviewScene(destinationScene);
+                EditorSceneManager.ClosePreviewScene(sourceScene);
+            }
+        }
+
+        [Test]
+        public async Task FailureAfterLoadThenUnloadCommit_KeepsDestinationScene()
+        {
+            var fixture = CreateServiceFixture();
+            var sourceScene = EditorSceneManager.NewPreviewScene();
+            var destinationScene = EditorSceneManager.NewPreviewScene();
+            try
+            {
+                fixture.Service.Configure(
+                    new CompletedLoader(sourceScene),
+                    new RecordingEffect(),
+                    fixture.Profile,
+                    fixture.Blocker,
+                    fixture.ErrorFallback);
+                await fixture.Service.LoadInitialContentSceneAsync("Source Scene");
+
+                var loader = new TrackingLoader(destinationScene);
+                fixture.Service.Configure(
+                    loader,
+                    new ThrowOnRevealEffect(),
+                    fixture.Profile,
+                    fixture.Blocker,
+                    fixture.ErrorFallback);
+
+                Assert.ThrowsAsync<InvalidOperationException>(async () =>
+                    await fixture.Service.LoadContentSceneAsync("Destination Scene"));
+
+                Assert.That(loader.UnloadedScenes, Is.EqualTo(new[] { sourceScene }));
+                Assert.That(fixture.Service.CurrentContentScene, Is.EqualTo(destinationScene));
+                Assert.That(loader.LastActivatedScene, Is.EqualTo(destinationScene));
+                Assert.That(fixture.Service.State, Is.EqualTo(SceneTransitionState.Failed));
+                Assert.That(fixture.ErrorFallback.activeSelf, Is.True);
+                Assert.That(fixture.Blocker.blocksRaycasts, Is.False);
+            }
+            finally
+            {
+                fixture.Dispose();
+                EditorSceneManager.ClosePreviewScene(destinationScene);
+                EditorSceneManager.ClosePreviewScene(sourceScene);
+            }
+        }
+
+        [Test]
+        public void ScenePathIdentity_DoesNotCollapseEqualFileNames()
+        {
+            const string first = "Assets/Scenes/ChapterOne/Battle.unity";
+            const string second = "Assets/Scenes/ChapterTwo/Battle.unity";
+
+            Assert.That(ScenePathUtility.Equals(first, first.Replace('/', '\\')), Is.True);
+            Assert.That(ScenePathUtility.Equals(first, second), Is.False);
+        }
+
+        [Test]
         public async Task SceneInitializers_RunInDeclaredOrder()
         {
             var scene = EditorSceneManager.NewPreviewScene();
@@ -380,6 +483,57 @@ namespace TxTRPG.SceneTransition.Tests
             public void SetRevealedImmediately() => RevealedImmediately = true;
         }
 
+        private sealed class CancelOnRevealEffect : IScreenTransitionEffect
+        {
+            private readonly CancellationTokenSource cancellation;
+
+            public CancelOnRevealEffect(CancellationTokenSource cancellation)
+            {
+                this.cancellation = cancellation;
+            }
+
+            public Task CoverAsync(
+                TransitionContext context,
+                CancellationToken cancellationToken) => Task.CompletedTask;
+
+            public Task RevealAsync(
+                TransitionContext context,
+                CancellationToken cancellationToken)
+            {
+                cancellation.Cancel();
+                cancellationToken.ThrowIfCancellationRequested();
+                return Task.CompletedTask;
+            }
+
+            public void SetCoveredImmediately(Color color)
+            {
+            }
+
+            public void SetRevealedImmediately()
+            {
+            }
+        }
+
+        private sealed class ThrowOnRevealEffect : IScreenTransitionEffect
+        {
+            public Task CoverAsync(
+                TransitionContext context,
+                CancellationToken cancellationToken) => Task.CompletedTask;
+
+            public Task RevealAsync(
+                TransitionContext context,
+                CancellationToken cancellationToken) =>
+                Task.FromException(new InvalidOperationException("Reveal failed."));
+
+            public void SetCoveredImmediately(Color color)
+            {
+            }
+
+            public void SetRevealedImmediately()
+            {
+            }
+        }
+
         private abstract class TestLoader : ISceneLoader
         {
             public virtual Task UnloadSceneAsync(Scene scene, CancellationToken cancellationToken) =>
@@ -453,6 +607,40 @@ namespace TxTRPG.SceneTransition.Tests
             {
                 UnloadedScene = scene;
                 return Task.CompletedTask;
+            }
+        }
+
+        private sealed class TrackingLoader : TestLoader
+        {
+            private readonly Scene destination;
+
+            public TrackingLoader(Scene destination)
+            {
+                this.destination = destination;
+            }
+
+            public List<Scene> UnloadedScenes { get; } = new();
+            public Scene LastActivatedScene { get; private set; }
+
+            public override Task<SceneLoadResult> LoadSceneAsync(
+                string scenePath,
+                LoadSceneMode loadMode,
+                IProgress<float> progress,
+                CancellationToken cancellationToken) =>
+                Task.FromResult(new SceneLoadResult(destination));
+
+            public override Task UnloadSceneAsync(
+                Scene scene,
+                CancellationToken cancellationToken)
+            {
+                UnloadedScenes.Add(scene);
+                return Task.CompletedTask;
+            }
+
+            public override bool SetActiveScene(Scene scene)
+            {
+                LastActivatedScene = scene;
+                return true;
             }
         }
 

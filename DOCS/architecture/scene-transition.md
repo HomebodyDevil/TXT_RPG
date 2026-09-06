@@ -38,6 +38,8 @@ Content Scene                                 Additive로 하나씩 교체
 
 `UnitySceneLoader`도 로드 직전에 전체 `Assets/.../*.unity` 경로와 Player에서 로드 가능한지를 검사합니다. 이 검사는 Editor 작성 오류가 빌드를 통과하지 못하게 하는 검증을 대체하지 않으며, 손상되거나 외부에서 바뀐 런타임 구성에 대한 마지막 방어선입니다. Addressables Scene은 Build Settings 경로와 수명 규칙이 다르므로 현재 문자열 필드에 혼합하지 않습니다. 향후 별도의 참조 형식과 `ISceneLoader` 구현으로 추가합니다.
 
+로드 완료 결과와 이미 로드된 Scene 검사는 `SceneManager.GetSceneByPath()` 및 `Scene.path`를 사용합니다. 파일명만 비교하지 않으므로 서로 다른 폴더의 같은 이름을 가진 Scene도 전체 경로로 구분합니다. 경로 구분자는 `/`로 정규화하며 비교 시 대소문자 차이는 허용합니다.
+
 ## 전환 흐름
 
 최초 콘텐츠 Scene은 첫 화면이 렌더링되기 전에 완전히 가려진 상태로 준비합니다.
@@ -68,6 +70,8 @@ Fade Out 또는 즉시 Cover
 → 한 프레임 대기 후 다시 레이아웃 확정
 → Fade In 또는 즉시 Reveal
 ```
+
+대상 Scene의 Initializer와 Ready Source가 모두 완료되면 전환을 커밋합니다. `LoadThenUnload`에서는 이 커밋 직후 기존 Scene 언로드를 시작합니다. 커밋 전 실패나 취소는 기존 Scene을 다시 활성화하고 대상 Scene을 정리합니다. 커밋 후에는 기존 Scene이 이미 언로드되었을 수 있으므로 대상 Scene을 활성 콘텐츠로 유지하며, 레이아웃 대기나 Reveal 중 실패·취소가 발생해도 대상 Scene을 언로드하지 않습니다.
 
 `ContentSceneSwapMode.LoadThenUnload`가 기본값입니다. 이전 Scene을 유지한 채 새 Scene을 준비하므로 실패 시 기존 화면으로 복구할 수 있지만, 전환 중 두 Scene의 메모리가 일시적으로 함께 필요합니다. 모바일처럼 메모리 상한이 더 중요한 화면은 `UnloadBeforeLoad`를 선택할 수 있습니다. 이 모드에서는 로드 실패 후 복구할 이전 Scene이 없을 수 있으므로 제품 수준의 오류 화면과 재시도 경로가 필요합니다.
 
@@ -119,6 +123,7 @@ Fade는 첫 애니메이션 프레임을 정확한 진행률 0으로 한 번 렌
 
 - 전환 중 두 번째 요청은 `InvalidOperationException`으로 거부합니다. 현재 구현에는 요청 대기열이 없습니다.
 - 새 Scene을 로드한 뒤 초기화가 실패하거나 취소되었고 이전 Scene이 아직 로드되어 있으면, 이전 Scene을 다시 활성화하고 실패한 새 Scene을 언로드합니다.
+- 대상 Scene 준비가 완료되어 전환이 커밋된 뒤 실패하거나 취소되면, 기존 Scene을 복원하려 하지 않고 대상 Scene을 현재 콘텐츠로 유지합니다.
 - `UnloadBeforeLoad`에서 이전 Scene을 이미 제거했거나 로드 자체가 실패하면 `ErrorFallback`을 표시하고 예외를 호출자에게 전달합니다.
 - 모든 실패와 취소 경로는 Transition Image를 투명 상태로 복구하고 입력 차단을 해제합니다.
 - Unity Scene 비동기 연산은 시작 후 취소할 수 없습니다. 로더는 연산이 끝날 때까지 기다리고, 서비스가 결과 Scene을 정리할 기회를 가진 뒤 취소를 관찰합니다.

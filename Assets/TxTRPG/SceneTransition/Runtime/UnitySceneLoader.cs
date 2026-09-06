@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -34,11 +33,15 @@ namespace TxTRPG.SceneTransition
             }
 
             progress?.Report(1f);
-            var lookupName = Path.GetFileNameWithoutExtension(scenePath.Replace('\\', '/'));
-            var scene = SceneManager.GetSceneByName(lookupName);
+            var normalizedPath = ScenePathUtility.Normalize(scenePath);
+            var scene = ScenePathUtility.GetLoadedScene(normalizedPath);
             if (!scene.IsValid() && loadMode == LoadSceneMode.Single)
             {
-                scene = SceneManager.GetActiveScene();
+                var activeScene = SceneManager.GetActiveScene();
+                if (ScenePathUtility.Matches(activeScene, normalizedPath))
+                {
+                    scene = activeScene;
+                }
             }
 
             if (!scene.IsValid() || !scene.isLoaded)
@@ -85,7 +88,7 @@ namespace TxTRPG.SceneTransition
                 throw new ArgumentException("A Build Settings scene path is required.", nameof(scenePath));
             }
 
-            var normalizedPath = scenePath.Replace('\\', '/');
+            var normalizedPath = ScenePathUtility.Normalize(scenePath);
             if (!normalizedPath.StartsWith("Assets/", StringComparison.Ordinal) ||
                 !normalizedPath.EndsWith(".unity", StringComparison.OrdinalIgnoreCase))
             {

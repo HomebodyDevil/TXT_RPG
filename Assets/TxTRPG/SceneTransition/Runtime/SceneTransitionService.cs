@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -178,10 +177,11 @@ namespace TxTRPG.SceneTransition
             activeCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var token = activeCancellation.Token;
             var completed = false;
+            var destinationCommitted = false;
             var sourceScene = ResolveCurrentContentScene();
             var destinationScene = default(Scene);
             var context = new TransitionContext(
-                sourceScene.IsValid() ? sourceScene.name : string.Empty,
+                sourceScene.IsValid() ? sourceScene.path : string.Empty,
                 scenePath,
                 profile,
                 ReduceMotion,
@@ -251,6 +251,8 @@ namespace TxTRPG.SceneTransition
                     profile.ReadinessTimeout,
                     token);
 
+                token.ThrowIfCancellationRequested();
+                destinationCommitted = true;
                 if (profile.SceneSwapMode == ContentSceneSwapMode.LoadThenUnload &&
                     IsUnloadableContentScene(sourceScene))
                 {
@@ -288,13 +290,19 @@ namespace TxTRPG.SceneTransition
             }
             catch (OperationCanceledException)
             {
-                await TryRestorePreviousSceneAsync(sourceScene, destinationScene);
+                await RecoverSceneStateAsync(
+                    sourceScene,
+                    destinationScene,
+                    destinationCommitted);
                 SetState(SceneTransitionState.Cancelled);
                 throw;
             }
             catch (Exception exception)
             {
-                await TryRestorePreviousSceneAsync(sourceScene, destinationScene);
+                await RecoverSceneStateAsync(
+                    sourceScene,
+                    destinationScene,
+                    destinationCommitted);
                 SetState(SceneTransitionState.Failed);
                 if (errorFallback != null)
                 {
@@ -427,8 +435,23 @@ namespace TxTRPG.SceneTransition
             cancellationToken.ThrowIfCancellationRequested();
         }
 
-        private async Task TryRestorePreviousSceneAsync(Scene sourceScene, Scene destinationScene)
+        private async Task RecoverSceneStateAsync(
+            Scene sourceScene,
+            Scene destinationScene,
+            bool destinationCommitted)
         {
+            if (destinationCommitted && destinationScene.IsValid() && destinationScene.isLoaded)
+            {
+                if (!sceneLoader.SetActiveScene(destinationScene))
+                {
+                    Debug.LogError(
+                        $"Committed scene '{destinationScene.path}' could not become active during recovery.",
+                        this);
+                }
+                currentContentScene = destinationScene;
+                return;
+            }
+
             if (sourceScene.IsValid() && sourceScene.isLoaded)
             {
                 sceneLoader.SetActiveScene(sourceScene);
@@ -472,19 +495,17 @@ namespace TxTRPG.SceneTransition
 
         private void ValidateDestination(string scenePath, Scene sourceScene)
         {
-            var destinationName = Path.GetFileNameWithoutExtension(scenePath.Replace('\\', '/'));
-            if (appScene.IsValid() &&
-                string.Equals(destinationName, appScene.name, StringComparison.OrdinalIgnoreCase))
+            var normalizedPath = ScenePathUtility.Normalize(scenePath);
+            if (ScenePathUtility.Matches(appScene, normalizedPath))
             {
                 throw new InvalidOperationException("AppScene cannot be loaded as a content scene.");
             }
-            if (sourceScene.IsValid() &&
-                string.Equals(destinationName, sourceScene.name, StringComparison.OrdinalIgnoreCase))
+            if (ScenePathUtility.Matches(sourceScene, normalizedPath))
             {
                 throw new InvalidOperationException($"Content scene '{scenePath}' is already active.");
             }
 
-            var loadedDestination = SceneManager.GetSceneByName(destinationName);
+            var loadedDestination = ScenePathUtility.GetLoadedScene(normalizedPath);
             if (loadedDestination.IsValid() && loadedDestination.isLoaded)
             {
                 throw new InvalidOperationException($"Scene '{scenePath}' is already loaded.");
