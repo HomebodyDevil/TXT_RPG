@@ -30,22 +30,39 @@ flowchart LR
 ```text
 HealthBarPanel
 ├── BackgroundLayer
+│   └── BackgroundVisualRoot
+│       └── Background
 ├── BarRoot
-│   ├── Slider
+│   └── BarVisualRoot
+│       ├── Slider
 │   │   ├── Background
 │   │   └── Fill Area
 │   │       └── Fill
-│   └── BarEffectOverlay
+│   │           └── FillVisualRoot
+│   │               └── FillImage
+│       ├── BarEffectOverlay
+│       └── BorderVisualRoot
 ├── TextLayer
-│   ├── LabelText
-│   └── ValueText
+│   └── TextVisualRoot
+│       ├── LabelText
+│       └── ValueText
 ├── ForegroundEffectLayer
 └── TransitionOverlay
 ```
 
 Slider는 표시 전용입니다. `Interactable = false`, `Navigation = None`, Handle 없음, `minValue = 0`, `wholeNumbers = true`를 유지합니다. 현재값과 최댓값은 `HealthPresentation`에서 받고, 문구는 Binder의 `IHealthTextFormatter`가 결정합니다. Label 또는 Value Text 참조가 없으면 해당 표시만 생략합니다.
 
-구체적인 점멸, 흔들림, 글리치 또는 셰이더 효과는 `HealthBarPanel`에 내장하지 않습니다. `HealthBarEffect` 구현을 등록하면 이전 값, 새 값과 최초 적용 여부를 받아 상태 기반 효과와 사건 기반 효과를 독립적으로 구현할 수 있습니다. Slider의 즉시 값 갱신과 시각적 보간도 효과 컴포넌트에서 분리하여 처리합니다.
+`HealthBarLayoutController`는 애니메이션하지 않는 `BackgroundLayer`의 사각형을 기준으로 `BarRoot`만 배치합니다. 새 기본값은 양 축 `Stretch`, 사방 Padding 12, 가로 `Center`, 세로 `Middle`입니다. 따라서 520×64 기준 영역에서는 BarRoot와 Slider의 효과 전 크기가 496×40이 됩니다. 문구는 Overlay이므로 문구 유무가 이 크기에 영향을 주지 않습니다.
+
+Padding은 Canvas 로컬 UI 단위이며, 비대칭 Padding을 사용하면 Center는 Padding을 제외한 영역의 중앙을 의미합니다. Padding 합이 기준 크기를 넘으면 저장된 원본 값은 유지하고 계산에 사용하는 두 값을 비례 축소하여 결과 크기를 0으로 제한합니다. 음수 Padding과 NaN·무한대 크기 또는 Offset은 안전한 0으로 보정합니다. Offset은 계산이 끝난 뒤 적용하므로 의도적으로 Padding 경계 밖으로 이동할 수 있습니다.
+
+기존 직렬화 데이터와 API의 호환성을 위해 축별 `Fixed` 모드와 `Fixed Size`는 유지합니다. Fixed 축은 가용 크기와 Fixed Size 중 작은 값을 사용하고 남은 영역에서 Left·Center·Right 또는 Bottom·Middle·Top으로 정렬합니다. Stretch 축은 Padding 내부를 모두 채우므로 해당 축의 Alignment 값은 결과에 영향을 주지 않습니다. 기준 참조가 없거나 패널 밖을 가리키거나 `BarRoot`와 순환 관계이면 패널 루트를 안전한 기준으로 사용합니다.
+
+`BarRoot`는 레이아웃 전용이므로 흔들림·확대·회전·셰이더 효과를 직접 적용하지 않습니다. 전체 바 효과는 `BarVisualRoot`, 채우기 효과는 `FillVisualRoot`, 테두리 효과는 `BorderVisualRoot`, 문구 효과는 `TextVisualRoot`에 적용합니다. 배경과 전경 효과도 각각 `BackgroundVisualRoot`와 `ForegroundEffectLayer`에 격리합니다. 이 구조에서는 런타임 정렬 변경이 효과 Transform을 덮어쓰지 않습니다.
+
+`HealthBarEffect` 구현은 이전 값, 새 값과 최초 적용 여부를 받습니다. 등록 직후 이미 값이 있거나 비활성 상태에서 다시 활성화되면 최초 동기화로 적용하며, 최초 동기화는 피해 사건으로 취급하지 않습니다. 등록 해제, 컴포넌트 비활성화, 패널 비활성화·파괴 또는 효과 전체 비활성화 시에는 `Clear()`가 실행되어 Coroutine과 임시 시각 상태를 정리합니다. `HealthBarScalePulseEffect`는 피해 시 `BarVisualRoot`만 확대했다가 복구하는 작은 예제입니다. 효과 구현에서 공유 Material 자체를 변경하지 말고 인스턴스 속성이나 별도 Material 인스턴스를 사용해야 합니다.
+
+Label과 Value Text는 Slider 위의 `TextLayer`에 겹쳐 표시되며 각각 왼쪽과 오른쪽 절반을 사용합니다. 기본 Prefab은 자동 글자 크기 조절과 말줄임을 사용하므로 긴 현지화 문구가 바깥으로 넘치지 않습니다.
 
 ## 운영 Prefab과 바인딩
 

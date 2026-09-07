@@ -24,6 +24,12 @@ namespace TxTRPG.UI
         Clip
     }
 
+    public enum FlexibleLayoutContentLayer
+    {
+        Content,
+        BackgroundContent
+    }
+
     public readonly struct FlexibleLayoutSizeRequest
     {
         public FlexibleLayoutSizeRequest(
@@ -75,6 +81,32 @@ namespace TxTRPG.UI
         [SerializeField] private RectMask2D contentMask;
         [SerializeField] private bool clipContent;
 
+        [Header("Background Content")]
+        [SerializeField] private RectTransform backgroundContentRoot;
+        [SerializeField] private FlexibleContentLayoutGroup backgroundContentLayout;
+        [SerializeField] private RectMask2D backgroundContentMask;
+        [SerializeField] private CanvasGroup backgroundContentCanvasGroup;
+        [SerializeField] private bool useContentLayoutSettings = true;
+        [SerializeField] private FlexibleLayoutAxis backgroundFixedAxis = FlexibleLayoutAxis.Horizontal;
+        [SerializeField] private FlexibleLayoutAxisPolicy backgroundAxisPolicy = FlexibleLayoutAxisPolicy.Fixed;
+        [SerializeField, Min(1f)] private float backgroundBreakpoint = 720f;
+        [SerializeField, Min(0f)] private float backgroundSpacing;
+        [SerializeField] private RectOffset backgroundPadding = new();
+        [SerializeField] private FlexibleLayoutOverflow backgroundOverflow = FlexibleLayoutOverflow.ShrinkBelowMinimum;
+        [SerializeField] private bool backgroundIncludeInactiveChildren;
+        [SerializeField] private TextAnchor backgroundChildAlignment = TextAnchor.MiddleCenter;
+        [SerializeField] private bool backgroundClipContent;
+        [SerializeField] private bool overrideBackgroundContentMargins;
+        [SerializeField] private RectOffset backgroundContentMargins = new();
+        [SerializeField, HideInInspector] private bool previousUseContentLayoutSettings = true;
+        [SerializeField, HideInInspector] private bool previousOverrideBackgroundContentMargins;
+        [SerializeField, HideInInspector] private bool hasBackgroundAuthoredRect;
+        [SerializeField, HideInInspector] private Vector2 backgroundAuthoredAnchorMin;
+        [SerializeField, HideInInspector] private Vector2 backgroundAuthoredAnchorMax = Vector2.one;
+        [SerializeField, HideInInspector] private Vector2 backgroundAuthoredPivot = new(0.5f, 0.5f);
+        [SerializeField, HideInInspector] private Vector2 backgroundAuthoredPosition;
+        [SerializeField, HideInInspector] private Vector2 backgroundAuthoredSizeDelta;
+
         public string NodeId => nodeId;
         public FlexibleLayoutAxis CurrentAxis => ResolveAxis(ContentRoot.rect.width);
         public RectTransform ContentRoot => contentRoot != null ? contentRoot : rectTransform;
@@ -83,6 +115,11 @@ namespace TxTRPG.UI
         public RectOffset ContentPadding => padding;
         public RectOffset ContentMargins => contentMargins;
         public bool OverridesContentMargins => overrideContentMargins;
+        public RectTransform BackgroundContentRoot => backgroundContentRoot;
+        public FlexibleContentLayoutGroup BackgroundContentLayout => backgroundContentLayout;
+        public CanvasGroup BackgroundContentCanvasGroup => backgroundContentCanvasGroup;
+        public bool UsesContentLayoutSettingsForBackground => useContentLayoutSettings;
+        public bool BackgroundClipContent => backgroundClipContent;
 
         public override void CalculateLayoutInputHorizontal()
         {
@@ -107,12 +144,20 @@ namespace TxTRPG.UI
 
         public void Add(Transform child, float weight = 1f)
         {
+            Add(child, FlexibleLayoutContentLayer.Content, weight);
+        }
+
+        public void Add(
+            Transform child,
+            FlexibleLayoutContentLayer layer,
+            float weight = 1f)
+        {
             if (child == null)
             {
                 return;
             }
 
-            child.SetParent(ContentRoot, false);
+            child.SetParent(GetLayerRoot(layer), false);
             var item = child.GetComponent<FlexibleLayoutItem>() ?? child.gameObject.AddComponent<FlexibleLayoutItem>();
             item.Configure(FlexibleLayoutSizeMode.Weighted, weight);
             Rebuild();
@@ -120,7 +165,12 @@ namespace TxTRPG.UI
 
         public void Remove(Transform child)
         {
-            if (child != null && child.parent == ContentRoot)
+            Remove(child, FlexibleLayoutContentLayer.Content);
+        }
+
+        public void Remove(Transform child, FlexibleLayoutContentLayer layer)
+        {
+            if (child != null && child.parent == GetLayerRoot(layer))
             {
                 child.SetParent(null, false);
                 Rebuild();
@@ -129,7 +179,15 @@ namespace TxTRPG.UI
 
         public void SetWeight(Transform child, float weight)
         {
-            if (child == null || child.parent != ContentRoot)
+            SetWeight(child, FlexibleLayoutContentLayer.Content, weight);
+        }
+
+        public void SetWeight(
+            Transform child,
+            FlexibleLayoutContentLayer layer,
+            float weight)
+        {
+            if (child == null || child.parent != GetLayerRoot(layer))
             {
                 return;
             }
@@ -177,11 +235,115 @@ namespace TxTRPG.UI
             SyncContentLayout();
         }
 
+        public void SetBackgroundUsesContentLayoutSettings(bool value)
+        {
+            if (useContentLayoutSettings == value)
+            {
+                return;
+            }
+
+            if (value && !overrideBackgroundContentMargins) CaptureBackgroundAuthoredRect();
+            else if (!value && !overrideBackgroundContentMargins) RestoreBackgroundAuthoredRect();
+            useContentLayoutSettings = value;
+            previousUseContentLayoutSettings = value;
+            Rebuild();
+        }
+
+        public void ConfigureBackgroundLayout(
+            FlexibleLayoutAxis axis,
+            FlexibleLayoutAxisPolicy policy,
+            float widthBreakpoint,
+            float childSpacing,
+            RectOffset childPadding,
+            FlexibleLayoutOverflow overflowPolicy,
+            bool includeInactive,
+            TextAnchor alignment)
+        {
+            SetBackgroundUsesContentLayoutSettings(false);
+            backgroundFixedAxis = axis;
+            backgroundAxisPolicy = policy;
+            backgroundBreakpoint = Mathf.Max(1f, widthBreakpoint);
+            backgroundSpacing = Mathf.Max(0f, childSpacing);
+            backgroundPadding = CopyInsets(childPadding);
+            backgroundOverflow = overflowPolicy;
+            backgroundIncludeInactiveChildren = includeInactive;
+            backgroundChildAlignment = alignment;
+            Rebuild();
+        }
+
+        public void SetBackgroundContentMargins(int left, int right, int top, int bottom)
+        {
+            SetBackgroundUsesContentLayoutSettings(false);
+            if (!overrideBackgroundContentMargins) CaptureBackgroundAuthoredRect();
+            backgroundContentMargins = CreateInsets(left, right, top, bottom);
+            overrideBackgroundContentMargins = true;
+            previousOverrideBackgroundContentMargins = true;
+            Rebuild();
+        }
+
+        public void UseAuthoredBackgroundContentOffsets()
+        {
+            SetBackgroundUsesContentLayoutSettings(false);
+            overrideBackgroundContentMargins = false;
+            previousOverrideBackgroundContentMargins = false;
+            RestoreBackgroundAuthoredRect();
+            Rebuild();
+        }
+
+        public void SetBackgroundClipContent(bool value)
+        {
+            SetBackgroundUsesContentLayoutSettings(false);
+            backgroundClipContent = value;
+            SyncContentLayout();
+        }
+
+        public void SetBackgroundInteraction(bool interactable, bool blocksRaycasts)
+        {
+            RequireBackgroundLayer();
+            backgroundContentCanvasGroup.interactable = interactable;
+            backgroundContentCanvasGroup.blocksRaycasts = blocksRaycasts;
+        }
+
+        public void SetBackgroundAlpha(float value)
+        {
+            RequireBackgroundLayer();
+            backgroundContentCanvasGroup.alpha = Mathf.Clamp01(value);
+        }
+
+        public RectTransform GetLayerRoot(FlexibleLayoutContentLayer layer)
+        {
+            return layer switch
+            {
+                FlexibleLayoutContentLayer.Content => ContentRoot,
+                FlexibleLayoutContentLayer.BackgroundContent =>
+                    backgroundContentRoot != null
+                        ? backgroundContentRoot
+                        : throw new InvalidOperationException(
+                            "This FlexibleLayoutPanel has no BackgroundContentLayer. Upgrade the asset explicitly before using it."),
+                _ => throw new ArgumentOutOfRangeException(nameof(layer), layer, null)
+            };
+        }
+
+        public FlexibleContentLayoutGroup GetLayerLayout(FlexibleLayoutContentLayer layer)
+        {
+            return layer switch
+            {
+                FlexibleLayoutContentLayer.Content => contentLayout,
+                FlexibleLayoutContentLayer.BackgroundContent =>
+                    backgroundContentLayout != null
+                        ? backgroundContentLayout
+                        : throw new InvalidOperationException(
+                            "This FlexibleLayoutPanel has no BackgroundContentLayer layout."),
+                _ => throw new ArgumentOutOfRangeException(nameof(layer), layer, null)
+            };
+        }
+
         public void Rebuild()
         {
             SetDirty();
             SyncContentLayout();
             if (contentLayout != null) contentLayout.Rebuild();
+            if (backgroundContentLayout != null) backgroundContentLayout.Rebuild();
         }
 
         public FlexibleLayoutAxis ResolveAxis(float width)
@@ -318,7 +480,11 @@ namespace TxTRPG.UI
             base.OnValidate();
             breakpoint = Mathf.Max(1f, breakpoint);
             spacing = Mathf.Max(0f, spacing);
+            backgroundBreakpoint = Mathf.Max(1f, backgroundBreakpoint);
+            backgroundSpacing = Mathf.Max(0f, backgroundSpacing);
             EnsureNodeId();
+            SynchronizeBackgroundModeTransition();
+            SynchronizeBackgroundMarginTransition();
             SyncContentLayout();
         }
 #endif
@@ -347,6 +513,145 @@ namespace TxTRPG.UI
             if (contentMask == null && clipContent)
                 contentMask = container.gameObject.AddComponent<RectMask2D>();
             if (contentMask != null) contentMask.enabled = clipContent;
+            SyncBackgroundContentLayout(container);
+        }
+
+        private void SyncBackgroundContentLayout(RectTransform contentContainer)
+        {
+            if (backgroundContentRoot == null)
+            {
+                return;
+            }
+            if (backgroundContentLayout == null ||
+                backgroundContentLayout.transform != backgroundContentRoot)
+            {
+                backgroundContentLayout =
+                    backgroundContentRoot.GetComponent<FlexibleContentLayoutGroup>();
+            }
+            if (backgroundContentCanvasGroup == null ||
+                backgroundContentCanvasGroup.transform != backgroundContentRoot)
+            {
+                backgroundContentCanvasGroup =
+                    backgroundContentRoot.GetComponent<CanvasGroup>();
+            }
+
+            SynchronizeBackgroundModeTransition();
+            SynchronizeBackgroundMarginTransition();
+
+            if (useContentLayoutSettings)
+            {
+                CopyRect(contentContainer, backgroundContentRoot);
+                backgroundContentLayout?.Configure(
+                    fixedAxis, axisPolicy, breakpoint, spacing, padding, overflow,
+                    includeInactiveChildren, childAlignment);
+            }
+            else
+            {
+                if (overrideBackgroundContentMargins)
+                {
+                    backgroundContentRoot.offsetMin = new Vector2(
+                        backgroundContentMargins.left,
+                        backgroundContentMargins.bottom);
+                    backgroundContentRoot.offsetMax = new Vector2(
+                        -backgroundContentMargins.right,
+                        -backgroundContentMargins.top);
+                }
+                backgroundContentLayout?.Configure(
+                    backgroundFixedAxis,
+                    backgroundAxisPolicy,
+                    backgroundBreakpoint,
+                    backgroundSpacing,
+                    backgroundPadding,
+                    backgroundOverflow,
+                    backgroundIncludeInactiveChildren,
+                    backgroundChildAlignment);
+            }
+
+            if (backgroundContentMask == null ||
+                backgroundContentMask.transform != backgroundContentRoot)
+            {
+                backgroundContentMask = backgroundContentRoot.GetComponent<RectMask2D>();
+            }
+            if (backgroundContentMask != null)
+            {
+                backgroundContentMask.enabled = useContentLayoutSettings
+                    ? clipContent
+                    : backgroundClipContent;
+            }
+        }
+
+        private void RequireBackgroundLayer()
+        {
+            if (backgroundContentRoot == null || backgroundContentCanvasGroup == null)
+            {
+                throw new InvalidOperationException(
+                    "This FlexibleLayoutPanel has no configured BackgroundContentLayer.");
+            }
+        }
+
+        private void SynchronizeBackgroundModeTransition()
+        {
+            if (backgroundContentRoot == null ||
+                previousUseContentLayoutSettings == useContentLayoutSettings)
+            {
+                return;
+            }
+
+            if (useContentLayoutSettings && !overrideBackgroundContentMargins) CaptureBackgroundAuthoredRect();
+            else if (!useContentLayoutSettings && !overrideBackgroundContentMargins) RestoreBackgroundAuthoredRect();
+            previousUseContentLayoutSettings = useContentLayoutSettings;
+        }
+
+        private void SynchronizeBackgroundMarginTransition()
+        {
+            if (backgroundContentRoot == null || useContentLayoutSettings ||
+                previousOverrideBackgroundContentMargins == overrideBackgroundContentMargins)
+            {
+                return;
+            }
+
+            if (overrideBackgroundContentMargins) CaptureBackgroundAuthoredRect();
+            else RestoreBackgroundAuthoredRect();
+            previousOverrideBackgroundContentMargins = overrideBackgroundContentMargins;
+        }
+
+        private void CaptureBackgroundAuthoredRect()
+        {
+            if (backgroundContentRoot == null) return;
+            backgroundAuthoredAnchorMin = backgroundContentRoot.anchorMin;
+            backgroundAuthoredAnchorMax = backgroundContentRoot.anchorMax;
+            backgroundAuthoredPivot = backgroundContentRoot.pivot;
+            backgroundAuthoredPosition = backgroundContentRoot.anchoredPosition;
+            backgroundAuthoredSizeDelta = backgroundContentRoot.sizeDelta;
+            hasBackgroundAuthoredRect = true;
+        }
+
+        private void RestoreBackgroundAuthoredRect()
+        {
+            if (backgroundContentRoot == null || !hasBackgroundAuthoredRect) return;
+            backgroundContentRoot.anchorMin = backgroundAuthoredAnchorMin;
+            backgroundContentRoot.anchorMax = backgroundAuthoredAnchorMax;
+            backgroundContentRoot.pivot = backgroundAuthoredPivot;
+            backgroundContentRoot.anchoredPosition = backgroundAuthoredPosition;
+            backgroundContentRoot.sizeDelta = backgroundAuthoredSizeDelta;
+        }
+
+        private static void CopyRect(RectTransform source, RectTransform destination)
+        {
+            if (source.anchorMin == destination.anchorMin &&
+                source.anchorMax == destination.anchorMax &&
+                source.pivot == destination.pivot &&
+                source.anchoredPosition == destination.anchoredPosition &&
+                source.sizeDelta == destination.sizeDelta)
+            {
+                return;
+            }
+
+            destination.anchorMin = source.anchorMin;
+            destination.anchorMax = source.anchorMax;
+            destination.pivot = source.pivot;
+            destination.anchoredPosition = source.anchoredPosition;
+            destination.sizeDelta = source.sizeDelta;
         }
 
         private static RectOffset CreateInsets(int left, int right, int top, int bottom)
@@ -356,6 +661,13 @@ namespace TxTRPG.UI
                 Mathf.Max(0, right),
                 Mathf.Max(0, top),
                 Mathf.Max(0, bottom));
+        }
+
+        private static RectOffset CopyInsets(RectOffset source)
+        {
+            return source == null
+                ? new RectOffset()
+                : new RectOffset(source.left, source.right, source.top, source.bottom);
         }
 
         private void EnsureNodeId()

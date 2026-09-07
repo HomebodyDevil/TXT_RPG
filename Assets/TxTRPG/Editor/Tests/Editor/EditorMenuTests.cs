@@ -35,10 +35,19 @@ namespace TxTRPG.Editor.Tests
                     TxTRPGEditorMenuPriorities.Rebuild,
                 [TxTRPGEditorMenuPaths.UiPrefabs + "Rebuild Flexible Layout"] =
                     TxTRPGEditorMenuPriorities.Rebuild,
+                [TxTRPGEditorMenuPaths.UiPrefabs + "Upgrade Selected Flexible Layouts"] =
+                    TxTRPGEditorMenuPriorities.Refresh,
+                [TxTRPGEditorMenuPaths.UiPrefabs + "Upgrade Selected Health Bars"] =
+                    TxTRPGEditorMenuPriorities.Refresh,
+                [TxTRPGEditorMenuPaths.UiPrefabs +
+                 "Convert Selected Health Bars to Padding Sizing"] =
+                    TxTRPGEditorMenuPriorities.Refresh + 1,
                 [TxTRPGEditorMenuPaths.UiDemos + "Rebuild Story Text Panel Demo"] =
                     TxTRPGEditorMenuPriorities.Rebuild,
                 [TxTRPGEditorMenuPaths.UiDemos +
                  "Rebuild Character Display Panel Demo"] =
+                    TxTRPGEditorMenuPriorities.Rebuild,
+                [TxTRPGEditorMenuPaths.UiDemos + "Rebuild Health Bar Panel Demo"] =
                     TxTRPGEditorMenuPriorities.Rebuild,
                 [TxTRPGEditorMenuPaths.UiDemos + "Rebuild Enemy Display Panel Demo"] =
                     TxTRPGEditorMenuPriorities.Rebuild,

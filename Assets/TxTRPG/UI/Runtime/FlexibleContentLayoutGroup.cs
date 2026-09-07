@@ -19,6 +19,9 @@ namespace TxTRPG.UI
         private readonly List<FlexibleLayoutItem> items = new();
 
         public FlexibleLayoutAxis CurrentAxis => ResolveAxis(rectTransform.rect.width);
+        public FlexibleLayoutAxis FixedAxis => fixedAxis;
+        public FlexibleLayoutAxisPolicy AxisPolicy => axisPolicy;
+        public float Breakpoint => breakpoint;
         public float Spacing => spacing;
         public FlexibleLayoutOverflow Overflow => overflow;
         public bool IncludeInactiveChildren => includeInactiveChildren;
@@ -27,10 +30,24 @@ namespace TxTRPG.UI
             float childSpacing, RectOffset childPadding, FlexibleLayoutOverflow overflowPolicy,
             bool includeInactive, TextAnchor alignment)
         {
+            var nextBreakpoint = Mathf.Max(1f, widthBreakpoint);
+            var nextSpacing = Mathf.Max(0f, childSpacing);
+            if (fixedAxis == axis &&
+                axisPolicy == policy &&
+                Mathf.Approximately(breakpoint, nextBreakpoint) &&
+                Mathf.Approximately(spacing, nextSpacing) &&
+                PaddingEquals(padding, childPadding) &&
+                overflow == overflowPolicy &&
+                includeInactiveChildren == includeInactive &&
+                childAlignment == alignment)
+            {
+                return;
+            }
+
             fixedAxis = axis;
             axisPolicy = policy;
-            breakpoint = Mathf.Max(1f, widthBreakpoint);
-            spacing = Mathf.Max(0f, childSpacing);
+            breakpoint = nextBreakpoint;
+            spacing = nextSpacing;
             padding = CopyPadding(childPadding);
             overflow = overflowPolicy;
             includeInactiveChildren = includeInactive;
@@ -169,5 +186,12 @@ namespace TxTRPG.UI
 
         private static RectOffset CopyPadding(RectOffset value) => value == null
             ? new RectOffset() : new RectOffset(value.left, value.right, value.top, value.bottom);
+
+        private static bool PaddingEquals(RectOffset left, RectOffset right)
+        {
+            if (left == null || right == null) return left == null && right == null;
+            return left.left == right.left && left.right == right.right &&
+                   left.top == right.top && left.bottom == right.bottom;
+        }
     }
 }

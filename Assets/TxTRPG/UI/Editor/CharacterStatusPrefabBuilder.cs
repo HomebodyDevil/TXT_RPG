@@ -28,21 +28,22 @@ namespace TxTRPG.UI.Editor
                 ((RectTransform)root.transform).sizeDelta = new Vector2(520f, 64f);
                 var healthBar = root.AddComponent<HealthBarPanel>();
 
-                var backgroundLayer = CreateImage(
-                    "BackgroundLayer",
-                    root.transform,
+                var backgroundLayer = CreateUiObject("BackgroundLayer", root.transform);
+                Stretch((RectTransform)backgroundLayer.transform);
+                var backgroundVisualRoot = CreateUiObject("BackgroundVisualRoot", backgroundLayer.transform);
+                Stretch((RectTransform)backgroundVisualRoot.transform);
+                var backgroundImage = CreateImage(
+                    "Background",
+                    backgroundVisualRoot.transform,
                     new Color(0.025f, 0.03f, 0.045f, 0.86f));
-                Stretch(backgroundLayer.rectTransform);
+                Stretch(backgroundImage.rectTransform);
 
                 var barRoot = CreateUiObject("BarRoot", root.transform);
-                SetRect(
-                    (RectTransform)barRoot.transform,
-                    new Vector2(0f, 0f),
-                    new Vector2(1f, 0.58f),
-                    new Vector2(12f, 8f),
-                    new Vector2(-12f, -2f));
+                var barRootRect = (RectTransform)barRoot.transform;
+                var barVisualRoot = CreateUiObject("BarVisualRoot", barRoot.transform);
+                Stretch((RectTransform)barVisualRoot.transform);
 
-                var sliderObject = CreateUiObject("Slider", barRoot.transform);
+                var sliderObject = CreateUiObject("Slider", barVisualRoot.transform);
                 Stretch((RectTransform)sliderObject.transform);
                 var slider = sliderObject.AddComponent<Slider>();
                 slider.interactable = false;
@@ -64,33 +65,46 @@ namespace TxTRPG.UI.Editor
                 var fill = CreateImage(
                     "Fill",
                     fillArea.transform,
-                    new Color(0.24f, 0.78f, 0.42f, 1f));
+                    Color.clear);
                 Stretch(fill.rectTransform);
                 slider.fillRect = fill.rectTransform;
-                slider.targetGraphic = fill;
+                var fillVisualRoot = CreateUiObject("FillVisualRoot", fill.transform);
+                Stretch((RectTransform)fillVisualRoot.transform);
+                var fillImage = CreateImage(
+                    "FillImage",
+                    fillVisualRoot.transform,
+                    new Color(0.24f, 0.78f, 0.42f, 1f));
+                Stretch(fillImage.rectTransform);
+                slider.targetGraphic = fillImage;
 
                 var barEffect = CreateImage(
                     "BarEffectOverlay",
-                    barRoot.transform,
+                    barVisualRoot.transform,
                     Color.clear);
                 Stretch(barEffect.rectTransform);
                 barEffect.enabled = false;
+                var borderVisualRoot = CreateUiObject("BorderVisualRoot", barVisualRoot.transform);
+                Stretch((RectTransform)borderVisualRoot.transform);
+                var border = CreateImage("Border", borderVisualRoot.transform, Color.clear);
+                Stretch(border.rectTransform);
+                border.enabled = false;
 
                 var textLayer = CreateUiObject("TextLayer", root.transform);
-                SetRect(
-                    (RectTransform)textLayer.transform,
-                    new Vector2(0f, 0.58f),
-                    Vector2.one,
-                    new Vector2(12f, 0f),
-                    new Vector2(-12f, -2f));
+                Stretch((RectTransform)textLayer.transform);
+                var textVisualRoot = CreateUiObject("TextVisualRoot", textLayer.transform);
+                Stretch((RectTransform)textVisualRoot.transform, 12f);
                 var label = CreateText(
                     "LabelText",
-                    textLayer.transform,
+                    textVisualRoot.transform,
                     TextAlignmentOptions.Left);
+                SetRect(label.rectTransform, Vector2.zero, new Vector2(0.5f, 1f),
+                    Vector2.zero, new Vector2(-4f, 0f));
                 var value = CreateText(
                     "ValueText",
-                    textLayer.transform,
+                    textVisualRoot.transform,
                     TextAlignmentOptions.Right);
+                SetRect(value.rectTransform, new Vector2(0.5f, 0f), Vector2.one,
+                    new Vector2(4f, 0f), Vector2.zero);
 
                 var foregroundEffect = CreateImage(
                     "ForegroundEffectLayer",
@@ -105,7 +119,24 @@ namespace TxTRPG.UI.Editor
                 Stretch(transition.rectTransform);
                 transition.enabled = false;
 
+                var layout = root.AddComponent<HealthBarLayoutController>();
+                layout.Configure(
+                    (RectTransform)backgroundLayer.transform,
+                    barRootRect,
+                    HealthBarHorizontalAlignment.Center,
+                    HealthBarVerticalAlignment.Middle,
+                    HealthBarAxisSizeMode.Stretch,
+                    HealthBarAxisSizeMode.Stretch,
+                    new Vector2(240f, 24f),
+                    new RectOffset(12, 12, 12, 12),
+                    Vector2.zero);
                 healthBar.Configure(slider, label, value);
+                healthBar.ConfigureVisualRoots(
+                    (RectTransform)backgroundVisualRoot.transform,
+                    (RectTransform)barVisualRoot.transform,
+                    (RectTransform)fillVisualRoot.transform,
+                    (RectTransform)borderVisualRoot.transform,
+                    (RectTransform)textVisualRoot.transform);
                 PrefabUtility.SaveAsPrefabAsset(root, HealthBarPrefabPath);
             }
             finally
@@ -173,6 +204,11 @@ namespace TxTRPG.UI.Editor
             Stretch((RectTransform)result.transform);
             var text = result.AddComponent<TextMeshProUGUI>();
             text.fontSize = 18f;
+            text.enableAutoSizing = true;
+            text.fontSizeMin = 10f;
+            text.fontSizeMax = 18f;
+            text.enableWordWrapping = false;
+            text.overflowMode = TextOverflowModes.Ellipsis;
             text.color = Color.white;
             text.alignment = alignment;
             text.raycastTarget = false;

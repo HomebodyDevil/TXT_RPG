@@ -79,13 +79,13 @@ namespace TxTRPG.UI.Tests
             Assert.That(healthPrefab, Is.Not.Null);
             Assert.That(statusPrefab, Is.Not.Null);
             Assert.That(
-                healthPrefab.transform.Find("BarRoot/Slider/Fill Area/Fill"),
+                healthPrefab.transform.Find("BarRoot/BarVisualRoot/Slider/Fill Area/Fill/FillVisualRoot/FillImage"),
                 Is.Not.Null);
             Assert.That(
-                healthPrefab.transform.Find("BarRoot/BarEffectOverlay"),
+                healthPrefab.transform.Find("BarRoot/BarVisualRoot/BarEffectOverlay"),
                 Is.Not.Null);
-            Assert.That(healthPrefab.transform.Find("TextLayer/LabelText"), Is.Not.Null);
-            Assert.That(healthPrefab.transform.Find("TextLayer/ValueText"), Is.Not.Null);
+            Assert.That(healthPrefab.transform.Find("TextLayer/TextVisualRoot/LabelText"), Is.Not.Null);
+            Assert.That(healthPrefab.transform.Find("TextLayer/TextVisualRoot/ValueText"), Is.Not.Null);
             Assert.That(healthPrefab.transform.Find("ForegroundEffectLayer"), Is.Not.Null);
             Assert.That(healthPrefab.transform.Find("TransitionOverlay"), Is.Not.Null);
 

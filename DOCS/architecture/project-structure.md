@@ -120,6 +120,8 @@ TxT-RPG/
 | `Characters/CharacterStatusPanel.cs` | 선택적인 `CharacterStatusElement`를 모아 동일한 상태 표시 모델을 전달합니다. |
 | `Characters/CharacterNamePanel.cs` | 현지화가 완료된 캐릭터 이름을 선택적으로 표시합니다. |
 | `Characters/HealthBarPanel.cs` | 비상호작용 Slider, 선택적 문구와 교체 가능한 Health 효과를 관리합니다. |
+| `Characters/HealthBarLayoutController.cs` | 배경 기준 HealthBar 정렬, 축별 Fixed·Stretch 크기와 런타임 재배치를 관리합니다. |
+| `Characters/HealthBarScalePulseEffect.cs` | 레이아웃 Transform과 분리된 피해 확대 효과 및 Coroutine 수명을 관리합니다. |
 | `CharacterDisplayPanelDemoData.cs` | 데모 외형 정의와 ID 기반 표시 요청을 보관합니다. |
 | `CharacterDisplayPanelDemoLoader.cs` | Play Mode에서 데모 캐릭터와 등장 전환을 실행합니다. |
 | `EnemyPresentation.cs` | 적 종류와 개별 전투 인스턴스를 분리하여 전달하는 불변 값 객체입니다. |
@@ -140,8 +142,8 @@ TxT-RPG/
 | `ActionGridPanelDemoData.cs` | 아이템과 스킬이 혼합된 데모 표시 데이터를 보관합니다. |
 | `ActionGridPanelDemoController.cs` | Play Mode 데모의 옵션 제공자와 명령 실행기 예제를 제공합니다. |
 | `FlexibleLayoutItem.cs` | 자식 영역의 가중치·고정 크기와 최소·최대 크기를 정의합니다. |
-| `FlexibleLayoutPanel.cs` | 레이아웃 컨테이너의 외부 API, 직렬화 설정과 ContentLayer 참조를 관리합니다. |
-| `FlexibleContentLayoutGroup.cs` | ContentLayer의 실제 크기를 기준으로 직계 자식의 반응형 배치를 담당합니다. |
+| `FlexibleLayoutPanel.cs` | 레이아웃 컨테이너의 외부 API와 두 독립 콘텐츠 레이어의 공유·독립 설정 및 참조를 관리합니다. |
+| `FlexibleContentLayoutGroup.cs` | 각 콘텐츠 레이어의 실제 크기를 기준으로 해당 직계 자식의 반응형 배치를 담당합니다. |
 | `FlexibleLayoutBackground.cs` | 배경 슬롯, 효과 Overlay, 클리핑, 머티리얼 소유권과 교차 페이드를 관리합니다. |
 | `FlexibleLayoutBackgroundStyle.cs` | 재사용 가능한 배경 Sprite·색상·표시·Material 정책을 정의합니다. |
 | `PanelBackgroundRenderer.cs` | 여러 UI 패널이 공유하는 배경 교차 페이드와 Addressables 수명 관리를 제공합니다. |
@@ -167,12 +169,16 @@ TxT-RPG/
 | `StoryTextPanelEditModePreview.cs` | 데모 데이터를 미리보기 항목으로 직렬화하고 열린 미리보기의 레이아웃·투명도를 갱신합니다. |
 | `CharacterDisplayPanelPrefabBuilder.cs` | 운영용 `CharacterDisplayPanel` 2D Prefab과 상태 UI Prefab 생성을 조율합니다. |
 | `CharacterStatusPrefabBuilder.cs` | `HealthBarPanel.prefab`과 조합형 `CharacterStatusPanel.prefab`을 생성합니다. |
+| `HealthBarPanelDemoBuilder.cs` | 9가지 정렬과 런타임 변경·효과 예제를 포함한 HealthBar Demo를 생성합니다. |
+| `HealthBarPanelUpgradeUtility.cs` | 기존 HealthBar의 사용자 계층과 참조를 보존하면서 누락된 레이아웃·효과 루트 참조를 보완합니다. |
 | `CharacterDisplayPanelDemoBuilder.cs` | 데모 Sprite, 외형 정의, 데이터와 미리보기 Prefab을 생성합니다. |
 | `EnemyDisplayPanelPrefabBuilder.cs` | 운영용 다중 적 패널, 2D View Template과 풀 계층을 생성합니다. |
 | `EnemyDisplayPanelDemoBuilder.cs` | 샘플 적 Sprite, 외형 정의, 데이터와 Demo Prefab을 생성합니다. |
 | `ActionGridPrefabBuilder.cs` | 셀, 컨텍스트 메뉴와 그리드 패널 운영용 Prefab을 생성합니다. |
 | `ActionGridPanelDemoBuilder.cs` | 데모 아이콘, 데이터와 Edit Mode 미리보기 Prefab을 생성합니다. |
-| `FlexibleLayoutPrefabBuilder.cs` | 빈 운영용 레이아웃 Prefab과 세 제품 UI를 조합한 재귀 Demo를 생성합니다. |
+| `FlexibleLayoutPrefabBuilder.cs` | 빈 운영용 레이아웃, Placeholder Prefab과 세 제품 UI를 조합한 재귀 Demo를 생성합니다. |
+| `FlexibleLayoutUpgradeUtility.cs` | 선택한 구형 Prefab과 씬 인스턴스에 BackgroundContentLayer를 명시적으로 추가합니다. |
+| `FlexibleLayoutPanelEditor.cs` | 공유 중인 BackgroundContent 독립 설정을 읽기 전용으로 표시합니다. |
 | `AddressableAssetEditor.cs` | 수명 기반 그룹과 안정적인 주소 등록 및 Player Content 빌드 메뉴를 제공합니다. |
 | `TxTRPG.UI.Editor.asmdef` | Editor 전용 어셈블리 경계를 정의합니다. |
 
@@ -185,11 +191,13 @@ TxT-RPG/
 | `CharacterDisplayPanel.prefab` | 교체 가능한 2D View를 포함하는 운영용 캐릭터 표시 패널입니다. |
 | `HealthBarPanel.prefab` | 표시 전용 Slider와 선택적 문구·효과 계층을 포함하는 Health 요소입니다. |
 | `CharacterStatusPanel.prefab` | HealthBarPanel을 기본 요소로 포함하는 선택적 상태 UI 컨테이너입니다. |
+| `UI/DEMO/CharacterStatusPanel/HealthBarPanelDemo.prefab` | 9가지 정렬과 런타임 정렬·피해 pulse를 확인하는 개발용 Demo입니다. |
 | `EnemyDisplayPanel.prefab` | 풀링되는 2D 적 View와 반응형 포메이션을 포함하는 운영용 적 표시 패널입니다. |
 | `ActionGridCell.prefab` | 공통 행동 항목 하나의 표시와 선택 상태를 담당합니다. |
 | `ActionContextMenu.prefab` | 선택 항목의 동적 명령 목록을 표시합니다. |
 | `ActionGridPanel.prefab` | 아이템과 스킬을 표시하며 Scroll View 아래에 비상호작용 `OppositeScrollbarArea`를 포함하는 반응형 선택 그리드입니다. |
-| `FlexibleLayoutPanel.prefab` | Background·Content·Foreground 계층과 빈 ContentLayer를 제공하는 운영용 레이아웃 컨테이너입니다. |
+| `FlexibleLayoutPanel.prefab` | Background, BackgroundContent, Content와 Foreground 계층을 제공하는 운영용 레이아웃 컨테이너입니다. |
+| `FlexibleLayoutPlaceholder.prefab` | 그래픽 없이 Weighted/Fixed 및 최소·최대 크기 계산에 참여하는 빈 항목입니다. |
 
 ### `Assets/TxTRPG/UI/Styles`
 
@@ -206,7 +214,7 @@ TxT-RPG/
 | `CharacterDisplayPanel/CharacterDisplayPanelDemo.prefab` | 운영용 캐릭터 패널, 샘플 외형과 런타임 로더를 조합한 검증용 프리팹입니다. |
 | `EnemyDisplayPanel/EnemyDisplayPanelDemo.prefab` | 같은 종류의 적 세 인스턴스, 타깃 표시와 런타임 로더를 조합한 검증용 프리팹입니다. |
 | `ActionGridPanel/ActionGridPanelDemo.prefab` | 혼합 항목, 셀 상태와 컨텍스트 메뉴를 조합한 검증용 프리팹입니다. |
-| `FlexibleLayoutPanel/FlexibleLayoutPanelDemo.prefab` | Story, Action과 Character Demo를 가중치 기반 중첩 레이아웃으로 조합한 검증용 프리팹입니다. |
+| `FlexibleLayoutPanel/FlexibleLayoutPanelDemo.prefab` | Story, Action과 Character Demo 및 BackgroundContent Placeholder 예시를 조합한 검증용 프리팹입니다. |
 | `FlexibleLayoutPanel/FlexibleLayoutBackgroundDemoStyle.asset` | Demo 루트의 정적 배경 색상과 클리핑 정책을 정의합니다. |
 
 ### `Assets/TxTRPG/UI/Tests/Editor`

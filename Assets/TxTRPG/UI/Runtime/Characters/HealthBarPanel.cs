@@ -14,6 +14,18 @@ namespace TxTRPG.UI
             bool isInitialValue);
 
         public abstract void Clear();
+
+        protected virtual void OnEnable()
+        {
+            GetComponentInParent<HealthBarPanel>()?.NotifyEffectEnabled(this);
+        }
+
+        protected virtual void OnDisable()
+        {
+            var panel = GetComponentInParent<HealthBarPanel>();
+            if (panel != null) panel.NotifyEffectDisabled(this);
+            else Clear();
+        }
     }
 
     [DisallowMultipleComponent]
@@ -22,12 +34,25 @@ namespace TxTRPG.UI
         [SerializeField] private Slider slider;
         [SerializeField] private TMP_Text labelText;
         [SerializeField] private TMP_Text valueText;
+        [SerializeField] private RectTransform backgroundVisualRoot;
+        [SerializeField] private RectTransform barVisualRoot;
+        [SerializeField] private RectTransform fillVisualRoot;
+        [SerializeField] private RectTransform borderVisualRoot;
+        [SerializeField] private RectTransform textVisualRoot;
         [SerializeField] private List<HealthBarEffect> effects = new();
+        [SerializeField] private bool effectsEnabled = true;
 
         private HealthPresentation currentPresentation;
         private bool hasPresentation;
+        private readonly HashSet<HealthBarEffect> appliedEffects = new();
 
         public Slider Slider => slider;
+        public RectTransform BackgroundVisualRoot => backgroundVisualRoot;
+        public RectTransform BarVisualRoot => barVisualRoot;
+        public RectTransform FillVisualRoot => fillVisualRoot;
+        public RectTransform BorderVisualRoot => borderVisualRoot;
+        public RectTransform TextVisualRoot => textVisualRoot;
+        public bool EffectsEnabled => effectsEnabled;
 
         public override void Apply(in CharacterStatusPresentation presentation)
         {
@@ -46,10 +71,7 @@ namespace TxTRPG.UI
             var isInitialValue = !hasPresentation;
             currentPresentation = next;
             hasPresentation = true;
-            for (var index = 0; index < effects.Count; index++)
-            {
-                effects[index]?.Apply(previous, next, isInitialValue);
-            }
+            SynchronizeEffects(previous, next, isInitialValue);
         }
 
         public override void Clear()
@@ -64,10 +86,7 @@ namespace TxTRPG.UI
             }
             ClearOptionalText(labelText);
             ClearOptionalText(valueText);
-            for (var index = 0; index < effects.Count; index++)
-            {
-                effects[index]?.Clear();
-            }
+            ClearAllEffects();
         }
 
         public void Configure(
@@ -81,6 +100,20 @@ namespace TxTRPG.UI
             ConfigureSlider();
         }
 
+        public void ConfigureVisualRoots(
+            RectTransform configuredBackgroundVisualRoot,
+            RectTransform configuredBarVisualRoot,
+            RectTransform configuredFillVisualRoot,
+            RectTransform configuredBorderVisualRoot,
+            RectTransform configuredTextVisualRoot)
+        {
+            backgroundVisualRoot = configuredBackgroundVisualRoot;
+            barVisualRoot = configuredBarVisualRoot;
+            fillVisualRoot = configuredFillVisualRoot;
+            borderVisualRoot = configuredBorderVisualRoot;
+            textVisualRoot = configuredTextVisualRoot;
+        }
+
         public void RegisterEffect(HealthBarEffect effect)
         {
             if (effect == null)
@@ -90,22 +123,44 @@ namespace TxTRPG.UI
             if (!effects.Contains(effect))
             {
                 effects.Add(effect);
-                if (hasPresentation)
-                {
-                    effect.Apply(default, currentPresentation, true);
-                }
             }
+            NotifyEffectEnabled(effect);
         }
 
         public bool UnregisterEffect(HealthBarEffect effect)
         {
-            return effect != null && effects.Remove(effect);
+            if (effect == null || !effects.Remove(effect)) return false;
+            appliedEffects.Remove(effect);
+            effect.Clear();
+            return true;
+        }
+
+        public void SetEffectsEnabled(bool value)
+        {
+            if (effectsEnabled == value) return;
+            effectsEnabled = value;
+            if (!value)
+            {
+                ClearAppliedEffects();
+                return;
+            }
+            if (hasPresentation) SynchronizeEffects(default, currentPresentation, true);
         }
 
         private void Awake()
         {
             ConfigureSlider();
         }
+
+        private void OnEnable()
+        {
+            ConfigureSlider();
+            if (hasPresentation && effectsEnabled)
+                SynchronizeEffects(default, currentPresentation, true);
+        }
+
+        private void OnDisable() => ClearAppliedEffects();
+        private void OnDestroy() => ClearAppliedEffects();
 
 #if UNITY_EDITOR
         private void OnValidate()
@@ -126,6 +181,64 @@ namespace TxTRPG.UI
             slider.navigation = new Navigation { mode = Navigation.Mode.None };
             slider.minValue = 0f;
             slider.wholeNumbers = true;
+        }
+
+        internal void NotifyEffectEnabled(HealthBarEffect effect)
+        {
+            if (effect == null || effects == null || !effects.Contains(effect) ||
+                !effectsEnabled || !hasPresentation || !effect.isActiveAndEnabled)
+            {
+                return;
+            }
+            effect.Apply(default, currentPresentation, true);
+            appliedEffects.Add(effect);
+        }
+
+        internal void NotifyEffectDisabled(HealthBarEffect effect)
+        {
+            if (effect != null && appliedEffects.Remove(effect)) effect.Clear();
+        }
+
+        private void SynchronizeEffects(
+            in HealthPresentation previous,
+            in HealthPresentation current,
+            bool isInitialValue)
+        {
+            effects ??= new List<HealthBarEffect>();
+            if (!effectsEnabled)
+            {
+                ClearAppliedEffects();
+                return;
+            }
+
+            for (var index = 0; index < effects.Count; index++)
+            {
+                var effect = effects[index];
+                if (effect == null) continue;
+                if (!effect.isActiveAndEnabled)
+                {
+                    NotifyEffectDisabled(effect);
+                    continue;
+                }
+                if (isInitialValue && appliedEffects.Contains(effect)) continue;
+                effect.Apply(previous, current, isInitialValue);
+                appliedEffects.Add(effect);
+            }
+        }
+
+        private void ClearAppliedEffects()
+        {
+            if (appliedEffects.Count == 0) return;
+            var snapshot = new List<HealthBarEffect>(appliedEffects);
+            appliedEffects.Clear();
+            for (var index = 0; index < snapshot.Count; index++) snapshot[index]?.Clear();
+        }
+
+        private void ClearAllEffects()
+        {
+            appliedEffects.Clear();
+            effects ??= new List<HealthBarEffect>();
+            for (var index = 0; index < effects.Count; index++) effects[index]?.Clear();
         }
 
         private static void ApplyOptionalText(TMP_Text target, string value)

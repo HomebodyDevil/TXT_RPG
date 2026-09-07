@@ -30,6 +30,7 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 7917181322663194022}
+  - {fileID: 2836874411795264212}
   - {fileID: 9134192191214517861}
   - {fileID: 2627419131076438132}
   m_Father: {fileID: 0}
@@ -65,9 +66,47 @@ MonoBehaviour:
   overflow: 0
   includeInactiveChildren: 0
   contentRoot: {fileID: 9134192191214517861}
+  overrideContentMargins: 0
+  contentMargins:
+    m_Left: 0
+    m_Right: 0
+    m_Top: 0
+    m_Bottom: 0
   contentLayout: {fileID: 8854991644967675989}
   contentMask: {fileID: 2441808215002690609}
   clipContent: 0
+  backgroundContentRoot: {fileID: 2836874411795264212}
+  backgroundContentLayout: {fileID: 6819695228846202330}
+  backgroundContentMask: {fileID: 7697161252177287401}
+  backgroundContentCanvasGroup: {fileID: 2646868946489209369}
+  useContentLayoutSettings: 1
+  backgroundFixedAxis: 0
+  backgroundAxisPolicy: 0
+  backgroundBreakpoint: 720
+  backgroundSpacing: 0
+  backgroundPadding:
+    m_Left: 0
+    m_Right: 0
+    m_Top: 0
+    m_Bottom: 0
+  backgroundOverflow: 0
+  backgroundIncludeInactiveChildren: 0
+  backgroundChildAlignment: 4
+  backgroundClipContent: 0
+  overrideBackgroundContentMargins: 0
+  backgroundContentMargins:
+    m_Left: 0
+    m_Right: 0
+    m_Top: 0
+    m_Bottom: 0
+  previousUseContentLayoutSettings: 1
+  previousOverrideBackgroundContentMargins: 0
+  hasBackgroundAuthoredRect: 0
+  backgroundAuthoredAnchorMin: {x: 0, y: 0}
+  backgroundAuthoredAnchorMax: {x: 1, y: 1}
+  backgroundAuthoredPivot: {x: 0.5, y: 0.5}
+  backgroundAuthoredPosition: {x: 0, y: 0}
+  backgroundAuthoredSizeDelta: {x: 0, y: 0}
 --- !u!1 &2614579155677921620
 GameObject:
   m_ObjectHideFlags: 0
@@ -547,6 +586,115 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!1 &7826208728921698006
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2836874411795264212}
+  - component: {fileID: 5610257369774125801}
+  - component: {fileID: 2646868946489209369}
+  - component: {fileID: 7697161252177287401}
+  - component: {fileID: 6819695228846202330}
+  m_Layer: 0
+  m_Name: BackgroundContentLayer
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &2836874411795264212
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7826208728921698006}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4542519813139884612}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &5610257369774125801
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7826208728921698006}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 306cc8c2b49d7114eaa3623786fc2126, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.LayoutElement
+  m_IgnoreLayout: 1
+  m_MinWidth: -1
+  m_MinHeight: -1
+  m_PreferredWidth: -1
+  m_PreferredHeight: -1
+  m_FlexibleWidth: -1
+  m_FlexibleHeight: -1
+  m_LayoutPriority: 1
+--- !u!225 &2646868946489209369
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7826208728921698006}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 0
+  m_BlocksRaycasts: 0
+  m_IgnoreParentGroups: 0
+--- !u!114 &7697161252177287401
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7826208728921698006}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3312d7739989d2b4e91e6319e9a96d76, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.RectMask2D
+  m_Padding: {x: 0, y: 0, z: 0, w: 0}
+  m_Softness: {x: 0, y: 0}
+--- !u!114 &6819695228846202330
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7826208728921698006}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5915668cecda3ed478d1c5cba0889656, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TxTRPG.UI::TxTRPG.UI.FlexibleContentLayoutGroup
+  m_Padding:
+    m_Left: 12
+    m_Right: 12
+    m_Top: 12
+    m_Bottom: 12
+  m_ChildAlignment: 4
+  fixedAxis: 0
+  axisPolicy: 0
+  breakpoint: 720
+  spacing: 12
+  overflow: 0
+  includeInactiveChildren: 0
 --- !u!1 &8992195014108772992
 GameObject:
   m_ObjectHideFlags: 0

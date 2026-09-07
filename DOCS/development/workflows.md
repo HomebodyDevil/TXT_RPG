@@ -75,7 +75,37 @@ Story, Character, Enemy와 Action Grid Demo는 동일한 `PanelStartupController
 4. 이름이 필요하면 `CharacterNamePanel`을 상태 컨테이너 자식으로 추가하고 TMP Text를 연결합니다.
 5. 현지화 조립 코드에서 `SetNameLocalizer`와 `SetHealthTextFormatter`를 호출합니다.
 
-기본 CharacterStatusPanel Prefab에는 HealthBarPanel만 포함됩니다. Health Label과 Value Text는 선택적이며 참조를 제거해도 오류가 발생하지 않습니다. 점멸, 피해 흔들림 또는 글리치 효과는 `HealthBarEffect`를 상속한 별도 컴포넌트로 구현하고 HealthBarPanel의 Effects에 등록합니다. 공격력과 다른 일반 Stat은 이 패널에 추가하지 않고 추후 별도 CharacterStatWindow에서 표시합니다.
+기본 CharacterStatusPanel Prefab에는 HealthBarPanel만 포함됩니다. Health Label과 Value Text는 선택적이며 참조를 제거해도 오류가 발생하지 않습니다. 공격력과 다른 일반 Stat은 이 패널에 추가하지 않고 추후 별도 CharacterStatWindow에서 표시합니다.
+
+HealthBar의 Inspector 배치는 루트의 `HealthBarLayoutController`에서 설정합니다. Reference Area에는 일반적으로 `BackgroundLayer`, Bar Root에는 `BarRoot`를 연결합니다. 새 기본 Prefab은 Horizontal·Vertical Size Mode가 모두 `Stretch`이고 Left·Right·Top·Bottom Padding이 모두 12입니다. 이 설정은 Padding을 제외한 영역을 Slider가 모두 채우므로 Alignment를 변경해도 결과가 달라지지 않습니다.
+
+Alignment가 필요한 제한 배치는 해당 축만 `Fixed`로 바꾸고 `Fixed Size`를 설정합니다. Fixed 값은 남은 영역보다 클 수 없으며, 호환성을 위해 Stretch로 돌아간 뒤에도 직렬화 값이 유지됩니다. Padding은 Canvas 로컬 UI 단위이고 Offset의 양수 X는 오른쪽, 양수 Y는 위쪽입니다. Offset은 Padding 계산 후 적용되므로 Padding 경계를 벗어날 수 있습니다. Slider 내부 `Fill Area`의 2단위 inset은 외부 Padding과 별개입니다.
+
+런타임에는 다음 API를 사용합니다.
+
+```csharp
+layout.SetSizeModes(HealthBarAxisSizeMode.Stretch, HealthBarAxisSizeMode.Stretch);
+layout.SetPadding(12, 12, 12, 12);
+
+// 크기를 제한하여 Alignment가 의미를 갖게 하는 호환 모드입니다.
+layout.SetSizeModes(HealthBarAxisSizeMode.Fixed, HealthBarAxisSizeMode.Fixed);
+layout.SetFixedSize(280f, 24f);
+layout.SetAlignment(HealthBarHorizontalAlignment.Right, HealthBarVerticalAlignment.Top);
+layout.SetOffset(new Vector2(-8f, -6f));
+
+healthBar.RegisterEffect(pulseEffect);
+healthBar.SetEffectsEnabled(accessibilitySettings.EnableUiMotion);
+```
+
+효과 컴포넌트는 `HealthBarEffect`를 상속하고 `Apply`와 `Clear`를 구현합니다. 전체 바 효과는 `BarVisualRoot`, Fill 전용 효과는 `FillVisualRoot`에 적용하고 레이아웃 전용 `BarRoot`는 변경하지 않습니다. 파생 컴포넌트가 `OnEnable` 또는 `OnDisable`을 재정의한다면 기반 구현을 호출해야 자동 재동기화와 정리가 유지됩니다.
+
+기존 HealthBar 자산은 먼저 Prefab 또는 Scene 인스턴스를 선택한 뒤 `Tools > TxT RPG > UI > Prefabs > Upgrade Selected Health Bars`를 실행합니다. 이 작업은 누락된 Layout Controller와 시각 루트 참조만 보완하며 기존 Slider 계층, Animator 경로, 이미 지정된 참조와 레이아웃 설정을 바꾸지 않습니다. Scene 변경은 자동 저장하지 않으며 Undo를 지원합니다.
+
+기존 Fixed 크기를 Padding 기반 양축 자동 크기로 명시적으로 전환하려면 같은 대상을 선택하고 `Tools > TxT RPG > UI > Prefabs > Convert Selected Health Bars to Padding Sizing`을 실행합니다. 전환은 두 Size Mode만 Stretch로 바꾸며 기존 Padding, Alignment, Offset과 비활성화된 Fixed Size 값은 보존합니다. 따라서 기존 자산의 Top·Bottom Padding이 0이었다면 전환 전후에 개발자가 원하는 값, 새 기본값을 따르려면 각각 12로 설정해야 합니다. 두 메뉴는 반복 실행할 수 있고 Scene 인스턴스에서는 Undo와 Prefab Override를 유지합니다.
+
+기존 계층에 전용 시각 루트가 없으면 Upgrade 메뉴는 호환 가능한 기존 Transform을 참조합니다. 별도 효과 계층이 필요할 때에는 새 운영 Prefab 구조를 기준으로 수동 이전한 뒤 Animator 경로를 함께 갱신합니다. 운영 기본 구조를 처음부터 다시 만들려면 `Rebuild Character Display Panel`을 사용할 수 있지만, 이 메뉴는 대상 Prefab을 재생성하므로 사용자 정의 Prefab에는 Upgrade와 Convert 메뉴를 우선 사용합니다.
+
+`Tools > TxT RPG > UI > Demos > Rebuild Health Bar Panel Demo`는 `Assets/TxTRPG/UI/DEMO/CharacterStatusPanel/HealthBarPanelDemo.prefab`을 생성합니다. 이 데모는 9가지 Fixed 정렬 조합과 런타임 정렬·피해 pulse 예제를 포함합니다.
 
 ## Scene 전환 사용하기
 
@@ -148,6 +178,12 @@ ActionGridPanel의 Content 높이는 패널이 직접 계산하므로 Content에
 6. 좁은 화면에서 배치 방향을 바꾸려면 Axis Policy와 Breakpoint를 설정합니다.
 7. 복합 화면은 ContentLayer의 자식에 `FlexibleLayoutPanel`을 추가하여 같은 방식으로 중첩합니다.
 
+빈 배분 공간이 필요하면 `Assets/TxTRPG/UI/Prefabs/FlexibleLayoutPlaceholder.prefab`을 `ContentLayer` 또는 `BackgroundContentLayer` 아래에 배치하고 `FlexibleLayoutItem`의 Weight, Fixed Size, Minimum Size와 Maximum Size를 설정합니다. Placeholder에는 그래픽이나 입력 차단 컴포넌트가 없습니다. `Include Inactive Children`가 꺼져 있을 때에도 공간을 유지하려면 Placeholder를 활성 상태로 둡니다.
+
+배경과 기존 콘텐츠 사이에 별도 표현을 배치하려면 `BackgroundContentLayer`의 직계 자식으로 추가합니다. 기본 `Use Content Layout Settings`가 켜져 있으면 기존 Content 설정과 최종 Rect를 공유하지만, 자식 배분 계산은 독립적으로 실행됩니다. 다른 축, Breakpoint, Spacing, Padding 또는 Offset이 필요하면 공유 옵션을 끄고 Background Content 설정을 편집합니다. 레이아웃 항목의 애니메이션은 항목 아래에 `VisualRoot`를 만들고 그 자식에 적용합니다.
+
+런타임에서는 기존 `Add(child, weight)`가 앞쪽 ContentLayer를 계속 사용합니다. 뒤쪽 레이어에는 `Add(child, FlexibleLayoutContentLayer.BackgroundContent, weight)`를 사용합니다. 입력을 허용하려면 `SetBackgroundInteraction(true, true)`를 호출한 뒤 해당 Selectable의 Navigation을 구성합니다. 앞쪽 Graphic이 Raycast를 받는 영역에서는 뒤쪽 Graphic까지 자동으로 입력이 전달되지 않습니다.
+
 ContentLayer의 RectTransform Offset은 콘텐츠 전체의 외부 여백이고, `FlexibleContentLayoutGroup`의 Padding은 내부 여백입니다. 두 값은 합산됩니다. 실제 표시 영역을 자르려면 루트 `FlexibleLayoutPanel`의 `Clip Content`를 활성화합니다. `Overflow = Clip`만으로는 렌더링이 잘리지 않습니다.
 
 Inspector에서 자식 사이 간격은 `Spacing`, ContentLayer 내부 상·하·좌·우 여백은 기본 `Padding`을 사용합니다. 패널 테두리와 ContentLayer 사이의 상·하·좌·우 외부 여백까지 설정하려면 `Override Content Margins`를 활성화하고 `Content Margins`를 입력합니다. 기존에 ContentLayer RectTransform Offset을 직접 편집한 Prefab은 이 옵션을 비활성화하여 기존 값을 유지할 수 있습니다.
@@ -168,12 +204,16 @@ Inspector에서 자식 사이 간격은 `Spacing`, ContentLayer 내부 상·하�
 | `Tools > TxT RPG > UI > Demos > Rebuild Story Text Panel Demo` | 데모 데이터와 데모 프리팹을 기본 상태로 다시 생성합니다. |
 | `Tools > TxT RPG > UI > Preview > Refresh Story Text Panel` | 현재 데모 데이터로 미리보기 항목을 다시 생성합니다. |
 | `Tools > TxT RPG > UI > Prefabs > Rebuild Character Display Panel` | 운영용 2D 캐릭터 표시 패널과 HealthBar·CharacterStatus 프리팹을 기본 구조로 다시 생성합니다. |
+| `Tools > TxT RPG > UI > Prefabs > Upgrade Selected Health Bars` | 선택한 기존 Prefab 또는 Scene 인스턴스의 누락된 HealthBar 레이아웃·시각 루트 참조를 비파괴적으로 보완합니다. |
+| `Tools > TxT RPG > UI > Prefabs > Convert Selected Health Bars to Padding Sizing` | 기존 설정을 보존하면서 선택한 HealthBar의 양 축을 Padding 기반 Stretch 크기로 전환합니다. |
 | `Tools > TxT RPG > UI > Demos > Rebuild Character Display Panel Demo` | 샘플 Sprite, 외형 정의, 데이터와 캐릭터 표시 데모 Prefab을 다시 생성합니다. |
+| `Tools > TxT RPG > UI > Demos > Rebuild Health Bar Panel Demo` | 9가지 정렬과 런타임 변경·피해 pulse를 보여 주는 HealthBar 데모 Prefab을 다시 생성합니다. |
 | `Tools > TxT RPG > UI > Prefabs > Rebuild Enemy Display Panel` | 운영용 적 표시 패널, 2D View Template과 풀 계층을 다시 생성합니다. |
 | `Tools > TxT RPG > UI > Demos > Rebuild Enemy Display Panel Demo` | 샘플 적 Sprite, 외형 정의, 다중 적 데이터와 Demo Prefab을 다시 생성합니다. |
 | `Tools > TxT RPG > UI > Prefabs > Rebuild Action Grid` | 셀, 컨텍스트 메뉴와 ActionGridPanel 운영용 Prefab을 다시 생성합니다. |
 | `Tools > TxT RPG > UI > Demos > Rebuild Action Grid Demo` | 샘플 아이콘, 혼합 항목 데이터와 ActionGridPanel Demo를 다시 생성합니다. |
 | `Tools > TxT RPG > UI > Prefabs > Rebuild Flexible Layout` | 자식 없는 운영용 FlexibleLayoutPanel Prefab을 다시 생성합니다. |
+| `Tools > TxT RPG > UI > Prefabs > Upgrade Selected Flexible Layouts` | 선택한 기존 Prefab 또는 씬 인스턴스에 BackgroundContentLayer와 참조를 중복 없이 추가합니다. |
 | `Tools > TxT RPG > UI > Demos > Rebuild Flexible Layout Demo` | 세 제품 UI Demo를 중첩한 반응형 Flexible Layout Demo를 다시 생성합니다. |
 | `Tools > TxT RPG > UI > Demos > Rebuild Sample Main Layout Demo` | SampleScene의 1:3:1 주 레이아웃과 세 Demo Prefab을 조합한 샘플을 다시 생성합니다. |
 | `Tools > TxT RPG > Addressables > Register UI Assets` | 기존 운영용 UI Prefab과 공통 스타일을 수명 기반 Addressables 그룹에 등록합니다. |
@@ -193,13 +233,20 @@ Inspector에서 자식 사이 간격은 `Spacing`, ContentLayer 내부 상·하�
 
 Editor fallback Sprite는 미리보기 용도로만 사용합니다. 새 런타임 콘텐츠에 Addressables ID 없이 직접 Sprite만 설정하지 않습니다. 배경 Style에는 Addressables 로딩 전에도 표시할 수 있도록 투명하지 않은 Tint 또는 경량 fallback Sprite를 설정합니다. Panel마다 Shader 속성 값을 변경할 Effect Material은 `Effect Material Mode = Instance`를 사용합니다. Prefab 생성 또는 Demo 재생성 후에는 `Register UI Assets`를 다시 실행하여 주소와 그룹을 동기화합니다.
 
-운영용 프리팹 재생성은 수동으로 적용한 프리팹 변경을 덮어쓸 수 있습니다. 생성기 코드가 권위 있는 구조인지 확인한 뒤 실행하십시오.
+운영용 프리팹 재생성은 수동으로 적용한 프리팹 변경을 덮어쓸 수 있습니다. 생성기 코드가 권위 있는 구조인지 확인한 뒤 실행하십시오. 기존 자산에는 재생성 메뉴 대신 다음 업그레이드 절차를 사용합니다.
+
+1. Project 창에서 기존 FlexibleLayout Prefab을 선택하거나 Hierarchy에서 업그레이드할 인스턴스 루트를 선택합니다.
+2. `Tools > TxT RPG > UI > Prefabs > Upgrade Selected Flexible Layouts`를 실행합니다.
+3. `BackgroundLayer`, `BackgroundContentLayer`, `ContentLayer`, `ForegroundLayer` 순서와 새 참조를 확인합니다.
+4. 씬 인스턴스 변경은 자동 저장되지 않습니다. 결과를 확인한 뒤 직접 저장하거나 Undo로 되돌립니다.
+
+명령은 기존 ContentLayer 자식, Offset, 참조와 Prefab 연결을 유지하며 Prefab을 Unpack하지 않습니다. 같은 대상에 반복 실행해도 레이어를 중복 생성하지 않습니다. Prefab 자산을 선택한 경우에는 해당 자산만 저장합니다.
 
 데모 프리팹을 다시 생성하면 기존 미리보기 항목이 제거될 수 있습니다. 데모 재생성 후에는 Edit Mode 미리보기 새로고침 메뉴도 실행하십시오.
 
 ## 테스트
 
-Edit Mode 테스트는 `Assets/TxTRPG/UI/Tests/Editor`, `Assets/TxTRPG/Application/Tests/Editor`, `Assets/TxTRPG/SceneTransition/Tests/Editor`와 `Assets/TxTRPG/Editor/Tests/Editor`에 있습니다. `EditorMenuTests`는 등록된 20개 메뉴의 전체 경로, 우선순위와 중복 여부를 검증합니다.
+Edit Mode 테스트는 `Assets/TxTRPG/UI/Tests/Editor`, `Assets/TxTRPG/Application/Tests/Editor`, `Assets/TxTRPG/SceneTransition/Tests/Editor`와 `Assets/TxTRPG/Editor/Tests/Editor`에 있습니다. `EditorMenuTests`는 등록된 Editor 메뉴의 전체 경로, 우선순위와 중복 여부를 검증합니다.
 캐릭터 Gameplay 도메인 테스트는 `Assets/TxTRPG/Gameplay/Tests/Editor`에 있습니다.
 
 - `CharacterDomainTests`는 Stat, Health, 피해 계산과 단일 캐릭터 저장 호환성을 검증합니다.
@@ -237,9 +284,11 @@ Sprite Sheet의 여러 상태 Sprite를 선택했다면 모든 행에 같은 Tex
 | `StoryTextPanelDemoTests` | 데모 데이터의 양, 발화자 조합, 로더·패널·기본 배경 연결을 검증합니다. |
 | `StoryTextPanelEditModePreviewTests` | 데모 데이터 개수와 직렬화된 미리보기 항목 개수가 일치하는지 검증합니다. |
 | `CharacterDisplayPanelTests` | 표시 요청, 2D 패널 계층, 조합형 상태 UI, 비상호작용 Health Slider, 선택적 참조와 데모 연결을 검증합니다. |
+| `HealthBarPanelTests` | Padding 크기 표, 초과 Padding 비례 보정, 9가지 제한 정렬, 효과 수명, 이전 멱등성, 생성 Prefab과 Demo 계약을 검증합니다. |
+| `HealthBarPanelPlayModeTests` | 실제 프레임에서 피해 pulse 취소·원상 복구와 루트 크기 변경에 따른 양축 Stretch 재배치를 검증합니다. |
 | `EnemyDisplayPanelTests` | 적 종류와 인스턴스 식별, 반응형 포메이션, View 풀 재사용과 운영·Demo Prefab 연결을 검증합니다. |
 | `ActionGridPanelTests` | 표시 모델 정규화, 열 수와 필요 높이, 세로 중앙·상단 전환, 스크롤 위치 복구, 컨텍스트 메뉴 방향 전환·경계 제한, 운영용 Prefab 경계와 혼합 항목 Demo 상태를 검증합니다. |
-| `FlexibleLayoutPanelTests` | 가중치·고정 크기, 최소·최대 크기, Overflow 계산, 배경 스타일 정책과 생성된 계층형 Prefab 구조를 검증합니다. |
+| `FlexibleLayoutPanelTests` | 가중치·고정 크기, Placeholder, 독립 레이어 배분, 공유·독립 설정 복원, 구형 API 호환성, 업그레이드 반복 실행과 생성된 계층형 Prefab 구조를 검증합니다. |
 | `AssetManagementTests` | AssetScope의 중복 없는 Lease 해제와 Addressables 주소·그룹 등록을 검증합니다. |
 | `SceneTransitionTests` | AppScene 구조와 빌드 순서, Scene 경로 선택·마이그레이션·중복 이름 구분, Additive 로드, 초기 가림, Initializer 순서, 커밋 전 롤백, 커밋 후 대상 Scene 보존과 실패·취소 시 화면·입력 복구를 검증합니다. |
 | `CharacterDomainTests` | 기본 스탯 생성과 검증, 피해·회복 제한, 전투 불능 이벤트, 최대 체력 보정, 저장 Round Trip, 구버전 마이그레이션과 누락 ID 처리를 검증합니다. |

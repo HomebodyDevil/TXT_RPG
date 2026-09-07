@@ -10,6 +10,7 @@ namespace TxTRPG.UI.Editor
         private const string PrefabFolder = "Assets/TxTRPG/UI/Prefabs";
         private const string DemoFolder = "Assets/TxTRPG/UI/DEMO/FlexibleLayoutPanel";
         private const string PanelPrefabPath = PrefabFolder + "/FlexibleLayoutPanel.prefab";
+        private const string PlaceholderPrefabPath = PrefabFolder + "/FlexibleLayoutPlaceholder.prefab";
         private const string DemoPrefabPath = DemoFolder + "/FlexibleLayoutPanelDemo.prefab";
         private const string SampleMainDemoPrefabPath = DemoFolder + "/Sample_Main_FlexibleLayoutPanelDemo.prefab";
         private const string DemoStylePath = DemoFolder + "/FlexibleLayoutBackgroundDemoStyle.asset";
@@ -24,6 +25,7 @@ namespace TxTRPG.UI.Editor
         public static void CreateOrUpdatePrefab()
         {
             EnsureFolder(PrefabFolder);
+            CreateOrUpdatePlaceholderPrefab();
             var root = CreateLayoutObject("FlexibleLayoutPanel", "flexible-layout-root");
             try
             {
@@ -56,6 +58,7 @@ namespace TxTRPG.UI.Editor
         public static void CreateOrUpdateDemo()
         {
             EnsureFolder(DemoFolder);
+            CreateOrUpdatePlaceholderPrefab();
             var storyPrefab = LoadRequiredPrefab(StoryDemoPath);
             var characterPrefab = LoadRequiredPrefab(CharacterDemoPath);
             var actionPrefab = LoadRequiredPrefab(ActionDemoPath);
@@ -77,6 +80,7 @@ namespace TxTRPG.UI.Editor
                     FlexibleLayoutOverflow.ShrinkBelowMinimum,
                     false,
                     TextAnchor.MiddleCenter);
+                ConfigureBackgroundDemoContent(root.GetComponent<FlexibleLayoutPanel>(), false);
 
                 var left = CreateLayoutObject("MainContent", "gameplay-layout-main", root.GetComponent<FlexibleLayoutPanel>().ContentRoot);
                 ConfigureLayout(
@@ -132,6 +136,7 @@ namespace TxTRPG.UI.Editor
         public static void CreateOrUpdateSampleMainDemo()
         {
             EnsureFolder(DemoFolder);
+            CreateOrUpdatePlaceholderPrefab();
             var actionPrefab = LoadRequiredPrefab(ActionDemoPath);
             var storyPrefab = LoadRequiredPrefab(StoryDemoPath);
             var characterPrefab = LoadRequiredPrefab(CharacterDemoPath);
@@ -146,6 +151,7 @@ namespace TxTRPG.UI.Editor
                     FlexibleLayoutAxisPolicy.VerticalWhenNarrow, 720f, 12f,
                     new RectOffset(12, 12, 12, 12), FlexibleLayoutOverflow.ShrinkBelowMinimum,
                     false, TextAnchor.MiddleCenter);
+                ConfigureBackgroundDemoContent(root.GetComponent<FlexibleLayoutPanel>(), true);
                 AddSampleColumn(root, "TMP_FlexibleLayoutPanel", "sample-main-actions", actionPrefab, "ActionGridPanelDemo", 1f, 280f);
                 AddSampleColumn(root, "Text_FlexibleLayoutPanel", "sample-main-story", storyPrefab, "StoryTextPanelDemo", 3f, 560f);
                 AddSampleColumn(root, "Character_FlexibleLayoutPanel", "sample-main-character", characterPrefab, "CharacterDisplayPanelDemo", 1f, 280f);
@@ -211,6 +217,14 @@ namespace TxTRPG.UI.Editor
             backgroundProperties.FindProperty("clipMask").objectReferenceValue = clipMask;
             backgroundProperties.ApplyModifiedPropertiesWithoutUndo();
 
+            var backgroundContentLayer = CreateLayer("BackgroundContentLayer", gameObject.transform);
+            var backgroundContentGroup = backgroundContentLayer.GetComponent<CanvasGroup>();
+            backgroundContentGroup.interactable = false;
+            backgroundContentGroup.blocksRaycasts = false;
+            var backgroundContentMask = backgroundContentLayer.AddComponent<RectMask2D>();
+            backgroundContentMask.enabled = false;
+            var backgroundContentLayout = backgroundContentLayer.AddComponent<FlexibleContentLayoutGroup>();
+
             var contentLayer = CreateLayer("ContentLayer", gameObject.transform);
             var contentMask = contentLayer.AddComponent<RectMask2D>();
             contentMask.enabled = false;
@@ -223,8 +237,79 @@ namespace TxTRPG.UI.Editor
             serialized.FindProperty("contentRoot").objectReferenceValue = contentLayer.transform;
             serialized.FindProperty("contentLayout").objectReferenceValue = contentLayout;
             serialized.FindProperty("contentMask").objectReferenceValue = contentMask;
+            serialized.FindProperty("backgroundContentRoot").objectReferenceValue = backgroundContentLayer.transform;
+            serialized.FindProperty("backgroundContentLayout").objectReferenceValue = backgroundContentLayout;
+            serialized.FindProperty("backgroundContentMask").objectReferenceValue = backgroundContentMask;
+            serialized.FindProperty("backgroundContentCanvasGroup").objectReferenceValue = backgroundContentGroup;
+            serialized.FindProperty("useContentLayoutSettings").boolValue = true;
+            serialized.FindProperty("previousUseContentLayoutSettings").boolValue = true;
             serialized.ApplyModifiedPropertiesWithoutUndo();
             return gameObject;
+        }
+
+        private static void CreateOrUpdatePlaceholderPrefab()
+        {
+            var placeholder = new GameObject(
+                "FlexibleLayoutPlaceholder",
+                typeof(RectTransform),
+                typeof(FlexibleLayoutItem));
+            try
+            {
+                placeholder.GetComponent<FlexibleLayoutItem>().Configure(
+                    FlexibleLayoutSizeMode.Weighted,
+                    1f);
+                PrefabUtility.SaveAsPrefabAsset(placeholder, PlaceholderPrefabPath);
+            }
+            finally
+            {
+                Object.DestroyImmediate(placeholder);
+            }
+        }
+
+        private static void ConfigureBackgroundDemoContent(
+            FlexibleLayoutPanel panel,
+            bool useIndependentSettings)
+        {
+            if (useIndependentSettings)
+            {
+                panel.ConfigureBackgroundLayout(
+                    FlexibleLayoutAxis.Horizontal,
+                    FlexibleLayoutAxisPolicy.VerticalWhenNarrow,
+                    680f,
+                    10f,
+                    new RectOffset(8, 8, 8, 8),
+                    FlexibleLayoutOverflow.ShrinkBelowMinimum,
+                    false,
+                    TextAnchor.MiddleCenter);
+            }
+
+            var placeholderPrefab = LoadRequiredPrefab(PlaceholderPrefabPath);
+            var placeholder = (GameObject)PrefabUtility.InstantiatePrefab(
+                placeholderPrefab,
+                panel.BackgroundContentRoot);
+            placeholder.name = "ReservedBackdropSpace";
+            placeholder.GetComponent<FlexibleLayoutItem>().Configure(
+                FlexibleLayoutSizeMode.Weighted,
+                1f,
+                newMinimumSize: 80f,
+                newMaximumSize: 360f);
+
+            var region = new GameObject(
+                "BackdropRegion",
+                typeof(RectTransform),
+                typeof(FlexibleLayoutItem));
+            region.transform.SetParent(panel.BackgroundContentRoot, false);
+            region.GetComponent<FlexibleLayoutItem>().Configure(
+                FlexibleLayoutSizeMode.Weighted,
+                1f,
+                newMinimumSize: 80f);
+            var visualRoot = CreateLayer("VisualRoot", region.transform);
+            visualRoot.GetComponent<LayoutElement>().ignoreLayout = true;
+            var image = CreateImage(
+                "Tint",
+                visualRoot.transform,
+                new Color32(36, 76, 108, 42));
+            image.raycastTarget = false;
         }
 
         private static GameObject CreateLayer(string name, Transform parent)
