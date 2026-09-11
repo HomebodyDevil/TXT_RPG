@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4b9577c82dabd8049acc49971b59e12e, type: 3}
+  m_Name: MinorHealingPotion
+  m_EditorClassIdentifier: TxTRPG.Content::TxTRPG.Content.Items.ItemDefinition
+  definitionId: item.minor_healing_potion
+  displayNameLocalizationKey: item.minor_healing_potion.name
+  iconAssetId: item.minor_healing_potion.icon
+  effectKind: 1
+  effectAmount: 25

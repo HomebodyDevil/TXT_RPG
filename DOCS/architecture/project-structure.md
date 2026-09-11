@@ -281,3 +281,9 @@ flowchart TD
 - 모바일 Safe Area를 포함한 최종 화면 조합과 기기별 레이아웃 검증
 
 새 영역을 구현할 때 런타임, 플랫폼 어댑터, Editor 제작 도구와 테스트의 경계를 먼저 결정해야 합니다.
+
+### ???꾩씠?쒓낵 寃뚯엫 李?
+- `Assets/TxTRPG/Gameplay/Runtime/Items`: UI? 臾닿????몃깽?좊━ 諛????щ’ ?곹깭?낅땲??
+- `Assets/TxTRPG/Content/Runtime/Items`: ?꾩씠??肄섑뀗痢??뺤쓽? 移댄깉濡쒓렇?낅땲??
+- `Assets/TxTRPG/Application/Runtime/Items`: ?ъ슜 洹쒖튃, Presenter? ?댁쁺 李??섏씠吏?낅땲??
+- `Assets/TxTRPG/UI/Runtime/Windows`: ?섏씠吏 ID 湲곕컲 硫붾돱, 紐⑤떖 ?몄뒪?몄? 李??섎챸 愿由ъ엯?덈떎.

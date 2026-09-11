@@ -146,3 +146,7 @@ Width 변경은 Scrollbar 루트와 Opposite 영역의 너비를 함께 바꾸�
 `Assets/TxTRPG/UI/DEMO/ActionGridPanel/ActionGridPanelDemo.prefab`은 아이템과 스킬, 수량, 비활성 상태, 쿨다운, 단축키, 선택 프레임과 컨텍스트 메뉴를 Edit Mode에서 함께 보여줍니다.
 
 Play Mode에서는 `ActionGridPanelDemoController`가 동일한 데이터를 운영용 API로 다시 바인딩하고 옵션 제공자와 명령 실행기 예제를 연결합니다. Demo의 아이콘과 명령 결과는 검증 전용입니다.
+
+## ???꾩씠???ъ슜
+
+`QuickItemGridPresenter`??`ConfigureBehavior(FillCapacityWithEmptySlots, PreserveSlots, ExecuteDefaultAction)`瑜??몄텧?섏뿬 湲곗〈 `ActionGridPanel`?????щ’?쇰줈 ?ъ슜?⑸땲?? 鍮??щ’? ?꾩튂瑜??좎??섎ŉ, ?깅줉???꾩씠?쒖쓽 ?섎웾??0???섏뼱????ぉ? ?④퀬 ?ъ슜留?鍮꾪솢?깊솕?⑸땲?? 紐⑤떖 李쎌쓣 ?닿린 ?꾩뿉 `GameMenuPanel`??`CloseContextMenu()`瑜??몄텧?⑸땲??

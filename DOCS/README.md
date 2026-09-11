@@ -18,6 +18,7 @@
 | [캐릭터와 플레이어 Gameplay 도메인](architecture/character-domain.md) | 캐릭터 스탯·체력·피해 계산, 플레이어 소유 목록과 복수 캐릭터 저장 경계를 설명합니다. |
 | [캐릭터 콘텐츠 구성](architecture/character-content.md) | Gameplay Definition과 UI Appearance를 묶는 콘텐츠 원본, 카탈로그와 제작 검증 절차를 설명합니다. |
 | [PlayerSession과 새 게임 초기화](architecture/player-session.md) | 기본 캐릭터 선택, 저장 복원, AppScene 수명과 운영 캐릭터 UI 연결을 설명합니다. |
+| [TMP_MainScene 기본 표시와 Preview](architecture/main-scene-default-presentation.md) | 배포용 대체 표시, 상태 구분, 운영 Scene 연결과 격리된 Preview를 설명합니다. |
 | [캐릭터 상태 UI 설계](architecture/character-status-ui.md) | 선택적 상태 Element, HealthBarPanel과 외형·상태 Binder 분리를 설명합니다. |
 | [개발 및 검증 절차](development/workflows.md) | 프리팹 재생성, 데모 미리보기, 테스트와 변경 시 확인 사항을 설명합니다. |
 
@@ -25,6 +26,10 @@
 
 | 문서 | 설명 |
 | --- | --- |
+| [GameMenuPanel 기본 구성과 서비스 연결 지침](instructions/game-menu-prefab-default-composition.md) | 내부 참조 완성, 통합 프리팹, 외부 서비스 연결과 안전한 마이그레이션 기준입니다. |
+| [GameMenuPanel 버튼 확장 및 반응형 배치 지침](instructions/game-menu-responsive-buttons.md) | 수평 스크롤과 줄바꿈, 열 정책, 버튼 외형·명령 분리 및 기존 Scene 보존 기준입니다. |
+| [TMP_MainScene 기본 콘텐츠와 대체 표시 지침](instructions/main-scene-default-content-and-fallbacks.md) | 현재 화면 보존, 배포 기본값, 실패 표시 및 격리된 미리보기의 구현 기준입니다. |
+| [빠른 아이템·메뉴·모달 창 구현 지침](instructions/quick-items-navigation-and-modal-windows.md) | 빠른 슬롯과 소유 데이터 연결, 교체 가능한 메뉴 배치, 공통 모달 호스트 및 잠정 정책을 정의합니다. |
 | [HealthBarPanel 정렬 및 효과 확장 지침](instructions/health-bar-alignment-and-effect-roots.md) | 배경 기준 중앙 정렬, 런타임 배치 설정, 효과용 계층과 수명 관리에 대한 구현 명세입니다. |
 | [HealthBarPanel Padding 기반 크기 지침](instructions/health-bar-padding-driven-sizing.md) | 기존 고정 크기 기본값을 대체하는 자동 크기 계산, Alignment 의미 및 검증 기준입니다. |
 | [FlexibleLayout Placeholder 및 BackgroundContentLayer 구현 지침](instructions/flexible-layout-placeholder-and-background-content.md) | 빈 공간용 프리팹과 두 번째 콘텐츠 레이어의 구현 목표, 호환성 및 검증 기준입니다. |
@@ -62,3 +67,5 @@ flowchart LR
 - Editor 메뉴나 생성 절차가 바뀌면 개발 및 검증 절차 문서를 수정합니다.
 - 문서에 기재된 경로, 클래스명, 메뉴명은 실제 프로젝트와 일치해야 합니다.
 - 구현되지 않은 계획은 현재 구조처럼 서술하지 않고 별도의 후속 작업으로 구분합니다.
+
+- [???꾩씠?쒓낵 寃뚯엫 李?(architecture/quick-items-and-game-windows.md): ?몃깽?좊━, ???щ’, 寃뚯엫 硫붾돱? ?⑥씪 紐⑤떖 李쎌쓽 ?꾩옱 援ы쁽???ㅻ챸?⑸땲??

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using TxTRPG.Gameplay.Characters;
+using TxTRPG.Gameplay.Items;
 
 namespace TxTRPG.Gameplay.Players
 {
@@ -14,7 +15,9 @@ namespace TxTRPG.Gameplay.Players
 
         public PlayerState(
             IEnumerable<CharacterRuntimeState> characters,
-            string activeCharacterInstanceId)
+            string activeCharacterInstanceId,
+            InventoryState inventory = null,
+            QuickItemLoadout quickItems = null)
         {
             if (characters == null)
             {
@@ -41,6 +44,8 @@ namespace TxTRPG.Gameplay.Players
             }
 
             charactersView = this.characters.AsReadOnly();
+            Inventory = inventory ?? new InventoryState();
+            QuickItems = quickItems ?? new QuickItemLoadout();
         }
 
         public event Action<CharacterRuntimeState, CharacterRuntimeState> ActiveCharacterChanged;
@@ -49,6 +54,8 @@ namespace TxTRPG.Gameplay.Players
         public string ActiveCharacterInstanceId { get; private set; }
         public CharacterRuntimeState ActiveCharacter =>
             charactersByInstanceId[ActiveCharacterInstanceId];
+        public InventoryState Inventory { get; }
+        public QuickItemLoadout QuickItems { get; }
 
         public bool TryGetCharacter(
             string characterInstanceId,
@@ -126,10 +133,30 @@ namespace TxTRPG.Gameplay.Players
             {
                 version = PlayerSaveData.CurrentVersion,
                 activeCharacterInstanceId = ActiveCharacterInstanceId,
-                characters = savedCharacters
+                characters = savedCharacters,
+                inventory = CreateInventorySaveData(),
+                quickItems = CreateQuickItemSaveData()
             };
         }
 
+        private List<ItemQuantitySaveData> CreateInventorySaveData()
+        {
+            var saved = new List<ItemQuantitySaveData>();
+            foreach (var pair in Inventory.Quantities)
+                saved.Add(new ItemQuantitySaveData { itemDefinitionId = pair.Key, quantity = pair.Value });
+            return saved;
+        }
+
+        private List<QuickItemSlotSaveData> CreateQuickItemSaveData()
+        {
+            var saved = new List<QuickItemSlotSaveData>();
+            for (var slot = 0; slot < QuickItems.Capacity; slot++)
+            {
+                var id = QuickItems.GetItemDefinitionId(slot);
+                if (id.Length > 0) saved.Add(new QuickItemSlotSaveData { slotIndex = slot, itemDefinitionId = id });
+            }
+            return saved;
+        }
         private void AddCharacterCore(CharacterRuntimeState character)
         {
             if (character == null)

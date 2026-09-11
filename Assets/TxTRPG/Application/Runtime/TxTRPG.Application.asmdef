@@ -5,7 +5,9 @@
     "TxTRPG.Gameplay",
     "TxTRPG.Content",
     "TxTRPG.UI",
-    "TxTRPG.SceneTransition"
+    "TxTRPG.SceneTransition",
+    "Unity.TextMeshPro",
+    "Unity.ugui"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

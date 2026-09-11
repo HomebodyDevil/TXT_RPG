@@ -197,6 +197,16 @@ namespace TxTRPG.UI
             }
         }
 
+        public void ConfigureBehavior(
+            ActionGridPopulationMode population,
+            ActionGridPackingMode packing,
+            GridActivationBehavior activation)
+        {
+            populationMode = population;
+            packingMode = packing;
+            activationBehavior = activation;
+            InitializeVisibleSlots();
+        }
         public void SetServices(IActionMenuProvider options, IActionCommandExecutor executor)
         {
             menuProvider = options;

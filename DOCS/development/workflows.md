@@ -1,5 +1,13 @@
 # 개발 및 검증 절차
 
+## Game menu prefab composition
+
+- Use `Tools > TxT RPG > UI > Prefabs > Rebuild Game Menu and Modal Windows` to rebuild `GameMenuPanel.prefab`, `ModalWindowHost.prefab`, and `GameMenuScreen.prefab` from the existing item catalog. The prefab-only command does not create or modify item content and does not modify a Scene.
+- For an existing screen, retain `GameMenuPanel.prefab` and connect its shared `GameWindowService` with `BindExternalDependencies` or `GameMenuCompositionBinder`. The quick-item grid is optional.
+- For a new standalone screen, place `GameMenuScreen.prefab` directly under a Canvas. Do not add it when the screen already owns a shared modal service; bind the base menu instead.
+- When a Scene has unsaved changes, update the prefab source rather than rebuilding or saving the Scene. This preserves the instance parent, sibling order, RectTransform, and existing overrides.
+- `QuickItemsUiProjectBuilder.ValidateSavedPrefabs` and `QuickItemsUiProjectBuilderTests` validate the base prefab's internal references and empty external references, plus the integrated binder references after save and reload.
+
 ## StoryTextPanel을 씬에서 사용하기
 
 1. 씬에 Canvas를 준비합니다.
@@ -244,6 +252,17 @@ Editor fallback Sprite는 미리보기 용도로만 사용합니다. 새 런타�
 
 데모 프리팹을 다시 생성하면 기존 미리보기 항목이 제거될 수 있습니다. 데모 재생성 후에는 Edit Mode 미리보기 새로고침 메뉴도 실행하십시오.
 
+## TMP_MainScene 기본 표시와 Preview
+
+1. `Tools > TxT RPG > Application > Configure Main Scene Default Content`를 실행합니다.
+2. 생성기는 기존 레이아웃 계층과 RectTransform을 유지하고 운영 Profile, 로컬 대체 Style, 여섯 Preview Profile과 Preview Harness Prefab을 갱신합니다.
+3. 운영 Scene의 `EnemyDisplayPanelDemoLoader`를 제거하고 같은 패널 인스턴스를 `MainScenePresentationController`에 연결합니다.
+4. Preview가 필요하면 `MainScenePreviewHarness.prefab`을 임시로 배치하고 Target Controller와 원하는 `Preview/*.asset`을 연결한 뒤 `Run On Enable`을 켭니다. 검증 후 Harness 인스턴스를 제거합니다.
+5. Preview는 일반 저장 파일과 `PlayerSessionHost`를 사용하지 않으며 아이템이나 적 상태를 운영 저장에 기록하지 않습니다.
+
+오류 검증에는 `MissingConfiguration`, `ReadyEmpty`, `PartialAssetFailure`, `DelayedRecovery`, `InitializationFailure` Profile을 각각 사용합니다. `ReadyEmpty`에서는 안내 Story나 샘플 적이 나타나면 안 됩니다. `DelayedRecovery`에서는 Loading 중 가짜 상호작용을 허용하지 않고 지연 후 최신 요청만 반영되는지 확인합니다.
+
+기존 자산을 이전하려면 Scene을 저장한 뒤 위 메뉴를 실행합니다. 생성기는 Panel Prefab을 재생성하거나 Unpack하지 않습니다. 적용 후 `Main_FlexibleLayoutPanel`의 Prefab Override와 자식 순서를 비교하고, `EnemyDisplayPanelContainer`에 Demo Loader가 남아 있지 않은지 확인합니다.
 ## 테스트
 
 Edit Mode 테스트는 `Assets/TxTRPG/UI/Tests/Editor`, `Assets/TxTRPG/Application/Tests/Editor`, `Assets/TxTRPG/SceneTransition/Tests/Editor`와 `Assets/TxTRPG/Editor/Tests/Editor`에 있습니다. `EditorMenuTests`는 등록된 Editor 메뉴의 전체 경로, 우선순위와 중복 여부를 검증합니다.
@@ -341,3 +360,26 @@ Sprite Sheet의 여러 상태 Sprite를 선택했다면 모든 행에 같은 Tex
 - 현재 구현과 향후 계획이 문서에서 명확하게 구분되는가?
 
 하나라도 해당하면 같은 변경에서 `DOCS` 문서를 갱신합니다.
+
+## 퀵 아이템과 게임 창 생성
+
+1. Scene 배치까지 새로 구성하려면 먼저 `TMP_MainScene`을 저장한 다음 `Tools > TxT RPG > Application > Rebuild Quick Items and Game Windows`를 실행합니다. Scene에 미저장 변경이 있으면 생성기는 어떤 자산도 변경하기 전에 중단합니다.
+2. Scene을 변경하지 않고 운영 Prefab만 갱신하려면 `Tools > TxT RPG > UI > Prefabs > Rebuild Game Menu and Modal Windows`를 실행합니다.
+3. 전체 생성기는 기존 `ActionGridPanel`을 유지하고 바로 아래에 `GameMenuPanel`을 배치하며, Canvas 최상위에 모달 호스트를 배치합니다.
+4. 기존 Scene 인스턴스의 부모, 형제 순서, `FlexibleLayoutItem`, 창 서비스 연결과 Prefab Override를 보존해야 한다면 전체 생성기를 실행하지 말고 먼저 Prefab 전용 메뉴를 실행한 뒤 인스턴스의 Override를 검토합니다.
+
+개발자는 `ItemCatalog`에 `ItemDefinition`을 추가하고 게임 획득 시점에 `PlayerState.Inventory.Add`를 호출하여 실제 수량을 반영합니다. `QuickItemService.TryRegister`, `TryUnregister`, `UseAsync`를 사용하면 마우스·터치·키보드·게임패드 UI가 같은 규칙을 사용합니다. 기본 페이지 ID는 `system`, `inventory`, `status`이며 표시 순서와 호출 여부는 `GameMenuPanel`의 바인딩 목록에서 변경할 수 있습니다.
+
+### GameMenuPanel 설정
+
+1. `GameMenuPanel/Viewport/Content`의 `GameMenuLayoutGroup`에서 `Layout Mode`를 선택합니다.
+2. `Button Size`, `Spacing`, `Padding`, 수평·수직 정렬을 설정합니다. `Wrap`에서는 `AutoFit` 또는 `MaximumColumns`와 열 상한을 설정합니다.
+3. 루트 `GameMenuPanel`에서 수평 스크롤바의 `Visibility`, `Space Mode`, 높이와 간격을 설정합니다. `Hidden`은 시각 요소만 숨기며 스크롤 입력은 유지합니다.
+4. Inspector의 계산 열 수, 행 수, 필요 너비·높이와 `Insufficient Space`를 확인합니다. Wrap에 필요한 높이가 부모로부터 제공되지 않으면 `FlexibleLayoutItem`의 고정 크기 또는 최소 크기를 조정합니다.
+5. 새 버튼은 `Content` 아래에 추가하고 `ButtonRoot/VisualRoot` 계층을 유지합니다. `GameMenuButtonView`의 Button, Background, Icon, Label, Border, EffectOverlay를 연결한 뒤 `GameMenuPanel.Buttons`에 안정적인 페이지 ID로 등록합니다.
+
+독립 미리보기는 `Assets/TxTRPG/UI/DEMO/GameMenuPanel/GameMenuPanelDemo.prefab`을 Prefab Mode로 열어 확인합니다. 루트 너비를 바꾸고 `HorizontalScroll`과 `Wrap`을 전환하여 한 줄 스크롤, 열 개행, 마지막 행 정렬과 부족 공간 표시를 확인합니다. 이 Demo는 창 서비스가 없는 상태이므로 버튼을 눌러 실제 창을 여는 용도가 아니라 레이아웃과 외형을 검증하는 용도입니다.
+
+런타임에서는 `ConfigureLayout(...)`, `ConfigureScrollbar(...)`, `SetItemVisible(pageId, visible)`를 호출한 뒤 별도 매 프레임 갱신 없이 한 번의 예약된 레이아웃 갱신으로 반영됩니다. 외형 애니메이션은 `VisualRoot` 또는 개별 Graphic에만 적용하고 `ButtonRoot`의 크기와 위치는 변경하지 않습니다.
+
+기존 자산은 Prefab 전용 재생성 메뉴로 이전합니다. 이 메뉴는 `GameMenuPanel.prefab`의 GUID를 유지하면서 ScrollRect, Viewport, Content, 버튼 View와 선택적 스크롤바 계층을 다시 만듭니다. 사용자 정의 외형을 운영 Prefab 자체에 직접 수정했다면 먼저 Prefab Variant나 별도 버튼 Prefab으로 옮긴 뒤 재생성합니다. Scene 인스턴스의 Override는 자동 저장하지 않으며, 적용 후 Inspector의 Prefab Override 창에서 기존 위치와 서비스 참조를 확인합니다.
