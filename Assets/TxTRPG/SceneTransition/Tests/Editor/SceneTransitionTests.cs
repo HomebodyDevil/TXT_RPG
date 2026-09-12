@@ -14,6 +14,16 @@ namespace TxTRPG.SceneTransition.Tests
     public sealed class SceneTransitionTests
     {
         [Test]
+        public void EditorPlayStartPolicy_TargetsValidatedAppScene()
+        {
+            Assert.That(EditorPlayStartPolicy.IsEnabled, Is.True);
+            Assert.That(EditorPlayStartPolicy.IsConfigured, Is.True);
+            Assert.That(EditorSceneManager.playModeStartScene, Is.SameAs(
+                AssetDatabase.LoadAssetAtPath<SceneAsset>(EditorPlayStartPolicy.AppScenePath)));
+            Assert.That(EditorPlayStartPolicy.TryValidateConfiguration(out var error), Is.True, error);
+        }
+
+        [Test]
         public void GeneratedAppScene_HasRequiredHierarchyReferencesAndBuildOrder()
         {
             SceneTransitionPrefabBuilder.CreateOrUpdateAssets();

@@ -23,6 +23,16 @@ Content Scene                                 Additive로 하나씩 교체
 
 제품 실행 경로는 Build Settings 0번인 `Assets/Scenes/AppScene.unity`에서 시작합니다. `AppSceneRoot`는 기본 콘텐츠인 `Assets/Scenes/TMP_MainScene.unity`를 로드합니다. 런타임 데이터는 Scene 이름이 아니라 전체 프로젝트 경로를 사용하므로, 같은 이름을 가진 Scene이 여러 폴더에 있어도 대상을 모호하지 않게 식별합니다.
 
+## Editor Play 시작 정책
+
+`EditorPlayStartPolicy`는 Editor에서 어떤 Scene을 열어 둔 상태인지와 관계없이 일반 Play를 `Assets/Scenes/AppScene.unity`에서 시작하게 합니다. 이 정책은 `EditorSceneManager.playModeStartScene`만 설정하며, AppRoot를 복제하거나 콘텐츠 Scene에 별도 Bootstrap을 추가하지 않습니다. 따라서 `TMP_MainScene`을 편집하다가 Play해도 제품과 동일하게 AppScene의 `PlayerSessionHost`, `SceneTransitionService`, 초기 콘텐츠 로드 순서를 거칩니다. Play를 종료하면 Unity가 원래 열려 있던 Scene 구성과 활성 Scene을 복원합니다.
+
+프로젝트별 활성 상태와 정책이 소유한 이전 시작 Scene GUID는 `ProjectSettings/TxTRPGEditorPlaySettings.asset`에 저장됩니다. 자동 초기화는 이미 다른 시작 Scene이 지정되어 있으면 이를 덮어쓰지 않습니다. 개발자가 Project Settings에서 명시적으로 정책을 적용한 경우에만 이전 값을 백업하며, 정책을 끌 때 현재 값이 여전히 AppScene인 경우에만 이전 값으로 복원합니다. 정책 적용 후 개발자가 다시 바꾼 시작 Scene은 오래된 백업으로 덮어쓰지 않습니다.
+
+Play 직전에는 AppScene 자산, Build Settings 첫 활성 Scene, AppRoot의 `Load Initial Content On Start`, 최초 콘텐츠 경로를 검증합니다. Scene에 미저장 변경이 있으면 Unity의 저장 확인을 사용하고, 취소하면 Play도 취소합니다. 저장되지 않은 Prefab Stage는 디스크에서 로드되는 결과와 다를 수 있으므로 Play를 중단하고 저장을 요청합니다. Unity Test Runner의 Play Mode 실행에는 이 정책을 적용하지 않습니다.
+
+이 기능은 Editor 편의를 위한 정책입니다. Player 빌드의 시작 순서와 런타임 Scene 전환 계약은 계속 Build Settings와 `AppSceneRoot`가 결정합니다.
+
 ## Scene 경로 작성과 검증
 
 `AppSceneRoot.initialContentScenePath`에는 `[ScenePath(excludeAppScene: true)]`가 적용되어 있습니다. Inspector에서는 직접 문자열을 입력하는 대신 Build Settings에 등록되어 있고 활성화된 Scene을 `Scene 이름 (전체 경로)` 형식의 목록에서 선택합니다. AppScene은 콘텐츠 대상으로 선택할 수 없습니다.
