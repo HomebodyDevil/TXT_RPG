@@ -51,6 +51,20 @@ ActionGridCell
 ```
 
 `ActionGridCell` 루트는 `GridLayoutGroup`이 위치와 크기를 제어하는 레이아웃 전용 Transform입니다. 테두리 색상과 Outline은 `Border`에 적용하고, 흔들림·확대·회전·노이즈 같은 항목 연출은 `ContentRoot`에 적용합니다. 셀 루트에 Animator가 위치나 크기를 기록하면 GridLayoutGroup의 재배치와 충돌할 수 있으므로 사용하지 않습니다.
+## Cell 아이콘 크기 정책
+
+아이콘 크기 정책은 `ActionGridCell`이 단독으로 소유하며 `ActionGridPanel`에는 중복 저장하지 않습니다. Inspector의 `Icon Layout`에서 다음 방식을 선택합니다.
+
+| 방식 | 동작 |
+| --- | --- |
+| `RelativeToContent` | `ContentRoot`의 실제 너비와 높이에 `Icon Area Ratio`를 각각 곱한 중앙 정렬 Rect를 사용합니다. 기본값은 0.9이며 Sprite의 `Preserve Aspect`는 유지됩니다. |
+| `FixedPadding` | `ContentRoot` 안에서 Left·Right·Top·Bottom 여백을 Canvas UI 단위로 적용합니다. 기존 표시를 재현하는 값은 각 방향 10입니다. |
+
+45×45 Cell은 `ContentRoot`의 각 방향 3 여백을 제외하면 39×39입니다. `RelativeToContent = 0.9`일 때 Icon Rect는 35.1×35.1이고, `FixedPadding = 10`일 때에는 19×19입니다. 비율은 Cell 전체가 아니라 `ContentRoot`를 기준으로 합니다.
+
+신규 필드가 없는 기존 직렬화 데이터는 enum의 0번 값인 `FixedPadding`을 사용하므로 외형이 갑자기 변경되지 않습니다. 운영 `ActionGridCell.prefab`과 생성기의 신규 기본값은 `RelativeToContent = 0.9`입니다. 런타임에서는 `ConfigureIconSizing()`으로 정책을 변경할 수 있으며, 잘못된 비율과 음수·과도한 여백은 안전한 범위로 제한됩니다. 크기 갱신은 활성화, Rect 크기 변경과 설정 변경 시에만 수행하고 매 프레임 폴링하지 않습니다.
+
+아이콘 Rect만 이 정책의 대상입니다. 수량, 단축키, 쿨다운, 상태 Overlay, 선택 프레임과 Button 클릭 영역은 변경하지 않습니다. 향후 아이콘 연출을 추가할 때에는 레이아웃이 소유하는 Icon Rect 자체의 Anchor를 Animator로 덮어쓰지 말고 그 아래 별도 효과 자식을 두어야 합니다.
 
 컨텍스트 메뉴는 `Assets/TxTRPG/UI/Prefabs/ActionContextMenu.prefab`이며 선택한 항목에 대해 외부 `IActionMenuProvider`가 반환한 옵션만 동적으로 표시합니다. `ContextMenuAnchor`는 패널 전체를 덮는 마스크 밖 오버레이 좌표계입니다. 메뉴는 선택 셀의 RectTransform을 이 좌표계로 변환하여 오른쪽, 왼쪽, 아래쪽, 위쪽 순으로 배치 가능한 위치를 선택하고, 마지막으로 패널 경계 안에 좌표를 제한합니다.
 
@@ -163,3 +177,22 @@ Play Mode에서는 `ActionGridPanelDemoController`가 동일한 데이터를 운
 `ActionGridLayoutMode.ExactColumns`는 기존 enum 값 뒤에 추가되어 직렬화 호환성을 유지합니다. 이 모드는 개발자가 지정한 열 수와 최소 Cell 크기를 그대로 사용합니다. 기존 `FixedColumns`는 설정값을 최대 열 수로 해석하고 Viewport가 좁아지면 열 수를 줄이는 현재 동작을 유지합니다.
 
 런타임 호출자는 `ConfigureLayout(...)`으로 열 정책, 열 수, Cell 크기, Spacing, Padding, 전체 및 마지막 행 정렬, 세로 배치를 한 번에 갱신할 수 있습니다. 호출 즉시 Content와 Scrollbar 레이아웃이 다시 계산되며 매 프레임 갱신을 추가하지 않습니다.
+## 빈 슬롯 크기 정책
+
+`EmptySlot`은 아이템 `Icon`과 별개의 표시이므로 `ActionGridCell` Inspector의 `Empty Slot Layout`에서 독립적으로 설정합니다. 두 정책은 같은 안전한 크기 계산 규칙만 공유하며 서로의 모드, 비율, 여백 또는 Rect를 변경하지 않습니다.
+
+| 방식 | 동작 |
+| --- | --- |
+| `RelativeToContent` | `ContentRoot`의 너비와 높이에 `Empty Slot Area Ratio`를 각각 곱한 중앙 정렬 Rect를 사용합니다. 운영 공용 Prefab의 기본값은 0.9입니다. |
+| `FixedPadding` | `ContentRoot` 안에서 `Empty Slot Padding`을 Canvas UI 단위로 적용합니다. 기존 외형 보존값은 각 방향 14입니다. |
+
+`ContentRoot`가 40×40이면 비율 0.9에서 `EmptySlot`은 36×36이고, 고정 여백 14에서는 12×12입니다. 비율 모드에서는 고정 여백을 중첩하지 않습니다. 신규 필드가 없는 기존 직렬화 데이터는 enum 0번 값인 `FixedPadding`으로 기존 외형을 유지하고, 실제 전환할 Prefab에만 `RelativeToContent`를 명시적으로 저장합니다.
+
+런타임에서는 `ConfigureEmptySlotSizing()`으로 정책을 변경합니다. 최초 활성화, 부모 Rect 변경, `BindEmpty()`와 풀 재사용 시 동일한 설정을 다시 적용하지만 활성 상태를 크기 계산 과정에서 변경하지 않습니다. `Bind()`는 기존대로 빈 슬롯을 숨기며, `BindEmpty()`는 아이콘을 비운 뒤 빈 슬롯을 표시합니다.
+## 비율 및 고정 상한 크기 정책
+
+`RelativeWithMaxSize`는 기존 enum 값 뒤에 추가된 모드이며 Icon과 EmptySlot에 독립적으로 설정합니다. `ContentRoot`의 실제 크기를 W×H, 비율을 R, 최대 크기를 MaxWidth×MaxHeight라고 할 때 최종 Rect는 축별로 `min(max(0, W) × R, MaxWidth)`와 `min(max(0, H) × R, MaxHeight)`를 사용하고 중앙에 배치합니다. Padding은 이 모드에서 적용하지 않습니다.
+
+운영 `ActionGridCell.prefab`의 Icon과 EmptySlot 기본 설정은 모두 `Ratio = 0.9`, `Maximum Size = 64×64`입니다. 작은 Cell은 비율에 따라 축소되고 큰 Cell은 64×64를 넘지 않습니다. 최대 크기는 물리 픽셀이 아니라 Canvas UI 단위이며, Icon의 Sprite는 기존 `Preserve Aspect`를 유지합니다.
+
+기존 `FixedPadding`과 `RelativeToContent`의 enum 번호와 계산은 바뀌지 않습니다. 기존 `ConfigureIconSizing()` 및 `ConfigureEmptySlotSizing()`의 위치 인수도 유지하며, 상한 정책은 `ConfigureIconRatioCappedSizing()`과 `ConfigureEmptySlotRatioCappedSizing()`으로 명시적으로 설정합니다. 비율의 NaN·Infinity는 0.9, 최대 크기의 NaN·Infinity는 축별 64로 복구하고 음수 상한은 0으로 제한합니다.

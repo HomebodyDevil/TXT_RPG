@@ -26,6 +26,99 @@ namespace TxTRPG.UI.Editor
             Debug.Log($"Action grid prefabs created at {PrefabFolder}.");
         }
 
+        [MenuItem(
+            TxTRPGEditorMenuPaths.UiPrefabs + "Upgrade Action Grid Cell Icon Layout",
+            false,
+            TxTRPGEditorMenuPriorities.Rebuild + 1)]
+        public static void UpgradeCellIconLayout()
+        {
+            var root = PrefabUtility.LoadPrefabContents(CellPath);
+            try
+            {
+                var cell = root.GetComponent<ActionGridCell>()
+                    ?? throw new UnityException("ActionGridCell component was not found.");
+                cell.ConfigureIconSizing(ActionGridIconSizingMode.RelativeToContent, 0.9f);
+cell.ConfigureEmptySlotSizing(ActionGridIconSizingMode.RelativeToContent, 0.9f);
+                var contentRoot = root.transform.Find("ContentRoot") as RectTransform;
+                if (contentRoot != null)
+                {
+                    contentRoot.anchorMin = Vector2.zero;
+                    contentRoot.anchorMax = Vector2.one;
+                    contentRoot.offsetMin = new Vector2(3f, 3f);
+                    contentRoot.offsetMax = new Vector2(-3f, -3f);
+                }
+                EditorUtility.SetDirty(cell);
+                PrefabUtility.SaveAsPrefabAsset(root, CellPath);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+            AssetDatabase.SaveAssets();
+            Debug.Log("ActionGridCell icon layout upgraded to RelativeToContent (0.9).");
+        }
+
+        [MenuItem(
+            TxTRPGEditorMenuPaths.UiPrefabs + "Upgrade Action Grid Cell Empty Slot Layout",
+            false,
+            TxTRPGEditorMenuPriorities.Rebuild + 2)]
+        public static void UpgradeCellEmptySlotLayout()
+        {
+            var root = PrefabUtility.LoadPrefabContents(CellPath);
+            try
+            {
+                var cell = root.GetComponent<ActionGridCell>()
+                    ?? throw new UnityException("ActionGridCell component was not found.");
+cell.ConfigureEmptySlotSizing(ActionGridIconSizingMode.RelativeToContent, 0.9f);
+                var contentRoot = root.transform.Find("ContentRoot") as RectTransform;
+                if (contentRoot != null)
+                {
+                    contentRoot.anchorMin = Vector2.zero;
+                    contentRoot.anchorMax = Vector2.one;
+                    contentRoot.offsetMin = new Vector2(3f, 3f);
+                    contentRoot.offsetMax = new Vector2(-3f, -3f);
+                }
+                EditorUtility.SetDirty(cell);
+                PrefabUtility.SaveAsPrefabAsset(root, CellPath);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+            AssetDatabase.SaveAssets();
+            Debug.Log("ActionGridCell empty slot layout upgraded to RelativeToContent (0.9).");
+        }
+        [MenuItem(
+            TxTRPGEditorMenuPaths.UiPrefabs + "Upgrade Action Grid Cell Ratio Capped Layout",
+            false,
+            TxTRPGEditorMenuPriorities.Rebuild + 3)]
+        public static void UpgradeCellRatioCappedLayout()
+        {
+            var root = PrefabUtility.LoadPrefabContents(CellPath);
+            try
+            {
+                var cell = root.GetComponent<ActionGridCell>()
+                    ?? throw new UnityException("ActionGridCell component was not found.");
+                cell.ConfigureIconRatioCappedSizing(0.9f, new Vector2(64f, 64f));
+                cell.ConfigureEmptySlotRatioCappedSizing(0.9f, new Vector2(64f, 64f));
+                var contentRoot = root.transform.Find("ContentRoot") as RectTransform;
+                if (contentRoot != null)
+                {
+                    contentRoot.anchorMin = Vector2.zero;
+                    contentRoot.anchorMax = Vector2.one;
+                    contentRoot.offsetMin = new Vector2(3f, 3f);
+                    contentRoot.offsetMax = new Vector2(-3f, -3f);
+                }
+                EditorUtility.SetDirty(cell);
+                PrefabUtility.SaveAsPrefabAsset(root, CellPath);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+            AssetDatabase.SaveAssets();
+            Debug.Log("ActionGridCell Icon and EmptySlot upgraded to RelativeWithMaxSize (0.9, 64x64).");
+        }
         private static ActionGridCell BuildCellPrefab()
         {
             var root = CreateUiObject("ActionGridCell");
@@ -95,6 +188,8 @@ namespace TxTRPG.UI.Editor
                 properties.FindProperty("shortcutLabel").objectReferenceValue = shortcut;
                 properties.FindProperty("emptySlotVisual").objectReferenceValue = empty.gameObject;
                 properties.ApplyModifiedPropertiesWithoutUndo();
+                cell.ConfigureIconRatioCappedSizing(0.9f, new Vector2(64f, 64f));
+                cell.ConfigureEmptySlotRatioCappedSizing(0.9f, new Vector2(64f, 64f));
 
                 return PrefabUtility.SaveAsPrefabAsset(root, CellPath).GetComponent<ActionGridCell>();
             }
