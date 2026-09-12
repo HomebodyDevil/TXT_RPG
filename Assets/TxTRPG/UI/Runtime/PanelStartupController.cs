@@ -7,6 +7,12 @@ using UnityEngine.UI;
 
 namespace TxTRPG.UI
 {
+    public interface IPanelInitialLayoutParticipant
+    {
+        void BeginInitialContentSetup();
+        bool CompleteInitialContentSetup();
+        void CancelInitialContentSetup();
+    }
     public enum PanelStartupState { Idle, Loading, Applying, WaitingForLayout, Revealing, Ready, Failed, Cancelled }
     public enum MissingInitialDataPolicy { ShowEmpty, PreserveAuthoredState, StayHidden }
 
@@ -33,6 +39,7 @@ namespace TxTRPG.UI
 
         private CancellationTokenSource cancellation;
         private Task initializationTask = Task.CompletedTask;
+        private IPanelInitialLayoutParticipant[] initialLayoutParticipants = Array.Empty<IPanelInitialLayoutParticipant>();
         public PanelStartupState State { get; private set; } = PanelStartupState.Idle;
         public Task WhenReady => initializationTask;
 
@@ -67,13 +74,20 @@ namespace TxTRPG.UI
             cancellation?.Dispose();
             cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var token = cancellation.Token;
+            initialLayoutParticipants = FindInitialLayoutParticipants();
+            foreach (var participant in initialLayoutParticipants) participant.BeginInitialContentSetup();
             revealTransition?.PrepareHidden(canvasGroup);
             SetInputEnabled(false);
             try
             {
                 if (initialDataLoader == null || !initialDataLoader.HasInitialData)
                 {
-                    if (missingDataPolicy == MissingInitialDataPolicy.StayHidden) { State = PanelStartupState.Ready; return; }
+                    if (missingDataPolicy == MissingInitialDataPolicy.StayHidden)
+                    {
+                        foreach (var participant in initialLayoutParticipants) participant.CompleteInitialContentSetup();
+                        State = PanelStartupState.Ready;
+                        return;
+                    }
                 }
                 else
                 {
@@ -85,6 +99,7 @@ namespace TxTRPG.UI
                 State = PanelStartupState.WaitingForLayout;
                 Canvas.ForceUpdateCanvases();
                 if (layoutRoot != null) LayoutRebuilder.ForceRebuildLayoutImmediate(layoutRoot);
+                foreach (var participant in initialLayoutParticipants) participant.CompleteInitialContentSetup();
                 await Task.Yield();
                 token.ThrowIfCancellationRequested();
                 State = PanelStartupState.Revealing;
@@ -93,14 +108,26 @@ namespace TxTRPG.UI
                 SetInputEnabled(true);
                 State = PanelStartupState.Ready;
             }
-            catch (OperationCanceledException) { State = PanelStartupState.Cancelled; }
+            catch (OperationCanceledException) { foreach (var participant in initialLayoutParticipants) participant.CancelInitialContentSetup(); State = PanelStartupState.Cancelled; }
             catch (Exception exception)
             {
+                foreach (var participant in initialLayoutParticipants) participant.CompleteInitialContentSetup();
                 State = PanelStartupState.Failed;
                 Debug.LogError($"Panel startup failed: {exception.Message}", this);
                 if (missingDataPolicy != MissingInitialDataPolicy.StayHidden)
                 { revealTransition?.CompleteImmediately(canvasGroup); SetInputEnabled(true); }
             }
+        }
+
+        private IPanelInitialLayoutParticipant[] FindInitialLayoutParticipants()
+        {
+            var root = layoutRoot != null ? layoutRoot : transform as RectTransform;
+            if (root == null) return Array.Empty<IPanelInitialLayoutParticipant>();
+            var behaviours = root.GetComponentsInChildren<MonoBehaviour>(true);
+            var participants = new System.Collections.Generic.List<IPanelInitialLayoutParticipant>();
+            foreach (var behaviour in behaviours)
+                if (behaviour is IPanelInitialLayoutParticipant participant) participants.Add(participant);
+            return participants.ToArray();
         }
 
         private void SetInputEnabled(bool enabled)

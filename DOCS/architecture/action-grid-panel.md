@@ -93,6 +93,14 @@ ActionGridPanel은 표시 Cell 수, 현재 열 수, Cell 높이, 세로 Spacing�
 
 슬롯 제거나 화면 확장으로 overflow 상태에서 fitting 상태로 전환되면 ScrollRect의 관성과 스크롤 위치를 상단으로 초기화한 뒤 가운데 정렬합니다. Content의 상단 Anchor와 Pivot은 변경하지 않으며 GridLayoutGroup의 `Upper*`와 `Middle*` 정렬만 전환하므로, 런타임 중 Anchor 변경으로 인한 위치 이동을 방지합니다.
 
+## 최초 스크롤 준비
+
+각 `ActionGridPanel` 인스턴스는 최초 표시 준비가 끝날 때까지 한 번만 유효한 상단 위치 확정을 보류합니다. 셀과 Content 높이가 계산되고 Viewport 크기가 0보다 큰 첫 Canvas 렌더 직전에 overflow이면 관성을 정지하고 첫 행이 상단 Padding 아래에서 시작하도록 맞춥니다. 콘텐츠가 Viewport 안에 들어오면 기존 `Top` 또는 `CenterWhenContentFits` 배치를 유지합니다.
+
+`PanelStartupController`는 하위의 `IPanelInitialLayoutParticipant`를 수집하여 초기 로드 전에 준비를 보류하고, 데이터 적용과 강제 레이아웃 이후 완료합니다. `QuickItemGridPresenter`도 비동기 PlayerSession 준비 전후로 같은 계약을 사용합니다. 빈 결과와 실패도 완료 상태로 처리하며, 취소된 준비는 다음 활성화에서 이어집니다.
+
+최초 확정 이후 `SetEntries`, 수량·아이콘 갱신, 크기 변경과 일반 레이아웃 재계산은 스크롤 위치를 초기화하지 않습니다. 비동기 초기 데이터를 사용하는 로더는 인스턴스의 최초 준비 과정에서만 `BeginInitialContentSetup`과 `CompleteInitialContentSetup`을 한 쌍으로 호출합니다. 공용 `ConfigurableScrollbarController`에는 초기 위치 정책을 넣지 않으므로 StoryTextPanel의 하단 스크롤 정책에는 영향을 주지 않습니다.
+
 `Compact Forward`는 Entry 제거 후 데이터 인덱스를 먼저 압축하며, 불완전 행 정렬은 압축된 활성 Cell 결과에만 적용됩니다. `Entries Only`에서는 Entry Cell 수를 기준으로 마지막 행을 판단합니다. `Fill Capacity With Empty Slots`에서는 빈 슬롯도 활성 Cell이므로 Capacity까지 포함한 수를 기준으로 판단하며, 마지막 행이 열 수만큼 차 있으면 추가 offset을 적용하지 않습니다.
 
 `ConfigurableScrollbarController`는 스크롤바 표시 상태와 Viewport 예약 영역이 실제로 변경될 때 `ViewportLayoutChanged`를 발생시킵니다. `ActionGridPanel`은 이 알림을 구독하여 같은 호출 흐름에서 열 수와 슬롯 정렬을 다시 계산하므로 한 프레임 지연에 의존하지 않습니다. 공용 컨트롤러는 StoryTextPanel 같은 기존 사용처의 Auto 동작을 유지하기 위해 콘텐츠 높이와 Viewport 크기 변화를 감시하지만, 값이 실제로 달라진 경우에만 `Refresh()`를 호출하며 매 프레임 레이아웃을 재계산하지 않습니다.

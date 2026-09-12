@@ -421,7 +421,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 245895500473356421, guid: a8df080f67f80eb4fa0b14d4cb60df66, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 36.644043
+      value: 38.421143
       objectReference: {fileID: 0}
     - target: {fileID: 245895500473356421, guid: a8df080f67f80eb4fa0b14d4cb60df66, type: 3}
       propertyPath: m_AnchoredPosition.x
@@ -977,7 +977,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7242156928449942662, guid: 710e05e333125844981c6a744671bbf0, type: 3}
       propertyPath: weight
-      value: 0.3
+      value: 0.2
       objectReference: {fileID: 0}
     - target: {fileID: 8611826733746421032, guid: 710e05e333125844981c6a744671bbf0, type: 3}
       propertyPath: m_AnchorMax.x
@@ -1030,6 +1030,18 @@ PrefabInstance:
     - target: {fileID: 8758868297217110278, guid: 710e05e333125844981c6a744671bbf0, type: 3}
       propertyPath: m_ActiveFontFeatures.Array.size
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8866260308860533340, guid: 710e05e333125844981c6a744671bbf0, type: 3}
+      propertyPath: layoutMode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8866260308860533340, guid: 710e05e333125844981c6a744671bbf0, type: 3}
+      propertyPath: buttonSize.x
+      value: 80
+      objectReference: {fileID: 0}
+    - target: {fileID: 8866260308860533340, guid: 710e05e333125844981c6a744671bbf0, type: 3}
+      propertyPath: buttonSize.y
+      value: 50
       objectReference: {fileID: 0}
     - target: {fileID: 8967712299652669829, guid: 710e05e333125844981c6a744671bbf0, type: 3}
       propertyPath: m_Name
@@ -1598,17 +1610,25 @@ PrefabInstance:
       propertyPath: m_Size
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 725699211715778544, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 901234567890123456, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 901234567890123457, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 2753455743794963697, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 110
+      value: 146.11111
       objectReference: {fileID: 0}
     - target: {fileID: 2753455743794963697, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 25.186432
+      value: 37.37429
       objectReference: {fileID: 0}
     - target: {fileID: 2762015896075174702, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       propertyPath: m_Name
@@ -1616,23 +1636,23 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2799687139059118830, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       propertyPath: m_SizeDelta.x
-      value: -48
+      value: -30.000004
       objectReference: {fileID: 0}
     - target: {fileID: 4923355288798784966, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       propertyPath: capacity
-      value: 5
+      value: 16
       objectReference: {fileID: 0}
     - target: {fileID: 4923355288798784966, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       propertyPath: spacing.x
-      value: 15
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 4923355288798784966, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       propertyPath: spacing.y
-      value: 15
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 4923355288798784966, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       propertyPath: fixedColumns
-      value: 5
+      value: 6
       objectReference: {fileID: 0}
     - target: {fileID: 4923355288798784966, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       propertyPath: gridAlignment
@@ -1640,7 +1660,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4923355288798784966, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       propertyPath: initialCapacity
-      value: 5
+      value: 16
       objectReference: {fileID: 0}
     - target: {fileID: 4923355288798784966, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       propertyPath: maximumCellSize.x
@@ -1665,6 +1685,14 @@ PrefabInstance:
     - target: {fileID: 5197199657193233500, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       propertyPath: m_IsActive
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7049455077455274752, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
+      propertyPath: gap
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 7049455077455274752, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
+      propertyPath: width
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 7049455077455274752, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       propertyPath: spaceMode

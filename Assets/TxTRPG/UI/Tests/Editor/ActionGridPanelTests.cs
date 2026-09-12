@@ -556,6 +556,37 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        public void InitialContentCompletion_ResetsOverflowToTopOnlyOnce()
+        {
+            ActionGridPrefabBuilder.CreateOrUpdatePrefabs();
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/TxTRPG/UI/Prefabs/ActionGridPanel.prefab");
+            var instance = Object.Instantiate(prefab);
+            try
+            {
+                var panel = instance.GetComponent<ActionGridPanel>();
+                var scrollRect = instance.GetComponentInChildren<ScrollRect>(true);
+                panel.BeginInitialContentSetup();
+                panel.SetCapacity(40);
+                Canvas.ForceUpdateCanvases();
+                scrollRect.content.anchoredPosition = new Vector2(
+                    scrollRect.content.anchoredPosition.x, 120f);
+
+                Assert.That(panel.CompleteInitialContentSetup(), Is.True);
+                Assert.That(panel.HasAppliedInitialScroll, Is.True);
+                Assert.That(scrollRect.verticalNormalizedPosition, Is.EqualTo(1f).Within(0.001f));
+                Assert.That(scrollRect.content.anchoredPosition.y, Is.Zero.Within(0.5f));
+
+                scrollRect.verticalNormalizedPosition = 0.35f;
+                Canvas.ForceUpdateCanvases();
+                panel.SetEntries(CreateEntries(40), 40);
+                Canvas.ForceUpdateCanvases();
+                Assert.That(scrollRect.verticalNormalizedPosition, Is.EqualTo(0.35f).Within(0.02f));
+            }
+            finally { Object.DestroyImmediate(instance); }
+        }
+
+        [Test]
         public void AddingEntry_ReplacesFirstEmptySlotAndPreservesCapacitySlots()
         {
             ActionGridPrefabBuilder.CreateOrUpdatePrefabs();

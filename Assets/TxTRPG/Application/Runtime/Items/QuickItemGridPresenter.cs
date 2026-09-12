@@ -36,6 +36,7 @@ namespace TxTRPG.Application.Items
 
         private async void OnEnable()
         {
+            panel?.BeginInitialContentSetup();
             lifetime = new CancellationTokenSource();
             try
             {
@@ -43,9 +44,10 @@ namespace TxTRPG.Application.Items
                 if (host == null) throw new InvalidOperationException("QuickItemGridPresenter requires a PlayerSessionHost.");
                 await host.EnsureInitializedAsync(lifetime.Token);
                 Bind(host.Session.CurrentPlayer);
+                panel?.CompleteInitialContentSetup();
             }
-            catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
-            catch (Exception exception) { Debug.LogError($"Quick-item UI initialization failed: {exception.Message}", this); }
+            catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { panel?.CancelInitialContentSetup(); }
+            catch (Exception exception) { panel?.CompleteInitialContentSetup(); Debug.LogError($"Quick-item UI initialization failed: {exception.Message}", this); }
         }
 
         private void OnDisable()

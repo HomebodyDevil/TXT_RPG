@@ -9,7 +9,7 @@ using UnityEngine.UI;
 
 namespace TxTRPG.UI
 {
-    public sealed class ActionGridPanel : MonoBehaviour
+    public sealed class ActionGridPanel : MonoBehaviour, IPanelInitialLayoutParticipant
     {
         private const float LayoutEpsilon = 0.5f;
 
@@ -61,6 +61,9 @@ namespace TxTRPG.UI
         private int selectedIndex = -1;
         private int currentColumns = 1;
         private Task currentIconLoadTask = Task.CompletedTask;
+        private bool initialScrollPending = true;
+        private bool initialContentSetupHeld;
+        private bool applyingInitialScroll;
         public Task WhenAssetsReady => currentIconLoadTask;
 
         public event Action<ActionGridEntry> SelectionChanged;
@@ -80,6 +83,8 @@ namespace TxTRPG.UI
         public ActionGridHorizontalAlignment GridAlignment => gridAlignment;
         public ActionGridHorizontalAlignment IncompleteRowAlignment => incompleteRowAlignment;
         public ActionGridVerticalPlacement VerticalPlacement => verticalPlacement;
+        public bool IsInitialScrollPending => initialScrollPending;
+        public bool HasAppliedInitialScroll => !initialScrollPending;
 
         [Obsolete("Use GridAlignment and IncompleteRowAlignment.")]
         public ActionGridHorizontalAlignment SlotAlignment => gridAlignment;
@@ -96,6 +101,7 @@ namespace TxTRPG.UI
             }
             ApplyLayout();
             RefreshScrollbarLayout();
+            ScheduleInitialScrollResolution();
         }
 
         private void OnDisable()
@@ -104,6 +110,7 @@ namespace TxTRPG.UI
             {
                 scrollbarController.ViewportLayoutChanged -= OnViewportLayoutChanged;
             }
+            Canvas.willRenderCanvases -= ResolveInitialScrollBeforeRender;
         }
 
         private void Awake()
@@ -131,6 +138,7 @@ namespace TxTRPG.UI
 
         private void OnDestroy()
         {
+            Canvas.willRenderCanvases -= ResolveInitialScrollBeforeRender;
             CancelPendingCommand();
             ReleaseAssets();
         }
@@ -139,6 +147,32 @@ namespace TxTRPG.UI
         {
             ReleaseAssets();
             assetProvider = provider;
+        }
+
+        public void BeginInitialContentSetup()
+        {
+            if (!initialScrollPending) return;
+            initialContentSetupHeld = true;
+            Canvas.willRenderCanvases -= ResolveInitialScrollBeforeRender;
+        }
+
+        public bool CompleteInitialContentSetup()
+        {
+            if (!initialScrollPending) return true;
+            initialContentSetupHeld = false;
+            Canvas.ForceUpdateCanvases();
+            ApplyLayout();
+            RefreshScrollbarLayout();
+            if (TryResolveInitialScroll()) return true;
+            ScheduleInitialScrollResolution();
+            return false;
+        }
+
+        public void CancelInitialContentSetup()
+        {
+            if (!initialScrollPending) return;
+            initialContentSetupHeld = false;
+            ScheduleInitialScrollResolution();
         }
 
         private void OnRectTransformDimensionsChange()
@@ -624,6 +658,37 @@ namespace TxTRPG.UI
 
             anchoredPosition.y = 0f;
             content.anchoredPosition = anchoredPosition;
+        }
+
+        private void ScheduleInitialScrollResolution()
+        {
+            if (!isActiveAndEnabled || !initialScrollPending || initialContentSetupHeld) return;
+            Canvas.willRenderCanvases -= ResolveInitialScrollBeforeRender;
+            Canvas.willRenderCanvases += ResolveInitialScrollBeforeRender;
+        }
+
+        private void ResolveInitialScrollBeforeRender()
+        {
+            if (TryResolveInitialScroll())
+                Canvas.willRenderCanvases -= ResolveInitialScrollBeforeRender;
+        }
+
+        private bool TryResolveInitialScroll()
+        {
+            if (!initialScrollPending || initialContentSetupHeld || applyingInitialScroll) return !initialScrollPending;
+            if (viewport == null || content == null || viewport.rect.width <= LayoutEpsilon || viewport.rect.height <= LayoutEpsilon) return false;
+            applyingInitialScroll = true;
+            try
+            {
+                ApplyLayout();
+                if (content != null) LayoutRebuilder.ForceRebuildLayoutImmediate(content);
+                scrollbarController?.Refresh();
+                var overflowing = content.rect.height > viewport.rect.height + LayoutEpsilon;
+                if (overflowing) ResetScrollToTop();
+                initialScrollPending = false;
+                return true;
+            }
+            finally { applyingInitialScroll = false; }
         }
 
         private void DisableConflictingContentSizeFitter()
