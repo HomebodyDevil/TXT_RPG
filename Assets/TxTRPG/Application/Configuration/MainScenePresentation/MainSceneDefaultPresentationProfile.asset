@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: add587f14bbcc0243ae11f7e48c6229a, type: 3}
+  m_Name: MainSceneDefaultPresentationProfile
+  m_EditorClassIdentifier: TxTRPG.Application::TxTRPG.Application.Presentation.MainSceneDefaultPresentationProfile
+  storyMissingConfigurationText: The story is not available yet.
+  storyLoadFailedText: The story could not be loaded.
+  unknownHealthLabel: HP
+  unknownHealthValue: Unknown
+  storyBackgroundStyle: {fileID: 11400000, guid: a87a4e275ae1ddd40949b108e75dddfa, type: 2}
+  enemyBackgroundStyle: {fileID: 11400000, guid: 6ac88c1e7fccc9e45b88a18b112b49d0, type: 2}

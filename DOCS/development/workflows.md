@@ -476,3 +476,26 @@ Scene 연결을 복구할 때에는 기존 메뉴의 Transform, 형제 순서, �
 기존 생성 자산은 현재 `QuickItemsUiProjectBuilder`로 다시 생성하면 같은 계층과 안전 기본값 정책을 얻습니다. 사용자 정의 Prefab Override가 있거나 TMP_MainScene 배치를 유지해야 하면 전체 재생성 대신 `ApplyInventoryErrorLayoutAndFallbacks`의 선별 이전 절차를 사용하고, 적용 전 Scene을 저장합니다. 이 메서드를 호출하기 위한 임시 `Tools/TxT RPG/Internal/...` 메뉴는 작업 중에만 허용되며 적용 후 반드시 제거하고 재컴파일해야 합니다.
 
 기존 자산의 `displayMode`, `itemsPerPage`, `fillPageWithEmptySlots`는 최초 역직렬화 때 `GridContentLayoutSettings`로 이전됩니다. 기존 `ActionGridLayoutMode` enum의 숫자는 바뀌지 않았습니다. 저장된 운영 Prefab은 전체 재생성하지 않고 대상 계층과 참조만 갱신해야 하며, `TMP_MainScene`의 `GameMenuPanel` Transform과 Prefab Override는 유지합니다.
+
+## Main Scene 시각 개선 제안안
+
+- `Tools > TxT RPG > UI > Visual Proposals > Rebuild Main Scene Visual Proposal`은 `TMP_MainScene`을 보존하면서 `MainScene_VisualProposal`과 전용 스타일을 생성하거나 갱신합니다.
+- `Tools > TxT RPG > UI > Visual Proposals > Play Main Scene Visual Proposal`은 AppScene을 먼저 실행하고 기존 초기화가 끝난 뒤 같은 Scene 전환 서비스로 제안 Scene을 엽니다.
+- 생성기가 소유하는 설정, 비교 화면과 수동 검증 항목은 [Main Scene 시각 개선 제안안](main-scene-visual-proposal.md)을 확인합니다.
+## ActionGridCell 아이콘 크기 설정
+
+`ActionGridCell` Inspector의 `Icon Layout`에서 `Relative To Content`와 `Fixed Padding`을 선택합니다. 비율 기반 기본값은 0.9이며, 고정 여백 값은 Canvas UI 단위입니다. 기존 Prefab의 다른 사용자 설정을 보존하면서 신규 기본값만 적용하려면 `Tools > TxT RPG > UI > Prefabs > Upgrade Action Grid Cell Icon Layout`을 실행합니다. 전체 `Rebuild Action Grid`도 같은 비율 기본값을 생성하지만 Cell·Panel·Context Menu를 함께 재생성하므로 개별 사용자 설정을 유지해야 할 때에는 사용하지 않습니다.
+
+`TMP_MainScene`의 ActionGridPanel은 공용 `ActionGridCell.prefab` 참조를 사용하므로 선택적 업그레이드가 즉시 적용됩니다. 적용 후 Prefab의 `Icon Sizing Mode = RelativeToContent`, `Icon Area Ratio = 0.9`, Icon Anchor Min/Max가 각각 `(0.05, 0.05)`와 `(0.95, 0.95)`인지 확인합니다.
+## ActionGridCell 빈 슬롯 크기 설정
+
+`ActionGridCell` Inspector의 `Empty Slot Layout`에서 `Relative To Content` 또는 `Fixed Padding`을 선택합니다. 비율은 `ContentRoot`를 기준으로 하며 운영 기본값은 0.9입니다. 고정 방식의 기존 외형 보존값은 Left·Right·Top·Bottom 각각 14 Canvas UI 단위입니다. 이 설정은 `Icon Layout`과 독립적입니다.
+
+기존 사용자 설정을 보존하면서 공용 Cell의 빈 슬롯 정책만 이전하려면 `Tools > TxT RPG > UI > Prefabs > Upgrade Action Grid Cell Empty Slot Layout`을 실행합니다. 이 작업은 `ActionGridCell.prefab`의 빈 슬롯 모드와 비율만 바꾸고 자동 저장하며 안전하게 재실행할 수 있습니다. 전체 `Rebuild Action Grid`는 관련 Prefab 전체를 다시 만들기 때문에 사용자 정의 설정이 있으면 사용하지 않습니다.
+
+`TMP_MainScene`은 공용 `ActionGridCell.prefab`을 사용하므로 별도 Scene Override 없이 반영됩니다. 적용 후 Prefab과 Play Mode 인스턴스에서 `Empty Slot Sizing Mode = RelativeToContent`, `Empty Slot Area Ratio = 0.9`, `EmptySlot` Anchor Min/Max가 각각 `(0.05, 0.05)`와 `(0.95, 0.95)`인지 확인합니다.
+## ActionGridCell 비율 상한 설정
+
+`ActionGridCell` Inspector에서 Icon Layout과 Empty Slot Layout의 모드를 각각 `Relative With Max Size`로 선택한 뒤 `Area Ratio`와 `Maximum Size`를 설정합니다. 운영 기본값은 두 표시 모두 0.9와 64×64이며, 최종 크기는 ContentRoot 비율값과 최대 크기 중 축별로 작은 값입니다.
+
+기존 공용 Cell을 사용자 설정을 보존하면서 이전하려면 `Tools > TxT RPG > UI > Prefabs > Upgrade Action Grid Cell Ratio Capped Layout`을 실행합니다. 이 메뉴는 두 표시의 모드·비율·상한과 생성기 기본 ContentRoot 여백만 저장하고 전체 ActionGridPanel을 재생성하지 않습니다. 자동 저장되며 같은 값으로 안전하게 재실행할 수 있습니다. `TMP_MainScene`은 공용 Cell 참조를 사용하므로 별도 Scene Override가 필요하지 않습니다.
