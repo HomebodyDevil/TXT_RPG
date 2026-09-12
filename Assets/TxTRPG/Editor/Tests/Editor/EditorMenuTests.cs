@@ -5,6 +5,7 @@ using System.Reflection;
 using NUnit.Framework;
 using TxTRPG.Content.Characters.Editor;
 using TxTRPG.Editor.Common.Menu;
+using TxTRPG.Editor.Common.PrefabRebuild;
 using TxTRPG.SceneTransition.Editor;
 using TxTRPG.UI.Editor;
 using UnityEditor;
@@ -69,12 +70,17 @@ namespace TxTRPG.Editor.Tests
                 [TxTRPGEditorMenuPaths.Addressables + "Validate Settings"] =
                     TxTRPGEditorMenuPriorities.Validate,
                 [TxTRPGEditorMenuPaths.Addressables + "Build Player Content"] =
-                    TxTRPGEditorMenuPriorities.Build
+                    TxTRPGEditorMenuPriorities.Build,
+                [TxTRPGEditorMenuPaths.Build + "Rebuild Generated Prefabs..."] =
+                    TxTRPGEditorMenuPriorities.Rebuild,
+                [TxTRPGEditorMenuPaths.Build + "Validate Prefab Rebuild Registry"] =
+                    TxTRPGEditorMenuPriorities.Validate
             };
 
             var assemblies = new[]
             {
                 typeof(CharacterAuthoringWindow).Assembly,
+                typeof(PrefabRebuildWindow).Assembly,
                 typeof(AddressableAssetEditor).Assembly,
                 typeof(SceneTransitionPrefabBuilder).Assembly
             }.Distinct();

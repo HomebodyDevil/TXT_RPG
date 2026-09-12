@@ -1,5 +1,25 @@
 # 개발 및 검증 절차
 
+## ActionGridPanel 최초 스크롤 확인
+
+1. 초기 데이터를 비동기로 적용하는 화면은 `PanelStartupController`의 `Layout Root` 안에 `ActionGridPanel`을 포함하거나, 로더에서 `BeginInitialContentSetup`과 `CompleteInitialContentSetup`을 호출합니다.
+2. Play Mode에서 Capacity 또는 Entry를 여러 행이 생기도록 설정하고, 첫 프레임부터 첫 행이 상단 Padding 바로 아래에 표시되는지 확인합니다.
+3. 중간으로 스크롤한 뒤 수량, 아이콘이나 동일 목록을 갱신하여 정규화 위치가 유지되는지 확인합니다.
+4. Hidden, Auto, Always 스크롤바와 좁은 Viewport에서도 같은 동작인지 확인합니다. 기존 Scene이나 Prefab의 Content 좌표를 수동으로 0으로 저장하는 방법으로 문제를 우회하지 않습니다.
+
+## 등록 기반 운영 Prefab 일괄 재생성
+
+1. Scene과 Prefab Mode의 변경을 저장하거나 취소하고 Play Mode를 종료합니다.
+2. `Tools > TxT RPG > Build > Rebuild Generated Prefabs...`를 엽니다.
+3. 기본 선택된 운영 작업, 출력 경로와 제외 사유를 확인합니다. `Select All Eligible`은 등록된 적격 작업만 선택합니다.
+4. `Validate Plan`으로 입력, Editor 상태와 등록 계약을 쓰기 전에 검사합니다.
+5. 버전 관리 체크포인트를 만든 뒤 `Rebuild Selected`에서 출력 덮어쓰기를 확인합니다.
+6. 실패하거나 취소되면 결과에 표시된 완료 작업과 실패 작업을 확인하고, 이미 저장된 출력은 버전 관리에서 개별 복구합니다.
+
+등록 구조만 검사하려면 `Tools > TxT RPG > Build > Validate Prefab Rebuild Registry`를 사용합니다. 이 검증은 Prefab이나 Scene을 변경하지 않습니다.
+
+새 생성기를 추가할 때에는 해당 기능의 Editor 어셈블리에 `IPrefabRebuildTaskProvider` 구현을 추가합니다. `PrefabRebuildTaskDescriptor`에 변경되지 않는 ID, 운영 또는 Demo 분류, 기본 선택 여부, 정확한 입력·출력, 선행 작업 ID, 설명, 공통 생성 메서드와 저장 후 검증을 선언합니다. Scene, 콘텐츠, Addressables나 Build Settings를 변경하거나 기존 Style 값을 초기화하는 생성기는 등록하지 않고 `PrefabRebuildExclusion`으로 이유를 남깁니다. 개별 MenuItem과 일괄 작업은 반드시 같은 생성 핵심 메서드를 호출해야 합니다.
+
 ## Game menu prefab composition
 
 - Use `Tools > TxT RPG > UI > Prefabs > Rebuild Game Menu and Modal Windows` to rebuild `GameMenuPanel.prefab`, `ModalWindowHost.prefab`, and `GameMenuScreen.prefab` from the existing item catalog. The prefab-only command does not create or modify item content and does not modify a Scene.

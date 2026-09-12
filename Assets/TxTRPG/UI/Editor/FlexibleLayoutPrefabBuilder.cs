@@ -41,8 +41,6 @@ namespace TxTRPG.UI.Editor
                     false,
                     TextAnchor.MiddleCenter);
                 PrefabUtility.SaveAsPrefabAsset(root, PanelPrefabPath);
-                AssetDatabase.SaveAssets();
-                AssetDatabase.Refresh();
                 Debug.Log($"Flexible layout prefab created at {PanelPrefabPath}.");
             }
             finally

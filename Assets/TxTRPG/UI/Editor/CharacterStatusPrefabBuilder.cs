@@ -16,8 +16,6 @@ namespace TxTRPG.UI.Editor
         {
             CreateHealthBarPrefab();
             CreateStatusPanelPrefab();
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
         }
 
         private static void CreateHealthBarPrefab()

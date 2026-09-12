@@ -88,6 +88,8 @@ TxT-RPG/
 
 `Assets/TxTRPG/Editor/Common/Menu`는 `Tools > TxT RPG` 아래의 공통 메뉴 경로와 의미별 우선순위를 소유합니다. 각 기능의 Editor 어셈블리는 이 상수를 참조하므로 메뉴 계층과 정렬 정책을 개별 문자열로 중복하지 않습니다. `Assets/TxTRPG/Editor/Tests/Editor/EditorMenuTests.cs`는 Content, UI와 Scene Transition Editor 어셈블리에서 등록한 메뉴 계약을 한 곳에서 검증합니다.
 
+`Assets/TxTRPG/Editor/Common/PrefabRebuild`는 생성형 운영 Prefab 작업의 등록 계약, 의존 계획, 사전 검사, 순차 실행과 선택 창을 제공합니다. 기능별 Editor 어셈블리가 Provider를 구현하므로 공통 어셈블리는 UI나 Application Editor를 역참조하지 않습니다.
+
 ### `Assets/TxTRPG/Application`
 
 `TxTRPG.Application`은 Content와 Gameplay를 실제 실행 상태로 조립합니다. `DefaultNewGameProfile.asset`은 기본 카탈로그와 `DefaultCharacterContent`를 새 게임 초기값으로 연결합니다. `PlayerSession`은 저장 유무에 따라 `PlayerState`를 복원하거나 새로 생성하고, AppScene의 `PlayerSessionHost`가 이 상태를 콘텐츠 Scene 교체와 무관하게 소유합니다. `ActiveCharacterDisplayBinder`는 외형 표시와 Addressables readiness를 담당하며, 선택적인 `ActiveCharacterStatusBinder`는 상태 표시 모델만 조합형 상태 UI에 전달합니다. Editor 어셈블리는 Profile, AppRoot와 `TMP_MainScene` 연결을 재현 가능하게 생성하고, Tests 어셈블리는 새 게임·복원·손상 저장 및 Prefab·Scene 계약을 검증합니다.

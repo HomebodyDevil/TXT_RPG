@@ -64,6 +64,8 @@ Treat this project as a single shared codebase that may ship to Steam on desktop
 
 ## Build and Configuration
 
+- Every new generated-Prefab builder must declare a stable task ID, exact input and output paths, dependencies, category, default-selection policy, validation, and either an `IPrefabRebuildTaskProvider` registration or an explicit exclusion reason. Individual menus and registered tasks must call the same generation core. Scene, content, Addressables, Build Settings, manual Prefabs, and user Variants must not be added to the production Prefab batch unless a side-effect-free Prefab-only core is first separated and tested.
+
 - Keep platform differences in build profiles, configuration assets, assembly definitions, and platform adapters rather than manual scene edits.
 - Do not depend on uncommitted local editor settings for a successful build. Required settings must be reproducible from version-controlled configuration or documented setup.
 - Ensure platform-specific scenes, addressable content, scripting symbols, permissions, orientations, and quality settings are selected deliberately.
@@ -108,6 +110,7 @@ Treat `DOCS/README.md` as the entry point for repository architecture and develo
 - When the user asks for a design document that is also intended to guide future implementation, an implementation guide, a work specification, or instructions for another agent, create the instruction document under `DOCS/instructions/`. Use `DOCS/architecture/` only for verified, currently implemented architecture, and keep planned work clearly separated from current behavior.
 - Link every new instruction document from the `작업 지침서` section of `DOCS/README.md`. Give the file a focused kebab-case name and include its objective, prerequisites, in-scope and out-of-scope work, affected paths and dependencies, implementation requirements, compatibility and failure behavior, verification criteria, documentation updates, and expected final report.
 - After creating an instruction document, explain in the final response how the user should invoke it. Provide the exact document path and at least one ready-to-use request, such as: “`DOCS/instructions/<document-name>.md`를 읽고 지침에 따라 구현해줘.” Mention any optional scope, verification, or commit-and-push clauses the user may append when they are relevant.
+- Present ready-to-use task instructions and prompts intended for the user to copy into another agent or task in fenced code blocks delimited by three backticks, optionally labeled `text`. Do not use Markdown blockquotes (`>`) for these instructions. Keep explanations outside the code block and include the complete copyable request inside it. This applies both to instruction-document invocation examples and to standalone task prompts.
 - Link every new document from `DOCS/README.md`. Avoid creating isolated documentation that cannot be discovered from the documentation index.
 - Use exact repository paths, class names, assembly names, prefab names, ScriptableObject names, and Editor menu paths. Verify them against the current worktree before finalizing documentation.
 - Describe verified current behavior separately from planned or recommended behavior. Do not document an unimplemented design as if it already exists.

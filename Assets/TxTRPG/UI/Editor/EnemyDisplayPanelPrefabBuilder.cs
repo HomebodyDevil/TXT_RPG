@@ -60,8 +60,6 @@ namespace TxTRPG.UI.Editor
                 panelProperties.ApplyModifiedPropertiesWithoutUndo();
 
                 PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
-                AssetDatabase.SaveAssets();
-                AssetDatabase.Refresh();
                 Debug.Log($"Enemy display prefab created at {PrefabPath}.");
             }
             finally

@@ -23,8 +23,6 @@ namespace TxTRPG.UI.Editor
             var cell = BuildCellPrefab();
             var menu = BuildContextMenuPrefab();
             BuildPanelPrefab(cell, menu);
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
             Debug.Log($"Action grid prefabs created at {PrefabFolder}.");
         }
 

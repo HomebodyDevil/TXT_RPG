@@ -10,5 +10,6 @@ namespace TxTRPG.Editor.Common.Menu
         public const string Application = Root + "Application/";
         public const string Addressables = Root + "Addressables/";
         public const string Validation = Root + "Validation/";
+        public const string Build = Root + "Build/";
     }
 }
