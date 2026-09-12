@@ -158,3 +158,8 @@ Play Mode에서는 `ActionGridPanelDemoController`가 동일한 데이터를 운
 ## ???꾩씠???ъ슜
 
 `QuickItemGridPresenter`??`ConfigureBehavior(FillCapacityWithEmptySlots, PreserveSlots, ExecuteDefaultAction)`瑜??몄텧?섏뿬 湲곗〈 `ActionGridPanel`?????щ’?쇰줈 ?ъ슜?⑸땲?? 鍮??щ’? ?꾩튂瑜??좎??섎ŉ, ?깅줉???꾩씠?쒖쓽 ?섎웾??0???섏뼱????ぉ? ?④퀬 ?ъ슜留?鍮꾪솢?깊솕?⑸땲?? 紐⑤떖 李쎌쓣 ?닿린 ?꾩뿉 `GameMenuPanel`??`CloseContextMenu()`瑜??몄텧?⑸땲??
+## 가방용 명시적 열 정책
+
+`ActionGridLayoutMode.ExactColumns`는 기존 enum 값 뒤에 추가되어 직렬화 호환성을 유지합니다. 이 모드는 개발자가 지정한 열 수와 최소 Cell 크기를 그대로 사용합니다. 기존 `FixedColumns`는 설정값을 최대 열 수로 해석하고 Viewport가 좁아지면 열 수를 줄이는 현재 동작을 유지합니다.
+
+런타임 호출자는 `ConfigureLayout(...)`으로 열 정책, 열 수, Cell 크기, Spacing, Padding, 전체 및 마지막 행 정렬, 세로 배치를 한 번에 갱신할 수 있습니다. 호출 즉시 Content와 Scrollbar 레이아웃이 다시 계산되며 매 프레임 갱신을 추가하지 않습니다.

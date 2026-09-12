@@ -1,5 +1,24 @@
 # 개발 및 검증 절차
 
+## 이미지 메뉴와 가방 창 설정
+
+1. `ItemDefinition`의 `Category Id`에 안정적인 ID를 입력합니다. 기본 소비품은 `consumable`이며 빈 값과 미등록 값은 `misc`로 표시합니다.
+2. `InventoryWindowPage.prefab`의 `InventoryGameWindowPage`에서 `Display Mode`, `Items Per Page`, `Fill Page With Empty Slots`와 `Categories`의 ID·이름·순서를 설정합니다.
+3. 런타임에서는 `SetDisplayMode`, `SelectCategory`, `GoToPage`를 사용합니다. 카테고리와 페이지를 바꾸면 열린 컨텍스트 메뉴가 먼저 닫힙니다.
+4. 메뉴 이미지는 `GameMenuButtonView.SetIcon`으로 교체하고 `ConfigureDisplay`로 `ImageOnly` 또는 `ImageWithLabel`, 여백과 색상을 설정합니다. 이미지가 없으면 Label이 대체 표시됩니다.
+5. Scene을 변경하지 않고 생성 자산만 갱신하려면 `Tools > TxT RPG > UI > Prefabs > Rebuild Game Menu and Modal Windows`를 실행합니다. 이 메뉴는 `GameMenuPanel.prefab`, `InventoryWindowPage.prefab`, `ModalWindowHost.prefab`과 `GameMenuScreen.prefab`을 갱신합니다.
+6. 기존 `TMP_MainScene` 배치까지 이전할 때에만 Scene을 먼저 저장한 뒤 `Tools > TxT RPG > Application > Rebuild Quick Items and Game Windows`를 사용합니다. 미저장 Scene은 생성 전에 거부됩니다. 사용자 Override가 있다면 Prefab 전용 생성 후 Overrides 창에서 개별 적용합니다.
+
+검증할 때에는 빈 카테고리, 1개, 페이지당 개수 전후, 여러 페이지, 마지막 페이지 항목 제거, 미등록 정의 ID를 확인합니다. VerticalScroll에서 수량 갱신 후 위치가 유지되는지, Paged에서 수직 스크롤이 꺼지는지, 사용이 퀵 슬롯 연결을 바꾸지 않는지도 확인합니다. 키보드·게임패드·터치와 좁은 화면의 탭 길이는 실제 목표 기기에서 별도로 확인합니다.
+
+### TMP_MainScene 연결 및 실행
+
+1. `TMP_MainScene`의 저장된 구성에서 기존 메뉴와 `GameWindowsOverlay`의 연결을 확인합니다. 별도의 일회성 적용 메뉴는 제공하지 않습니다.
+2. Build Settings의 첫 Scene인 `Assets/Scenes/AppScene.unity`를 열고 Play Mode를 시작합니다. `AppScene`의 `PlayerSessionHost`가 저장 데이터를 준비한 뒤 `TMP_MainScene`을 로드합니다.
+3. 기존 가방 버튼으로 창을 열고 Close 또는 Cancel로 닫은 뒤 포커스가 가방 버튼으로 복원되는지 확인합니다. `TMP_MainScene` 직접 Play에는 AppScene 세션이 없으므로 정식 실행 경로로 지원하지 않습니다.
+4. System 버튼으로 제목과 닫기 버튼만 있는 빈 설정 모달이 열리는지 확인합니다.
+5. 실제 저장 데이터가 비어 있으면 EmptyState가 정상입니다. 테스트 아이템이 필요하면 사용자 저장 파일이 아닌 격리된 테스트 세션을 사용합니다.
+
 ## ActionGridPanel 최초 스크롤 확인
 
 1. 초기 데이터를 비동기로 적용하는 화면은 `PanelStartupController`의 `Layout Root` 안에 `ActionGridPanel`을 포함하거나, 로더에서 `BeginInitialContentSetup`과 `CompleteInitialContentSetup`을 호출합니다.
@@ -136,6 +155,23 @@ healthBar.SetEffectsEnabled(accessibilitySettings.EnableUiMotion);
 `Tools > TxT RPG > UI > Demos > Rebuild Health Bar Panel Demo`는 `Assets/TxTRPG/UI/DEMO/CharacterStatusPanel/HealthBarPanelDemo.prefab`을 생성합니다. 이 데모는 9가지 Fixed 정렬 조합과 런타임 정렬·피해 pulse 예제를 포함합니다.
 
 ## Scene 전환 사용하기
+
+### Editor에서 AppScene 경유로 Play하기
+
+프로젝트 기본값에서는 `TMP_MainScene`이나 다른 콘텐츠 Scene을 열어 둔 상태에서 Play해도 `Assets/Scenes/AppScene.unity`가 먼저 실행됩니다. AppScene의 기존 초기화가 완료되면 `AppSceneRoot.Initial Content Scene Path`에 지정된 `Assets/Scenes/TMP_MainScene.unity`로 진입합니다. Play 종료 후에는 Play 전의 편집 Scene 구성과 활성 Scene으로 돌아옵니다.
+
+설정은 `Edit > Project Settings > TxT RPG > Play Mode Start`에서 관리합니다. `Always start Play Mode through AppScene`을 끄면 현재 Scene을 직접 실행할 수 있습니다. 다시 켜거나 `Reapply AppScene Start Policy`를 누르면 AppScene을 시작 Scene으로 지정합니다. 기존에 다른 Play 시작 Scene이 있었다면 명시적 적용 시 백업하며, 정책을 끌 때 정책이 아직 AppScene을 소유하고 있는 경우에만 복원합니다.
+
+미저장 Scene이 있으면 Play 진입 전에 Unity의 저장 확인 창이 표시됩니다. 저장을 취소하면 Play도 취소되며 편집 내용은 유지됩니다. Prefab Mode의 저장되지 않은 변경은 자동 저장하지 않고 Play를 중단하므로, Prefab을 저장한 뒤 다시 실행합니다. Play Mode 테스트는 Unity Test Runner가 지정한 테스트 Scene을 사용할 수 있도록 이 정책을 우회합니다.
+
+정책이 적용되지 않거나 AppScene 구성에 오류가 있으면 현재 Scene을 대신 실행하지 않고 Play를 중단합니다. 다음 항목을 확인합니다.
+
+- `Assets/Scenes/AppScene.unity`가 Build Settings의 첫 번째 활성 Scene인지 확인합니다.
+- `Assets/TxTRPG/SceneTransition/Prefabs/AppRoot.prefab`의 `Load Initial Content On Start`가 활성화되어 있는지 확인합니다.
+- 최초 콘텐츠 경로가 `Assets/Scenes/TMP_MainScene.unity`인지 확인합니다.
+- Project Settings의 경고를 확인하고 필요한 경우 정책을 다시 적용합니다.
+
+Enter Play Mode Options는 프로젝트의 기존 설정을 변경하지 않습니다. 현재 기본 구성처럼 Domain Reload와 Scene Reload가 모두 활성화된 조합을 기준으로 검증하며, 다른 조합을 사용한다면 정적 서비스와 이벤트 구독의 반복 Play 동작을 별도로 확인합니다.
 
 1. 현재 작업 Scene을 저장한 뒤 `Tools > TxT RPG > Application > Rebuild App Scene`을 실행합니다. 이 메뉴는 기본 Scene Transition Profile, `DefaultNewGameProfile.asset`, PlayerSessionHost가 포함된 `AppRoot.prefab`, 운영 캐릭터 UI가 연결된 최초 콘텐츠 Scene과 `AppScene.unity`를 생성하고 AppScene을 Build Settings의 0번으로 등록합니다.
 2. `AppRoot`의 `AppSceneRoot.Initial Content Scene Path` 목록에서 최초로 로드할 Scene을 선택합니다. 목록에는 활성화된 Build Settings Scene이 `Scene 이름 (Assets/.../*.unity)` 형식으로 표시되며 AppScene은 제외됩니다. 기본값은 `Assets/Scenes/TMP_MainScene.unity`입니다.
@@ -383,6 +419,12 @@ Sprite Sheet의 여러 상태 Sprite를 선택했다면 모든 행에 같은 Tex
 
 ## 퀵 아이템과 게임 창 생성
 
+운영 메뉴는 `Assets/Scenes/AppScene.unity`에서 시작하여 플레이어 세션이 준비된 경로로 검증합니다. `Assets/Scenes/TMP_MainScene.unity`에는 기존 `GameMenuPanel` 하나와 같은 Canvas 최상위의 `GameWindowsOverlay` 하나가 있어야 합니다. Overlay의 `GameWindowService`에는 `inventory`, `system`, `status` 페이지가 각각 한 번만 등록되어야 하며, 메뉴의 외부 서비스 참조는 이 서비스로 연결합니다.
+
+가방 버튼이 비활성화되어 있으면 `GameMenuPanel.WindowService`와 서비스의 `inventory` 등록부터 확인합니다. 버튼을 강제로 활성화하면 연결 오류가 가려지므로 사용하지 않습니다. System 버튼은 같은 서비스의 빈 `system` 페이지를 열며, 제목과 닫기 버튼만 보이는 상태가 현재 정상 동작입니다. 닫기 버튼이나 Cancel 입력을 사용하면 창을 열었던 메뉴 버튼으로 포커스가 복원됩니다.
+
+Scene 연결을 복구할 때에는 기존 메뉴의 Transform, 형제 순서, 이미지와 Prefab Override를 유지하고 Overlay 및 외부 참조만 저장합니다. 전체 Scene 생성은 기존 배치를 교체할 수 있으므로 연결 복구의 기본 절차로 사용하지 않습니다.
+
 1. Scene 배치까지 새로 구성하려면 먼저 `TMP_MainScene`을 저장한 다음 `Tools > TxT RPG > Application > Rebuild Quick Items and Game Windows`를 실행합니다. Scene에 미저장 변경이 있으면 생성기는 어떤 자산도 변경하기 전에 중단합니다.
 2. Scene을 변경하지 않고 운영 Prefab만 갱신하려면 `Tools > TxT RPG > UI > Prefabs > Rebuild Game Menu and Modal Windows`를 실행합니다.
 3. 전체 생성기는 기존 `ActionGridPanel`을 유지하고 바로 아래에 `GameMenuPanel`을 배치하며, Canvas 최상위에 모달 호스트를 배치합니다.
@@ -403,3 +445,34 @@ Sprite Sheet의 여러 상태 Sprite를 선택했다면 모든 행에 같은 Tex
 런타임에서는 `ConfigureLayout(...)`, `ConfigureScrollbar(...)`, `SetItemVisible(pageId, visible)`를 호출한 뒤 별도 매 프레임 갱신 없이 한 번의 예약된 레이아웃 갱신으로 반영됩니다. 외형 애니메이션은 `VisualRoot` 또는 개별 Graphic에만 적용하고 `ButtonRoot`의 크기와 위치는 변경하지 않습니다.
 
 기존 자산은 Prefab 전용 재생성 메뉴로 이전합니다. 이 메뉴는 `GameMenuPanel.prefab`의 GUID를 유지하면서 ScrollRect, Viewport, Content, 버튼 View와 선택적 스크롤바 계층을 다시 만듭니다. 사용자 정의 외형을 운영 Prefab 자체에 직접 수정했다면 먼저 Prefab Variant나 별도 버튼 Prefab으로 옮긴 뒤 재생성합니다. Scene 인스턴스의 Override는 자동 저장하지 않으며, 적용 후 Inspector의 Prefab Override 창에서 기존 위치와 서비스 참조를 확인합니다.
+### 모달 콘텐츠와 가방 Grid 설정
+
+1. `Assets/TxTRPG/UI/Prefabs/ModalWindowHost.prefab`의 `ContentContainer`에서 본문 Padding을 설정합니다. 페이지는 `ContentContainer/Pages` 아래에 두고, 본문 마스크 밖에 표시할 보조 UI는 `Window/OverlayRoot`를 사용합니다.
+2. `Assets/TxTRPG/UI/Prefabs/InventoryWindowPage.prefab`의 `InventoryGameWindowPage > Grid Settings`에서 `Display Mode`를 선택합니다.
+3. 번호 페이지에서는 `Slots Per Page`와 `Fill Page With Empty Slots`를 설정합니다. 세로 스크롤에서는 `Minimum Scroll Slots`를 설정하며 결과 전체가 계속 표시됩니다.
+4. `Columns`와 `Column Policy`를 설정합니다. 기존 반응형 동작은 `Adaptive Up To Configured`, 고정 열은 `Exact`입니다.
+5. 같은 설정에서 `Cell Size`, `Spacing`, `Padding`, 전체 Grid 정렬, 마지막 불완전 행 정렬과 세로 배치를 지정합니다.
+6. Play Mode에서 카테고리를 바꾸면 첫 페이지와 상단으로 이동하는지, 수량 갱신에서는 선택과 스크롤 위치가 가능한 한 유지되는지 확인합니다. 번호 버튼은 현재 페이지 주변에서 최대 7개만 생성됩니다.
+
+### 타입 기반 모달 요청 설정
+
+1. `GameMenuPanel.Buttons`의 각 바인딩은 기존 `Page Id`와 함께 요청의 `Content Kind`와 선택적 제목 Override를 가집니다. Bag은 `inventory + ItemGrid + Bag`, System은 `system + CustomContent + System Settings`를 사용합니다.
+2. 표시 설정과 데이터 공급자는 버튼이 영구 소유하지 않습니다. `InventoryGameWindowPage.CreateDefaultRequest`가 Inspector의 `Grid Settings` 사본과 기존 세션·카탈로그를 연결하는 `InventoryModalDataProvider`를 런타임 요청에 넣습니다.
+3. 프로그램 코드에서는 가능하면 `GameWindowService.CreateRequest`로 기본 요청을 얻거나 `ModalOpenRequest`를 명시적으로 구성한 뒤 `OpenAsync(request)`를 호출합니다. 호환용 `OpenAsync(pageId, returnFocus)`도 내부에서 같은 요청을 생성합니다.
+4. 새 본문 타입을 추가할 때에는 `ModalContentKind`, 해당 `IModalContentConfiguration`의 복사 구현, 명확한 `IModalDataProvider`와 이를 소비하는 `GameWindowPage.ApplyRequest`를 함께 구현합니다. 공통 Dictionary나 페이지 내 슬롯 인덱스를 도메인 ID로 사용하지 않습니다.
+5. Paged에서는 이전·다음, 현재/전체 표시와 번호 버튼을 사용합니다. 번호 버튼은 현재 페이지 주변에서 최대 설정 개수만 생성되며, 생략된 페이지는 이전·다음으로 접근합니다. VerticalScroll에서는 번호 UI를 숨기고 해당 카테고리의 전체 결과를 표시합니다.
+6. 재시도는 마지막 문자열 ID가 아니라 원래 `ModalOpenRequest` 전체를 다시 실행합니다. 닫기나 새 요청은 이전 준비 작업을 취소하며, 공급자의 기존 소유 데이터를 초기화하지 않습니다.
+
+기존 자산을 이전할 때에는 Scene을 먼저 저장하고 `QuickItemsUiProjectBuilder.ApplyTypedModalRequestCoordinator`의 선별 적용 경로를 사용합니다. 이 경로는 `GameMenuPanel.prefab`, `GameMenuScreen.prefab`과 TMP_MainScene의 기존 메뉴 바인딩에 요청 종류와 제목만 기록하며 Transform, 이미지, 서비스 연결 및 사용자 Grid 설정을 유지합니다. 임시 내부 메뉴로 호출했다면 적용 직후 메뉴 선언을 제거하고 재컴파일합니다.
+
+### 가방 오류 표시와 설정 대체 동작
+
+1. `InventoryWindowPage.prefab`에서 `InventoryGameWindowPage`의 `Catalog`와 `Item Grid`가 연결되어 있는지 확인합니다. 런타임 세션은 `AppScene` 수명의 `PlayerSessionHost`에서 연결되며 Prefab에 Scene 객체를 저장하지 않습니다.
+2. 표시 설정은 같은 컴포넌트의 `Grid Settings`에서 편집합니다. 유효하지 않은 값이나 설정 누락은 코드의 안전한 기본값으로 대체되며, 원본 설정과 플레이어 인벤토리는 변경되지 않습니다.
+3. `ModalWindowHost.prefab`의 `ErrorStateRoot/Error`는 좌우 Stretch 상태를 유지합니다. 오류 UI를 `ContentContainer/Pages`나 Grid의 자식으로 옮기지 않습니다.
+4. 오류 발생 시 Console의 `inventory.*` 진단 코드를 확인합니다. `session-host-missing`은 AppScene 실행 경로, `catalog-missing`은 운영 ItemCatalog 참조, `item-grid-missing`은 가방 전용 ActionGridPanel 참조를 각각 점검합니다.
+5. 재시도 버튼은 누락된 필수 참조를 자동 생성하지 않습니다. 원인을 복구한 뒤 현재 페이지 준비를 다시 실행하며, 닫기와 Cancel 입력은 항상 사용할 수 있어야 합니다.
+
+기존 생성 자산은 현재 `QuickItemsUiProjectBuilder`로 다시 생성하면 같은 계층과 안전 기본값 정책을 얻습니다. 사용자 정의 Prefab Override가 있거나 TMP_MainScene 배치를 유지해야 하면 전체 재생성 대신 `ApplyInventoryErrorLayoutAndFallbacks`의 선별 이전 절차를 사용하고, 적용 전 Scene을 저장합니다. 이 메서드를 호출하기 위한 임시 `Tools/TxT RPG/Internal/...` 메뉴는 작업 중에만 허용되며 적용 후 반드시 제거하고 재컴파일해야 합니다.
+
+기존 자산의 `displayMode`, `itemsPerPage`, `fillPageWithEmptySlots`는 최초 역직렬화 때 `GridContentLayoutSettings`로 이전됩니다. 기존 `ActionGridLayoutMode` enum의 숫자는 바뀌지 않았습니다. 저장된 운영 Prefab은 전체 재생성하지 않고 대상 계층과 참조만 갱신해야 하며, `TMP_MainScene`의 `GameMenuPanel` Transform과 Prefab Override는 유지합니다.

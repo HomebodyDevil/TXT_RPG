@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using TxTRPG.Application.Items;
@@ -41,6 +42,29 @@ namespace TxTRPG.Application.Tests
             Assert.That((await emptyService.UseAsync(0)).Succeeded, Is.True);
             Assert.That((await emptyService.UseAsync(0)).Failure, Is.EqualTo(ItemUseFailure.OutOfStock));
             Assert.That(emptyPlayer.Inventory.GetQuantity("potion"), Is.Zero);
+        }
+
+        [Test]
+        public async Task InventoryUse_DoesNotChangeQuickSlotAndSharesExecutionRules()
+        {
+            var (player, service) = CreateState(2, 50);
+            var before = player.QuickItems.GetItemDefinitionId(0);
+            var result = await service.UseItemAsync("potion");
+            Assert.That(result.Succeeded, Is.True);
+            Assert.That(player.QuickItems.GetItemDefinitionId(0), Is.EqualTo(before));
+            Assert.That(player.Inventory.GetQuantity("potion"), Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task TwoServicesForSamePlayer_ShareUseResultAndInventory()
+        {
+            var (player, first) = CreateState(2, 50);
+            var item = created.OfType<ItemDefinition>().Single();
+            var catalog = ScriptableObject.CreateInstance<ItemCatalog>(); created.Add(catalog); catalog.ConfigureForEditor(new[] { item });
+            var second = new QuickItemService(player, catalog);
+            Assert.That((await first.UseItemAsync("potion")).Succeeded, Is.True);
+            Assert.That((await second.UseItemAsync("potion")).Succeeded, Is.True);
+            Assert.That(player.Inventory.GetQuantity("potion"), Is.Zero);
         }
 
         private (PlayerState, QuickItemService) CreateState(int quantity, int health)

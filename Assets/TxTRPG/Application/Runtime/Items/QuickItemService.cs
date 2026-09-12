@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Runtime.CompilerServices;
 using TxTRPG.Content.Items;
 using TxTRPG.Gameplay.Players;
 
@@ -19,12 +20,15 @@ namespace TxTRPG.Application.Items
     {
         private readonly PlayerState player;
         private readonly ItemCatalog catalog;
-        private int useInProgress;
+        private sealed class SharedUseGate { public int InProgress; }
+        private static readonly ConditionalWeakTable<PlayerState, SharedUseGate> UseGates = new();
+        private readonly SharedUseGate useGate;
 
         public QuickItemService(PlayerState player, ItemCatalog catalog)
         {
             this.player = player ?? throw new ArgumentNullException(nameof(player));
             this.catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
+            useGate = UseGates.GetOrCreateValue(player);
         }
 
         public bool TryRegister(int slotIndex, string itemDefinitionId)
@@ -39,16 +43,27 @@ namespace TxTRPG.Application.Items
         public Task<ItemUseResult> UseAsync(int slotIndex, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (Interlocked.CompareExchange(ref useInProgress, 1, 0) != 0)
+            if (slotIndex < 0 || slotIndex >= player.QuickItems.Capacity)
+                return Task.FromResult(new ItemUseResult(false, ItemUseFailure.InvalidSlot));
+            if (Interlocked.CompareExchange(ref useGate.InProgress, 1, 0) != 0)
                 return Task.FromResult(new ItemUseResult(false, ItemUseFailure.Busy));
-            try { return Task.FromResult(UseCore(slotIndex)); }
-            finally { Volatile.Write(ref useInProgress, 0); }
+            try { return Task.FromResult(UseCore(player.QuickItems.GetItemDefinitionId(slotIndex), slotIndex)); }
+            finally { Volatile.Write(ref useGate.InProgress, 0); }
         }
 
-        private ItemUseResult UseCore(int slotIndex)
+        public Task<ItemUseResult> UseItemAsync(string itemDefinitionId, CancellationToken cancellationToken = default)
         {
-            if (slotIndex < 0 || slotIndex >= player.QuickItems.Capacity) return new ItemUseResult(false, ItemUseFailure.InvalidSlot);
-            var itemId = player.QuickItems.GetItemDefinitionId(slotIndex);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (Interlocked.CompareExchange(ref useGate.InProgress, 1, 0) != 0)
+                return Task.FromResult(new ItemUseResult(false, ItemUseFailure.Busy));
+            try { return Task.FromResult(UseCore(itemDefinitionId, -1)); }
+            finally { Volatile.Write(ref useGate.InProgress, 0); }
+        }
+
+        private ItemUseResult UseCore(string itemId, int slotIndex)
+        {
+            if (slotIndex >= player.QuickItems.Capacity) return new ItemUseResult(false, ItemUseFailure.InvalidSlot);
+            itemId = itemId?.Trim() ?? string.Empty;
             if (itemId.Length == 0) return new ItemUseResult(false, ItemUseFailure.EmptySlot);
             if (!catalog.TryGet(itemId, out var definition)) return new ItemUseResult(false, ItemUseFailure.UnknownItem);
             if (definition.EffectKind != ItemEffectKind.Healing || definition.EffectAmount <= 0) return new ItemUseResult(false, ItemUseFailure.UnsupportedEffect);

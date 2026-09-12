@@ -15,5 +15,6 @@ MonoBehaviour:
   definitionId: item.minor_healing_potion
   displayNameLocalizationKey: item.minor_healing_potion.name
   iconAssetId: item.minor_healing_potion.icon
+  categoryId: consumable
   effectKind: 1
   effectAmount: 25

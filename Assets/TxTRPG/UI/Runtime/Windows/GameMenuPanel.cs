@@ -14,15 +14,23 @@ namespace TxTRPG.UI.Windows
         [SerializeField] private Button button;
         [SerializeField] private bool visible = true;
         [SerializeField] private GameMenuButtonView view;
+        [SerializeField] private bool overrideRequestPresentation;
+        [SerializeField] private ModalContentKind contentKind = ModalContentKind.CustomContent;
+        [SerializeField] private string requestTitle = string.Empty;
         public string PageId => pageId?.Trim() ?? string.Empty;
         public Button Button => button != null ? button : view != null ? view.Button : null;
         public bool Visible => visible;
         public GameMenuButtonView View => view;
+        public ModalContentKind ContentKind => contentKind;
+        public bool OverridesRequestPresentation => overrideRequestPresentation;
+        public string RequestTitle => requestTitle?.Trim() ?? string.Empty;
         public void SetVisible(bool value) => visible = value;
 #if UNITY_EDITOR
         public void ConfigureForEditor(string id, Button target, bool isVisible = true,
-            GameMenuButtonView targetView = null)
-        { pageId = id; button = target; visible = isVisible; view = targetView; }
+            GameMenuButtonView targetView = null, ModalContentKind kind = ModalContentKind.CustomContent,
+            string title = null, bool overridePresentation = false)
+        { pageId = id; button = target; visible = isVisible; view = targetView; contentKind = kind;
+          requestTitle = title ?? string.Empty; overrideRequestPresentation = overridePresentation; }
 #endif
     }
 
@@ -78,13 +86,29 @@ namespace TxTRPG.UI.Windows
         public void Open(string pageId)
         {
             quickItemGrid?.CloseContextMenu();
-            if (!ValidateInternalConfiguration(out var reason) || windowService == null || !windowService.HasPage(pageId))
+            if (!ValidateInternalConfiguration(out var reason))
             {
-                UnavailableReason = windowService == null ? "GameWindowService is not connected." : reason;
+                UnavailableReason = reason;
                 Debug.LogWarning($"Cannot open game-menu page '{pageId}': {UnavailableReason}", this);
                 return;
             }
-            _ = windowService.OpenAsync(pageId, EventSystem.current?.currentSelectedGameObject);
+            if (windowService == null)
+            {
+                UnavailableReason = "GameWindowService is not connected.";
+                Debug.LogWarning($"Cannot open game-menu page '{pageId}': {UnavailableReason}", this);
+                return;
+            }
+            if (!windowService.HasPage(pageId))
+            {
+                UnavailableReason = $"GameWindowService has no page registered for '{pageId}'.";
+                Debug.LogWarning($"Cannot open game-menu page '{pageId}': {UnavailableReason}", this);
+                return;
+            }
+            var request = windowService.CreateRequest(pageId, EventSystem.current?.currentSelectedGameObject);
+            var binding = buttons.Find(item => item != null && string.Equals(item.PageId, pageId?.Trim(), StringComparison.Ordinal));
+            if (request != null && binding != null && binding.OverridesRequestPresentation)
+                request = request.WithPresentation(binding.ContentKind, binding.RequestTitle);
+            _ = windowService.OpenAsync(request);
         }
 
         public bool SetItemVisible(string pageId, bool visible)

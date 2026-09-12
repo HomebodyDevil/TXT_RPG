@@ -3,6 +3,7 @@
   "rootNamespace": "TxTRPG.UI.Tests",
   "references": [
     "TxTRPG.UI",
+    "TxTRPG.Application",
     "Unity.ugui"
   ],
   "includePlatforms": [],

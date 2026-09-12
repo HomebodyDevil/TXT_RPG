@@ -15,7 +15,8 @@ namespace TxTRPG.UI
     public enum ActionGridLayoutMode
     {
         FixedColumns,
-        AdaptiveCellSize
+        AdaptiveCellSize,
+        ExactColumns
     }
 
     public enum ActionGridHorizontalAlignment

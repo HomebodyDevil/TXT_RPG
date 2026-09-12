@@ -64,6 +64,7 @@ Treat this project as a single shared codebase that may ship to Steam on desktop
 
 ## Build and Configuration
 
+- The generated-Prefab registration requirements below apply only when a reusable builder is justified. They do not require creating builders or permanent Tools menus for ordinary asset edits or one-off integration work.
 - Every new generated-Prefab builder must declare a stable task ID, exact input and output paths, dependencies, category, default-selection policy, validation, and either an `IPrefabRebuildTaskProvider` registration or an explicit exclusion reason. Individual menus and registered tasks must call the same generation core. Scene, content, Addressables, Build Settings, manual Prefabs, and user Variants must not be added to the production Prefab batch unless a side-effect-free Prefab-only core is first separated and tested.
 
 - Keep platform differences in build profiles, configuration assets, assembly definitions, and platform adapters rather than manual scene edits.
@@ -80,6 +81,27 @@ Treat this project as a single shared codebase that may ship to Steam on desktop
 - Preserve player settings such as volume, text speed, control preferences, quality tier, and accessibility options across sessions.
 
 ## Implementation Workflow
+
+### Direct Editor Application and Tooling Policy
+
+- Temporary Tools menus for applying one-off changes are permitted, including menus intended for the user to run manually after an implementation task. Keep them narrowly scoped, identify their purpose and temporary status, and document whether they can be safely rerun. Reserve permanent tools for recurring authoring, validation, or build needs. This permission supersedes older instruction documents that prohibit temporary application menus; it does not authorize unrelated or destructive changes.
+- For implementation requests, include the necessary Prefab, Scene, and configuration application work in the plan. Use available Unity Editor automation when appropriate, or provide a temporary application menu for explicit manual application. Clearly distinguish implemented code and tools from changes already applied and verified in the Editor. Analysis-only and documentation-only requests do not authorize Editor mutations.
+- Treat stored assets as the source of truth for developer-authored Prefabs. Modify only the necessary parts; do not use full regeneration as the default application method. For genuinely code-generated assets, keep the generator as the source of truth and explicitly separate generated content from developer-owned customization.
+- Connect runtime-selected services through explicit initialization and binding paths. Store mandatory internal Prefab components and references in a complete, valid state in the asset. Do not hide missing configuration through unrestricted scene searches or duplicate service creation.
+- Do not attach destructive automatic regeneration to compilation, domain reload, or OnValidate callbacks.
+- Before applying changes, check Editor connectivity, permissions, compilation state, and unsaved changes. Wait for required compilation and domain reload to finish, resolve relevant compilation errors, and execute only the application operations needed for the current task. Preserve user edits, Prefab overrides, scene layout, and player save data; do not bypass permissions or silently save unrelated changes.
+- Verify saved assets and Scene connections after application, and perform relevant Edit Mode or Play Mode checks in proportion to risk. A successful menu invocation or code compilation alone does not prove that the requested feature is applied and working.
+- If Editor automation is unavailable or blocked, report the concrete cause, checks attempted, completed work, and remaining application or verification steps. Do not report the task as complete merely because a new menu or manual procedure was provided. Request only the user action or authority actually needed to proceed.
+- This policy does not authorize deleting existing tools, converting all generated assets, or rebuilding unrelated assets. Handle broader tooling cleanup and source-of-truth migrations as separate, explicitly scoped work.
+
+### Required Handoff for Manual Tools Steps
+
+- After implementing an instruction document, if any Tools menu must still be run by the user, include a separate, clearly labeled section in the final response (for Korean responses, use `사용자가 수행할 적용 절차`). Do not bury required steps in a general summary or present them as optional suggestions.
+- Put the complete ordered procedure in a fenced `text` code block so it can be copied. Use numbered steps and exact, verified menu paths. Explain prerequisites such as waiting for compilation, leaving Play Mode, opening the correct Scene or Prefab, selecting a target object, and handling unsaved changes without discarding user work.
+- For each menu, state what it changes, how to run it (including required selections, options, and confirmation dialogs), what successful completion looks like, and whether it saves automatically or requires an explicit save. State which step must finish before the next one starts; stop instructions must be clear if an error occurs.
+- State whether each operation is one-time or safely repeatable, and warn about overwrites or other material side effects before the execution step. Explain any required backup or recovery procedure. Do not remove a temporary menu before the user has had an opportunity to apply the change; document when it may be retired.
+- End the procedure with the exact validation path, including the starting Scene, Play Mode actions, and expected visible or functional result where applicable. Record the same procedure in the relevant development documentation so it remains discoverable after the conversation.
+- Report separately: implementation completed, application already performed, application still required, and verification performed or pending. Never claim the feature is fully applied or runtime-verified while required manual steps remain. If no manual Tools steps remain, say so explicitly instead of listing menus unnecessarily.
 
 Before changing a cross-platform feature:
 

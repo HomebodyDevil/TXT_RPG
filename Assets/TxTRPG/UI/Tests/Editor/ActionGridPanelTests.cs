@@ -56,6 +56,14 @@ namespace TxTRPG.UI.Tests
             Assert.That(columns, Is.EqualTo(6));
         }
 
+        [TestCase(760f)]
+        [TestCase(60f)]
+        public void ExactColumns_PreservesDeveloperConfiguredCount(float width)
+        {
+            Assert.That(ActionGridPanel.CalculateColumnCount(
+                ActionGridLayoutMode.ExactColumns, 4, width, 72f, 8f), Is.EqualTo(4));
+        }
+
         [TestCase(0, 5, 16f)]
         [TestCase(5, 5, 88f)]
         [TestCase(6, 5, 168f)]

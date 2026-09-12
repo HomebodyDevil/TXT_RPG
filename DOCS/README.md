@@ -27,6 +27,13 @@
 
 | 문서 | 설명 |
 | --- | --- |
+| [TMP_MainScene Play 시작 경로 통일 지침](instructions/editor-play-through-app-scene.md) | Editor에서 AppScene을 통해 실행하고 기존 초기화·편집 상태를 보존하는 기준입니다. |
+| [타입 기반 모달 요청과 단일 담당자 지침](instructions/typed-modal-request-coordinator.md) | 단일 개방 경로, 본문 타입·설정·데이터 공급자와 카테고리별 번호 페이지 구성을 정의합니다. |
+| [Bag 오류 표시와 설정 기본값 복구 지침](instructions/inventory-error-layout-and-settings-fallback.md) | 필수 참조 복구, 세로 오류 문구 수정 및 안전한 표시 설정 대체 정책을 정의합니다. |
+| [모달 콘텐츠 영역과 카테고리형 Grid 설정 지침](instructions/modal-content-container-and-grid-configuration.md) | 공통 본문 Container, 슬롯 수·열 수 설정과 카테고리별 페이지·스크롤 표시를 정의합니다. |
+| [Inventory 입력 수정과 시스템 설정 모달 지침](instructions/main-scene-menu-input-and-settings-modal.md) | 기존 메뉴의 클릭 실패 진단, 빈 설정 모달 연결 및 직접 Editor 적용·검증 기준입니다. |
+| [TMP_MainScene 가방 메뉴 연결 지침](instructions/main-scene-inventory-menu-integration.md) | 기존 메뉴·모달·플레이어 세션을 연결하여 최근 구현한 가방 창을 사용하는 작업 기준입니다. |
+| [이미지 메뉴와 카테고리형 가방 창 지침](instructions/image-menu-and-inventory-window.md) | 이미지 버튼, 가방 필터, 스크롤·번호 페이지 및 잠정 컨텍스트 명령의 구현 기준입니다. |
 | [ActionGridPanel 최초 스크롤 상단 표시 지침](instructions/action-grid-initial-scroll-top.md) | 초기 준비 후 첫 행 표시, 지연 로드와 레이아웃 순서 및 사용자 스크롤 보존을 정의합니다. |
 | [등록 기반 Prefab 일괄 Rebuild 지침](instructions/registered-prefab-batch-rebuild.md) | 안전한 생성기 선별, 의존 순서, 실행 전 검증과 신규 도구 등록 규칙을 정의합니다. |
 | [GameMenuPanel 기본 구성과 서비스 연결 지침](instructions/game-menu-prefab-default-composition.md) | 내부 참조 완성, 통합 프리팹, 외부 서비스 연결과 안전한 마이그레이션 기준입니다. |

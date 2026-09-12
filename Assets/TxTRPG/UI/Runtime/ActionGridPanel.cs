@@ -85,6 +85,12 @@ namespace TxTRPG.UI
         public ActionGridVerticalPlacement VerticalPlacement => verticalPlacement;
         public bool IsInitialScrollPending => initialScrollPending;
         public bool HasAppliedInitialScroll => !initialScrollPending;
+        public ScrollRect ScrollRect => scrollRect;
+        public ActionGridLayoutMode LayoutMode => layoutMode;
+        public int ConfiguredColumns => fixedColumns;
+        public Vector2 MinimumCellSize => minimumCellSize;
+        public Vector2 Spacing => spacing;
+        public RectOffset Padding => padding;
 
         [Obsolete("Use GridAlignment and IncompleteRowAlignment.")]
         public ActionGridHorizontalAlignment SlotAlignment => gridAlignment;
@@ -212,6 +218,36 @@ namespace TxTRPG.UI
             verticalPlacement = placement;
             RebuildGridLayout();
             RefreshScrollbarLayout();
+        }
+
+        public void ConfigureLayout(
+            ActionGridLayoutMode mode,
+            int columns,
+            Vector2 cellSize,
+            Vector2 layoutSpacing,
+            RectOffset layoutPadding,
+            ActionGridHorizontalAlignment horizontalAlignment,
+            ActionGridHorizontalAlignment trailingRowAlignment,
+            ActionGridVerticalPlacement placement)
+        {
+            layoutMode = mode;
+            fixedColumns = Mathf.Max(1, columns);
+            minimumCellSize = new Vector2(Mathf.Max(1f, cellSize.x), Mathf.Max(1f, cellSize.y));
+            maximumCellSize = mode == ActionGridLayoutMode.ExactColumns
+                ? minimumCellSize
+                : new Vector2(Mathf.Max(minimumCellSize.x, maximumCellSize.x), Mathf.Max(minimumCellSize.y, maximumCellSize.y));
+            spacing = new Vector2(Mathf.Max(0f, layoutSpacing.x), Mathf.Max(0f, layoutSpacing.y));
+            padding = layoutPadding == null
+                ? new RectOffset()
+                : new RectOffset(
+                    Mathf.Max(0, layoutPadding.left), Mathf.Max(0, layoutPadding.right),
+                    Mathf.Max(0, layoutPadding.top), Mathf.Max(0, layoutPadding.bottom));
+            gridAlignment = horizontalAlignment;
+            incompleteRowAlignment = trailingRowAlignment;
+            verticalPlacement = placement;
+            RebuildGridLayout();
+            RefreshScrollbarLayout();
+            ConfigureNavigation();
         }
 
         [Obsolete("Use SetGridAlignment and SetIncompleteRowAlignment.")]
@@ -460,6 +496,13 @@ namespace TxTRPG.UI
             contextMenu?.Hide();
         }
 
+        public void ScrollToTop()
+        {
+            ApplyLayout();
+            RefreshScrollbarLayout();
+            ResetScrollToTop();
+        }
+
         private void ActivateCell(int index)
         {
             if (!IsOccupied(index))
@@ -575,7 +618,9 @@ namespace TxTRPG.UI
                 availableWidth,
                 minimumCellSize.x,
                 spacing.x);
-            var width = (availableWidth - spacing.x * (currentColumns - 1)) / currentColumns;
+            var width = layoutMode == ActionGridLayoutMode.ExactColumns
+                ? minimumCellSize.x
+                : (availableWidth - spacing.x * (currentColumns - 1)) / currentColumns;
             width = Mathf.Clamp(width, minimumCellSize.x, maximumCellSize.x);
             var aspect = minimumCellSize.x > 0f ? minimumCellSize.y / minimumCellSize.x : 1f;
 
@@ -739,9 +784,12 @@ namespace TxTRPG.UI
                 (Mathf.Max(1f, availableWidth) + safeSpacing) /
                 (safeMinimumWidth + safeSpacing)));
 
-            return mode == ActionGridLayoutMode.FixedColumns
-                ? Mathf.Min(Mathf.Max(1, maximumColumns), columnsThatFit)
-                : columnsThatFit;
+            return mode switch
+            {
+                ActionGridLayoutMode.ExactColumns => Mathf.Max(1, maximumColumns),
+                ActionGridLayoutMode.FixedColumns => Mathf.Min(Mathf.Max(1, maximumColumns), columnsThatFit),
+                _ => columnsThatFit
+            };
         }
 
         public static float CalculateRequiredGridHeight(
