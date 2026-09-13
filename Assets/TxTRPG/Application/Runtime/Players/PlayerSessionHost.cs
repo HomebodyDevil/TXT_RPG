@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using TxTRPG.Application.Configuration;
 using TxTRPG.Application.Persistence;
 using TxTRPG.Application.Dice;
+using TxTRPG.Gameplay.Combat;
+using TxTRPG.Gameplay.Exploration;
 using UnityEngine;
 
 namespace TxTRPG.Application.Players
@@ -24,12 +26,16 @@ namespace TxTRPG.Application.Players
         private PlayerSession session;
         private Task initializationTask;
         private TemporaryPlayerDiceState temporaryDice;
+        private ExplorationRunState temporaryExploration;
+        private TemporaryCombatState temporaryExplorationCombat;
 
         public static PlayerSessionHost Instance => instance;
         public IPlayerSession Session => session;
         public bool IsReady => session != null && session.IsReady;
         public Task WhenReady => EnsureInitializedAsync();
         public TemporaryPlayerDiceState TemporaryDice => temporaryDice;
+        public ExplorationRunState TemporaryExploration => temporaryExploration;
+        public TemporaryCombatState TemporaryExplorationCombat => temporaryExplorationCombat;
 
         private void Awake()
         {
@@ -153,6 +159,17 @@ namespace TxTRPG.Application.Players
             lifetimeCancellation = null;
         }
 
+        public ExplorationRunState GetOrCreateTemporaryExploration(Func<ExplorationRunState> factory)
+        {
+            if (temporaryExploration != null) return temporaryExploration;
+            temporaryExploration = factory?.Invoke() ?? throw new ArgumentNullException(nameof(factory));
+            return temporaryExploration;
+        }
+
+        public void SetTemporaryExplorationCombat(TemporaryCombatState combat)
+        {
+            temporaryExplorationCombat = combat;
+        }
         public void ConfigureTemporaryDice(TemporaryDiceConfiguration configuration)
         {
             if (temporaryDice != null) throw new InvalidOperationException("Temporary dice are already initialized.");

@@ -537,3 +537,10 @@ Scene 연결을 복구할 때에는 기존 메뉴의 Transform, 형제 순서, �
 - 실행 경로: `Assets/Scenes/AppScene.unity`에서 Play Mode를 시작하고 TMP_MainScene이 로드되면 적 체력 40/40, `다음 적 행동: 공격 5`와 `행동` 버튼을 확인합니다. 버튼을 누르면 주사위별 기록, 실제 적용 결과와 적 행동이 Story에 순서대로 추가됩니다.
 - 격리 검증: 행동 전후 `PlayerSessionHost.Instance.Session.CurrentPlayer.ActiveCharacter.Health` 값은 같아야 합니다. Scene을 다시 진입하면 임시 전투만 초기화됩니다.
 - 비활성화: 설정 자산의 `Enabled For Scene`을 끄면 전투가 생성되지 않고 명령이 비활성화됩니다. 정식 전투로 이전할 때에는 Scene의 임시 컨트롤러·추가 체력 바·예고 표시와 임시 명령 바인딩을 제거합니다. 저장 마이그레이션은 필요하지 않습니다.
+## 점진 생성 탐험 검증
+
+- 설정 자산: `Assets/TxTRPG/Application/Configuration/ExplorationRunConfiguration.asset`에서 `Choice Count`, `Combat Weight`, `Recovery Upgrade Weight`를 설정합니다. 가중치 합계는 양수여야 합니다.
+- Scene 적용: `Tools > TxT RPG > Application > Temporary > Apply Player Dice Roll Menu`는 탐험 설정이 없을 때만 기본 자산을 만들고, TMP_MainScene의 Canvas에 `ExplorationNodePanel`과 필수 참조를 선별 적용합니다. 기존 설정 자산 값은 덮어쓰지 않습니다.
+- 실행: `Assets/Scenes/AppScene.unity`에서 시작합니다. 후보를 선택하면 전투 노드는 `행동` 버튼을 활성화하고, 회복·강화 노드는 미구현 안내와 `계속` 버튼을 표시합니다. 완료 뒤 새 후보가 나타나며 상태 문구의 체력이 이전 노드 결과를 유지해야 합니다.
+- 진단: `ExplorationRunController.Run.Nodes`에서 부모 ID, 형제 순서, 깊이, 상태와 완료 이유를 읽을 수 있습니다. 미선택 형제는 `Unchosen`이며 자식을 갖지 않아야 합니다.
+- 제거: 정식 탐험으로 교체할 때 Scene의 `ExplorationRunController`와 `ExplorationNodePanel`, 임시 설정 자산 및 명령 바인딩을 제거합니다. 저장 데이터 마이그레이션은 필요하지 않습니다.

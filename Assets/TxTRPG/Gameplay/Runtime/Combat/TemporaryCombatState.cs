@@ -63,10 +63,21 @@ namespace TxTRPG.Gameplay.Combat
             int enemyAttackAmount,
             int enemyHealAmount,
             IDamageResolver damageResolver = null)
+            : this(new HealthState(playerMaximumHealth, playerCurrentHealth), enemyMaximumHealth, enemyAttackAmount, enemyHealAmount, damageResolver)
         {
+        }
+
+        public TemporaryCombatState(
+            HealthState playerHealth,
+            int enemyMaximumHealth,
+            int enemyAttackAmount,
+            int enemyHealAmount,
+            IDamageResolver damageResolver = null)
+        {
+            PlayerHealth = playerHealth ?? throw new ArgumentNullException(nameof(playerHealth));
+            if (PlayerHealth.IsDefeated) throw new ArgumentException("The combat player must be alive.", nameof(playerHealth));
             if (enemyAttackAmount < 0) throw new ArgumentOutOfRangeException(nameof(enemyAttackAmount));
             if (enemyHealAmount < 0) throw new ArgumentOutOfRangeException(nameof(enemyHealAmount));
-            PlayerHealth = new HealthState(playerMaximumHealth, playerCurrentHealth);
             EnemyHealth = new HealthState(enemyMaximumHealth);
             this.enemyAttackAmount = enemyAttackAmount;
             this.enemyHealAmount = enemyHealAmount;

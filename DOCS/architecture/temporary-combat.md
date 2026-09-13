@@ -2,7 +2,7 @@
 
 ## 범위와 상태 소유권
 
-`TMP_MainScene`의 임시 전투는 정식 전투·저장 시스템과 분리된 실행 검증 기능입니다. `TemporaryCombatState`는 Unity 객체를 참조하지 않는 순수 C# 상태이며, Scene 진입 시 운영 캐릭터의 현재·최대 체력 값을 새 `HealthState`에 복사합니다. 이후 피해와 회복은 복사본과 임시 적에게만 적용되므로 `PlayerSession`의 운영 체력과 저장 DTO는 변경되지 않습니다.
+`TMP_MainScene`의 임시 전투는 정식 전투·저장 시스템과 분리된 탐험 노드 처리기입니다. `TemporaryCombatState`는 Unity 객체를 참조하지 않는 순수 C# 상태이며, 전투 노드를 시작할 때 탐험이 소유한 `HealthState`를 직접 사용합니다. 피해와 회복은 다음 노드까지 이어지지만 `PlayerSession`의 운영 체력과 저장 DTO는 변경되지 않습니다.
 
 | 구성 요소 | 책임 |
 | --- | --- |
@@ -19,7 +19,7 @@
 
 ## Scene 수명과 표시
 
-`MainScenePresentationController`가 기본 적 표시를 정리한 뒤 임시 컨트롤러가 세션을 준비하고 전투를 생성합니다. TMP_MainScene에서는 `EnemyDisplayPanelDemoLoader`의 초기 데이터 소유권을 해제하여 임시 전투 컨트롤러만 적 표시를 갱신합니다. Scene이 파괴되면 체력 변경 구독을 해제하며, 재진입하면 운영 상태의 새 복사본과 초기 적을 다시 생성합니다.
+`MainScenePresentationController`가 기본 적 표시를 정리한 뒤 임시 컨트롤러는 전투 노드가 선택될 때까지 적을 생성하지 않습니다. TMP_MainScene에서는 `EnemyDisplayPanelDemoLoader`의 초기 데이터 소유권을 해제하여 임시 전투 컨트롤러만 적 표시를 갱신합니다. Scene이 파괴되면 체력 변경 구독을 해제하며, 재진입하면 운영 상태의 새 복사본과 초기 적을 다시 생성합니다.
 
 플레이어와 적 체력 바, 다음 적 행동, `StoryTextPanel`은 모두 같은 `TemporaryCombatState`를 읽습니다. 정식 전투, 보상, 경험치, 자동 부활, 3D 물리 굴림과 저장 반영은 이 기능의 범위에 포함되지 않습니다.
 

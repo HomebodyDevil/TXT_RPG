@@ -304,3 +304,8 @@ flowchart TD
 ### 임시 적 전투
 
 `Assets/TxTRPG/Gameplay/Runtime/Combat/`은 UI와 저장에 독립적인 임시 전투 상태를 포함합니다. `Assets/TxTRPG/Application/Runtime/Combat/`은 Scene별 시험 적 설정을, Dice 컨트롤러는 TMP_MainScene 표시 연결을 담당합니다. 상세 계약은 [임시 적 전투](temporary-combat.md)를 참조합니다.
+
+
+### 점진 생성 탐험
+
+`Assets/TxTRPG/Gameplay/Runtime/Exploration/`은 노드 생성·트리 기록·상태 전환을 소유합니다. `Assets/TxTRPG/Application/Runtime/Exploration/`은 AppScene 수명의 임시 탐험과 TMP_MainScene의 선택 UI·전투 처리기를 연결합니다. 자세한 내용은 [점진 생성 탐험 노드 트리](exploration-node-tree.md)를 참조합니다.

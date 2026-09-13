@@ -37,6 +37,7 @@ namespace TxTRPG.Application.Dice
         public int InitializationOrder => -800;
         public bool IsReady => initialized && combat != null && sessionHost?.TemporaryDice != null;
         public TemporaryCombatState Combat => combat;
+        public event Action<bool> CombatFinished;
 
         public async Task InitializeAsync(SceneInitializationContext context, CancellationToken cancellationToken)
         {
@@ -54,30 +55,33 @@ namespace TxTRPG.Application.Dice
                 return;
             }
 
-            var source = sessionHost.Session.CurrentPlayer.ActiveCharacter.Health;
-            if (source.IsDefeated)
-            {
-                storyPanel.AddMessage("[전투] 플레이어가 전투 불능 상태여서 임시 전투를 시작할 수 없습니다.");
-                RefreshPresentation();
-                menu.RefreshExecutionState();
-                return;
-            }
-
-            combat = new TemporaryCombatState(
-                source.Maximum,
-                source.Current,
-                combatConfiguration.EnemyMaximumHealth,
-                combatConfiguration.EnemyAttackAmount,
-                combatConfiguration.EnemyHealAmount);
-            combat.PlayerHealth.Changed += OnHealthChanged;
-            combat.EnemyHealth.Changed += OnHealthChanged;
             random = new SystemRandomIndexSource();
             initialized = true;
+            if (sessionHost.TemporaryExplorationCombat != null) AttachCombat(sessionHost.TemporaryExplorationCombat);
+            else ClearCombat();
+        }
+
+        public void BeginCombat(HealthState playerHealth)
+        {
+            if (!initialized) throw new InvalidOperationException("Temporary combat controller is not initialized.");
+            if (playerHealth == null) throw new ArgumentNullException(nameof(playerHealth));
+            ReleaseCombat();
+            combat = new TemporaryCombatState(playerHealth, combatConfiguration.EnemyMaximumHealth, combatConfiguration.EnemyAttackAmount, combatConfiguration.EnemyHealAmount);
+            sessionHost.SetTemporaryExplorationCombat(combat);
+            SubscribeCombat();
             ApplyEnemyPresentation();
             RefreshPresentation();
             menu.RefreshExecutionState();
         }
 
+        public void ClearCombat()
+        {
+            ReleaseCombat();
+            sessionHost?.SetTemporaryExplorationCombat(null);
+            enemyPanel?.SetEnemies(Array.Empty<EnemyPresentation>());
+            RefreshPresentation();
+            menu?.RefreshExecutionState();
+        }
         public bool CanExecute(string commandId, out string unavailableReason)
         {
             if (!string.Equals(commandId?.Trim(), RollAllCommandId, StringComparison.Ordinal))
@@ -107,6 +111,7 @@ namespace TxTRPG.Application.Dice
                 RecordTurn(rolls, result);
                 ApplyEnemyPresentation();
                 RefreshPresentation();
+                if (combat.IsComplete) CombatFinished?.Invoke(combat.EnemyHealth.IsDefeated);
                 return true;
             }
             catch (Exception exception)
@@ -165,6 +170,21 @@ namespace TxTRPG.Application.Dice
             }
         }
 
+        private void AttachCombat(TemporaryCombatState existingCombat)
+        {
+            ReleaseCombat();
+            combat = existingCombat;
+            SubscribeCombat();
+            ApplyEnemyPresentation();
+            RefreshPresentation();
+            menu?.RefreshExecutionState();
+        }
+
+        private void SubscribeCombat()
+        {
+            combat.PlayerHealth.Changed += OnHealthChanged;
+            combat.EnemyHealth.Changed += OnHealthChanged;
+        }
         private void OnHealthChanged(HealthChangeResult _) => RefreshPresentation();
 
         private void RefreshPresentation()
@@ -173,7 +193,7 @@ namespace TxTRPG.Application.Dice
             {
                 playerHealthBar?.Clear();
                 enemyHealthBar?.Clear();
-                if (nextEnemyActionText != null) nextEnemyActionText.text = "전투 준비 안 됨";
+                if (nextEnemyActionText != null) nextEnemyActionText.text = "전투 노드를 선택하세요";
                 return;
             }
 

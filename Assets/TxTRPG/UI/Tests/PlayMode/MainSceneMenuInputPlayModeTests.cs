@@ -4,6 +4,8 @@ using NUnit.Framework;
 using TxTRPG.Application.Items;
 using TxTRPG.Application.Players;
 using TxTRPG.Application.Dice;
+using TxTRPG.Application.Exploration;
+using TxTRPG.Gameplay.Exploration;
 using TxTRPG.UI;
 using TxTRPG.UI.Windows;
 using UnityEngine;
@@ -91,6 +93,22 @@ namespace TxTRPG.UI.Tests
             var story = components.OfType<StoryTextPanel>().Single();
             var binding = menu.Buttons.Single(item => item.ActionKind == GameMenuButtonActionKind.Command && item.CommandId == TemporaryDiceRollMenuController.RollAllCommandId);
             var controller = components.OfType<TemporaryDiceRollMenuController>().Single();
+            var exploration = components.OfType<ExplorationRunController>().Single();
+            var explorationPanel = components.First(item => item.gameObject.name == "ExplorationNodePanel").gameObject;
+            for (var set = 0; set < 100 && exploration.Run.CurrentChoices.All(item => item.TypeId != ExplorationNodeTypeIds.Combat); set++)
+            {
+                var placeholder = exploration.Run.CurrentChoices[0];
+                var choice = explorationPanel.transform.Find($"Choices/Choice{placeholder.SiblingIndex + 1}").GetComponent<UnityEngine.UI.Button>();
+                ExecuteEvents.Execute(choice.gameObject, new BaseEventData(EventSystem.current), ExecuteEvents.submitHandler);
+                yield return null;
+                var continueButton = explorationPanel.transform.Find("Continue").GetComponent<UnityEngine.UI.Button>();
+                ExecuteEvents.Execute(continueButton.gameObject, new BaseEventData(EventSystem.current), ExecuteEvents.submitHandler);
+                yield return null;
+            }
+            var combatChoice = exploration.Run.CurrentChoices.First(item => item.TypeId == ExplorationNodeTypeIds.Combat);
+            var combatButton = explorationPanel.transform.Find($"Choices/Choice{combatChoice.SiblingIndex + 1}").GetComponent<UnityEngine.UI.Button>();
+            ExecuteEvents.Execute(combatButton.gameObject, new BaseEventData(EventSystem.current), ExecuteEvents.submitHandler);
+            yield return null;
             for (var frame = 0; frame < 300 && !binding.Button.interactable; frame++) yield return null;
             Assert.That(binding.Button.interactable, Is.True, menu.UnavailableReason);
             Assert.That(binding.Button.GetComponentInChildren<TMPro.TMP_Text>(true).text, Is.EqualTo("행동"));
