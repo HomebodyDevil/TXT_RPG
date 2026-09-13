@@ -581,3 +581,4 @@ MonoBehaviour:
   newGameProfile: {fileID: 11400000, guid: 52fe062c14f563743a3f78278ecf7558, type: 2}
   saveFileName: player-save.json
   initializeOnAwake: 1
+  temporaryDiceConfiguration: {fileID: 11400000, guid: a6c6300a055e27c4c8e8e84bfc0a3d6e, type: 2}

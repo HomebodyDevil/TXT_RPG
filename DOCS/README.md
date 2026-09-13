@@ -21,13 +21,19 @@
 | [TMP_MainScene 기본 표시와 Preview](architecture/main-scene-default-presentation.md) | 배포용 대체 표시, 상태 구분, 운영 Scene 연결과 격리된 Preview를 설명합니다. |
 | [캐릭터 상태 UI 설계](architecture/character-status-ui.md) | 선택적 상태 Element, HealthBarPanel과 외형·상태 Binder 분리를 설명합니다. |
 | [개발 및 검증 절차](development/workflows.md) | 프리팹 재생성, 데모 미리보기, 테스트와 변경 시 확인 사항을 설명합니다. |
+| [설정 가능한 주사위 Gameplay 도메인](architecture/dice-domain.md) | 면별 정수 구성, 허용 범위, 런타임 변경과 주입 가능한 균등 굴림 계약을 설명합니다. |
 | [Main Scene 시각 개선 제안안](development/main-scene-visual-proposal.md) | 원본과 격리된 제안 Scene의 구성, 생성·실행·비교 절차와 검증 범위를 설명합니다. |
 | [등록 기반 Prefab Rebuild](architecture/prefab-rebuild-registry.md) | 안전한 생성 작업의 명시적 등록, 계획 검증, 실행과 제외 정책을 설명합니다. |
+| [한국어 TMP 대체 폰트](architecture/korean-font-fallback.md) | 기존 영문 폰트를 유지하는 전역 Noto Sans KR fallback, 라이선스, 적용과 검증 절차를 설명합니다. |
 
 ## 작업 지침서
 
 | 문서 | 설명 |
 | --- | --- |
+| [StoryTextPanel 레이아웃 수명주기 오류 수정](instructions/story-text-layout-lifecycle-null-fix.md) | 초기화 중 참조 누락과 레이아웃 재진입을 구분하고 크기 변경 콜백의 예외를 수정·검증합니다. |
+| [한국어 표시와 TMP 대체 폰트 수정](instructions/korean-text-font-fallback-fix.md) | 한국어 깨짐의 원인을 구분하고 기존 영문 폰트를 유지한 채 한글 fallback과 빌드 검증을 적용합니다. |
+| [임시 주사위 보유와 메뉴 굴림](instructions/temporary-player-dice-roll-menu.md) | 세션에 D4·D6·D8을 보유하고 메뉴 버튼으로 굴린 개별 결과를 StoryTextPanel에 누적 표시합니다. |
+| [설정 가능한 주사위 도메인](instructions/configurable-dice-domain.md) | 중복 정수 면, 균등 면 추첨, 런타임 구성 변경과 추후 소유·장착 연결 경계를 구현합니다. |
 | [Grid 표시 크기의 비율·고정 상한](instructions/action-grid-ratio-capped-sizing.md) | Icon과 EmptySlot에 비율 계산값과 고정 최대 크기 중 작은 값을 축별로 적용합니다. |
 | [Grid 빈 슬롯 표시 크기](instructions/action-grid-empty-slot-sizing.md) | EmptySlot에 독립적인 비율·고정 여백 설정을 제공하고 아이템 Icon 설정과 구분합니다. |
 | [Grid Cell 반응형 아이콘 크기](instructions/action-grid-cell-responsive-icon-sizing.md) | 비율 기반 아이콘 영역과 기존 고정 여백 모드를 제공하고 TMP_MainScene의 작은 아이콘 표시를 개선합니다. |

@@ -4,7 +4,8 @@
   "references": [
     "TxTRPG.UI",
     "TxTRPG.Application",
-    "Unity.ugui"
+    "Unity.ugui",
+    "Unity.TextMeshPro"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

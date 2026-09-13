@@ -131,3 +131,7 @@ ModalWindowHost
 `InventoryGameWindowPage`는 `GridContentLayoutSettings.CreateSafeCopy`로 표시 설정의 복사본을 검증한 뒤 사용합니다. 따라서 런타임 보정이 Prefab이나 공유 설정 원본을 변경하지 않습니다. null, 알 수 없는 enum 값, NaN·Infinity, 음수 및 과도한 값은 안전 범위로 대체하지만, 플레이어의 `InventoryState`와 아이템 수량은 변경하지 않습니다. 현재 상한은 슬롯 512개, 열 32개, Cell 1024px, 간격 256px, Padding 512px입니다.
 
 필수 의존성 오류는 `inventory.session-host-missing`, `inventory.catalog-missing`, `inventory.item-grid-missing`으로 구분하여 개발 로그에 원래 예외와 계층 경로를 남깁니다. 플레이어에게는 내부 경로나 예외 원문 대신 안전한 공통 문구를 표시합니다. 취소된 준비 요청은 오류로 처리하지 않으며, 재시도 버튼은 현재 페이지 준비 작업만 다시 요청합니다.
+
+## 임시 명령 버튼
+
+`GameMenuButtonBinding.actionKind`의 기본값 `OpenPage(0)`은 기존 직렬화 자산의 창 열기 동작을 보존합니다. `Command` 바인딩은 가짜 Page ID를 만들지 않고 `IGameMenuCommandHandler`로 전달됩니다. TMP_MainScene의 `TemporaryDiceRoll`만 이 경로를 사용하며, 세션과 StoryTextPanel이 모두 준비되고 보유 주사위가 있을 때만 활성화됩니다. 기존 Inventory, System, Status 버튼은 계속 `GameWindowService`를 사용합니다.

@@ -2,6 +2,8 @@ using System.Collections;
 using System.Linq;
 using NUnit.Framework;
 using TxTRPG.Application.Items;
+using TxTRPG.Application.Dice;
+using TxTRPG.UI;
 using TxTRPG.UI.Windows;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -77,6 +79,28 @@ namespace TxTRPG.UI.Tests
             Assert.That(EventSystem.current.currentSelectedGameObject, Is.SameAs(systemButton.gameObject));
         }
 
+        [UnityTest]
+        public IEnumerator AppScene_TemporaryDiceButton_AppendsThreeIndividualResultsPerActivation()
+        {
+            SceneManager.LoadScene(AppScenePath, LoadSceneMode.Single);
+            yield return WaitForScene(MainScenePath, 600);
+            var mainScene = SceneManager.GetSceneByPath(MainScenePath);
+            var components = mainScene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<Component>(true)).ToArray();
+            var menu = components.OfType<GameMenuPanel>().Single();
+            var story = components.OfType<StoryTextPanel>().Single();
+            var binding = menu.Buttons.Single(item => item.ActionKind == GameMenuButtonActionKind.Command && item.CommandId == TemporaryDiceRollMenuController.RollAllCommandId);
+            for (var frame = 0; frame < 300 && !binding.Button.interactable; frame++) yield return null;
+            Assert.That(binding.Button.interactable, Is.True, menu.UnavailableReason);
+            var before = story.MessageCount;
+            ExecuteEvents.Execute(binding.Button.gameObject, new BaseEventData(EventSystem.current), ExecuteEvents.submitHandler);
+            yield return null;
+            Assert.That(story.MessageCount, Is.EqualTo(before + 3));
+            ExecuteEvents.Execute(binding.Button.gameObject, new BaseEventData(EventSystem.current), ExecuteEvents.submitHandler);
+            yield return null;
+            Assert.That(story.MessageCount, Is.EqualTo(before + 6));
+            var texts = story.GetComponentsInChildren<TMPro.TMP_Text>(true).Select(text => text.text).Where(text => !string.IsNullOrWhiteSpace(text)).ToArray();
+            Assert.That(texts.Count(text => text.Contains("D4") || text.Contains("D6") || text.Contains("D8")), Is.GreaterThanOrEqualTo(6));
+        }
         private static IEnumerator WaitForScene(string path, int frameLimit)
         {
             for (var frame = 0; frame < frameLimit; frame++)

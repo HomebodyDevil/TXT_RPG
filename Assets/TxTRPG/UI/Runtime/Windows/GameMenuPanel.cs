@@ -7,6 +7,13 @@ using UnityEngine.UI;
 
 namespace TxTRPG.UI.Windows
 {
+    public enum GameMenuButtonActionKind { OpenPage = 0, Command = 1 }
+
+    public interface IGameMenuCommandHandler
+    {
+        bool CanExecute(string commandId, out string unavailableReason);
+        bool TryExecute(string commandId);
+    }
     [Serializable]
     public sealed class GameMenuButtonBinding
     {
@@ -17,6 +24,8 @@ namespace TxTRPG.UI.Windows
         [SerializeField] private bool overrideRequestPresentation;
         [SerializeField] private ModalContentKind contentKind = ModalContentKind.CustomContent;
         [SerializeField] private string requestTitle = string.Empty;
+        [SerializeField] private GameMenuButtonActionKind actionKind;
+        [SerializeField] private string commandId = string.Empty;
         public string PageId => pageId?.Trim() ?? string.Empty;
         public Button Button => button != null ? button : view != null ? view.Button : null;
         public bool Visible => visible;
@@ -24,6 +33,8 @@ namespace TxTRPG.UI.Windows
         public ModalContentKind ContentKind => contentKind;
         public bool OverridesRequestPresentation => overrideRequestPresentation;
         public string RequestTitle => requestTitle?.Trim() ?? string.Empty;
+        public GameMenuButtonActionKind ActionKind => actionKind;
+        public string CommandId => commandId?.Trim() ?? string.Empty;
         public void SetVisible(bool value) => visible = value;
 #if UNITY_EDITOR
         public void ConfigureForEditor(string id, Button target, bool isVisible = true,
@@ -31,6 +42,8 @@ namespace TxTRPG.UI.Windows
             string title = null, bool overridePresentation = false)
         { pageId = id; button = target; visible = isVisible; view = targetView; contentKind = kind;
           requestTitle = title ?? string.Empty; overrideRequestPresentation = overridePresentation; }
+        public void ConfigureCommandForEditor(string id, Button target, bool isVisible = true, GameMenuButtonView targetView = null)
+        { pageId = string.Empty; commandId = id; actionKind = GameMenuButtonActionKind.Command; button = target; visible = isVisible; view = targetView; }
 #endif
     }
 
@@ -39,6 +52,7 @@ namespace TxTRPG.UI.Windows
     {
         [SerializeField] private List<GameMenuButtonBinding> buttons = new();
         [SerializeField] private GameWindowService windowService;
+        [SerializeField] private MonoBehaviour commandHandlerBehaviour;
         [SerializeField] private ActionGridPanel quickItemGrid;
         [SerializeField] private RectTransform viewport;
         [SerializeField] private RectTransform content;
@@ -69,8 +83,10 @@ namespace TxTRPG.UI.Windows
         public bool HasValidInternalConfiguration => ValidateInternalConfiguration(out _);
         public bool IsReady => HasValidInternalConfiguration && windowService != null;
         public string UnavailableReason { get; private set; } = string.Empty;
+        private IGameMenuCommandHandler CommandHandler => commandHandlerBehaviour as IGameMenuCommandHandler;
 
         private void OnEnable() { BindButtons(); RefreshExecutionState(); QueueRefresh(); }
+        private void Start() { BindButtons(); RefreshExecutionState(); QueueRefresh(); }
         private void OnDisable() => UnbindButtons();
         private void OnRectTransformDimensionsChange() => QueueRefresh();
         private void LateUpdate()
@@ -111,6 +127,19 @@ namespace TxTRPG.UI.Windows
             _ = windowService.OpenAsync(request);
         }
 
+        public bool ExecuteCommand(string commandId)
+        {
+            quickItemGrid?.CloseContextMenu();
+            var handler = CommandHandler;
+            var reason = string.Empty;
+            if (handler == null || !handler.CanExecute(commandId, out reason))
+            {
+                UnavailableReason = string.IsNullOrWhiteSpace(reason) ? "Game-menu command is not ready." : reason;
+                Debug.LogWarning($"Cannot execute game-menu command '{commandId}': {UnavailableReason}", this);
+                return false;
+            }
+            return handler.TryExecute(commandId);
+        }
         public bool SetItemVisible(string pageId, bool visible)
         {
             var normalized = pageId?.Trim() ?? string.Empty;
@@ -184,7 +213,7 @@ namespace TxTRPG.UI.Windows
             UnavailableReason = !internallyValid ? reason : windowService == null ? "GameWindowService is not connected." : string.Empty;
             foreach (var binding in buttons)
                 if (binding?.Button != null)
-                    binding.Button.interactable = internallyValid && windowService != null && windowService.HasPage(binding.PageId);
+                    binding.Button.interactable = internallyValid && CanExecute(binding);
         }
 
         private void BindButtons()
@@ -201,13 +230,23 @@ namespace TxTRPG.UI.Windows
                     Debug.LogWarning($"Game menu button '{button.name}' is bound more than once; duplicate binding was ignored.", this);
                     continue;
                 }
-                var id = binding.PageId;
-                UnityAction listener = () => Open(id);
+                var pageId = binding.PageId;
+                var commandId = binding.CommandId;
+                var actionKind = binding.ActionKind;
+                UnityAction listener = actionKind == GameMenuButtonActionKind.Command
+                    ? () => ExecuteCommand(commandId)
+                    : () => Open(pageId);
                 runtimeListeners.Add(button, listener);
                 button.onClick.AddListener(listener);
             }
         }
 
+        private bool CanExecute(GameMenuButtonBinding binding)
+        {
+            if (binding.ActionKind == GameMenuButtonActionKind.Command)
+                return CommandHandler != null && CommandHandler.CanExecute(binding.CommandId, out _);
+            return windowService != null && windowService.HasPage(binding.PageId);
+        }
         private void UnbindButtons()
         {
             foreach (var pair in runtimeListeners)
@@ -308,6 +347,12 @@ namespace TxTRPG.UI.Windows
             scrollRect = targetScrollRect;
             layout = targetLayout;
             horizontalScrollbar = targetScrollbar;
+        }
+        public void SetCommandHandlerForEditor(MonoBehaviour handler) => commandHandlerBehaviour = handler;
+        public void AddOrReplaceCommandForEditor(GameMenuButtonBinding binding)
+        {
+            buttons.RemoveAll(item => item != null && item.ActionKind == GameMenuButtonActionKind.Command && item.CommandId == binding.CommandId);
+            buttons.Add(binding);
         }
 #endif
     }

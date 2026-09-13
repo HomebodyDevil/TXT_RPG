@@ -398,12 +398,16 @@ Sprite Sheet의 여러 상태 Sprite를 선택했다면 모든 행에 같은 Tex
 
 ## 다국어 글꼴 확인
 
-현재 TextMeshPro 필수 리소스의 기본 Liberation Sans는 한국어 전체 글리프를 제공하지 않습니다. 다국어 기능을 구현할 때 다음 작업이 필요합니다.
+TextMeshPro 기본 Liberation Sans는 한국어 글리프를 제공하지 않으므로 Noto Sans KR 전역 fallback을 사용합니다. 기본 영문 폰트와 기존 Prefab의 폰트 참조는 교체하지 않습니다.
 
-- 지원 언어의 글리프를 포함하는 TMP Font Asset을 준비합니다.
-- 언어별 또는 공통 fallback 목록을 설정합니다.
-- 동적 폰트 사용 시 빌드 크기, 메모리와 플랫폼별 폰트 가용성을 확인합니다.
-- 한국어, 영어, 일본어와 긴 문자열 언어에서 줄바꿈과 레이아웃을 검증합니다.
+1. 컴파일이 끝나고 Play Mode가 아닌지 확인합니다.
+2. `Tools > TxT RPG > UI > Fonts > Apply Korean Font Fallback`을 실행합니다. 이 메뉴는 반복 실행해도 fallback을 중복 등록하지 않으며 자산을 자동 저장합니다.
+3. `Assets/TextMesh Pro/Resources/TMP Settings.asset`의 기본 폰트가 `LiberationSans SDF`인지, fallback 목록에 `NotoSansKR Fallback`이 있는지 확인합니다.
+4. Edit Mode에서 `KoreanFontFallbackTests`를 실행합니다.
+5. `Assets/Scenes/TMP_MainScene.unity`을 열고 AppScene 실행 정책을 통해 Play Mode를 시작합니다. 주사위 굴림, Story 메시지, `가방`과 `설정` 모달에서 한국어와 영문이 함께 표시되는지 확인합니다.
+6. 배포 대상 Player를 빌드하여 Missing glyph 경고, 글자 대체, 줄바꿈과 레이아웃을 확인합니다.
+
+원본 폰트와 라이선스, atlas 정책 및 지원 범위는 `DOCS/architecture/korean-font-fallback.md`에 기록합니다. 동적 atlas의 메모리와 최초 생성 비용은 데스크톱과 모바일 실제 기기에서 각각 측정해야 합니다.
 
 ## 문서 갱신 확인
 
@@ -499,3 +503,28 @@ Scene 연결을 복구할 때에는 기존 메뉴의 Transform, 형제 순서, �
 `ActionGridCell` Inspector에서 Icon Layout과 Empty Slot Layout의 모드를 각각 `Relative With Max Size`로 선택한 뒤 `Area Ratio`와 `Maximum Size`를 설정합니다. 운영 기본값은 두 표시 모두 0.9와 64×64이며, 최종 크기는 ContentRoot 비율값과 최대 크기 중 축별로 작은 값입니다.
 
 기존 공용 Cell을 사용자 설정을 보존하면서 이전하려면 `Tools > TxT RPG > UI > Prefabs > Upgrade Action Grid Cell Ratio Capped Layout`을 실행합니다. 이 메뉴는 두 표시의 모드·비율·상한과 생성기 기본 ContentRoot 여백만 저장하고 전체 ActionGridPanel을 재생성하지 않습니다. 자동 저장되며 같은 값으로 안전하게 재실행할 수 있습니다. `TMP_MainScene`은 공용 Cell 참조를 사용하므로 별도 Scene Override가 필요하지 않습니다.
+## 주사위 도메인 검증
+
+`Assets/TxTRPG/Gameplay/Tests/Editor/DiceTests.cs`는 4·6·8면 생성, 중복 숫자 면, 첫·마지막 인덱스 굴림, 면·범위 교체의 원자성, 입력 복사, 이전 결과 보존과 난수 공급자 계약을 검증합니다. Unity Test Runner의 Edit Mode에서 `TxTRPG.Gameplay.Tests.DiceTests`를 실행합니다. 이 도메인은 순수 C#이므로 Scene이나 Prefab 적용 절차가 없습니다.
+
+## 임시 플레이어 주사위 메뉴
+
+- 설정 자산: `Assets/TxTRPG/Application/Configuration/TemporaryDiceConfiguration.asset`
+- 적용 메뉴: `Tools > TxT RPG > Application > Temporary > Apply Player Dice Roll Menu`
+- 실행 경로: `Assets/Scenes/AppScene.unity`에서 시작하여 `TMP_MainScene`이 로드된 후 GameMenuPanel의 `주사위 굴리기 (임시)`를 사용합니다.
+- 기능 해제: 설정 자산의 `Enabled For Session`을 끄면 세션 지급과 버튼 실행이 비활성화됩니다.
+- 제거 지점: 정식 주사위 소유 시스템으로 전환할 때 `TemporaryDiceRollMenuController`, 임시 버튼 바인딩과 AppRoot의 임시 설정 참조를 제거합니다. 저장 스키마에는 이전할 데이터가 없습니다.
+
+적용 메뉴는 기존 메뉴·Story 인스턴스를 찾아 필요한 버튼과 참조만 추가하며 안전하게 다시 실행할 수 있습니다. 실행 전 TMP_MainScene의 미저장 변경이 있으면 중단하고, 성공하면 AppRoot.prefab과 TMP_MainScene을 저장합니다.
+
+
+## StoryTextPanel 레이아웃 수명 주기 검증
+
+`StoryTextPanel`의 필수 참조 누락과 레이아웃 재진입을 확인할 때에는 다음 순서로 검증합니다.
+
+1. Edit Mode에서 `TxTRPG.UI.Tests.StoryTextPanelTests`를 실행하여 운영 Prefab 참조와 누락 참조 경고를 확인합니다.
+2. Play Mode에서 `TxTRPG.UI.Tests.StoryTextPanelLifecyclePlayModeTests`를 실행합니다. 활성화 전 미구성, 활성화 후 참조 복구, 반복 크기 변경, Canvas 갱신, 비활성화·재활성화와 파괴 경로를 포함합니다.
+3. `Assets/Scenes/AppScene.unity`에서 실행하여 `TMP_MainScene` 진입 후 StoryTextPanel에 메시지를 추가하고 창 크기를 변경합니다.
+4. Scene 전환 또는 Play Mode 종료 후 `StoryTextPanel.RebuildAndRefresh`, `ScrollToBottomAfterLayout`과 MissingReference 관련 예외가 없는지 Console에서 확인합니다.
+
+운영 Prefab과 Scene 참조가 정상이라면 별도 적용 메뉴를 실행하지 않습니다. 누락이 확인되었을 때에도 자동 Scene 검색으로 숨기지 말고 Prefab 또는 해당 Scene Override의 직렬화 참조를 복구합니다.

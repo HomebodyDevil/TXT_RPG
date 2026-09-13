@@ -41,6 +41,8 @@ TxT-RPG/
 │   ├── TextMesh Pro/
 │   │   └── Resources, Fonts, Shaders, Sprites
 │   └── TxTRPG/
+│       ├── UI/Fonts/Korean/
+│       │   └── Noto Sans KR 원본, OFL 라이선스와 TMP fallback
 │       ├── Gameplay/
 │       │   ├── Runtime/Characters/
 │       │   └── Tests/Editor/
@@ -80,7 +82,7 @@ TxT-RPG/
 
 ### `Assets/TxTRPG/Gameplay`
 
-`TxTRPG.Gameplay`은 UI와 Scene 수명에서 독립된 게임 규칙 어셈블리입니다. `Runtime/Characters`에는 안정적인 Stat ID, 기본 스탯 Definition, 캐릭터 인스턴스 상태, 체력, 피해 계산 계약과 버전 저장 DTO가 있습니다. `Runtime/Players`에는 플레이어가 소유한 캐릭터 목록, 활성 캐릭터 선택, 복수 캐릭터 저장 DTO와 기존 단일 캐릭터 저장 변환 기능이 있습니다. `Tests/Editor`는 기본값 검증, 피해·회복 경계, 플레이어 불변 조건, 저장 Round Trip과 마이그레이션을 검증합니다. UI의 `CharacterPresentation`은 이 어셈블리로 이동하지 않으며 계속 외형 표현만 담당합니다.
+`TxTRPG.Gameplay`은 UI와 Scene 수명에서 독립된 게임 규칙 어셈블리입니다. `Runtime/Characters`에는 안정적인 Stat ID, 기본 스탯 Definition, 캐릭터 인스턴스 상태, 체력, 피해 계산 계약과 버전 저장 DTO가 있습니다. `Runtime/Dice`에는 독립적인 면 구성과 범위, 런타임 변경, 주입 가능한 난수 인덱스와 불변 굴림 결과가 있습니다. `Runtime/Players`에는 플레이어가 소유한 캐릭터 목록, 활성 캐릭터 선택, 복수 캐릭터 저장 DTO와 기존 단일 캐릭터 저장 변환 기능이 있습니다. `Tests/Editor`는 기본값 검증, 피해·회복 경계, 플레이어 불변 조건, 저장 Round Trip과 마이그레이션을 검증합니다. UI의 `CharacterPresentation`은 이 어셈블리로 이동하지 않으며 계속 외형 표현만 담당합니다.
 
 ### `Assets/TxTRPG/Content`
 
@@ -267,7 +269,7 @@ flowchart TD
 
 ## Unity 기본·생성 디렉터리
 
-- `Assets/TextMesh Pro`에는 TextMeshPro 필수 리소스가 있습니다. 실제 다국어 출시에 필요한 글꼴과 fallback 구성은 별도로 추가해야 합니다.
+- `Assets/TextMesh Pro`에는 TextMeshPro 필수 리소스와 전역 `TMP Settings`가 있습니다. 기본 `LiberationSans SDF`는 유지하며, 한국어는 `Assets/TxTRPG/UI/Fonts/Korean`의 Noto Sans KR fallback을 사용합니다. 세부 정책은 `DOCS/architecture/korean-font-fallback.md`를 참조합니다.
 - `Library`, `Temp`, `Logs`, `obj`는 Unity 또는 빌드 도구가 생성합니다. 소스 구현이나 문서의 권위 있는 근거로 사용하지 않으며 직접 수정하지 않습니다.
 - `Assets/TutorialInfo`와 `Assets/Readme.asset`은 Unity 템플릿 자산입니다. 현재 제품 런타임 구조에는 참여하지 않습니다.
 
@@ -293,3 +295,7 @@ flowchart TD
 ## UI 시각 제안 자산
 
 `Assets/TxTRPG/UI/VisualProposals/MainScene/`에는 운영용 공용 프리팹과 분리된 Main Scene 제안 스타일만 둡니다. `Assets/Scenes/MainScene_VisualProposal.unity`는 원본 `TMP_MainScene.unity`의 프리팹 연결을 유지하는 비교용 Scene이며, 실행·재생성 절차는 `DOCS/development/main-scene-visual-proposal.md`에 기록합니다.
+
+### 임시 주사위 메뉴
+
+`Assets/TxTRPG/Application/Runtime/Dice/`는 PlayerSession 수명의 임시 주사위 보유 상태와 TMP_MainScene 표시 어댑터를 포함합니다. 영구 Gameplay Dice 규칙은 계속 `Assets/TxTRPG/Gameplay/Runtime/Dice/`에 있으며 저장 모델과 분리됩니다.

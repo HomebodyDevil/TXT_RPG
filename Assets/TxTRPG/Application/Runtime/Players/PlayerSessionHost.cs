@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using TxTRPG.Application.Configuration;
 using TxTRPG.Application.Persistence;
+using TxTRPG.Application.Dice;
 using UnityEngine;
 
 namespace TxTRPG.Application.Players
@@ -17,15 +18,18 @@ namespace TxTRPG.Application.Players
         [SerializeField] private NewGameProfile newGameProfile;
         [SerializeField] private string saveFileName = "player-save.json";
         [SerializeField] private bool initializeOnAwake = true;
+        [SerializeField] private TemporaryDiceConfiguration temporaryDiceConfiguration;
 
         private CancellationTokenSource lifetimeCancellation;
         private PlayerSession session;
         private Task initializationTask;
+        private TemporaryPlayerDiceState temporaryDice;
 
         public static PlayerSessionHost Instance => instance;
         public IPlayerSession Session => session;
         public bool IsReady => session != null && session.IsReady;
         public Task WhenReady => EnsureInitializedAsync();
+        public TemporaryPlayerDiceState TemporaryDice => temporaryDice;
 
         private void Awake()
         {
@@ -45,6 +49,7 @@ namespace TxTRPG.Application.Players
             instance = this;
             lifetimeCancellation = new CancellationTokenSource();
             CreateSession();
+            CreateTemporaryDice();
             if (initializeOnAwake)
             {
                 StartInitialization(lifetimeCancellation.Token);
@@ -54,6 +59,7 @@ namespace TxTRPG.Application.Players
         public Task EnsureInitializedAsync(CancellationToken cancellationToken = default)
         {
             CreateSession();
+            CreateTemporaryDice();
             if (initializationTask == null ||
                 initializationTask.IsCanceled ||
                 initializationTask.IsFaulted)
@@ -105,6 +111,12 @@ namespace TxTRPG.Application.Players
                 new GuidCharacterInstanceIdGenerator());
         }
 
+        private void CreateTemporaryDice()
+        {
+            if (temporaryDice != null || temporaryDiceConfiguration == null) return;
+            temporaryDice = new TemporaryPlayerDiceState(temporaryDiceConfiguration);
+        }
+
         private void StartInitialization(CancellationToken cancellationToken)
         {
             initializationTask = session.InitializeAsync(cancellationToken);
@@ -139,6 +151,12 @@ namespace TxTRPG.Application.Players
             lifetimeCancellation?.Cancel();
             lifetimeCancellation?.Dispose();
             lifetimeCancellation = null;
+        }
+
+        public void ConfigureTemporaryDice(TemporaryDiceConfiguration configuration)
+        {
+            if (temporaryDice != null) throw new InvalidOperationException("Temporary dice are already initialized.");
+            temporaryDiceConfiguration = configuration;
         }
 
         private static string NormalizeSaveFileName(string value)

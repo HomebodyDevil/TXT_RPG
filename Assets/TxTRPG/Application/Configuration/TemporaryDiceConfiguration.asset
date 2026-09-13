@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9f15bda7bf3091c42ae42de0884c2ff9, type: 3}
+  m_Name: TemporaryDiceConfiguration
+  m_EditorClassIdentifier: TxTRPG.Application::TxTRPG.Application.Dice.TemporaryDiceConfiguration
+  enabledForSession: 1
+  dice:
+  - id: temporary.d4
+    displayName: D4
+    faceValues: 01000000020000000300000004000000
+    minimumValue: 1
+    maximumValue: 4
+  - id: temporary.d6
+    displayName: D6
+    faceValues: 010000000200000003000000040000000500000006000000
+    minimumValue: 1
+    maximumValue: 6
+  - id: temporary.d8
+    displayName: D8
+    faceValues: 0100000002000000030000000400000005000000060000000700000008000000
+    minimumValue: 1
+    maximumValue: 8
