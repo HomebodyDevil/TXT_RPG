@@ -157,20 +157,22 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
-        public void ActiveUnconfiguredPanel_ReportsMissingReferencesWithoutException()
+        public void ActiveUnconfiguredPanel_ReportsMissingReferencesOnceWithoutException()
         {
-            var gameObject = new GameObject("Unconfigured StoryTextPanel");
+            var gameObject = new GameObject("Unconfigured StoryTextPanel", typeof(RectTransform));
+            gameObject.SetActive(false);
             try
             {
                 var panel = gameObject.AddComponent<StoryTextPanel>();
                 LogAssert.Expect(
                     LogType.Warning,
                     new System.Text.RegularExpressions.Regex(
-                        "StoryTextPanel is disabled because required references are missing:.*scrollRect.*"));
-                typeof(StoryTextPanel)
-                    .GetMethod("OnEnable", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
-                    ?.Invoke(panel, null);
+                        "StoryTextPanel is waiting for required references:.*scrollRect.*"));
+                gameObject.SetActive(true);
+                ((RectTransform)gameObject.transform).sizeDelta = new Vector2(420f, 260f);
+                Canvas.ForceUpdateCanvases();
                 Assert.That(panel.HasRequiredReferences, Is.False);
+                LogAssert.NoUnexpectedReceived();
             }
             finally
             {

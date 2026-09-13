@@ -81,6 +81,11 @@ namespace TxTRPG.UI
         private float initialRevealProgress = 1f;
         private float initialRevealElapsed;
         private bool scrollListenersRegistered;
+        private bool missingReferencesLogged;
+        private bool layoutRefreshPending;
+        private bool layoutRefreshInProgress;
+        private ScrollRect subscribedScrollRect;
+        private Scrollbar subscribedScrollbar;
 
         public bool AllowUserScrolling
         {
@@ -220,14 +225,24 @@ namespace TxTRPG.UI
 
         public void ScrollToOldest()
         {
-            RebuildLayout();
+            if (!TryPrepareRequiredReferences() || !RebuildLayout())
+            {
+                layoutRefreshPending = true;
+                return;
+            }
+
             scrollRect.verticalNormalizedPosition = 1f;
             SynchronizeFromScrollRect(Vector2.up);
         }
 
         public void ScrollToLatest()
         {
-            RebuildLayout();
+            if (!TryPrepareRequiredReferences() || !RebuildLayout())
+            {
+                layoutRefreshPending = true;
+                return;
+            }
+
             scrollRect.verticalNormalizedPosition = 0f;
             SynchronizeFromScrollRect(Vector2.zero);
         }
@@ -268,28 +283,29 @@ namespace TxTRPG.UI
 
         private void OnEnable()
         {
-            if (!HasRequiredReferences)
+            layoutRefreshPending = true;
+            if (TryPrepareRequiredReferences())
             {
-                LogMissingRequiredReferences();
-                return;
+                ScheduleScrollToBottom();
             }
-
-            scrollRect.onValueChanged.AddListener(SynchronizeFromScrollRect);
-            scrollbar.onValueChanged.AddListener(SynchronizeFromScrollbar);
-            scrollListenersRegistered = true;
-            ApplyOptions();
-            ScheduleScrollToBottom();
         }
 
         private void OnDisable()
         {
-            if (scrollListenersRegistered)
-            {
-                scrollRect?.onValueChanged.RemoveListener(SynchronizeFromScrollRect);
-                scrollbar?.onValueChanged.RemoveListener(SynchronizeFromScrollbar);
-                scrollListenersRegistered = false;
-            }
+            UnregisterScrollListeners();
+            CancelScheduledWork();
+            layoutRefreshPending = false;
+            layoutRefreshInProgress = false;
+        }
 
+        private void OnDestroy()
+        {
+            UnregisterScrollListeners();
+            CancelScheduledWork();
+        }
+
+        private void CancelScheduledWork()
+        {
             if (scrollToBottomRoutine != null)
             {
                 StopCoroutine(scrollToBottomRoutine);
@@ -304,9 +320,56 @@ namespace TxTRPG.UI
             initialRevealRoutine = null;
         }
 
+        private void UnregisterScrollListeners()
+        {
+            if (!scrollListenersRegistered)
+            {
+                return;
+            }
+
+            subscribedScrollRect?.onValueChanged.RemoveListener(SynchronizeFromScrollRect);
+            subscribedScrollbar?.onValueChanged.RemoveListener(SynchronizeFromScrollbar);
+            subscribedScrollRect = null;
+            subscribedScrollbar = null;
+            scrollListenersRegistered = false;
+        }
+
+        private bool TryPrepareRequiredReferences()
+        {
+            if (!HasRequiredReferences)
+            {
+                UnregisterScrollListeners();
+                LogMissingRequiredReferences();
+                return false;
+            }
+
+            missingReferencesLogged = false;
+            if (scrollListenersRegistered && subscribedScrollRect == scrollRect &&
+                subscribedScrollbar == scrollbar)
+            {
+                return true;
+            }
+
+            UnregisterScrollListeners();
+            scrollRect.onValueChanged.AddListener(SynchronizeFromScrollRect);
+            scrollbar.onValueChanged.AddListener(SynchronizeFromScrollbar);
+            subscribedScrollRect = scrollRect;
+            subscribedScrollbar = scrollbar;
+            scrollListenersRegistered = true;
+            ApplyOptions();
+            layoutRefreshPending = true;
+            return true;
+        }
+
         private void LogMissingRequiredReferences()
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (missingReferencesLogged)
+            {
+                return;
+            }
+
+            missingReferencesLogged = true;
             var missing = new List<string>();
             if (messagePrefab == null) missing.Add(nameof(messagePrefab));
             if (viewport == null) missing.Add(nameof(viewport));
@@ -314,21 +377,38 @@ namespace TxTRPG.UI
             if (scrollRect == null) missing.Add(nameof(scrollRect));
             if (scrollbar == null) missing.Add(nameof(scrollbar));
             Debug.LogWarning(
-                $"StoryTextPanel is disabled because required references are missing: {string.Join(", ", missing)}.",
+                $"StoryTextPanel is waiting for required references: {string.Join(", ", missing)}.",
                 this);
 #endif
         }
 
         private void LateUpdate()
         {
+            var wasPrepared = scrollListenersRegistered;
+            if (!TryPrepareRequiredReferences())
+            {
+                return;
+            }
+
+            if (!wasPrepared)
+            {
+                ScheduleScrollToBottom();
+            }
+
+            if (layoutRefreshPending && !layoutRefreshInProgress)
+            {
+                layoutRefreshPending = false;
+                RebuildAndRefreshNow();
+            }
+
             RefreshMessageOpacity();
         }
 
         private void OnRectTransformDimensionsChange()
         {
-            if (isActiveAndEnabled)
+            if (isActiveAndEnabled && !layoutRefreshInProgress)
             {
-                RebuildAndRefresh();
+                layoutRefreshPending = true;
             }
         }
 
@@ -397,25 +477,44 @@ namespace TxTRPG.UI
 
         private void SynchronizeFromScrollbar(float value)
         {
-            if (synchronizingScrollbar)
+            if (synchronizingScrollbar || scrollRect == null)
             {
                 return;
             }
 
             synchronizingScrollbar = true;
-            scrollRect.verticalNormalizedPosition = value;
-            synchronizingScrollbar = false;
+            try
+            {
+                scrollRect.verticalNormalizedPosition = value;
+            }
+            finally
+            {
+                synchronizingScrollbar = false;
+            }
+
             RefreshMessageOpacity();
         }
 
         private void SynchronizeFromScrollRect(Vector2 position)
         {
+            if (scrollRect == null || scrollbar == null)
+            {
+                layoutRefreshPending = true;
+                return;
+            }
+
             if (!synchronizingScrollbar)
             {
                 synchronizingScrollbar = true;
-                scrollbar.value = scrollRect.verticalNormalizedPosition;
-                scrollbar.size = scrollbarHandleSize;
-                synchronizingScrollbar = false;
+                try
+                {
+                    scrollbar.value = scrollRect.verticalNormalizedPosition;
+                    scrollbar.size = scrollbarHandleSize;
+                }
+                finally
+                {
+                    synchronizingScrollbar = false;
+                }
             }
 
             RefreshMessageOpacity();
@@ -493,7 +592,7 @@ namespace TxTRPG.UI
 
         private void ScheduleScrollToBottom()
         {
-            if (!isActiveAndEnabled)
+            if (!isActiveAndEnabled || !HasRequiredReferences)
             {
                 return;
             }
@@ -509,9 +608,19 @@ namespace TxTRPG.UI
         private IEnumerator ScrollToBottomAfterLayout()
         {
             yield return null;
-            RebuildLayout();
-            scrollRect.verticalNormalizedPosition = 0f;
-            SynchronizeFromScrollRect(Vector2.zero);
+            if (!isActiveAndEnabled || !TryPrepareRequiredReferences())
+            {
+                scrollToBottomRoutine = null;
+                layoutRefreshPending = true;
+                yield break;
+            }
+
+            if (RebuildLayout())
+            {
+                scrollRect.verticalNormalizedPosition = 0f;
+                SynchronizeFromScrollRect(Vector2.zero);
+            }
+
             scrollToBottomRoutine = null;
             StartInitialRevealWhenReady();
         }
@@ -559,16 +668,45 @@ namespace TxTRPG.UI
 
         private void RebuildAndRefresh()
         {
-            RebuildLayout();
+            layoutRefreshPending = true;
+        }
+
+        private void RebuildAndRefreshNow()
+        {
+            if (!TryPrepareRequiredReferences() || !RebuildLayout() || !HasRequiredReferences)
+            {
+                layoutRefreshPending = true;
+                return;
+            }
+
             SynchronizeFromScrollRect(scrollRect.normalizedPosition);
             StartInitialRevealWhenReady();
         }
 
-        private void RebuildLayout()
+        private bool RebuildLayout()
         {
-            Canvas.ForceUpdateCanvases();
-            LayoutRebuilder.ForceRebuildLayoutImmediate(content);
-            Canvas.ForceUpdateCanvases();
+            if (!HasRequiredReferences || layoutRefreshInProgress)
+            {
+                return false;
+            }
+
+            layoutRefreshInProgress = true;
+            try
+            {
+                Canvas.ForceUpdateCanvases();
+                if (content == null)
+                {
+                    return false;
+                }
+
+                LayoutRebuilder.ForceRebuildLayoutImmediate(content);
+                Canvas.ForceUpdateCanvases();
+                return content != null;
+            }
+            finally
+            {
+                layoutRefreshInProgress = false;
+            }
         }
     }
 }
