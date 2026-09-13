@@ -21,7 +21,8 @@
 | [TMP_MainScene 기본 표시와 Preview](architecture/main-scene-default-presentation.md) | 배포용 대체 표시, 상태 구분, 운영 Scene 연결과 격리된 Preview를 설명합니다. |
 | [캐릭터 상태 UI 설계](architecture/character-status-ui.md) | 선택적 상태 Element, HealthBarPanel과 외형·상태 Binder 분리를 설명합니다. |
 | [개발 및 검증 절차](development/workflows.md) | 프리팹 재생성, 데모 미리보기, 테스트와 변경 시 확인 사항을 설명합니다. |
-| [설정 가능한 주사위 Gameplay 도메인](architecture/dice-domain.md) | 면별 정수 구성, 허용 범위, 런타임 변경과 주입 가능한 균등 굴림 계약을 설명합니다. |
+| [임시 적 전투](architecture/temporary-combat.md) | 격리된 플레이어·적 체력, 주사위 효과 적용, 적 행동 예고와 Scene 수명 경계를 설명합니다. |
+| [설정 가능한 주사위 Gameplay 도메인](architecture/dice-domain.md) | 면별 효과·수치 구성, 런타임 변경, 외부 면 판정과 결과 스냅샷 계약을 설명합니다. |
 | [Main Scene 시각 개선 제안안](development/main-scene-visual-proposal.md) | 원본과 격리된 제안 Scene의 구성, 생성·실행·비교 절차와 검증 범위를 설명합니다. |
 | [등록 기반 Prefab Rebuild](architecture/prefab-rebuild-registry.md) | 안전한 생성 작업의 명시적 등록, 계획 검증, 실행과 제외 정책을 설명합니다. |
 | [한국어 TMP 대체 폰트](architecture/korean-font-fallback.md) | 기존 영문 폰트를 유지하는 전역 Noto Sans KR fallback, 라이선스, 적용과 검증 절차를 설명합니다. |
@@ -30,6 +31,8 @@
 
 | 문서 | 설명 |
 | --- | --- |
+| [행동 버튼과 임시 적 전투](instructions/temporary-enemy-action-combat.md) | 격리된 전투 상태에서 플레이어 주사위와 적의 교대 행동, 체력 바·행동 예고·기록을 연결합니다. |
+| [주사위 효과 면과 결과 기록](instructions/dice-effect-faces-and-story-results.md) | 공격·회복과 수치로 면을 전환하고 Story 기록 및 추후 3D 판정 연결 경계를 구성합니다. |
 | [StoryTextPanel 레이아웃 수명주기 오류 수정](instructions/story-text-layout-lifecycle-null-fix.md) | 초기화 중 참조 누락과 레이아웃 재진입을 구분하고 크기 변경 콜백의 예외를 수정·검증합니다. |
 | [한국어 표시와 TMP 대체 폰트 수정](instructions/korean-text-font-fallback-fix.md) | 한국어 깨짐의 원인을 구분하고 기존 영문 폰트를 유지한 채 한글 fallback과 빌드 검증을 적용합니다. |
 | [임시 주사위 보유와 메뉴 굴림](instructions/temporary-player-dice-roll-menu.md) | 세션에 D4·D6·D8을 보유하고 메뉴 버튼으로 굴린 개별 결과를 StoryTextPanel에 누적 표시합니다. |

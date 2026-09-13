@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 28784297e6d6a68409db2c7020118a6e, type: 3}
+  m_Name: TemporaryCombatConfiguration
+  m_EditorClassIdentifier: TxTRPG.Application::TxTRPG.Application.Combat.TemporaryCombatConfiguration
+  enabledForScene: 1
+  enemyName: "\uD14C\uC2A4\uD2B8 \uC801"
+  enemyId: demo-slime
+  enemyInstanceId: temporary.enemy.1
+  enemyMaximumHealth: 40
+  enemyAttackAmount: 5
+  enemyHealAmount: 3

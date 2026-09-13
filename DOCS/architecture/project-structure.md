@@ -82,7 +82,7 @@ TxT-RPG/
 
 ### `Assets/TxTRPG/Gameplay`
 
-`TxTRPG.Gameplay`은 UI와 Scene 수명에서 독립된 게임 규칙 어셈블리입니다. `Runtime/Characters`에는 안정적인 Stat ID, 기본 스탯 Definition, 캐릭터 인스턴스 상태, 체력, 피해 계산 계약과 버전 저장 DTO가 있습니다. `Runtime/Dice`에는 독립적인 면 구성과 범위, 런타임 변경, 주입 가능한 난수 인덱스와 불변 굴림 결과가 있습니다. `Runtime/Players`에는 플레이어가 소유한 캐릭터 목록, 활성 캐릭터 선택, 복수 캐릭터 저장 DTO와 기존 단일 캐릭터 저장 변환 기능이 있습니다. `Tests/Editor`는 기본값 검증, 피해·회복 경계, 플레이어 불변 조건, 저장 Round Trip과 마이그레이션을 검증합니다. UI의 `CharacterPresentation`은 이 어셈블리로 이동하지 않으며 계속 외형 표현만 담당합니다.
+`TxTRPG.Gameplay`은 UI와 Scene 수명에서 독립된 게임 규칙 어셈블리입니다. `Runtime/Characters`에는 안정적인 Stat ID, 기본 스탯 Definition, 캐릭터 인스턴스 상태, 체력, 피해 계산 계약과 버전 저장 DTO가 있습니다. `Runtime/Dice`에는 효과와 수치로 구성된 독립적인 면, 런타임 변경, 주입 가능한 난수 인덱스, 외부 면 판정과 불변 굴림 결과가 있습니다. `Runtime/Players`에는 플레이어가 소유한 캐릭터 목록, 활성 캐릭터 선택, 복수 캐릭터 저장 DTO와 기존 단일 캐릭터 저장 변환 기능이 있습니다. `Tests/Editor`는 기본값 검증, 피해·회복 경계, 플레이어 불변 조건, 저장 Round Trip과 마이그레이션을 검증합니다. UI의 `CharacterPresentation`은 이 어셈블리로 이동하지 않으며 계속 외형 표현만 담당합니다.
 
 ### `Assets/TxTRPG/Content`
 
@@ -298,4 +298,9 @@ flowchart TD
 
 ### 임시 주사위 메뉴
 
-`Assets/TxTRPG/Application/Runtime/Dice/`는 PlayerSession 수명의 임시 주사위 보유 상태와 TMP_MainScene 표시 어댑터를 포함합니다. 영구 Gameplay Dice 규칙은 계속 `Assets/TxTRPG/Gameplay/Runtime/Dice/`에 있으며 저장 모델과 분리됩니다.
+`Assets/TxTRPG/Application/Runtime/Dice/`는 PlayerSession 수명의 임시 주사위 보유 상태와 TMP_MainScene 표시 어댑터와 로컬라이제이션 가능한 효과 표시명 경계를 포함합니다. 영구 Gameplay Dice 규칙은 계속 `Assets/TxTRPG/Gameplay/Runtime/Dice/`에 있으며 저장 모델과 분리됩니다.
+
+
+### 임시 적 전투
+
+`Assets/TxTRPG/Gameplay/Runtime/Combat/`은 UI와 저장에 독립적인 임시 전투 상태를 포함합니다. `Assets/TxTRPG/Application/Runtime/Combat/`은 Scene별 시험 적 설정을, Dice 컨트롤러는 TMP_MainScene 표시 연결을 담당합니다. 상세 계약은 [임시 적 전투](temporary-combat.md)를 참조합니다.

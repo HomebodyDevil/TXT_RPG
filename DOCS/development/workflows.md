@@ -505,17 +505,18 @@ Scene 연결을 복구할 때에는 기존 메뉴의 Transform, 형제 순서, �
 기존 공용 Cell을 사용자 설정을 보존하면서 이전하려면 `Tools > TxT RPG > UI > Prefabs > Upgrade Action Grid Cell Ratio Capped Layout`을 실행합니다. 이 메뉴는 두 표시의 모드·비율·상한과 생성기 기본 ContentRoot 여백만 저장하고 전체 ActionGridPanel을 재생성하지 않습니다. 자동 저장되며 같은 값으로 안전하게 재실행할 수 있습니다. `TMP_MainScene`은 공용 Cell 참조를 사용하므로 별도 Scene Override가 필요하지 않습니다.
 ## 주사위 도메인 검증
 
-`Assets/TxTRPG/Gameplay/Tests/Editor/DiceTests.cs`는 4·6·8면 생성, 중복 숫자 면, 첫·마지막 인덱스 굴림, 면·범위 교체의 원자성, 입력 복사, 이전 결과 보존과 난수 공급자 계약을 검증합니다. Unity Test Runner의 Edit Mode에서 `TxTRPG.Gameplay.Tests.DiceTests`를 실행합니다. 이 도메인은 순수 C#이므로 Scene이나 Prefab 적용 절차가 없습니다.
+`Assets/TxTRPG/Gameplay/Tests/Editor/DiceTests.cs`는 4·6·8면 효과 구성, 중복 면, 외부 면 판정, 면·범위 교체의 원자성, 입력 복사, 결과 스냅샷, 미지원 효과와 난수 공급자 계약을 검증합니다. Unity Test Runner의 Edit Mode에서 `TxTRPG.Gameplay.Tests.DiceTests`를 실행합니다. 이 도메인은 순수 C#이므로 Scene이나 Prefab 적용 절차가 없습니다.
 
 ## 임시 플레이어 주사위 메뉴
 
 - 설정 자산: `Assets/TxTRPG/Application/Configuration/TemporaryDiceConfiguration.asset`
 - 적용 메뉴: `Tools > TxT RPG > Application > Temporary > Apply Player Dice Roll Menu`
 - 실행 경로: `Assets/Scenes/AppScene.unity`에서 시작하여 `TMP_MainScene`이 로드된 후 GameMenuPanel의 `주사위 굴리기 (임시)`를 사용합니다.
+- 면 설정: 각 Dice 항목의 `Faces`에서 `Effect Kind`와 `Amount`를 편집합니다. 현재 런타임은 Attack과 Heal만 허용합니다.
 - 기능 해제: 설정 자산의 `Enabled For Session`을 끄면 세션 지급과 버튼 실행이 비활성화됩니다.
 - 제거 지점: 정식 주사위 소유 시스템으로 전환할 때 `TemporaryDiceRollMenuController`, 임시 버튼 바인딩과 AppRoot의 임시 설정 참조를 제거합니다. 저장 스키마에는 이전할 데이터가 없습니다.
 
-적용 메뉴는 기존 메뉴·Story 인스턴스를 찾아 필요한 버튼과 참조만 추가하며 안전하게 다시 실행할 수 있습니다. 실행 전 TMP_MainScene의 미저장 변경이 있으면 중단하고, 성공하면 AppRoot.prefab과 TMP_MainScene을 저장합니다.
+적용 메뉴는 기존 메뉴·Story 인스턴스를 찾아 필요한 버튼과 참조만 추가합니다. 알려진 숫자형 D4/D6/D8 기본 자산은 공격·회복 교대 면으로 한 번 업그레이드하며, 효과를 판단할 수 없는 사용자 정의 숫자형 자산은 변경하지 않고 오류로 중단합니다. 효과형 자산의 개발자 설정은 재실행해도 덮어쓰지 않습니다. 실행 전 TMP_MainScene의 미저장 변경이 있으면 중단하고, 성공하면 AppRoot.prefab과 TMP_MainScene을 저장합니다.
 
 
 ## StoryTextPanel 레이아웃 수명 주기 검증
@@ -528,3 +529,11 @@ Scene 연결을 복구할 때에는 기존 메뉴의 Transform, 형제 순서, �
 4. Scene 전환 또는 Play Mode 종료 후 `StoryTextPanel.RebuildAndRefresh`, `ScrollToBottomAfterLayout`과 MissingReference 관련 예외가 없는지 Console에서 확인합니다.
 
 운영 Prefab과 Scene 참조가 정상이라면 별도 적용 메뉴를 실행하지 않습니다. 누락이 확인되었을 때에도 자동 Scene 검색으로 숨기지 말고 Prefab 또는 해당 Scene Override의 직렬화 참조를 복구합니다.
+
+## TMP_MainScene 임시 적 전투
+
+- 설정 자산: `Assets/TxTRPG/Application/Configuration/TemporaryCombatConfiguration.asset`에서 활성 여부, 적 이름·외형 ID·최대 체력·공격량·회복량을 설정합니다.
+- 적용 메뉴: `Tools > TxT RPG > Application > Temporary > Apply Player Dice Roll Menu`는 기존 TMP_MainScene 배치를 보존하면서 임시 전투 참조, 적 체력 바, 행동 예고와 `행동` 버튼 제목을 선별 적용합니다. 설정 자산이 이미 있으면 값을 덮어쓰지 않으며 안전하게 다시 실행할 수 있습니다. Scene은 자동 저장되므로 적용 전에 관련 미저장 변경을 먼저 저장하거나 별도로 보존해야 합니다.
+- 실행 경로: `Assets/Scenes/AppScene.unity`에서 Play Mode를 시작하고 TMP_MainScene이 로드되면 적 체력 40/40, `다음 적 행동: 공격 5`와 `행동` 버튼을 확인합니다. 버튼을 누르면 주사위별 기록, 실제 적용 결과와 적 행동이 Story에 순서대로 추가됩니다.
+- 격리 검증: 행동 전후 `PlayerSessionHost.Instance.Session.CurrentPlayer.ActiveCharacter.Health` 값은 같아야 합니다. Scene을 다시 진입하면 임시 전투만 초기화됩니다.
+- 비활성화: 설정 자산의 `Enabled For Scene`을 끄면 전투가 생성되지 않고 명령이 비활성화됩니다. 정식 전투로 이전할 때에는 Scene의 임시 컨트롤러·추가 체력 바·예고 표시와 임시 명령 바인딩을 제거합니다. 저장 마이그레이션은 필요하지 않습니다.

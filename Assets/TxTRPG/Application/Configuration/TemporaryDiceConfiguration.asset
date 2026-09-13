@@ -16,16 +16,55 @@ MonoBehaviour:
   dice:
   - id: temporary.d4
     displayName: D4
-    faceValues: 01000000020000000300000004000000
+    faces:
+    - effectKind: 1
+      amount: 1
+    - effectKind: 2
+      amount: 2
+    - effectKind: 1
+      amount: 3
+    - effectKind: 2
+      amount: 4
+    legacyFaceValues: []
     minimumValue: 1
     maximumValue: 4
   - id: temporary.d6
     displayName: D6
-    faceValues: 010000000200000003000000040000000500000006000000
+    faces:
+    - effectKind: 1
+      amount: 1
+    - effectKind: 2
+      amount: 2
+    - effectKind: 1
+      amount: 3
+    - effectKind: 2
+      amount: 4
+    - effectKind: 1
+      amount: 5
+    - effectKind: 2
+      amount: 6
+    legacyFaceValues: []
     minimumValue: 1
     maximumValue: 6
   - id: temporary.d8
     displayName: D8
-    faceValues: 0100000002000000030000000400000005000000060000000700000008000000
+    faces:
+    - effectKind: 1
+      amount: 1
+    - effectKind: 2
+      amount: 2
+    - effectKind: 1
+      amount: 3
+    - effectKind: 2
+      amount: 4
+    - effectKind: 1
+      amount: 5
+    - effectKind: 2
+      amount: 6
+    - effectKind: 1
+      amount: 7
+    - effectKind: 2
+      amount: 8
+    legacyFaceValues: []
     minimumValue: 1
     maximumValue: 8
