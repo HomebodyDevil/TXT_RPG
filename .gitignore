@@ -54,6 +54,8 @@ crashlytics-build.properties
 # Test and coverage output
 /TestResults/
 /CodeCoverage/
+/Assets/InitTestScene*.unity
+/Assets/InitTestScene*.unity.meta
 *.coverage
 *.coveragexml
 
