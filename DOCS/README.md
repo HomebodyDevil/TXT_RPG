@@ -21,7 +21,7 @@
 | [TMP_MainScene 기본 표시와 Preview](architecture/main-scene-default-presentation.md) | 배포용 대체 표시, 상태 구분, 운영 Scene 연결과 격리된 Preview를 설명합니다. |
 | [캐릭터 상태 UI 설계](architecture/character-status-ui.md) | 선택적 상태 Element, HealthBarPanel과 외형·상태 Binder 분리를 설명합니다. |
 | [개발 및 검증 절차](development/workflows.md) | 프리팹 재생성, 데모 미리보기, 테스트와 변경 시 확인 사항을 설명합니다. |
-| [점진 생성 탐험 노드 트리](architecture/exploration-node-tree.md) | 선택·미선택 기록, 지연 후보 생성, 탐험 체력과 전투 연결을 설명합니다. |
+| [점진 생성 탐험 노드 트리](architecture/exploration-node-tree.md) | 선택·미선택 기록, 지연 후보 생성, 탐험 체력·전투 연결과 반응형 노드 선택 카드 구조를 설명합니다. |
 | [임시 적 전투](architecture/temporary-combat.md) | 격리된 플레이어·적 체력, 주사위 효과 적용, 적 행동 예고와 Scene 수명 경계를 설명합니다. |
 | [설정 가능한 주사위 Gameplay 도메인](architecture/dice-domain.md) | 면별 효과·수치 구성, 런타임 변경, 외부 면 판정과 결과 스냅샷 계약을 설명합니다. |
 | [Main Scene 시각 개선 제안안](development/main-scene-visual-proposal.md) | 원본과 격리된 제안 Scene의 구성, 생성·실행·비교 절차와 검증 범위를 설명합니다. |
@@ -32,6 +32,8 @@
 
 | 문서 | 설명 |
 | --- | --- |
+| [탐험 카드 정렬·간격·도형](instructions/exploration-card-layout-and-shapes.md) | 가로·세로 정렬, Padding·간격, 절차적 도형과 이미지 마스킹을 확장하는 작업 지침입니다. |
+| [탐험 노드 선택 카드 UI](instructions/exploration-node-choice-cards.md) | 선택 버튼을 줄바꿈 가능한 세로 카드로 교체하고 이미지·회전·애니메이션·효과 확장 경계를 구성합니다. |
 | [점진 생성 노드 트리와 탐험 흐름](instructions/incremental-run-node-tree.md) | 무작위 후보 선택·노드 완료·탐험 상태 연속성과 선택/미선택 분기 기록을 구현합니다. |
 | [행동 버튼과 임시 적 전투](instructions/temporary-enemy-action-combat.md) | 격리된 전투 상태에서 플레이어 주사위와 적의 교대 행동, 체력 바·행동 예고·기록을 연결합니다. |
 | [주사위 효과 면과 결과 기록](instructions/dice-effect-faces-and-story-results.md) | 공격·회복과 수치로 면을 전환하고 Story 기록 및 추후 3D 판정 연결 경계를 구성합니다. |

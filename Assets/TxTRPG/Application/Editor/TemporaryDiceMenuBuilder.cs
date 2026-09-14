@@ -6,6 +6,7 @@ using TxTRPG.Application.Dice;
 using TxTRPG.Application.Exploration;
 using TxTRPG.Application.Players;
 using TxTRPG.UI;
+using TxTRPG.UI.Exploration;
 using TxTRPG.UI.Windows;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -27,6 +28,7 @@ namespace TxTRPG.Application.Editor
         public const string EnemyHealthName = "TemporaryEnemyHealthBar";
         public const string NextActionName = "TemporaryEnemyNextAction";
         public const string ExplorationPanelName = "ExplorationNodePanel";
+        public const string ExplorationCardPrefabPath = "Assets/TxTRPG/UI/Prefabs/ExplorationNodeChoiceCard.prefab";
 
         [MenuItem("Tools/TxT RPG/Application/Temporary/Apply Player Dice Roll Menu")]
         public static void Apply()
@@ -96,6 +98,7 @@ namespace TxTRPG.Application.Editor
                 var ui = EnsureExplorationUi(menu.GetComponentInParent<Canvas>().transform);
                 var exploration = menu.GetComponent<ExplorationRunController>() ?? menu.gameObject.AddComponent<ExplorationRunController>();
                 exploration.ConfigureForEditor(explorationConfiguration, combat, story, ui.Root, ui.Status, ui.Buttons, ui.Labels, ui.Continue);
+                exploration.ConfigureCardsForEditor(ui.CardList);
                 EditorUtility.SetDirty(menu); EditorUtility.SetDirty(combat); EditorUtility.SetDirty(exploration); EditorUtility.SetDirty(enemyPanel);
                 if (!EditorSceneManager.SaveScene(scene, ScenePath)) throw new InvalidOperationException("Could not save TMP_MainScene.");
             }
@@ -111,7 +114,7 @@ namespace TxTRPG.Application.Editor
             var binding = new GameMenuButtonBinding(); binding.ConfigureCommandForEditor(TemporaryDiceRollMenuController.RollAllCommandId, view.Button, true, view); menu.AddOrReplaceCommandForEditor(binding);
         }
 
-        private sealed class ExplorationUi { public GameObject Root; public TMP_Text Status; public Button[] Buttons; public TMP_Text[] Labels; public Button Continue; }
+        private sealed class ExplorationUi { public GameObject Root; public TMP_Text Status; public Button[] Buttons; public TMP_Text[] Labels; public Button Continue; public ExplorationNodeChoiceCardList CardList; }
 
         private static ExplorationUi EnsureExplorationUi(Transform parent)
         {
@@ -120,19 +123,34 @@ namespace TxTRPG.Application.Editor
             {
                 existing.SetParent(parent, false);
                 var existingRect = (RectTransform)existing;
-                existingRect.anchorMin = existingRect.anchorMax = new Vector2(.5f, .5f);
-                existingRect.pivot = new Vector2(.5f, .5f);
-                existingRect.anchoredPosition = new Vector2(0, 80);
-                existingRect.sizeDelta = new Vector2(760, 250);
-                return new ExplorationUi { Root = existing.gameObject, Status = existing.Find("Status").GetComponent<TMP_Text>(), Buttons = Enumerable.Range(1, 3).Select(i => existing.Find($"Choices/Choice{i}").GetComponent<Button>()).ToArray(), Labels = Enumerable.Range(1, 3).Select(i => existing.Find($"Choices/Choice{i}/Label").GetComponent<TMP_Text>()).ToArray(), Continue = existing.Find("Continue").GetComponent<Button>() };
+                existingRect.anchorMin = new Vector2(.08f, .12f); existingRect.anchorMax = new Vector2(.92f, .88f);
+                existingRect.pivot = new Vector2(.5f, .5f); existingRect.offsetMin = existingRect.offsetMax = Vector2.zero;
+                var existingChoices = existing.Find("Choices"); if (existingChoices != null) existingChoices.gameObject.SetActive(false);
+                return new ExplorationUi { Root = existing.gameObject, Status = existing.Find("Status").GetComponent<TMP_Text>(), Buttons = Enumerable.Range(1, 3).Select(i => existing.Find($"Choices/Choice{i}").GetComponent<Button>()).ToArray(), Labels = Enumerable.Range(1, 3).Select(i => existing.Find($"Choices/Choice{i}/Label").GetComponent<TMP_Text>()).ToArray(), Continue = existing.Find("Continue").GetComponent<Button>(), CardList = EnsureExplorationCardList(existing) };
             }
-            var root = CreateRect(ExplorationPanelName, parent); root.anchorMin = root.anchorMax = new Vector2(.5f,.5f); root.pivot = new Vector2(.5f,.5f); root.anchoredPosition = new Vector2(0,80); root.sizeDelta = new Vector2(760,250);
+            var root = CreateRect(ExplorationPanelName, parent); root.anchorMin = new Vector2(.08f,.12f); root.anchorMax = new Vector2(.92f,.88f); root.pivot = new Vector2(.5f,.5f); root.offsetMin = root.offsetMax = Vector2.zero;
             var background = root.gameObject.AddComponent<Image>(); background.color = new Color(.07f,.09f,.14f,.96f);
             var statusRect = CreateRect("Status", root); statusRect.anchorMin = new Vector2(0,1); statusRect.anchorMax = Vector2.one; statusRect.offsetMin = new Vector2(24,-72); statusRect.offsetMax = new Vector2(-24,-18); var status = AddText(statusRect,"다음 노드 선택",24);
             var choices = CreateRect("Choices", root); choices.anchorMin = new Vector2(0,0); choices.anchorMax = Vector2.one; choices.offsetMin = new Vector2(24,64); choices.offsetMax = new Vector2(-24,-82); var layout = choices.gameObject.AddComponent<HorizontalLayoutGroup>(); layout.spacing = 14; layout.childAlignment = TextAnchor.MiddleCenter; layout.childControlWidth = true; layout.childForceExpandWidth = true;
             var buttons = new Button[3]; var labels = new TMP_Text[3]; for(var i=0;i<3;i++){ buttons[i]=CreateSimpleButton($"Choice{i+1}",choices,$"{i+1}. 노드",out labels[i]); }
             var continueRect = CreateRect("Continue", root); continueRect.anchorMin = continueRect.anchorMax = new Vector2(.5f,0); continueRect.pivot = new Vector2(.5f,0); continueRect.anchoredPosition = new Vector2(0,16); continueRect.sizeDelta = new Vector2(180,44); var continueButton = AddButtonVisual(continueRect,"계속",out _); continueRect.gameObject.SetActive(false);
-            return new ExplorationUi { Root=root.gameObject, Status=status, Buttons=buttons, Labels=labels, Continue=continueButton };
+            choices.gameObject.SetActive(false);
+            return new ExplorationUi { Root=root.gameObject, Status=status, Buttons=buttons, Labels=labels, Continue=continueButton, CardList=EnsureExplorationCardList(root) };
+        }
+
+        private static ExplorationNodeChoiceCardList EnsureExplorationCardList(Transform panelRoot)
+        {
+            var existing = panelRoot.Find("CardScroll");
+            if (existing != null) return existing.GetComponent<ExplorationNodeChoiceCardList>() ?? throw new InvalidOperationException("CardScroll has no ExplorationNodeChoiceCardList.");
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(ExplorationCardPrefabPath) ?? throw new InvalidOperationException($"Exploration card prefab is missing: {ExplorationCardPrefabPath}");
+            var scrollRectTransform = CreateRect("CardScroll", panelRoot); Stretch(scrollRectTransform, 24f, 64f, 24f, 82f);
+            var viewport = CreateRect("Viewport", scrollRectTransform); Stretch(viewport); viewport.gameObject.AddComponent<RectMask2D>();
+            var content = CreateRect("Content", viewport); content.anchorMin = new Vector2(0f,1f); content.anchorMax = Vector2.one; content.pivot = new Vector2(.5f,1f); content.anchoredPosition = Vector2.zero; content.sizeDelta = Vector2.zero;
+            var layout = content.gameObject.AddComponent<ExplorationNodeChoiceLayoutGroup>(); layout.Configure(210f, 300f, 18f, 18f, new RectOffset(12,12,12,12));
+            var fitter = content.gameObject.AddComponent<ContentSizeFitter>(); fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained; fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            var scroll = scrollRectTransform.gameObject.AddComponent<ScrollRect>(); scroll.viewport = viewport; scroll.content = content; scroll.horizontal = false; scroll.vertical = true; scroll.movementType = ScrollRect.MovementType.Clamped; scroll.scrollSensitivity = 32f;
+            var list = scrollRectTransform.gameObject.AddComponent<ExplorationNodeChoiceCardList>(); list.ConfigureForEditor(scroll, content, prefab.GetComponent<ExplorationNodeChoiceCardView>(), layout);
+            return list;
         }
 
         private static void DisableEnemyDemoLoader(EnemyDisplayPanel enemyPanel)

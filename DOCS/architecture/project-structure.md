@@ -104,6 +104,8 @@ TxT-RPG/
 
 플레이어 빌드에 포함되는 UI 모델과 MonoBehaviour가 있습니다. Editor API를 직접 사용하지 않습니다.
 
+`Exploration` 하위에는 노드 후보 표시 데이터와 선택 요청, 재사용 가능한 카드 View, 카드 목록 및 실제 Viewport 너비에 따라 중앙 정렬·줄바꿈하는 LayoutGroup이 있습니다. 탐험 규칙은 Gameplay에 남고 UI 어셈블리는 노드 생성이나 완료를 직접 수행하지 않습니다.
+
 | 파일 | 역할 |
 | --- | --- |
 | `StoryMessage.cs` | 표시가 준비된 본문과 선택적 발화자를 전달하는 불변 값 객체입니다. |
@@ -181,6 +183,7 @@ TxT-RPG/
 | `ActionGridPrefabBuilder.cs` | 셀, 컨텍스트 메뉴와 그리드 패널 운영용 Prefab을 생성합니다. |
 | `ActionGridPanelDemoBuilder.cs` | 데모 아이콘, 데이터와 Edit Mode 미리보기 Prefab을 생성합니다. |
 | `FlexibleLayoutPrefabBuilder.cs` | 빈 운영용 레이아웃, Placeholder Prefab과 세 제품 UI를 조합한 재귀 Demo를 생성합니다. |
+| `ExplorationNodeChoiceCardPrefabBuilder.cs` | 효과 적용 계층과 선택적 Artwork 영역을 갖춘 탐험 노드 선택 카드 Prefab을 생성합니다. |
 | `FlexibleLayoutUpgradeUtility.cs` | 선택한 구형 Prefab과 씬 인스턴스에 BackgroundContentLayer를 명시적으로 추가합니다. |
 | `FlexibleLayoutPanelEditor.cs` | 공유 중인 BackgroundContent 독립 설정을 읽기 전용으로 표시합니다. |
 | `AddressableAssetEditor.cs` | 수명 기반 그룹과 안정적인 주소 등록 및 Player Content 빌드 메뉴를 제공합니다. |

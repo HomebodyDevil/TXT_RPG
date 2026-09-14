@@ -42,3 +42,32 @@ Root(Completed)
 현재는 전투와 효과 없는 회복·강화 처리기만 등록되어 있습니다. 전체 트리 시각화, 되돌아가기, 최대 깊이, 엔딩, 보상, 실제 강화 효과와 디스크 저장·이어하기는 구현하지 않았습니다.
 
 ![탐험 노드 선택 실행 화면](../images/exploration-node-selection-runtime.png)
+
+## 노드 선택 카드
+
+`ExplorationRunController`는 도메인 후보를 표시 데이터로 변환하며, `ExplorationNodeChoiceCardList`는 카드 생성·재사용·포커스와 세로 스크롤을 담당합니다. 선택 요청에는 Run ID, Choice Set ID와 Node ID가 함께 포함되므로 재사용된 이전 카드가 새로운 후보를 선택할 수 없습니다.
+
+카드 Prefab은 `CardRoot > MotionRoot > VisualRoot` 구조를 사용합니다. 부모 Layout은 CardRoot만 배치하며 향후 이동·회전·확대 효과는 MotionRoot에, 외형과 알파 효과는 VisualRoot에 적용합니다. Artwork, Border, FocusVisual과 EffectOverlay는 서로 분리되어 있고 장식 Graphic은 Raycast를 차단하지 않습니다. 현재 기본 표현은 정적이며 실제 Tween, Animator와 셰이더 효과는 구현하지 않았습니다.
+
+`ExplorationNodeChoiceLayoutGroup`은 실제 Viewport 너비를 기준으로 열 수를 계산하고 각 행을 중앙 정렬합니다. 카드 크기를 축소하지 않고 공간이 부족하면 다음 행으로 줄바꿈하며, 높이가 부족하면 외부 ScrollRect가 세로 접근을 제공합니다.
+
+개발자는 `Child Alignment`에서 가로 좌측·중앙·우측과 세로 상단·중앙·하단의 9개 조합을 선택할 수 있습니다. 가로 정렬은 마지막 불완전 행에도 적용되며 데이터 순서는 바뀌지 않습니다. Content의 preferred height는 `max(내용 높이, Viewport 높이)`로 계산됩니다. 따라서 내용이 적을 때에는 세로 정렬 여유가 생기고, 내용이 넘치면 상단부터 배치되어 모든 행에 스크롤로 접근할 수 있습니다. `Padding`은 목록 경계에 한 번만 적용되고 두 Spacing 값은 카드와 행 사이에만 적용됩니다.
+
+카드 외형은 호환용 `Image` 모드와 `Procedural Shape` 모드로 구분됩니다. 절차적 모드에서는 `ShapeVisual`의 `ExplorationCardShapeGraphic`이 사각형, 둥근 사각형, 원, 타원 또는 위쪽을 향한 삼각형 Mesh를 만들고 같은 경계로 Artwork를 마스킹합니다. `ShapeBorder`는 내부 테두리만 그리며 CardRoot의 점유 크기를 늘리지 않습니다. 제목·설명·상태는 ShapeVisual 밖의 형제이므로 도형에 잘리지 않고, CardRoot의 Button 입력 영역은 계속 사각형입니다. 각 Graphic은 공유 Material을 변경하거나 별도 Mesh를 소유하지 않으며 Unity의 VertexHelper 재생성 수명에만 의존합니다.
+
+```text
+CardRoot
+└─ MotionRoot
+   └─ VisualRoot
+      ├─ Background (Image 모드 호환 배경)
+      ├─ ShapeVisual (도형 Graphic + Mask)
+      │  └─ Artwork
+      ├─ ShapeBorder
+      ├─ Title / Description / StatusBadge
+      ├─ FocusVisual
+      └─ EffectOverlay
+```
+
+| 넓은 부모 영역 | 좁은 부모 영역 |
+| --- | --- |
+| ![넓은 화면의 탐험 노드 카드](../images/exploration-node-cards-wide.png) | ![좁은 화면의 탐험 노드 카드](../images/exploration-node-cards-narrow.png) |

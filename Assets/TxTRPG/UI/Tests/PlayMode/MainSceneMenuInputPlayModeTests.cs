@@ -8,6 +8,7 @@ using TxTRPG.Application.Exploration;
 using TxTRPG.Gameplay.Exploration;
 using TxTRPG.UI;
 using TxTRPG.UI.Windows;
+using TxTRPG.UI.Exploration;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -95,10 +96,11 @@ namespace TxTRPG.UI.Tests
             var controller = components.OfType<TemporaryDiceRollMenuController>().Single();
             var exploration = components.OfType<ExplorationRunController>().Single();
             var explorationPanel = components.First(item => item.gameObject.name == "ExplorationNodePanel").gameObject;
+            var cardList = components.OfType<ExplorationNodeChoiceCardList>().Single();
             for (var set = 0; set < 100 && exploration.Run.CurrentChoices.All(item => item.TypeId != ExplorationNodeTypeIds.Combat); set++)
             {
                 var placeholder = exploration.Run.CurrentChoices[0];
-                var choice = explorationPanel.transform.Find($"Choices/Choice{placeholder.SiblingIndex + 1}").GetComponent<UnityEngine.UI.Button>();
+                var choice = cardList.Cards[placeholder.SiblingIndex].Button;
                 ExecuteEvents.Execute(choice.gameObject, new BaseEventData(EventSystem.current), ExecuteEvents.submitHandler);
                 yield return null;
                 var continueButton = explorationPanel.transform.Find("Continue").GetComponent<UnityEngine.UI.Button>();
@@ -106,7 +108,7 @@ namespace TxTRPG.UI.Tests
                 yield return null;
             }
             var combatChoice = exploration.Run.CurrentChoices.First(item => item.TypeId == ExplorationNodeTypeIds.Combat);
-            var combatButton = explorationPanel.transform.Find($"Choices/Choice{combatChoice.SiblingIndex + 1}").GetComponent<UnityEngine.UI.Button>();
+            var combatButton = cardList.Cards[combatChoice.SiblingIndex].Button;
             ExecuteEvents.Execute(combatButton.gameObject, new BaseEventData(EventSystem.current), ExecuteEvents.submitHandler);
             yield return null;
             for (var frame = 0; frame < 300 && !binding.Button.interactable; frame++) yield return null;

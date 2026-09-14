@@ -11,6 +11,9 @@ namespace TxTRPG.UI.Editor
     {
         public IEnumerable<PrefabRebuildTaskDescriptor> GetTasks()
         {
+            yield return Task("ui.exploration-node-choice-card", "Exploration Node Choice Card",
+                new[] { ExplorationNodeChoiceCardPrefabBuilder.PrefabPath },
+                ExplorationNodeChoiceCardPrefabBuilder.CreateOrUpdatePrefab);
             yield return Task("ui.action-grid", "Action Grid",
                 new[] { "Assets/TxTRPG/UI/Prefabs/ActionGridCell.prefab", "Assets/TxTRPG/UI/Prefabs/ActionContextMenu.prefab", "Assets/TxTRPG/UI/Prefabs/ActionGridPanel.prefab" },
                 ActionGridPrefabBuilder.CreateOrUpdatePrefabs);

@@ -18,7 +18,13 @@ namespace TxTRPG.Editor.Tests
             var registry = PrefabRebuildRegistry.Discover();
             Assert.That(registry.ValidateRegistry(), Is.Empty);
             Assert.That(registry.Tasks.Select(x => x.Id), Is.EquivalentTo(new[]
-            { "ui.action-grid", "ui.character-display", "ui.enemy-display", "ui.flexible-layout" }));
+            {
+                "ui.action-grid",
+                "ui.character-display",
+                "ui.enemy-display",
+                "ui.exploration-node-choice-card",
+                "ui.flexible-layout"
+            }));
             Assert.That(registry.Exclusions, Is.Not.Empty);
         }
 

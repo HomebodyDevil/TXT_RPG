@@ -541,6 +541,11 @@ Scene 연결을 복구할 때에는 기존 메뉴의 Transform, 형제 순서, �
 
 - 설정 자산: `Assets/TxTRPG/Application/Configuration/ExplorationRunConfiguration.asset`에서 `Choice Count`, `Combat Weight`, `Recovery Upgrade Weight`를 설정합니다. 가중치 합계는 양수여야 합니다.
 - Scene 적용: `Tools > TxT RPG > Application > Temporary > Apply Player Dice Roll Menu`는 탐험 설정이 없을 때만 기본 자산을 만들고, TMP_MainScene의 Canvas에 `ExplorationNodePanel`과 필수 참조를 선별 적용합니다. 기존 설정 자산 값은 덮어쓰지 않습니다.
+- 카드 Prefab: `Assets/TxTRPG/UI/Prefabs/ExplorationNodeChoiceCard.prefab`에서 Background, ShapeVisual/Artwork, ShapeBorder, Title, Description, StatusBadge, FocusVisual과 EffectOverlay를 설정합니다. 카드 루트는 Layout 전용이므로 이동·회전·확대 연출은 `MotionRoot`에 적용합니다.
+- 카드 배치: TMP_MainScene의 `ExplorationNodePanel/CardScroll/Viewport/Content`에 있는 `ExplorationNodeChoiceLayoutGroup`에서 Card Width, Card Height, 수평·수직 간격과 Padding을 설정합니다. 실제 Viewport 너비가 부족하면 카드 크기를 줄이지 않고 다음 행으로 넘기며, 높이가 부족하면 세로 ScrollRect를 사용합니다.
+- 카드 정렬: 같은 LayoutGroup의 `Child Alignment`에서 9방향 정렬을 선택합니다. 런타임에서는 `SetAlignment`, `SetCardSize`, `SetSpacing`, `SetPadding`을 호출합니다. 후보가 새로 표시될 때만 스크롤이 맨 위로 이동하며 단순 레이아웃 변경은 후보를 재생성하지 않습니다.
+- 카드 도형: `ExplorationNodeChoiceCard.prefab`의 `VisualRoot > ExplorationCardShapePresentation`에서 `Visual Mode`, `Shape`, `Size`, `Corner Radius`, `Border Thickness`와 색상을 설정합니다. 원은 Size의 짧은 축을 지름으로 사용하고 타원은 두 축을 독립적으로 사용합니다. 런타임에서는 카드 View의 `ApplyShape`에 설정 사본을 전달합니다. 개별 카드 Margin, 꼭짓점별 반경과 임의 다각형은 지원하지 않습니다.
+- Prefab만 다시 생성하려면 `Tools > TxT RPG > UI > Exploration > Rebuild Node Choice Card Prefab`을 실행합니다. 이 메뉴는 카드 Prefab을 기본 외형으로 다시 생성하므로 사용자 정의 기본 Prefab에는 실행하지 말고 Variant를 사용합니다. production batch에서는 `ui.exploration-node-choice-card` 작업으로 등록되어 있습니다.
 - 실행: `Assets/Scenes/AppScene.unity`에서 시작합니다. 후보를 선택하면 전투 노드는 `행동` 버튼을 활성화하고, 회복·강화 노드는 미구현 안내와 `계속` 버튼을 표시합니다. 완료 뒤 새 후보가 나타나며 상태 문구의 체력이 이전 노드 결과를 유지해야 합니다.
 - 진단: `ExplorationRunController.Run.Nodes`에서 부모 ID, 형제 순서, 깊이, 상태와 완료 이유를 읽을 수 있습니다. 미선택 형제는 `Unchosen`이며 자식을 갖지 않아야 합니다.
 - 제거: 정식 탐험으로 교체할 때 Scene의 `ExplorationRunController`와 `ExplorationNodePanel`, 임시 설정 자산 및 명령 바인딩을 제거합니다. 저장 데이터 마이그레이션은 필요하지 않습니다.
