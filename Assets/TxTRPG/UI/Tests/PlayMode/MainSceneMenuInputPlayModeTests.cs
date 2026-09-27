@@ -33,10 +33,20 @@ namespace TxTRPG.UI.Tests
                 .SelectMany(root => root.GetComponentsInChildren<Component>(true)).ToArray();
             var menu = components.OfType<GameMenuPanel>().Single();
             var service = components.OfType<GameWindowService>().Single();
+            var runController = components.OfType<ExplorationRunController>().Single();
+            for (var frame = 0; frame < 600 && runController.Run == null; frame++) yield return null;
+            Assert.That(runController.Run, Is.Not.Null, "Wait for scene initialization and its initial focus before interacting.");
             var inventory = service.Pages.Single(page => page.PageId == GamePageIds.Inventory);
             var system = service.Pages.Single(page => page.PageId == GamePageIds.System);
             var inventoryButton = menu.Buttons.Single(binding => binding.PageId == GamePageIds.Inventory).Button;
             var systemButton = menu.Buttons.Single(binding => binding.PageId == GamePageIds.System).Button;
+            foreach (var item in menu.Buttons)
+            {
+                Assert.That(item.View.Icon.sprite, Is.Not.Null);
+                Assert.That(item.View.DisplayMode, Is.EqualTo(GameMenuButtonDisplayMode.ImageOnly));
+                Assert.That(item.View.Icon.gameObject.activeInHierarchy, Is.True);
+                Assert.That(item.View.Label.gameObject.activeSelf, Is.False);
+            }
 
             Assert.That(inventoryButton.interactable, Is.True, menu.UnavailableReason);
             EventSystem.current.SetSelectedGameObject(inventoryButton.gameObject);
@@ -81,6 +91,17 @@ namespace TxTRPG.UI.Tests
             yield return null;
             Assert.That(service.IsOpen, Is.False);
             Assert.That(EventSystem.current.currentSelectedGameObject, Is.SameAs(systemButton.gameObject));
+
+            var statusButton = menu.Buttons.Single(binding => binding.PageId == GamePageIds.Status).Button;
+            if (statusButton.interactable)
+            {
+                EventSystem.current.SetSelectedGameObject(statusButton.gameObject);
+                ExecuteEvents.Execute(statusButton.gameObject, new BaseEventData(EventSystem.current), ExecuteEvents.submitHandler);
+                yield return WaitForPage(service, GamePageIds.Status, 120);
+                service.Close();
+                yield return null;
+                Assert.That(EventSystem.current.currentSelectedGameObject, Is.SameAs(statusButton.gameObject));
+            }
         }
 
         [UnityTest]
@@ -97,15 +118,18 @@ namespace TxTRPG.UI.Tests
             var exploration = components.OfType<ExplorationRunController>().Single();
             var explorationPanel = components.First(item => item.gameObject.name == "ExplorationNodePanel").gameObject;
             var cardList = components.OfType<ExplorationNodeChoiceCardList>().Single();
+            for (var frame = 0; frame < 600 && exploration.Run == null; frame++) yield return null;
+            Assert.That(exploration.Run, Is.Not.Null, "Exploration startup did not complete.");
+            Assert.That(binding.Button.interactable, Is.False, "Action must remain unavailable before combat.");
             for (var set = 0; set < 100 && exploration.Run.CurrentChoices.All(item => item.TypeId != ExplorationNodeTypeIds.Combat); set++)
             {
                 var placeholder = exploration.Run.CurrentChoices[0];
                 var choice = cardList.Cards[placeholder.SiblingIndex].Button;
                 ExecuteEvents.Execute(choice.gameObject, new BaseEventData(EventSystem.current), ExecuteEvents.submitHandler);
-                yield return null;
+                for (var frame = 0; frame < 180 && explorationPanel.transform.Find("Continue").gameObject.activeInHierarchy == false; frame++) yield return null;
                 var continueButton = explorationPanel.transform.Find("Continue").GetComponent<UnityEngine.UI.Button>();
                 ExecuteEvents.Execute(continueButton.gameObject, new BaseEventData(EventSystem.current), ExecuteEvents.submitHandler);
-                yield return null;
+                yield return null; yield return null;
             }
             var combatChoice = exploration.Run.CurrentChoices.First(item => item.TypeId == ExplorationNodeTypeIds.Combat);
             var combatButton = cardList.Cards[combatChoice.SiblingIndex].Button;

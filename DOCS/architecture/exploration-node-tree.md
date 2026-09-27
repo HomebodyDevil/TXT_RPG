@@ -100,3 +100,17 @@ AppScene에서 TMP_MainScene에 진입한 1920×1080 Game View를 캡처했습�
 Edit Mode 카드 테스트는 24/24 통과했습니다. Play Mode Test Runner는 Domain Reload 뒤 작업 복구 실패로 0개 실행되어 성공으로 기록하지 않았습니다. 대신 같은 Play Mode 테스트 IEnumerator를 실행 중 Editor의 프레임에 맞추어 진행하여 3주기 박동 범위, timeScale=0, 포커스 유지, 설정 변경, 외부 입력 잠금, 터치·드래그 이벤트, 한글/영문/숫자 메시 교체, 효과 해제와 재사용 검증을 통과했습니다. 실제 버튼 onClick 경로로 미구현 노드를 선택하고 계속한 뒤 새 후보와 Story 기록을 확인했습니다. 280px 카드 컨테이너에서는 한 열 줄바꿈과 세로 스크롤 콘텐츠를 확인했습니다.
 
 실제 컨트롤러·터치 기기의 물리 입력, 모바일 safe area·회전·울트라와이드, 확대 접근성 글자, Player/IL2CPP 빌드 및 성능 측정은 수행하지 않았습니다. 입력 이벤트 시뮬레이션과 좁은 컨테이너 검증을 실제 기기 검증으로 간주하지 않습니다.
+
+## 카드의 초기 무선택과 입력 소유권
+
+`ExplorationNodeChoiceCardList.Show`는 새로운 후보 세대의 시작입니다. 이 목록이 소유한 이전 Button 포커스만 해제한 뒤 카드를 다시 바인딩하며, 첫 카드를 자동 선택하지 않습니다. 호버 강조, EventSystem 포커스, Run의 노드 확정은 별개의 상태입니다. 실제 마우스가 카드 위에 있으면 무선택 상태에서도 기존 호버와 박동이 표시됩니다. `ShapeBorder`는 기본 장식으로 유지됩니다.
+
+목록은 현재 `InputSystemUIInputModule.move` 액션에서 중립 상태 이후의 방향 입력을 관찰합니다. `LateUpdate`에서 첫 활성·상호작용 가능한 카드에 포커스를 주므로 그 프레임의 기본 Move/Submit 처리가 이미 끝난 상태이며, 같은 입력으로 두 칸 이동하거나 확정하지 않습니다. 초기 Submit에는 별도 동작이 없습니다. 이후에는 기존 Button Navigation/Submit을 사용하고, CardView의 `Focused` 이벤트로 세로 스크롤에 포커스 카드를 노출합니다. 의미 기반 액션을 사용하므로 물리 키나 장치 종류를 고정하지 않습니다.
+
+운영 Scene의 목록은 `GameWindowService`를 직렬화 참조합니다. 모달이 로딩 중이거나 열린 동안에는 배경 진입과 확정을 차단하며, 기존 배경 포커스는 EventSystem 처리 전에 해제합니다. 다른 활성 UI가 선택되어 있으면 탐색 입력을 가져오지 않습니다. 모달 자체의 복원 정책과 계속 버튼 및 legacy 버튼의 초기 포커스는 유지됩니다. 운영 `ExplorationRunController`는 카드 목록을 참조하며 legacy 버튼은 대체 경로입니다.
+
+Hide/Disable/Destroy와 후보 교체는 입력 진입 상태·세대·확정 Coroutine을 초기화합니다. 입력을 전역 Disable하거나 최초 진입용 구독을 추가하지 않습니다. 풀 재사용은 포커스·눌림·확정·입력 출처를 초기화하되, 포인터가 실제로 계속 카드 위에 있는 경우 호버를 유지합니다. 설정이나 색상 갱신은 새 후보 표시가 아니므로 포커스를 해제하지 않습니다. Run/ChoiceSet/Node ID 검증과 단일 확정 잠금은 기존 경로를 유지합니다.
+
+## 탐험 기록 패널
+
+기존 후보 카드와 별도로 NodeTreePanel에 전체 후보·실제 선택 경로를 표시하는 읽기 전용 기록 트리를 추가했습니다. `ExplorationRunController`가 성공한 상태 변경 경계에서 `ExplorationTreeProjection`을 호출합니다. 트리 갱신은 카드 포커스나 도메인 선택을 변경하지 않습니다. 데이터·레이아웃·이미지·효과 수명은 [탐험 기록 트리](exploration-history-tree.md)에 설명합니다.

@@ -57,7 +57,17 @@ namespace TxTRPG.UI.Exploration
             finally { if (version == generation) { confirming = false; RefreshTarget(); } }
         }
 
-        public void ResetState() { generation++; hovered = focused = pressed = confirming = pulsing = false; pointer = null; pulseStarted = 0d; RefreshTarget(); if (motionRoot != null) motionRoot.localScale = Vector3.one; ApplyTint(1f); }
+        public void ResetState()
+        {
+            // Rebinding a pooled card does not produce a new pointer-enter event.
+            var stillHovered = isActiveAndEnabled && pointer != null && !IsTouch(pointer) && !pointer.dragging &&
+                pointer.pointerEnter != null && pointer.pointerEnter.transform.IsChildOf(transform);
+            generation++; focused = pressed = confirming = pulsing = false; hovered = stillHovered;
+            if (!stillHovered) pointer = null;
+            navigationFocus = true; inputDevice = null; pulseStarted = 0d; RefreshTarget();
+            if (motionRoot != null) motionRoot.localScale = Vector3.one;
+            ApplyTint(1f);
+        }
         private static bool IsTouch(PointerEventData data) => data is ExtendedPointerEventData extended && extended.pointerType == UIPointerType.Touch;
         public void OnPointerEnter(PointerEventData data) { pointer = data; hovered = !IsTouch(data); RefreshTarget(); }
         public void OnPointerExit(PointerEventData data) { pointer = null; hovered = pressed = false; RefreshTarget(); }

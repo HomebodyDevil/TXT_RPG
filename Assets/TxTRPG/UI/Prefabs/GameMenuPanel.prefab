@@ -148,7 +148,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &6854413616527351297
 RectTransform:
   m_ObjectHideFlags: 0
@@ -320,7 +320,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &6213477549025530627
 RectTransform:
   m_ObjectHideFlags: 0
@@ -557,7 +557,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &7079740537373140167
 RectTransform:
   m_ObjectHideFlags: 0
@@ -572,11 +572,11 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 3939452559981452286}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.5}
-  m_AnchorMax: {x: 0, y: 0.5}
-  m_AnchoredPosition: {x: 12, y: 0}
-  m_SizeDelta: {x: 28, y: 28}
-  m_Pivot: {x: 0, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: -16, y: -16}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &3574367706749241208
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -605,9 +605,9 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 0}
+  m_Sprite: {fileID: 21300000, guid: f21b4d527bc339243ac4d6cb92ca1fe8, type: 3}
   m_Type: 0
-  m_PreserveAspect: 0
+  m_PreserveAspect: 1
   m_FillCenter: 1
   m_FillMethod: 4
   m_FillAmount: 1
@@ -982,11 +982,11 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 2308644702526114476}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.5}
-  m_AnchorMax: {x: 0, y: 0.5}
-  m_AnchoredPosition: {x: 12, y: 0}
-  m_SizeDelta: {x: 28, y: 28}
-  m_Pivot: {x: 0, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: -16, y: -16}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &5927137946390866837
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1015,7 +1015,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -1768827007465551206, guid: 58beb6ddf09a7824ba98a09158ec1419, type: 2}
+  m_Sprite: {fileID: 21300000, guid: 4b0087abf93c9fb409d9c65299088c32, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -1042,7 +1042,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &6372902670985120913
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1330,7 +1330,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &4467762495261869217
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1345,11 +1345,11 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1361815561183662940}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.5}
-  m_AnchorMax: {x: 0, y: 0.5}
-  m_AnchoredPosition: {x: 12, y: 0}
-  m_SizeDelta: {x: 28, y: 28}
-  m_Pivot: {x: 0, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: -16, y: -16}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7161586436760780908
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1378,9 +1378,9 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 0}
+  m_Sprite: {fileID: 21300000, guid: 78e378677c8e38549a6d5cb5326595b1, type: 3}
   m_Type: 0
-  m_PreserveAspect: 0
+  m_PreserveAspect: 1
   m_FillCenter: 1
   m_FillMethod: 4
   m_FillAmount: 1
@@ -1639,9 +1639,10 @@ MonoBehaviour:
   label: {fileID: 68097636342120185}
   border: {fileID: 2216419117237101916}
   effectOverlay: {fileID: 714694964673310756}
-  displayMode: 1
+  displayMode: 0
   iconPadding: 8
   iconColor: {r: 1, g: 1, b: 1, a: 1}
+  iconVisible: 1
 --- !u!1 &8638249146909706320
 GameObject:
   m_ObjectHideFlags: 0
@@ -1743,9 +1744,10 @@ MonoBehaviour:
   label: {fileID: 3770577691140540977}
   border: {fileID: 6160170504349654846}
   effectOverlay: {fileID: 8588965946684945074}
-  displayMode: 1
+  displayMode: 0
   iconPadding: 8
   iconColor: {r: 1, g: 1, b: 1, a: 1}
+  iconVisible: 1
 --- !u!1 &8967712299652669829
 GameObject:
   m_ObjectHideFlags: 0
@@ -1836,6 +1838,8 @@ MonoBehaviour:
     overrideRequestPresentation: 1
     contentKind: 0
     requestTitle: System Settings
+    actionKind: 0
+    commandId:
   - pageId: inventory
     button: {fileID: 8103913099411357556}
     visible: 1
@@ -1843,6 +1847,8 @@ MonoBehaviour:
     overrideRequestPresentation: 1
     contentKind: 1
     requestTitle: Bag
+    actionKind: 0
+    commandId:
   - pageId: status
     button: {fileID: 1016946437343362278}
     visible: 1
@@ -1850,7 +1856,10 @@ MonoBehaviour:
     overrideRequestPresentation: 1
     contentKind: 0
     requestTitle: 
+    actionKind: 0
+    commandId:
   windowService: {fileID: 0}
+  commandHandlerBehaviour: {fileID: 0}
   quickItemGrid: {fileID: 0}
   viewport: {fileID: 3810517232577318277}
   content: {fileID: 5569213878491360316}
@@ -1979,9 +1988,10 @@ MonoBehaviour:
   label: {fileID: 3981825168497657092}
   border: {fileID: 8246254617170148832}
   effectOverlay: {fileID: 5082351120719732902}
-  displayMode: 1
+  displayMode: 0
   iconPadding: 8
   iconColor: {r: 1, g: 1, b: 1, a: 1}
+  iconVisible: 1
 --- !u!1 &9161654177319963763
 GameObject:
   m_ObjectHideFlags: 0

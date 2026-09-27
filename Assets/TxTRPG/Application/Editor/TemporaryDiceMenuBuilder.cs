@@ -99,6 +99,7 @@ namespace TxTRPG.Application.Editor
                 var exploration = menu.GetComponent<ExplorationRunController>() ?? menu.gameObject.AddComponent<ExplorationRunController>();
                 exploration.ConfigureForEditor(explorationConfiguration, combat, story, ui.Root, ui.Status, ui.Buttons, ui.Labels, ui.Continue);
                 exploration.ConfigureCardsForEditor(ui.CardList);
+                ui.CardList.ConfigureWindowServiceForEditor(components.OfType<GameWindowService>().Single());
                 EditorUtility.SetDirty(menu); EditorUtility.SetDirty(combat); EditorUtility.SetDirty(exploration); EditorUtility.SetDirty(enemyPanel);
                 if (!EditorSceneManager.SaveScene(scene, ScenePath)) throw new InvalidOperationException("Could not save TMP_MainScene.");
             }
@@ -111,6 +112,7 @@ namespace TxTRPG.Application.Editor
             var view = existing != null ? existing.GetComponent<GameMenuButtonView>() : CreateMenuButton(content);
             if (view == null) throw new InvalidOperationException("Temporary action button has no GameMenuButtonView.");
             var label = view.GetComponentInChildren<TMP_Text>(true); if (label != null) label.text = "행동";
+            TemporaryMenuIconUtility.ApplyDefault(view, "action");
             var binding = new GameMenuButtonBinding(); binding.ConfigureCommandForEditor(TemporaryDiceRollMenuController.RollAllCommandId, view.Button, true, view); menu.AddOrReplaceCommandForEditor(binding);
         }
 

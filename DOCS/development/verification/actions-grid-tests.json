@@ -1,0 +1,78 @@
+[
+  {
+    "result": {
+      "success": true,
+      "jobId": "37ca2030",
+      "status": "completed",
+      "totalTests": 9,
+      "passedTests": 9,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "inconclusiveTests": 0,
+      "otherTests": 0,
+      "failedTestNames": [],
+      "failedTestDetails": [],
+      "elapsedSeconds": 38,
+      "resultSummary": "Test run completed: 9/9 passed.",
+      "error": null
+    },
+    "name": "ActionGridCellRatioCappedSizingTests"
+  },
+  {
+    "result": {
+      "success": true,
+      "jobId": "cf75795a",
+      "status": "completed",
+      "totalTests": 14,
+      "passedTests": 14,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "inconclusiveTests": 0,
+      "otherTests": 0,
+      "failedTestNames": [],
+      "failedTestDetails": [],
+      "elapsedSeconds": 7,
+      "resultSummary": "Test run completed: 14/14 passed.",
+      "error": null
+    },
+    "name": "ActionGridDisplayTests"
+  },
+  {
+    "result": {
+      "success": true,
+      "jobId": "f8971316",
+      "status": "completed",
+      "totalTests": 17,
+      "passedTests": 17,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "inconclusiveTests": 0,
+      "otherTests": 0,
+      "failedTestNames": [],
+      "failedTestDetails": [],
+      "elapsedSeconds": 6,
+      "resultSummary": "Test run completed: 17/17 passed.",
+      "error": null
+    },
+    "name": "InventoryEmptyStateTests"
+  },
+  {
+    "result": {
+      "success": true,
+      "jobId": "f011f450",
+      "status": "completed",
+      "totalTests": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "inconclusiveTests": 0,
+      "otherTests": 0,
+      "failedTestNames": [],
+      "failedTestDetails": [],
+      "elapsedSeconds": 6,
+      "resultSummary": "Test run completed: 1/1 passed.",
+      "error": null
+    },
+    "name": "InventoryGridPresentationTests"
+  }
+]

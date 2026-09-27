@@ -7,7 +7,8 @@
     "TxTRPG.Gameplay",
     "TxTRPG.Content",
     "TxTRPG.UI",
-    "TxTRPG.SceneTransition"
+    "TxTRPG.SceneTransition",
+    "Unity.TextMeshPro"
   ],
   "includePlatforms": [
     "Editor"

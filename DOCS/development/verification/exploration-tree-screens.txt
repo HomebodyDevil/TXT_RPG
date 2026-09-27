@@ -1,0 +1,6 @@
+desktop: 1920x1080; viewport=(344.00, 976.00); nodes=4; content=(344.00, 976.00)
+phone-portrait: 390x844; viewport=(332.00, 280.00); nodes=4; content=(332.00, 280.00)
+phone-landscape: 844x390; viewport=(104.89, 230.00); nodes=4; content=(324.00, 230.00)
+tablet: 1024x768; viewport=(144.89, 608.00); nodes=4; content=(324.00, 608.00)
+ultrawide: 2560x1080; viewport=(486.22, 976.00); nodes=4; content=(486.22, 976.00)
+phone-safe-area: 390x844; viewport=(284.00, 280.00); nodes=4; content=(324.00, 280.00)

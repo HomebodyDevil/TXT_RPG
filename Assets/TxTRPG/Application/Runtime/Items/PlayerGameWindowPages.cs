@@ -101,6 +101,7 @@ namespace TxTRPG.Application.Items
         }
         public override async Task PrepareAsync(CancellationToken cancellationToken)
         {
+            if (emptyState != null) emptyState.gameObject.SetActive(false);
             var host = requestProvider?.ResolveHost() ?? (sessionHost != null ? sessionHost : PlayerSessionHost.Instance);
             var activeCatalog = requestProvider?.Catalog ?? catalog;
             if (host == null) throw new ConfigurationException("inventory.session-host-missing", $"Inventory page '{GetHierarchyPath()}' has no PlayerSessionHost in the AppScene lifetime.");
@@ -110,6 +111,7 @@ namespace TxTRPG.Application.Items
             IsUsingFallbackGridSettings |= usedFallback;
             if (usedFallback) Debug.LogWarning($"Inventory page '{GetHierarchyPath()}' is using safe fallback display settings.", this);
             await host.EnsureInitializedAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             UnsubscribeInventory();
             player = host.Session.CurrentPlayer;
             catalog = activeCatalog;
@@ -193,7 +195,8 @@ namespace TxTRPG.Application.Items
             itemGrid.ConfigureLayout(
                 gridSettings.columnPolicy == InventoryColumnPolicy.Exact ? ActionGridLayoutMode.ExactColumns : ActionGridLayoutMode.FixedColumns,
                 gridSettings.columns, gridSettings.cellSize, gridSettings.spacing, gridSettings.padding,
-                gridSettings.alignment, gridSettings.incompleteRowAlignment, gridSettings.verticalPlacement);
+                gridSettings.alignment, gridSettings.incompleteRowAlignment, gridSettings.verticalPlacement, preservePresentation: true);
+            itemGrid.ConfigureDisplay(gridSettings.presentation);
             itemGrid.ConfigureBehavior(capacity > entries.Count
                 ? ActionGridPopulationMode.FillCapacityWithEmptySlots : ActionGridPopulationMode.EntriesOnly,
                 ActionGridPackingMode.CompactForward, GridActivationBehavior.OpenContextMenu);
@@ -209,8 +212,8 @@ namespace TxTRPG.Application.Items
             if (nextPageButton != null) { nextPageButton.gameObject.SetActive(paged); nextPageButton.interactable = pageIndex + 1 < pageCount; }
             if (pageText != null) { pageText.gameObject.SetActive(paged); pageText.text = $"{pageIndex + 1} / {pageCount}"; }
             RebuildPageNumberButtons(paged ? pageCount : 0);
-            if (itemGrid.ScrollRect != null) itemGrid.ScrollRect.vertical = !paged;
-            if (emptyState != null) emptyState.gameObject.SetActive(entries.Count == 0);
+            if (itemGrid.ScrollRect != null) itemGrid.ScrollRect.vertical = !itemGrid.IsSingleRow && !paged;
+            if (emptyState != null) emptyState.gameObject.SetActive(itemGrid.VisibleCellCount == 0);
         }
 
         private void RebuildPageNumberButtons(int pageCount)

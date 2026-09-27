@@ -6,6 +6,12 @@
 
 | 문서 | 설명 |
 | --- | --- |
+| [탐험 기록 트리 패널](exploration-node-tree-panel.md) | 선택·미선택 후보와 실제 진행 경로를 세로 트리로 표시하고 노드·선 이미지 교체 및 효과 확장을 지원합니다. |
+| [노드 카드 초기 자동 선택 제거](exploration-card-no-initial-selection.md) | 새 후보의 자동 포커스를 제거하고 첫 방향 입력으로 탐색을 시작하며 초기 확인 입력의 진행을 차단합니다. |
+| [Actions 한 줄 탐색과 Header 정렬](actions-single-row-scroll-and-header-layout.md) | 기본 4개까지 중앙·5개부터 양 끝 배치, overflow의 가로 탐색·왼쪽 시작과 Header·Scrollbar 숨김 여백을 구현합니다. |
+| [Actions 슬롯 간격과 표시 방식](actions-grid-spacing-and-display-presets.md) | Actions에 균형형 배치를 적용하고 개발자가 간격 배분·큰 슬롯·수동 설정으로 전환하도록 구현합니다. |
+| [Bag 빈 상태와 모달 바깥 클릭 닫기](inventory-empty-state-and-modal-outside-close.md) | 표시 슬롯이 있을 때 빈 문구를 숨기고 공통 모달의 바깥 클릭·탭 닫기와 입력 차단을 구현합니다. |
+| [메뉴 버튼 임시 이미지 적용](game-menu-temporary-icons.md) | System·Bag·Status·행동을 교체 가능한 단색 아이콘으로 표시하고 기존 기능과 이미지 누락 시 대체 표시를 유지합니다. |
 | [노드 선택 카드 가독성과 느린 박동 효과](exploration-card-readability-and-hover-pulse.md) | 텍스트 표시 원인 수정, 고대비 기본값과 호버·포커스의 1.8초 반복 확대·축소를 구현하는 지침입니다. |
 | [탐험 카드 피드백·텍스트 효과](exploration-card-feedback-and-text-effects.md) | 입력 피드백, 선택 확정 연출, 텍스트 효과·색상과 플레이어 표시 설정을 구현하는 지침입니다. |
 | [탐험 카드 정렬·간격·도형](exploration-card-layout-and-shapes.md) | 가로·세로 정렬, Padding·간격, 절차적 도형과 이미지 마스킹을 확장하는 작업 지침입니다. |

@@ -6,7 +6,7 @@ namespace TxTRPG.UI.Windows
 {
     public enum GameMenuButtonDisplayMode { ImageOnly, ImageWithLabel }
 
-    [DisallowMultipleComponent]
+    [ExecuteAlways, DisallowMultipleComponent]
     public sealed class GameMenuButtonView : MonoBehaviour
     {
         [SerializeField] private Button button;
@@ -19,10 +19,19 @@ namespace TxTRPG.UI.Windows
         [SerializeField] private GameMenuButtonDisplayMode displayMode = GameMenuButtonDisplayMode.ImageWithLabel;
         [SerializeField, Min(0f)] private float iconPadding = 8f;
         [SerializeField] private Color iconColor = Color.white;
+        [SerializeField, Tooltip("Hide the image explicitly while retaining the text fallback.")]
+        private bool iconVisible = true;
+        private Image appliedIcon;
+        private Sprite appliedSprite;
+        private bool appliedVisible, appliedEnabled, appliedActive, refreshPending;
+        private GameMenuButtonDisplayMode appliedMode;
+        private float appliedPadding;
+        private Color appliedColor;
 
         public Button Button => button;
         public RectTransform VisualRoot => visualRoot;
         public TMP_Text Label => label;
+        public Image Icon => icon;
         public GameMenuButtonDisplayMode DisplayMode => displayMode;
 
         public void SetLabel(string value)
@@ -32,29 +41,39 @@ namespace TxTRPG.UI.Windows
 
         public void SetIcon(Sprite sprite, bool visible = true)
         {
-            if (icon == null) return;
-            icon.sprite = sprite;
-            icon.color = iconColor;
-            icon.preserveAspect = true;
-            icon.gameObject.SetActive(visible && sprite != null);
+            iconVisible = visible;
+            if (icon != null) { icon.sprite = sprite; icon.enabled = true; }
             ApplyDisplayMode();
         }
 
         public void ConfigureDisplay(GameMenuButtonDisplayMode mode, float padding, Color color)
-        { displayMode = mode; iconPadding = Mathf.Max(0f, padding); iconColor = color; ApplyDisplayMode(); }
+        { displayMode = mode; iconPadding = float.IsFinite(padding) ? Mathf.Max(0f, padding) : 8f; iconColor = color; ApplyDisplayMode(); }
 
         private void OnEnable() => ApplyDisplayMode();
+        private void OnValidate() => refreshPending = true;
+        private void LateUpdate()
+        {
+            if (refreshPending || appliedIcon != icon || appliedSprite != (icon != null ? icon.sprite : null) ||
+                appliedVisible != iconVisible || appliedMode != displayMode || appliedPadding != iconPadding || appliedColor != iconColor ||
+                appliedEnabled != (icon != null && icon.enabled) || appliedActive != (icon != null && icon.gameObject.activeSelf))
+                ApplyDisplayMode();
+        }
+
+        public void RefreshDisplay() => ApplyDisplayMode();
 
         private void ApplyDisplayMode()
         {
-            if (label != null) label.gameObject.SetActive(displayMode == GameMenuButtonDisplayMode.ImageWithLabel || icon == null || icon.sprite == null);
+            var showImage = iconVisible && icon != null && icon.enabled && icon.sprite != null;
+            if (label != null) label.gameObject.SetActive(displayMode == GameMenuButtonDisplayMode.ImageWithLabel || !showImage);
             if (icon != null)
             {
+                icon.gameObject.SetActive(showImage);
                 icon.color = iconColor; icon.preserveAspect = true;
                 if (icon.transform is RectTransform rect)
                 {
                     if (displayMode == GameMenuButtonDisplayMode.ImageOnly)
                     {
+                        rect.pivot = new Vector2(.5f, .5f);
                         rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one;
                         rect.offsetMin = Vector2.one * iconPadding; rect.offsetMax = -Vector2.one * iconPadding;
                     }
@@ -66,6 +85,10 @@ namespace TxTRPG.UI.Windows
                     }
                 }
             }
+            appliedIcon = icon; appliedSprite = icon != null ? icon.sprite : null;
+            appliedVisible = iconVisible; appliedMode = displayMode; appliedPadding = iconPadding; appliedColor = iconColor;
+            appliedEnabled = icon != null && icon.enabled; appliedActive = icon != null && icon.gameObject.activeSelf;
+            refreshPending = false;
         }
 
 #if UNITY_EDITOR

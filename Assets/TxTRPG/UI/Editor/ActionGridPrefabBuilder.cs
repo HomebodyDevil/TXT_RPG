@@ -373,6 +373,7 @@ cell.ConfigureEmptySlotSizing(ActionGridIconSizingMode.RelativeToContent, 0.9f);
                 properties.FindProperty("contextMenu").objectReferenceValue = menuObject.GetComponent<ActionContextMenu>();
                 properties.ApplyModifiedPropertiesWithoutUndo();
 
+                ActionGridSurfaceAuthoring.Ensure(panel);
                 PrefabUtility.SaveAsPrefabAsset(root, PanelPath);
             }
             finally

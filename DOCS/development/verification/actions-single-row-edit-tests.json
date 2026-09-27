@@ -1,0 +1,78 @@
+[
+  {
+    "result": {
+      "success": true,
+      "jobId": "78e72497",
+      "status": "completed",
+      "totalTests": 17,
+      "passedTests": 17,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "inconclusiveTests": 0,
+      "otherTests": 0,
+      "failedTestNames": [],
+      "failedTestDetails": [],
+      "elapsedSeconds": 8,
+      "resultSummary": "Test run completed: 17/17 passed.",
+      "error": null
+    },
+    "testClass": "ActionGridSingleRowTests"
+  },
+  {
+    "result": {
+      "success": true,
+      "jobId": "66ce960c",
+      "status": "completed",
+      "totalTests": 54,
+      "passedTests": 54,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "inconclusiveTests": 0,
+      "otherTests": 0,
+      "failedTestNames": [],
+      "failedTestDetails": [],
+      "elapsedSeconds": 19,
+      "resultSummary": "Test run completed: 54/54 passed.",
+      "error": null
+    },
+    "testClass": "ActionGridPanelTests"
+  },
+  {
+    "result": {
+      "success": true,
+      "jobId": "991a2e59",
+      "status": "completed",
+      "totalTests": 14,
+      "passedTests": 14,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "inconclusiveTests": 0,
+      "otherTests": 0,
+      "failedTestNames": [],
+      "failedTestDetails": [],
+      "elapsedSeconds": 5,
+      "resultSummary": "Test run completed: 14/14 passed.",
+      "error": null
+    },
+    "testClass": "ActionGridDisplayTests"
+  },
+  {
+    "result": {
+      "success": true,
+      "jobId": "21fbaeb7",
+      "status": "completed",
+      "totalTests": 18,
+      "passedTests": 18,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "inconclusiveTests": 0,
+      "otherTests": 0,
+      "failedTestNames": [],
+      "failedTestDetails": [],
+      "elapsedSeconds": 4,
+      "resultSummary": "Test run completed: 18/18 passed.",
+      "error": null
+    },
+    "testClass": "InventoryEmptyStateTests"
+  }
+]

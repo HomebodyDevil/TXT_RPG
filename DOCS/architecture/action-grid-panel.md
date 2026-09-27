@@ -196,3 +196,49 @@ Play Mode에서는 `ActionGridPanelDemoController`가 동일한 데이터를 운
 운영 `ActionGridCell.prefab`의 Icon과 EmptySlot 기본 설정은 모두 `Ratio = 0.9`, `Maximum Size = 64×64`입니다. 작은 Cell은 비율에 따라 축소되고 큰 Cell은 64×64를 넘지 않습니다. 최대 크기는 물리 픽셀이 아니라 Canvas UI 단위이며, Icon의 Sprite는 기존 `Preserve Aspect`를 유지합니다.
 
 기존 `FixedPadding`과 `RelativeToContent`의 enum 번호와 계산은 바뀌지 않습니다. 기존 `ConfigureIconSizing()` 및 `ConfigureEmptySlotSizing()`의 위치 인수도 유지하며, 상한 정책은 `ConfigureIconRatioCappedSizing()`과 `ConfigureEmptySlotRatioCappedSizing()`으로 명시적으로 설정합니다. 비율의 NaN·Infinity는 0.9, 최대 크기의 NaN·Infinity는 축별 64로 복구하고 음수 상한은 0으로 제한합니다.
+
+## 개발자 표시 방식과 설정 소유권
+
+`ActionGridPanel.Display Settings`는 `Manual`(0), `Balanced`(1), `DistributedSpacing`(2), `LargeSlots`(3)를 제공합니다. 신규 필드가 없는 자산은 Manual이며 기존 Layout Mode와 위치 인수 API는 유지됩니다. `ConfigureLayout(...)`은 기본적으로 Manual/Grid로 돌아갑니다. 기존 위치 인수는 유지하며, 마지막 선택 인수 `preservePresentation`은 페이지 소유자가 수동 값을 갱신하면서 현재 표시 설정을 보존할 때만 사용합니다. `ConfigureDisplay(settings)`는 입력을 깊은 복사하여 보관하고, `SetDisplayMode(mode)`는 저장된 방식별 값을 선택합니다. `GetDisplaySettings()`도 사본을 반환하므로 편집 후 ConfigureDisplay로 적용합니다. Inspector의 수동 Layout 값은 프리셋 선택 중에도 보존되며, 활성 프리셋의 정렬은 그 프리셋에서 편집합니다.
+
+| 방식 | 계산과 초기 조정값 |
+| --- | --- |
+| Balanced | 최대 6열, 셀 56~72, 간격 16×16, Padding 각 14입니다. |
+| Distributed Spacing | 최대 6열, 목표 셀 64×64, 가로 간격 12~32, 세로 간격 16, Padding 각 14입니다. 목표 셀은 최소·최대 셀 범위로 제한됩니다. |
+| Large Slots | 최대 3열, 셀 72~96, 간격 16×16, Padding 각 14입니다. |
+| Manual | 기존 FixedColumns·AdaptiveCellSize·ExactColumns와 수동 크기·간격·정렬을 사용합니다. |
+
+위 수치는 Canvas UI 단위이며 물리 픽셀이나 실제 기기 터치 영역 보장이 아닙니다. 세 프리셋은 독립 직렬화 설정을 가지며 방식 전환이나 OnEnable에서 사용자 조정값을 추천값으로 덮어쓰지 않습니다. 비정상 값은 설정 경계에서 정규화합니다.
+
+`ActionGridLayoutCalculator`는 Viewport와 표시 수에서 최종 열·셀·간격·필요 너비/높이를 계산합니다. Distributed Spacing은 목표 셀과 최소 간격으로 열 수를 구한 뒤 `clamp((W-C*S)/(C-1), Gmin, Gmax)`를 사용합니다. 1열은 최소 간격을 보관하며 나눗셈을 하지 않습니다. 전체 행의 열 위치를 공유하고, 프리셋의 단일 불완전 행도 설정된 열 묶음을 기준으로 정렬합니다. Manual의 기존 행 정렬은 보존합니다.
+
+`CurrentLayout`과 Inspector의 Resolved Layout에서 실제 계산값, 초기 Viewport 미준비와 한 셀/열 묶음의 공간 부족을 확인할 수 있습니다. 전체 Content 높이 초과는 정상 세로 스크롤이며 공간 부족 경고와 구분합니다. 셀 배치·Content 높이·Navigation은 동일한 계산 결과를 사용하고 스크롤바 점유 폭 변경 시 Navigation도 갱신합니다. 셀 목록·선택·슬롯 ID·게임 데이터·저장 형식은 변경하지 않습니다.
+
+Bag의 설정 원본은 `GridContentLayoutSettings.presentation`입니다. `InventoryGameWindowPage.Refresh`가 그 선택을 패널에 전달하므로 Bag의 자식 패널만 수정하는 방식은 사용하지 않습니다. 기존 Bag 설정과 공용 생성기는 Manual을 유지합니다.
+
+새 표시 방식에서는 `ActionGridCell.ISelectHandler`의 Focused 이벤트를 풀 생성 시 패널에 연결합니다. 포커스가 바뀔 때만 셀의 실제 Rect를 Viewport 좌표로 변환하여 필요한 만큼 세로 스크롤합니다. 빈 슬롯에도 적용되며 아이템 선택 이벤트나 실행 명령을 발생시키지 않습니다. Manual에는 기존 동작을 유지합니다. EventSystem 선택, 실제 슬롯 명령 실행과 스크롤의 책임을 분리하며 매 프레임 선택 오브젝트를 검색하지 않습니다.
+
+
+## 단일 행과 Header 영역
+
+`ActionGridDisplaySettings.flow`는 `Grid`(0)와 `SingleRow`(1)를 선택합니다. 프리셋과 별개이며, 기존 자산의 기본값은 Grid입니다. 운영 TMP_MainScene의 Actions만 Balanced + SingleRow이고 Header GameObject는 비활성입니다. 기존 부모 FlexibleLayout 배분은 변경하지 않습니다.
+
+| 책임 | 구현 |
+| --- | --- |
+| 셀 수·데이터·포커스·초기 준비 | `ActionGridPanel` |
+| 단일 행 크기·간격·조건부 정렬 계산 | `ActionGridSingleRowCalculator` |
+| Header/본문 Rect, 가로 축 전환, 원래 Grid 좌표와 스크롤 설정 복원 | `ActionGridSurfaceLayout` (`Scroll View`에 부착) |
+| Header 직접 활성/비활성 알림 | `ActionGridHeaderObserver` (`Header`에 부착) |
+| 저장된 필수 참조 구성 | `ActionGridSurfaceAuthoring.Ensure`, 기존 `ActionGridPrefabBuilder`에서 호출 |
+
+SingleRow는 표시되는 빈 슬롯까지 N개를 모두 한 행에 배치합니다. 활성 프리셋의 `targetCellSize`, `spacing.x`, `padding`을 사용하며, 목표 셀 크기는 프리셋의 최소·최대 범위에서 한 번 정규화됩니다. Manual은 `singleRow.targetCellSize`와 기존 수동 Spacing/Padding을 사용합니다. 슬롯 수에 맞춰 셀을 축소하지 않습니다. Grid의 최대 열 수, 마지막 행 정렬, 세로 배치, DistributedSpacing의 간격 상한은 SingleRow에서 사용하지 않으며 Inspector에서 비활성으로 표시합니다.
+
+필요 너비는 `Padding.horizontal + N × CellWidth + max(0,N−1) × Gap`입니다. 넘치면 왼쪽 정렬과 기본 간격을 유지합니다. 들어가는 경우 기본 `ConditionalCenterOrEnds`는 `N <= centerThreshold`에서 중앙 묶음 정렬이고, 그보다 많으면 양 끝 정렬입니다. K 기본값은 4이며 0 이상으로 정규화됩니다. 양 끝 정렬은 `Gap = (ViewportWidth − Padding.horizontal − N × CellWidth)/(N−1)`이며 상한을 적용하지 않습니다. N=1은 중앙, N=0은 나눗셈 없이 처리합니다. `FixedGapGroup`은 Left/Center/Right, `AlwaysEnds`는 개수와 무관한 양 끝 정책을 제공합니다. 세로 배치는 Top/Center/Bottom이며 Actions 기본값은 Center입니다.
+
+Content는 왼쪽 상단 고정 앵커·피벗을 사용하고, 너비는 Viewport와 필요 너비 중 큰 값이며 높이는 Viewport와 같습니다. 높이가 부족해도 줄바꿈하거나 세로 스크롤로 바꾸지 않으며 Inspector에서 부족 상태를 표시합니다. 최초 준비 완료와 fit→overflow 전환은 왼쪽에서 시작합니다. overflow 중 데이터·화면·Header 변경은 기존 픽셀 이동량을 보존하고 범위에 맞게 제한합니다. overflow→fit 및 Grid 전환은 관성을 정지합니다. Grid 복원용 좌표·축·바인딩은 작성 시 저장된 상태를 사용하므로 저장/재로드 후에도 복원할 수 있습니다.
+
+가로 Scrollbar는 별도 `HorizontalScrollbar` 참조를 사용합니다. Hidden 기본값은 바·간격·반대쪽 영역을 예약하지 않습니다. Auto/Always에서는 아래쪽에 설정한 높이와 간격을 예약합니다. 기존 `ConfigurableScrollbarController`는 SingleRow 동안 비활성화하고 Grid로 돌아갈 때 복원합니다. 다른 세로 스크롤 패널의 정책은 바꾸지 않습니다. Unity `ScrollRect`의 가로 전용 입력 처리가 세로 휠과 가로 트랙패드 델타를 처리하며 마우스/터치 드래그도 동일한 UI 이벤트 경로를 사용합니다.
+
+초기 자동 포커스는 왼쪽 시작 위치를 바꾸지 않습니다. 명시적 방향 이동은 `ActionGridCell.IMoveHandler`의 Navigated 이벤트로 초기 대기를 해제하고, 빈 슬롯을 포함한 목적지 Rect를 노출합니다. 사용자의 스크롤 입력도 초기 위치 재설정을 취소합니다. 늦은 데이터 갱신은 사용자가 이동한 위치를 덮어쓰지 않습니다.
+
+Header 표시 여부의 원본은 `Header.gameObject.activeSelf`입니다. `ActionGridSurfaceLayout.ConfigureHeader(visible,height,gap,margins)` 또는 Inspector에서 설정하고 `SetHeaderVisible`로 토글합니다. `manageHeaderLayout`이 활성일 때 Header가 꺼지면 예약 높이는 0이며, 켜지면 `headerHeight + headerBodyGap`입니다. Body Margins는 Grid Padding과 독립적입니다. 운영 Actions의 바깥 여백은 각 18이고, Header가 꺼진 Scroll View의 상단 Offset은 −18입니다. 공통 Prefab과 Bag는 기본적으로 기존 작성된 Header/Scroll View 배치를 유지합니다. Header 활성화를 OnEnable에서 강제하지 않으며 매 프레임 검색이나 재배치를 추가하지 않습니다.

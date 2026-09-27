@@ -1,0 +1,56 @@
+{
+  "runtimeChecks": {
+    "count": 5,
+    "logs": [
+      {
+        "type": "Log",
+        "message": "ACTIONS_SCROLL_RUNTIME: PASS Presets_ResizeKeepsSlotsSelectionNavigationAndStableScroll\nUnityEngine.Debug:Log (object)\nTxTRPG.Application.Editor.TemporaryActionsScrollVerification/<RunTests>d__6:MoveNext () (at Assets/TxTRPG/Application/Editor/TemporaryActionsScrollVerification.cs:46)\nTxTRPG.Application.Editor.TemporaryActionsScrollVerification:Tick () (at Assets/TxTRPG/Application/Editor/TemporaryActionsScrollVerification.cs:59)\nUnityEditor.EditorApplication:Internal_CallUpdateFunctions ()\n",
+        "file": "Assets/TxTRPG/Application/Editor/TemporaryActionsScrollVerification.cs",
+        "line": 46
+      },
+      {
+        "type": "Log",
+        "message": "ACTIONS_SCROLL_RUNTIME: PASS DelayedInitialContent_StartsAtTopAndLaterRefreshPreservesUserPosition\nUnityEngine.Debug:Log (object)\nTxTRPG.Application.Editor.TemporaryActionsScrollVerification/<RunTests>d__6:MoveNext () (at Assets/TxTRPG/Application/Editor/TemporaryActionsScrollVerification.cs:46)\nTxTRPG.Application.Editor.TemporaryActionsScrollVerification:Tick () (at Assets/TxTRPG/Application/Editor/TemporaryActionsScrollVerification.cs:59)\nUnityEditor.EditorApplication:Internal_CallUpdateFuncti...",
+        "file": "Assets/TxTRPG/Application/Editor/TemporaryActionsScrollVerification.cs",
+        "line": 46
+      },
+      {
+        "type": "Log",
+        "message": "ACTIONS_SCROLL_RUNTIME: PASS InputSystem_MouseWheelTouchDragKeyboardAndGamepad\nUnityEngine.Debug:Log (object)\nTxTRPG.Application.Editor.TemporaryActionsScrollVerification/<RunTests>d__6:MoveNext () (at Assets/TxTRPG/Application/Editor/TemporaryActionsScrollVerification.cs:46)\nTxTRPG.Application.Editor.TemporaryActionsScrollVerification:Tick () (at Assets/TxTRPG/Application/Editor/TemporaryActionsScrollVerification.cs:59)\nUnityEditor.EditorApplication:Internal_CallUpdateFunctions ()\n",
+        "file": "Assets/TxTRPG/Application/Editor/TemporaryActionsScrollVerification.cs",
+        "line": 46
+      },
+      {
+        "type": "Log",
+        "message": "ACTIONS_SCROLL_RUNTIME: PASS InvalidInitialViewportAndExplicitNavigationDuringPreparation\nUnityEngine.Debug:Log (object)\nTxTRPG.Application.Editor.TemporaryActionsScrollVerification/<RunTests>d__6:MoveNext () (at Assets/TxTRPG/Application/Editor/TemporaryActionsScrollVerification.cs:46)\nTxTRPG.Application.Editor.TemporaryActionsScrollVerification:Tick () (at Assets/TxTRPG/Application/Editor/TemporaryActionsScrollVerification.cs:59)\nUnityEditor.EditorApplication:Internal_CallUpdateFunctions ()\n",
+        "file": "Assets/TxTRPG/Application/Editor/TemporaryActionsScrollVerification.cs",
+        "line": 46
+      },
+      {
+        "type": "Log",
+        "message": "ACTIONS_SCROLL_RUNTIME: PASS Geometry_HeaderCountsResizeAndPositionRecovery\nUnityEngine.Debug:Log (object)\nTxTRPG.Application.Editor.TemporaryActionsScrollVerification/<RunTests>d__6:MoveNext () (at Assets/TxTRPG/Application/Editor/TemporaryActionsScrollVerification.cs:46)\nTxTRPG.Application.Editor.TemporaryActionsScrollVerification:Tick () (at Assets/TxTRPG/Application/Editor/TemporaryActionsScrollVerification.cs:59)\nUnityEditor.EditorApplication:Internal_CallUpdateFunctions ()\n",
+        "file": "Assets/TxTRPG/Application/Editor/TemporaryActionsScrollVerification.cs",
+        "line": 46
+      }
+    ],
+    "source": "console"
+  },
+  "playerScripts": [
+    {
+      "passed": true,
+      "target": "StandaloneWindows64",
+      "assemblies": 39
+    },
+    {
+      "passed": true,
+      "target": "Android",
+      "assemblies": 39
+    }
+  ],
+  "method": "NUnit coroutines with LogScope via temporary Editor adapter",
+  "consoleErrors": {
+    "count": 0,
+    "logs": [],
+    "source": "console"
+  }
+}

@@ -314,3 +314,12 @@ flowchart TD
 ### 점진 생성 탐험
 
 `Assets/TxTRPG/Gameplay/Runtime/Exploration/`은 노드 생성·트리 기록·상태 전환을 소유합니다. `Assets/TxTRPG/Application/Runtime/Exploration/`은 AppScene 수명의 임시 탐험과 TMP_MainScene의 선택 UI·전투 처리기를 연결합니다. 자세한 내용은 [점진 생성 탐험 노드 트리](exploration-node-tree.md)를 참조합니다.
+
+
+### Actions 표면 배치와 Editor 적용 경계
+
+`TxTRPG.UI`의 `ActionGridSingleRowSettings`, `ActionGridSurfaceLayout`, `ActionGridHeaderObserver`는 기존 ActionGridPanel의 단일 행 및 Header 표면 배치를 담당합니다. `TxTRPG.UI.Editor`의 `ActionGridSurfaceAuthoring`은 기존 자산에 필요한 참조만 연결합니다. `TxTRPG.Application.Editor`는 운영 Scene의 한정 적용 도구에서 이 작성 함수를 재사용하기 위해 `TxTRPG.UI.Editor`를 참조합니다. 런타임 어셈블리에는 Editor 의존성을 추가하지 않았습니다. 상세 내용은 [Action Grid Panel](action-grid-panel.md)을 참조합니다.
+
+탐험 기록 트리는 `UI/Runtime/Exploration`의 `ExplorationNodeTreePanel`, `ExplorationTreeSnapshot`, `ExplorationTreeLayout`, 노드·선 View와 `ExplorationTreeStyle`로 구성합니다. `Application/Runtime/Exploration/ExplorationTreeProjection.cs`가 도메인 전체 기록을 표시 스냅샷으로 변환하며 `ExplorationRunController`가 갱신 경계를 소유합니다. UI에서 Application으로의 역참조는 추가하지 않습니다. 상세 구조는 [탐험 기록 트리](exploration-history-tree.md)를 참고합니다.
+
+`UI/Runtime/ResponsiveMainScreen.cs`와 `NestedScrollRectBridge.cs`는 좁은 화면에서 기존 메인 패널을 세로 페이지로 전환하고 중첩 스크롤을 연결합니다. `Canvas/MainScreenViewport`가 기존 Main_FlexibleLayoutPanel을 감싸며 공유 게임 규칙과 저장 데이터에는 관여하지 않습니다.

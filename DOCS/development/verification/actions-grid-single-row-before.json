@@ -1,0 +1,220 @@
+{
+    "screens": [
+        {
+            "screen": "desktop",
+            "path": "Canvas/Main_FlexibleLayoutPanel/ContentLayer/Character_FlexibleLayoutPanel/ContentLayer/ActionGridPanel",
+            "width": 1920,
+            "height": 1080,
+            "slots": 5,
+            "columns": 6,
+            "canvasScale": 1.0,
+            "match": 0.0,
+            "reservedInset": 15.0,
+            "requiredHeight": 88.0,
+            "referenceResolution": {
+                "x": 800.0,
+                "y": 600.0
+            },
+            "viewport": {
+                "x": 468.0,
+                "y": 96.0
+            },
+            "parentSize": {
+                "x": 534.0,
+                "y": 180.0
+            },
+            "cell": {
+                "x": 60.0,
+                "y": 60.0
+            },
+            "spacing": {
+                "x": 16.0,
+                "y": 16.0
+            },
+            "picture": {
+                "x": 48.599998474121097,
+                "y": 48.599998474121097
+            }
+        },
+        {
+            "screen": "phone-portrait",
+            "path": "Canvas/Main_FlexibleLayoutPanel/ContentLayer/Character_FlexibleLayoutPanel/ContentLayer/ActionGridPanel",
+            "width": 390,
+            "height": 844,
+            "slots": 5,
+            "columns": 1,
+            "canvasScale": 1.0,
+            "match": 0.0,
+            "reservedInset": 15.0,
+            "requiredHeight": 452.0,
+            "referenceResolution": {
+                "x": 800.0,
+                "y": 600.0
+            },
+            "viewport": {
+                "x": 128.0,
+                "y": 96.0
+            },
+            "parentSize": {
+                "x": 194.0,
+                "y": 180.0
+            },
+            "cell": {
+                "x": 72.0,
+                "y": 72.0
+            },
+            "spacing": {
+                "x": 16.0,
+                "y": 16.0
+            },
+            "picture": {
+                "x": 59.39999771118164,
+                "y": 59.39999771118164
+            }
+        },
+        {
+            "screen": "phone-landscape",
+            "path": "Canvas/Main_FlexibleLayoutPanel/ContentLayer/Character_FlexibleLayoutPanel/ContentLayer/ActionGridPanel",
+            "width": 844,
+            "height": 390,
+            "slots": 5,
+            "columns": 3,
+            "canvasScale": 1.0,
+            "match": 0.0,
+            "reservedInset": 15.0,
+            "requiredHeight": 156.59259033203126,
+            "referenceResolution": {
+                "x": 800.0,
+                "y": 600.0
+            },
+            "viewport": {
+                "x": 228.88888549804688,
+                "y": 96.0
+            },
+            "parentSize": {
+                "x": 294.8888854980469,
+                "y": 180.0
+            },
+            "cell": {
+                "x": 56.296295166015628,
+                "y": 56.296295166015628
+            },
+            "spacing": {
+                "x": 16.0,
+                "y": 16.0
+            },
+            "picture": {
+                "x": 45.26666259765625,
+                "y": 45.26666259765625
+            }
+        },
+        {
+            "screen": "tablet",
+            "path": "Canvas/Main_FlexibleLayoutPanel/ContentLayer/Character_FlexibleLayoutPanel/ContentLayer/ActionGridPanel",
+            "width": 1024,
+            "height": 768,
+            "slots": 5,
+            "columns": 3,
+            "canvasScale": 1.0,
+            "match": 0.0,
+            "reservedInset": 15.0,
+            "requiredHeight": 183.25926208496095,
+            "referenceResolution": {
+                "x": 800.0,
+                "y": 600.0
+            },
+            "viewport": {
+                "x": 268.8888854980469,
+                "y": 96.0
+            },
+            "parentSize": {
+                "x": 334.8888854980469,
+                "y": 180.0
+            },
+            "cell": {
+                "x": 69.62963104248047,
+                "y": 69.62963104248047
+            },
+            "spacing": {
+                "x": 16.0,
+                "y": 16.0
+            },
+            "picture": {
+                "x": 57.266666412353519,
+                "y": 57.266666412353519
+            }
+        },
+        {
+            "screen": "ultrawide",
+            "path": "Canvas/Main_FlexibleLayoutPanel/ContentLayer/Character_FlexibleLayoutPanel/ContentLayer/ActionGridPanel",
+            "width": 2560,
+            "height": 1080,
+            "slots": 5,
+            "columns": 6,
+            "canvasScale": 1.0,
+            "match": 0.0,
+            "reservedInset": 15.0,
+            "requiredHeight": 100.0,
+            "referenceResolution": {
+                "x": 800.0,
+                "y": 600.0
+            },
+            "viewport": {
+                "x": 610.2222290039063,
+                "y": 96.0
+            },
+            "parentSize": {
+                "x": 676.2222290039063,
+                "y": 180.0
+            },
+            "cell": {
+                "x": 72.0,
+                "y": 72.0
+            },
+            "spacing": {
+                "x": 16.0,
+                "y": 16.0
+            },
+            "picture": {
+                "x": 59.39999771118164,
+                "y": 59.39999771118164
+            }
+        },
+        {
+            "screen": "phone-safe-area",
+            "path": "Canvas/Main_FlexibleLayoutPanel/ContentLayer/Character_FlexibleLayoutPanel/ContentLayer/ActionGridPanel",
+            "width": 390,
+            "height": 844,
+            "slots": 5,
+            "columns": 1,
+            "canvasScale": 1.0,
+            "match": 0.0,
+            "reservedInset": 15.0,
+            "requiredHeight": 452.0,
+            "referenceResolution": {
+                "x": 800.0,
+                "y": 600.0
+            },
+            "viewport": {
+                "x": 112.88888549804688,
+                "y": 96.0
+            },
+            "parentSize": {
+                "x": 178.88888549804688,
+                "y": 180.0
+            },
+            "cell": {
+                "x": 72.0,
+                "y": 72.0
+            },
+            "spacing": {
+                "x": 16.0,
+                "y": 16.0
+            },
+            "picture": {
+                "x": 59.39999771118164,
+                "y": 59.39999771118164
+            }
+        }
+    ]
+}

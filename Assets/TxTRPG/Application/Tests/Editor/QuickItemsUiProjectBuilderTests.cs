@@ -31,7 +31,7 @@ namespace TxTRPG.Application.Tests
             Assert.That(menuPrefab.transform.Find("Viewport/Content").GetComponent<GameMenuLayoutGroup>(), Is.Not.Null);
             Assert.That(menuPrefab.GetComponentsInChildren<GameMenuButtonView>(true).Length, Is.EqualTo(3));
             Assert.That(menuPrefab.GetComponentsInChildren<GameMenuButtonView>(true).Single(view => view.name == "Inventory").DisplayMode,
-                Is.EqualTo(GameMenuButtonDisplayMode.ImageWithLabel));
+                Is.EqualTo(GameMenuButtonDisplayMode.ImageOnly));
             Assert.That(menuPrefab.transform.Find("Viewport/Content/System/VisualRoot/EffectOverlay"), Is.Not.Null);
             var menu = menuPrefab.GetComponent<GameMenuPanel>();
             Assert.That(menu.HasValidInternalConfiguration, Is.True);

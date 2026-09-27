@@ -1,0 +1,47 @@
+{
+  "task": "exploration-card-no-initial-selection",
+  "date": "2026-09-27",
+  "scene": "Assets/Scenes/TMP_MainScene.unity",
+  "sceneChanges": [
+    "ExplorationNodeChoiceCardList.windowService -> existing GameWindowService fileID 560923292; verified script GUID"
+  ],
+  "editMode": {
+    "ExplorationNodeChoiceCardTests": 24,
+    "ExplorationInitialSelectionTests": 3
+  },
+  "playModeRunner": {
+    "executed": 0,
+    "jobId": "e0393c34",
+    "error": "Original Unity Test Runner job not restored after domain reload"
+  },
+  "playModeCoroutineAdapter": {
+    "passed": 5,
+    "inputPath": "Virtual Keyboard/Gamepad/Mouse/Touchscreen -> InputSystemUIInputModule",
+    "tests": [
+      "InitialSubmitFirstDirectionSimultaneousAndSeparateSubmit",
+      "HeldInputPooledFocusEmptyDisabledAndLifetime",
+      "GamepadWrappedScrollAndSubmit",
+      "ModalLoadingAndOtherUiOwnInputAndRestoreFocus",
+      "MouseHoverReuseClickAndTouchTapDrag"
+    ]
+  },
+  "feedbackRegression": "PASS: pulse, timeScale=0, focus, preferences, lock, touch, drag, text rebuild, reuse",
+  "runtimeBefore": {
+    "selected": "ChoiceCard1",
+    "focusVisual": true,
+    "scale": 1.00762939,
+    "shapeBorder": true
+  },
+  "runtimeAfter": {
+    "selected": null,
+    "allFocusVisual": false,
+    "allScale": 1.0,
+    "allShapeBorder": true
+  },
+  "screenshot": "Assets/Screenshots/exploration-no-initial-selection.png",
+  "unverified": [
+    "Physical controller/mobile hardware",
+    "Packaged/IL2CPP builds",
+    "Final Windows/Android script compilation waiting for Unity main-thread recovery"
+  ]
+}

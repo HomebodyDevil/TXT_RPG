@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using TxTRPG.Content.Items;
@@ -19,6 +19,8 @@ namespace TxTRPG.Application.Items
         public const float MaximumCellDimension = 1024f;
         public const float MaximumSpacing = 256f;
         public const int MaximumPadding = 512;
+        [Tooltip("Owns Bag grid presentation; panel-only edits are replaced on Refresh.")]
+        public ActionGridDisplaySettings presentation = new();
         public InventoryDisplayMode displayMode = InventoryDisplayMode.Paged;
         [Min(1)] public int slotsPerPage = 12;
         [Min(0)] public int minimumScrollSlots = 12;
@@ -34,6 +36,8 @@ namespace TxTRPG.Application.Items
 
         public void Normalize()
         {
+            presentation ??= new();
+            presentation.Normalize();
             displayMode = Enum.IsDefined(typeof(InventoryDisplayMode), displayMode) ? displayMode : InventoryDisplayMode.Paged;
             columnPolicy = Enum.IsDefined(typeof(InventoryColumnPolicy), columnPolicy) ? columnPolicy : InventoryColumnPolicy.AdaptiveUpToConfigured;
             slotsPerPage = Math.Min(MaximumSlots, Math.Max(1, slotsPerPage));
@@ -57,6 +61,7 @@ namespace TxTRPG.Application.Items
             source ??= new GridContentLayoutSettings();
             var copy = new GridContentLayoutSettings
             {
+                presentation = source.presentation?.Copy() ?? new(),
                 displayMode = source.displayMode,
                 slotsPerPage = source.slotsPerPage,
                 minimumScrollSlots = source.minimumScrollSlots,
@@ -78,7 +83,7 @@ namespace TxTRPG.Application.Items
 
         public IModalContentConfiguration CloneForRequest() => CreateSafeCopy(this, out _);
 
-        private string Snapshot() => $"{(int)displayMode}|{slotsPerPage}|{minimumScrollSlots}|{columns}|{(int)columnPolicy}|{cellSize}|{spacing}|{padding?.left},{padding?.right},{padding?.top},{padding?.bottom}|{(int)alignment}|{(int)incompleteRowAlignment}|{(int)verticalPlacement}";
+        private string Snapshot() => JsonUtility.ToJson(presentation) + $"{(int)displayMode}|{slotsPerPage}|{minimumScrollSlots}|{columns}|{(int)columnPolicy}|{cellSize}|{spacing}|{padding?.left},{padding?.right},{padding?.top},{padding?.bottom}|{(int)alignment}|{(int)incompleteRowAlignment}|{(int)verticalPlacement}";
         private static float SafeFinite(float value, float fallback, float minimum, float maximum) =>
             float.IsNaN(value) || float.IsInfinity(value) ? fallback : Math.Min(maximum, Math.Max(minimum, value));
 

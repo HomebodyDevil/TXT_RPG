@@ -2,6 +2,7 @@ using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 namespace TxTRPG.UI.Exploration
 {
@@ -29,7 +30,7 @@ namespace TxTRPG.UI.Exploration
     }
 
     [DisallowMultipleComponent]
-    public sealed class ExplorationNodeChoiceCardView : MonoBehaviour
+    public sealed class ExplorationNodeChoiceCardView : MonoBehaviour, ISelectHandler
     {
         [SerializeField] private Button button;
         [SerializeField] private RectTransform motionRoot;
@@ -45,6 +46,8 @@ namespace TxTRPG.UI.Exploration
         private Action<ExplorationNodeChoiceRequest> selected;
         private ExplorationNodeChoiceRequest request;
 
+        public event Action<ExplorationNodeChoiceCardView> Focused;
+        public void OnSelect(BaseEventData _) => Focused?.Invoke(this);
         public Button Button => button;
         public ExplorationNodeChoiceRequest Request => request;
         public ExplorationCardShapePresentation ShapePresentation => shapePresentation;

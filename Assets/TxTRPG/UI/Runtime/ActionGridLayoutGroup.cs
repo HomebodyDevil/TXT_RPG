@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -31,6 +31,9 @@ namespace TxTRPG.UI
             get => IncompleteRowAlignment;
             set => IncompleteRowAlignment = value;
         }
+
+        // Presets align against the configured grid width even when only one incomplete row exists.
+        public bool ReserveConfiguredColumns { get; set; }
 
         public override void SetLayoutVertical()
         {
@@ -91,6 +94,12 @@ namespace TxTRPG.UI
 
             var startsFromRight = startCorner == Corner.UpperRight ||
                                   startCorner == Corner.LowerRight;
+            if (ReserveConfiguredColumns && rectChildren.Count < columns)
+            {
+                var missingWidth = (columns - rectChildren.Count) * (cellSize.x + spacing.x);
+                var correction = missingWidth * ((startsFromRight ? 1f : 0f) - (int)childAlignment % 3 * .5f);
+                foreach (var child in rectChildren) child.anchoredPosition += Vector2.right * correction;
+            }
             var offset = CalculateTrailingRowOffset(
                 incompleteRowAlignment,
                 columns,

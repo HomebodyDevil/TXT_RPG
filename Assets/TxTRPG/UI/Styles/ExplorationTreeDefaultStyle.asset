@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a7f2839b62257d4db3b4fa68c69f8e1, type: 3}
+  m_Name: ExplorationTreeDefaultStyle
+  m_EditorClassIdentifier: TxTRPG.UI::TxTRPG.UI.Exploration.ExplorationTreeStyle
+  types:
+  - typeId: combat
+    displayName: "\uC804\uD22C"
+    sprite: {fileID: 21300000, guid: 2b658e928ff7ce349af8fad3bc71edab, type: 3}
+  - typeId: recovery-upgrade
+    displayName: "\uD68C\uBCF5\xB7\uAC15\uD654"
+    sprite: {fileID: 21300000, guid: 78e378677c8e38549a6d5cb5326595b1, type: 3}
+  fallbackIcon: {fileID: 21300000, guid: f21b4d527bc339243ac4d6cb92ca1fe8, type: 3}
+  lineSprite: {fileID: 0}
+  nodeSize: {x: 92, y: 124}
+  spacing: {x: 12, y: 40}
+  padding: 12
+  lineWidth: 2
+  visitedLineWidth: 4
+  lineColor: {r: 0.48, g: 0.56, b: 0.66, a: 1}
+  visitedLineColor: {r: 0.95, g: 0.78, b: 0.38, a: 1}
+  available: {r: 0.28, g: 0.48, b: 0.66, a: 1}
+  active: {r: 0.68, g: 0.49, b: 0.18, a: 1}
+  completed: {r: 0.25, g: 0.49, b: 0.38, a: 1}
+  failed: {r: 0.59, g: 0.25, b: 0.3, a: 1}
+  unchosen: {r: 0.25, g: 0.28, b: 0.34, a: 1}

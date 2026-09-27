@@ -50,6 +50,47 @@ namespace TxTRPG.UI.Tests
             }
         }
 
+        [UnityTest]
+        public IEnumerator Presets_ResizeKeepsSlotsSelectionNavigationAndStableScroll()
+        {
+            var canvasObject = new GameObject("PresetCanvas",typeof(RectTransform),typeof(Canvas));
+            canvasObject.GetComponent<Canvas>().renderMode=RenderMode.ScreenSpaceOverlay;
+            var prefab=CreateCellPrefab();
+            try
+            {
+                var panel=CreatePanel(canvasObject.transform,prefab,out var scroll);
+                panel.ConfigureBehavior(ActionGridPopulationMode.FillCapacityWithEmptySlots,ActionGridPackingMode.PreserveSlots,GridActivationBehavior.SelectOnly);
+                panel.gameObject.SetActive(true); panel.SetEntries(Entries(14),14); panel.Select(4,false);
+                foreach(var mode in new[]{ActionGridDisplayMode.Balanced,ActionGridDisplayMode.DistributedSpacing,ActionGridDisplayMode.LargeSlots,ActionGridDisplayMode.Manual})
+                foreach(var size in new[]{new Vector2(128,200),new Vector2(229,121),new Vector2(610,242),new Vector2(96,144)})
+                {
+                    panel.SetDisplayMode(mode);
+                    var rect=(RectTransform)panel.transform;
+                    rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal,size.x);
+                    rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical,size.y);
+                    yield return null; Canvas.ForceUpdateCanvases();
+                    var columns=panel.CurrentColumns; var height=scroll.content.rect.height;
+                    yield return null; yield return null;
+                    Assert.That(panel.CurrentColumns,Is.EqualTo(columns)); Assert.That(scroll.content.rect.height,Is.EqualTo(height).Within(.1f));
+                    Assert.That(panel.Capacity,Is.EqualTo(14)); Assert.That(panel.VisibleCellCount,Is.EqualTo(14)); Assert.That(panel.SelectedIndex,Is.EqualTo(4));
+                    var cells=scroll.content.GetComponentsInChildren<ActionGridCell>();
+                    for(var index=0;index<cells.Length;index++) Assert.That(cells[index].Index,Is.EqualTo(index));
+                    Assert.That(cells[0].Button.navigation.selectOnDown,Is.EqualTo(cells[columns].Button));
+                    if(mode != ActionGridDisplayMode.Manual)
+                    {
+                        cells[cells.Length-1].OnSelect(null); yield return null;
+                        var bounds=RectTransformUtility.CalculateRelativeRectTransformBounds(scroll.viewport,cells[cells.Length-1].transform);
+                        Assert.That(bounds.min.y,Is.GreaterThanOrEqualTo(scroll.viewport.rect.yMin-.5f));
+                        Assert.That(bounds.max.y,Is.LessThanOrEqualTo(scroll.viewport.rect.yMax+.5f));
+                    }
+                    scroll.verticalNormalizedPosition=.4f;
+                    panel.SetEntries(Entries(14),14); yield return null;
+                    Assert.That(scroll.verticalNormalizedPosition,Is.EqualTo(.4f).Within(.04f));
+                }
+            }
+            finally { Object.Destroy(canvasObject); Object.Destroy(prefab); }
+        }
+
         private static ActionGridPanel CreatePanel(Transform parent, ActionGridCell cellPrefab,
             out ScrollRect scrollRect)
         {
@@ -83,6 +124,15 @@ namespace TxTRPG.UI.Tests
             root.SetActive(false);
             var cell = root.AddComponent<ActionGridCell>();
             Set(cell, "button", root.GetComponent<Button>());
+            foreach (var field in new[] { "disabledOverlay", "selectionFrame", "emptySlotVisual" })
+            {
+                var visual = new GameObject(field, typeof(RectTransform));
+                visual.transform.SetParent(root.transform, false);
+                var visualRect = (RectTransform)visual.transform;
+                visualRect.anchorMin = Vector2.zero; visualRect.anchorMax = Vector2.one;
+                visualRect.offsetMin = Vector2.zero; visualRect.offsetMax = Vector2.zero;
+                Set(cell, field, visual);
+            }
             return cell;
         }
 

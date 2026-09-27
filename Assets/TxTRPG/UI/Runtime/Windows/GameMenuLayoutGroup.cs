@@ -61,6 +61,7 @@ namespace TxTRPG.UI.Windows
         public void SetViewport(RectTransform value) { viewport = value; SetDirty(); }
         public void Refresh() => SetDirty();
 
+#if UNITY_EDITOR
         protected override void OnValidate()
         {
             base.OnValidate();
@@ -70,6 +71,8 @@ namespace TxTRPG.UI.Windows
             spacing.y = Mathf.Max(0f, spacing.y);
             maximumColumns = Mathf.Max(1, maximumColumns);
         }
+
+#endif
 
         private void RefreshVisibleChildren()
         {

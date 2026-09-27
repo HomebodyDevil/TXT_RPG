@@ -2,6 +2,7 @@ using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 namespace TxTRPG.UI
 {
@@ -12,7 +13,7 @@ namespace TxTRPG.UI
         RelativeWithMaxSize
     }
 
-    public sealed class ActionGridCell : MonoBehaviour
+    public sealed class ActionGridCell : MonoBehaviour, ISelectHandler, IMoveHandler
     {
         [SerializeField] private Button button;
         [SerializeField] private Image icon;
@@ -47,6 +48,19 @@ namespace TxTRPG.UI
         private bool isApplyingIconLayout;
         private bool isApplyingEmptySlotLayout;
         private bool didWarnAboutMissingEmptySlotRect;
+
+        public event Action<int> Focused;
+        public event Action<int> Navigated;
+        public void OnMove(AxisEventData data)
+        {
+            if (button == null || data == null) return;
+            var navigation = button.navigation;
+            var target = data.moveDir switch { MoveDirection.Left => navigation.selectOnLeft, MoveDirection.Right => navigation.selectOnRight,
+                MoveDirection.Up => navigation.selectOnUp, MoveDirection.Down => navigation.selectOnDown, _ => null };
+            // The selectable may already have processed this event; reveal the intended destination directly.
+            if (target != null && target.TryGetComponent<ActionGridCell>(out var cell)) Navigated?.Invoke(cell.Index);
+        }
+        public void OnSelect(BaseEventData eventData) => Focused?.Invoke(Index);
 
         public int Index { get; private set; }
         public bool HasEntry { get; private set; }

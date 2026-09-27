@@ -16,7 +16,11 @@
 
 ## 이미지 메뉴와 가방 창
 
-`GameMenuButtonView`는 `ImageOnly`와 `ImageWithLabel` 표시 모드를 지원합니다. 아이콘은 비율을 유지하며 `VisualRoot` 안에서만 배치되므로 메뉴 레이아웃 크기를 변경하지 않습니다. Sprite가 없으면 현지화 가능한 Label을 다시 표시하여 빈 버튼이 되지 않습니다. 생성기는 프로젝트가 소유하는 단순한 기본 가방 아이콘을 `DefaultBagIcon.asset`으로 만들며 개발자는 버튼 View의 Sprite로 교체할 수 있습니다.
+`GameMenuButtonView`는 `ImageOnly`와 `ImageWithLabel` 표시 모드를 지원합니다. 기본 메뉴는 `Assets/TxTRPG/UI/Icons/TemporaryMenu/`의 system(톱니바퀴), inventory(가방), status(인물), action(주사위) PNG Sprite를 ImageOnly로 표시합니다. 네 이미지는 프로젝트에서 수학적 도형으로 제작한 128×128 투명 단색 자산이며 런타임 생성이나 외부 라이선스 의존성이 없습니다. 기존 `DefaultBagIcon.asset`은 호환성을 위해 유지합니다.
+
+아이콘은 비율을 유지하며 `VisualRoot` 안에서만 배치되므로 입력 영역과 메뉴 레이아웃 크기를 변경하지 않습니다. Sprite/참조 누락, `Icon Visible` 해제, `SetIcon(sprite, false)` 또는 Image 컴포넌트 비활성 시 기존 Label을 표시합니다. `ExecuteAlways` View는 Inspector 변경을 감지할 때만 해당 표시를 갱신하며 OnValidate에서 자산을 생성하지 않습니다. Icon GameObject 활성 상태는 View가 관리합니다. 런타임은 저장된 Sprite를 기본값으로 덮어쓰지 않습니다.
+
+`TemporaryMenuIconUtility`의 임시 적용 메뉴는 빈 Sprite와 확인된 옛 기본 가방 이미지만 바꿉니다. 사용자 Sprite와 이미 설정된 새 기본 아이콘의 tint/padding은 재실행 시 보존됩니다. 공용 GameMenuPanel의 세 버튼은 GameMenuScreen에 상속되며, 행동 버튼은 TMP_MainScene에만 존재하고 `temporary-dice.roll-all` 명령을 유지합니다. 전체 생성기는 저장된 PNG를 읽어 기본 구성을 만들지만, 사용자 외형을 보존하는 이전 도구는 아니므로 이미지 교체에 사용하지 않습니다.
 
 가방은 기존 `inventory` 페이지 ID와 `GameWindowService`를 유지합니다. `InventoryWindowPage.prefab` 안에는 `CategoryTabs`, 재사용한 `ActionGridPanel`, `PaginationControls`, `EmptyState`와 결과 표시가 있습니다. 기본 카테고리는 `all`, `consumable`, `misc`이며, 비어 있거나 이전 버전에서 생성된 `ItemDefinition.categoryId`는 `misc`로 처리합니다. 필터와 페이지 이동은 `InventoryState`를 변경하지 않습니다.
 
@@ -138,3 +142,22 @@ ModalWindowHost
 # 시스템 표시 설정
 
 System 페이지는 기존 `GameWindowService`와 `ModalWindowHost` 경로를 그대로 사용하며 `ExplorationCardSettingsView`의 두 Toggle을 표시합니다. `카드 효과 사용`은 기본적으로 켜져 있고 `움직임 줄이기`는 기본적으로 꺼져 있습니다. 값은 캐릭터·탐험 저장 데이터와 분리된 PlayerPrefs 키에 저장되고, 손상되거나 누락된 값에는 안전한 기본값을 사용합니다. Toggle 변경 이벤트는 현재 표시 중인 카드에 즉시 전달되며 페이지를 다시 열 때 저장값을 `SetIsOnWithoutNotify`로 복원하여 초기 바인딩 중 불필요한 저장을 방지합니다.
+
+## 표시 슬롯 기준의 빈 상태와 모달 바깥 입력
+
+Bag의 `EmptyState`는 `SetEntries`를 마친 `ActionGridPanel.VisibleCellCount == 0`일 때만 표시합니다. 빈 칸 채우기 슬롯, 현재 목록에서 스크롤로 가려진 슬롯과 미등록 아이템 대체 슬롯도 표시 슬롯에 포함합니다. 비활성 풀 셀이나 다른 카테고리의 슬롯은 포함하지 않습니다. 준비 시작 시에는 이전 문구를 숨기고, 준비 취소 후에는 데이터 바인딩과 이벤트 구독을 진행하지 않습니다. 빈 문구의 raycast는 꺼져 있으며 슬롯 설정과 저장 데이터는 변경하지 않습니다.
+
+`ModalWindowHost.windowRect`는 제목·본문·로딩·오류·스크롤바를 포함하는 `Window`를 명시적으로 참조합니다. 전체 화면 Host Image가 raycast 대상이고 Window Image가 내부 빈 공간을 받습니다. Host는 주 버튼의 Down과 정상 Up이 모두 자신의 배경에 적중하고 Window 밖일 때만 Click을 닫기 요청으로 보냅니다. 소속 컨텍스트 메뉴와 Overlay Graphic은 Window 밖에 펼쳐져 있어도 배경과 다른 raycast 대상이므로 닫기 입력이 아닙니다. 현재 ActionContextMenu에는 화면 전체를 가로채는 별도 blocker가 없으므로 메뉴와 Window 모두의 바깥에서는 Host 배경이 입력을 받습니다.
+
+포인터별 Down·Up을 구분하고 EventSystem의 클릭·드래그 임계값을 사용합니다. 취소된 터치는 이벤트가 제공한 TouchControl 상태로 거부하며 전역 입력 폴링을 하지 않습니다. 숨김, 비활성화, 포커스 상실, Cancel, 새 개방 및 재시도에서 이전 포인터 상태를 비웁니다. 입력을 Up 이전에 닫거나 뒤의 버튼으로 재전달하지 않습니다.
+
+바깥 입력은 `RequestClose` → `GameWindowService.Close`로 이어집니다. 기존 준비 취소, 페이지 Hide와 컨텍스트 메뉴 정리, Host 숨김, 호출 버튼 포커스 복원을 그대로 사용합니다. `ModalWindowHost.prefab`과 `GameMenuScreen.prefab`에 Window 참조가 저장되고 `TMP_MainScene`은 운영 Prefab 참조를 상속합니다. 창 크기·배치·Grid 정책을 변경하는 기능은 포함하지 않습니다.
+
+### Bag Grid 표시 프리셋
+
+`GridContentLayoutSettings.presentation`에서 Manual/Balanced/DistributedSpacing/LargeSlots를 선택합니다. 기본값은 Manual이며 기존 열 정책·셀 크기·간격·Padding은 그대로 사용합니다. 다른 방식을 선택하면 `InventoryGameWindowPage.Refresh`가 `ActionGridPanel.ConfigureDisplay`로 해당 설정의 사본을 전달합니다. 창 요청의 CloneForRequest와 CreateSafeCopy는 프리셋 및 RectOffset까지 깊은 복사하므로 열린 창의 변경이 기본 설정을 오염시키지 않습니다. 슬롯 수·페이지·필터·아이템 소유권은 이 표시 정책과 독립입니다. Bag 자식 ItemGrid Inspector의 선택은 다음 Refresh에서 원본 설정으로 교체되므로 운영 설정은 페이지의 Grid Settings / Presentation에서 편집합니다.
+
+
+### Bag의 단일 행 선택
+
+Bag는 `GridContentLayoutSettings.presentation.flow`에서 SingleRow를 선택할 수 있습니다. `singleRow`에는 조건부 정렬 임계값, 묶음 정렬, 세로 배치, Manual 목표 셀 크기와 가로 스크롤바 정책을 저장합니다. `InventoryGameWindowPage.Refresh`는 기존 수동 필드를 `ConfigureLayout(..., preservePresentation: true)`로 갱신한 뒤 페이지의 presentation 사본을 적용합니다. 분류·페이지·항목 갱신이 선택한 축을 초기화하지 않으며 SingleRow일 때 세로 ScrollRect는 비활성입니다. 저장된 Bag의 기본값은 Manual/Grid이고 Header와 기존 스크롤 정책은 유지됩니다. 페이지 수, 용량 계산, 슬롯 번호와 Player 저장 데이터에는 변경이 없습니다.

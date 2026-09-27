@@ -23,7 +23,42 @@ namespace TxTRPG.UI
         [SerializeField] private GameObject emptyState;
         [SerializeField] private ActionContextMenu contextMenu;
 
-        [Header("Layout")]
+        [SerializeField] private ActionGridSurfaceLayout surfaceLayout;
+        private bool applyingLayout;
+        public ActionGridSurfaceLayout SurfaceLayout => surfaceLayout;
+        public bool IsSingleRow => displaySettings?.flow == ActionGridFlow.SingleRow;
+        public void BindSurfaceLayout(ActionGridSurfaceLayout surface) => surfaceLayout = surface;
+
+        [SerializeField] private ActionGridDisplaySettings displaySettings = new();
+        private ActionGridLayoutResult currentLayout;
+        public ActionGridDisplayMode DisplayMode => displaySettings?.mode ?? ActionGridDisplayMode.Manual;
+        public ActionGridLayoutResult CurrentLayout => currentLayout;
+        public ActionGridDisplaySettings GetDisplaySettings() => displaySettings.Copy();
+
+        public void ConfigureDisplay(ActionGridDisplaySettings settings)
+        {
+            displaySettings = settings?.Copy() ?? new();
+            RefreshDisplayLayout();
+        }
+
+        public void SetDisplayMode(ActionGridDisplayMode mode)
+        {
+            displaySettings ??= new();
+            displaySettings.mode = mode;
+            RefreshDisplayLayout();
+        }
+
+        public void RefreshDisplayLayout()
+        {
+            displaySettings ??= new();
+            displaySettings.Normalize();
+            NormalizeManualLayout();
+            RebuildGridLayout();
+            RefreshScrollbarLayout();
+            ConfigureNavigation();
+        }
+
+        [Header("Manual Layout (retained while a preset is selected)")]
         [FormerlySerializedAs("slotAlignment")]
         [SerializeField, Tooltip("Aligns the complete grid block within the viewport.")]
         private ActionGridHorizontalAlignment gridAlignment =
@@ -52,6 +87,7 @@ namespace TxTRPG.UI
 
         private readonly List<ActionGridEntry> entries = new();
         private readonly List<ActionGridCell> cellPool = new();
+        private readonly Vector3[] focusCorners = new Vector3[4];
         private IActionMenuProvider menuProvider;
         private IActionCommandExecutor commandExecutor;
         private CancellationTokenSource commandCancellation;
@@ -95,9 +131,24 @@ namespace TxTRPG.UI
         [Obsolete("Use GridAlignment and IncompleteRowAlignment.")]
         public ActionGridHorizontalAlignment SlotAlignment => gridAlignment;
 
+        private void NormalizeManualLayout()
+        {
+            minimumCellSize = new Vector2(ActionGridDisplayPreset.Finite(minimumCellSize.x,72,1,1000000),ActionGridDisplayPreset.Finite(minimumCellSize.y,72,1,1000000));
+            maximumCellSize = new Vector2(ActionGridDisplayPreset.Finite(maximumCellSize.x,128,minimumCellSize.x,1000000),ActionGridDisplayPreset.Finite(maximumCellSize.y,128,minimumCellSize.y,1000000));
+            spacing = new Vector2(ActionGridDisplayPreset.Finite(spacing.x,8,0,1000000),ActionGridDisplayPreset.Finite(spacing.y,8,0,1000000));
+            fixedColumns = Mathf.Max(1,fixedColumns);
+            if((int)layoutMode < 0 || (int)layoutMode > 2) layoutMode=ActionGridLayoutMode.FixedColumns;
+            padding ??= new RectOffset(8,8,8,8);
+            padding.left=Mathf.Clamp(padding.left,0,1000000); padding.right=Mathf.Clamp(padding.right,0,1000000);
+            padding.top=Mathf.Clamp(padding.top,0,1000000); padding.bottom=Mathf.Clamp(padding.bottom,0,1000000);
+        }
+
         private void OnEnable()
         {
             padding ??= new RectOffset(8, 8, 8, 8);
+            displaySettings ??= new();
+            displaySettings.Normalize();
+            NormalizeManualLayout();
             DisableConflictingContentSizeFitter();
             ResolveScrollbarController();
             if (scrollbarController != null)
@@ -117,6 +168,7 @@ namespace TxTRPG.UI
                 scrollbarController.ViewportLayoutChanged -= OnViewportLayoutChanged;
             }
             Canvas.willRenderCanvases -= ResolveInitialScrollBeforeRender;
+            Canvas.willRenderCanvases -= FlushDeferredLayout;
         }
 
         private void Awake()
@@ -133,6 +185,8 @@ namespace TxTRPG.UI
             {
                 if (cell != null && !cellPool.Contains(cell))
                 {
+                    cell.Focused += ScrollFocusedCellIntoView;
+                    cell.Navigated += ScrollNavigatedCellIntoView;
                     cellPool.Add(cell);
                 }
             }
@@ -145,6 +199,7 @@ namespace TxTRPG.UI
         private void OnDestroy()
         {
             Canvas.willRenderCanvases -= ResolveInitialScrollBeforeRender;
+            Canvas.willRenderCanvases -= FlushDeferredLayout;
             CancelPendingCommand();
             ReleaseAssets();
         }
@@ -192,7 +247,15 @@ namespace TxTRPG.UI
         private void OnValidate()
         {
             padding ??= new RectOffset(8, 8, 8, 8);
-            ApplyLayout();
+            displaySettings ??= new();
+            displaySettings.Normalize();
+            NormalizeManualLayout();
+            UnityEditor.EditorApplication.delayCall -= RefreshAfterValidation;
+            UnityEditor.EditorApplication.delayCall += RefreshAfterValidation;
+        }
+        private void RefreshAfterValidation()
+        {
+            if (this != null && isActiveAndEnabled && !UnityEditor.EditorUtility.IsPersistent(this)) RefreshDisplayLayout();
         }
 #endif
 
@@ -228,8 +291,11 @@ namespace TxTRPG.UI
             RectOffset layoutPadding,
             ActionGridHorizontalAlignment horizontalAlignment,
             ActionGridHorizontalAlignment trailingRowAlignment,
-            ActionGridVerticalPlacement placement)
+            ActionGridVerticalPlacement placement,
+            bool preservePresentation = false)
         {
+            displaySettings ??= new();
+            if (!preservePresentation) { displaySettings.mode = ActionGridDisplayMode.Manual; displaySettings.flow = ActionGridFlow.Grid; }
             layoutMode = mode;
             fixedColumns = Mathf.Max(1, columns);
             minimumCellSize = new Vector2(Mathf.Max(1f, cellSize.x), Mathf.Max(1f, cellSize.y));
@@ -242,6 +308,7 @@ namespace TxTRPG.UI
                 : new RectOffset(
                     Mathf.Max(0, layoutPadding.left), Mathf.Max(0, layoutPadding.right),
                     Mathf.Max(0, layoutPadding.top), Mathf.Max(0, layoutPadding.bottom));
+            NormalizeManualLayout();
             gridAlignment = horizontalAlignment;
             incompleteRowAlignment = trailingRowAlignment;
             verticalPlacement = placement;
@@ -261,7 +328,7 @@ namespace TxTRPG.UI
         private void RebuildGridLayout()
         {
             ApplyLayout();
-            if (content != null)
+            if (content != null && !CanvasUpdateRegistry.IsRebuildingLayout() && !CanvasUpdateRegistry.IsRebuildingGraphics())
             {
                 LayoutRebuilder.ForceRebuildLayoutImmediate(content);
             }
@@ -599,11 +666,34 @@ namespace TxTRPG.UI
             {
                 var cell = Instantiate(cellPrefab, content);
                 cell.gameObject.SetActive(false);
+                cell.Focused += ScrollFocusedCellIntoView;
+                cell.Navigated += ScrollNavigatedCellIntoView;
                 cellPool.Add(cell);
             }
         }
 
         private void ApplyLayout()
+        {
+            if (applyingLayout) return;
+            if (CanvasUpdateRegistry.IsRebuildingLayout() || CanvasUpdateRegistry.IsRebuildingGraphics())
+            {
+                Canvas.willRenderCanvases -= FlushDeferredLayout;
+                Canvas.willRenderCanvases += FlushDeferredLayout;
+                return;
+            }
+            applyingLayout = true;
+            try { ApplyLayoutCore(); }
+            finally { applyingLayout = false; }
+        }
+
+        private void FlushDeferredLayout()
+        {
+            if (CanvasUpdateRegistry.IsRebuildingLayout() || CanvasUpdateRegistry.IsRebuildingGraphics()) return;
+            Canvas.willRenderCanvases -= FlushDeferredLayout;
+            if (isActiveAndEnabled) RefreshDisplayLayout();
+        }
+
+        private void ApplyLayoutCore()
         {
             if (viewport == null || content == null || gridLayout == null)
             {
@@ -611,45 +701,50 @@ namespace TxTRPG.UI
             }
 
             padding ??= new RectOffset();
-            var availableWidth = Mathf.Max(1f, viewport.rect.width - padding.horizontal);
-            currentColumns = CalculateColumnCount(
-                layoutMode,
-                fixedColumns,
-                availableWidth,
-                minimumCellSize.x,
-                spacing.x);
-            var width = layoutMode == ActionGridLayoutMode.ExactColumns
-                ? minimumCellSize.x
-                : (availableWidth - spacing.x * (currentColumns - 1)) / currentColumns;
-            width = Mathf.Clamp(width, minimumCellSize.x, maximumCellSize.x);
-            var aspect = minimumCellSize.x > 0f ? minimumCellSize.y / minimumCellSize.x : 1f;
-
-            var cellHeight = Mathf.Clamp(
-                width * aspect,
-                minimumCellSize.y,
-                maximumCellSize.y);
+            displaySettings ??= new();
+            surfaceLayout?.ApplyHeader();
+            var preset = displaySettings.ActivePreset;
+            var effectivePadding = preset?.padding ?? padding;
+            if (IsSingleRow && surfaceLayout != null)
+            {
+                surfaceLayout.EnterRow();
+                var options = displaySettings.singleRow;
+                // Hidden bars reserve no area, including any legacy symmetric side reservation.
+                var row = ActionGridSingleRowCalculator.Calculate(surfaceLayout.RowAvailableSize, GetDisplayedCount(),
+                    preset?.targetCellSize ?? options.targetCellSize, preset?.spacing.x ?? spacing.x, effectivePadding, options);
+                surfaceLayout.ConfigureRowViewport(options, row.Overflow);
+                row = ActionGridSingleRowCalculator.Calculate(viewport.rect.size, GetDisplayedCount(),
+                    preset?.targetCellSize ?? options.targetCellSize, preset?.spacing.x ?? spacing.x, effectivePadding, options);
+                currentLayout = row.Layout; currentColumns = row.Layout.Columns;
+                surfaceLayout.ApplyRowGeometry(row, gridLayout, effectivePadding, options);
+                return;
+            }
+            surfaceLayout?.RestoreGrid(gridLayout);
+            currentLayout = ActionGridLayoutCalculator.Calculate(viewport.rect.size, GetDisplayedCount(),
+                preset == null ? layoutMode : ActionGridLayoutMode.FixedColumns,
+                preset?.maximumColumns ?? fixedColumns, preset?.minimumCellSize ?? minimumCellSize,
+                preset?.maximumCellSize ?? maximumCellSize, preset?.spacing ?? spacing, effectivePadding,
+                DisplayMode == ActionGridDisplayMode.DistributedSpacing, preset?.targetCellSize ?? default,
+                preset?.minimumHorizontalGap ?? 0, preset?.maximumHorizontalGap ?? 0);
+            currentColumns = currentLayout.Columns;
             var viewportHeight = Mathf.Max(0f, viewport.rect.height);
-            var requiredGridHeight = CalculateRequiredGridHeight(
-                GetDisplayedCount(),
-                currentColumns,
-                cellHeight,
-                spacing.y,
-                padding);
+            var requiredGridHeight = currentLayout.RequiredHeight;
             var contentFits = requiredGridHeight <= viewportHeight + LayoutEpsilon;
             var wasOverflowing = content.rect.height > viewportHeight + LayoutEpsilon;
             var targetContentHeight = contentFits ? viewportHeight : requiredGridHeight;
 
             gridLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             gridLayout.constraintCount = currentColumns;
-            gridLayout.cellSize = new Vector2(width, cellHeight);
-            gridLayout.spacing = spacing;
-            gridLayout.padding = padding;
+            gridLayout.cellSize = currentLayout.CellSize;
+            gridLayout.spacing = currentLayout.Spacing;
+            ActionGridLayoutCalculator.ApplyPadding(gridLayout, effectivePadding);
             gridLayout.childAlignment = ResolveChildAlignment(
-                gridAlignment,
-                verticalPlacement == ActionGridVerticalPlacement.CenterWhenContentFits && contentFits);
+                preset?.alignment ?? gridAlignment,
+                (preset?.verticalPlacement ?? verticalPlacement) == ActionGridVerticalPlacement.CenterWhenContentFits && contentFits);
             if (gridLayout is ActionGridLayoutGroup alignedGrid)
             {
-                alignedGrid.IncompleteRowAlignment = incompleteRowAlignment;
+                alignedGrid.ReserveConfiguredColumns = preset != null;
+                alignedGrid.IncompleteRowAlignment = preset?.incompleteRowAlignment ?? incompleteRowAlignment;
             }
 
             if (!Mathf.Approximately(content.rect.height, targetContentHeight))
@@ -689,6 +784,7 @@ namespace TxTRPG.UI
 
         private void ResetScrollToTop()
         {
+            if (IsSingleRow) { surfaceLayout?.ResetLeft(); return; }
             if (scrollRect != null)
             {
                 scrollRect.StopMovement();
@@ -727,9 +823,10 @@ namespace TxTRPG.UI
             {
                 ApplyLayout();
                 if (content != null) LayoutRebuilder.ForceRebuildLayoutImmediate(content);
-                scrollbarController?.Refresh();
+                if (!IsSingleRow) scrollbarController?.Refresh();
                 var overflowing = content.rect.height > viewport.rect.height + LayoutEpsilon;
-                if (overflowing) ResetScrollToTop();
+                if (IsSingleRow) surfaceLayout?.ResetLeft();
+                else if (overflowing) ResetScrollToTop();
                 initialScrollPending = false;
                 return true;
             }
@@ -755,17 +852,18 @@ namespace TxTRPG.UI
         private void RefreshScrollbarLayout()
         {
             ResolveScrollbarController();
-            if (content != null)
+            if (content != null && !CanvasUpdateRegistry.IsRebuildingLayout() && !CanvasUpdateRegistry.IsRebuildingGraphics())
             {
                 LayoutRebuilder.ForceRebuildLayoutImmediate(content);
             }
-            scrollbarController?.Refresh();
+            if (!IsSingleRow) scrollbarController?.Refresh();
         }
 
         private void OnViewportLayoutChanged()
         {
             ApplyLayout();
-            if (content != null)
+            ConfigureNavigation();
+            if (content != null && !CanvasUpdateRegistry.IsRebuildingLayout() && !CanvasUpdateRegistry.IsRebuildingGraphics())
             {
                 LayoutRebuilder.ForceRebuildLayoutImmediate(content);
             }
@@ -778,8 +876,9 @@ namespace TxTRPG.UI
             float minimumCellWidth,
             float horizontalSpacing)
         {
-            var safeMinimumWidth = Mathf.Max(1f, minimumCellWidth);
-            var safeSpacing = Mathf.Max(0f, horizontalSpacing);
+            var safeMinimumWidth = ActionGridDisplayPreset.Finite(minimumCellWidth, 1, 1, 1000000);
+            var safeSpacing = ActionGridDisplayPreset.Finite(horizontalSpacing, 0, 0, 1000000);
+            availableWidth = ActionGridDisplayPreset.Finite(availableWidth, 1, 1, 1000000);
             var columnsThatFit = Mathf.Max(1, Mathf.FloorToInt(
                 (Mathf.Max(1f, availableWidth) + safeSpacing) /
                 (safeMinimumWidth + safeSpacing)));
@@ -806,6 +905,52 @@ namespace TxTRPG.UI
             return paddingHeight +
                    rows * Mathf.Max(0f, cellHeight) +
                    Mathf.Max(0, rows - 1) * Mathf.Max(0f, verticalSpacing);
+        }
+
+        private void ScrollFocusedCellIntoView(int index)
+        {
+            if ((!IsSingleRow && DisplayMode == ActionGridDisplayMode.Manual) || (IsSingleRow && initialScrollPending) || viewport == null || content == null ||
+                index < 0 || index >= cellPool.Count || viewport.rect.height <= LayoutEpsilon) return;
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(content);
+            ((RectTransform)cellPool[index].transform).GetWorldCorners(focusCorners);
+            if (IsSingleRow)
+            {
+                var left = viewport.InverseTransformPoint(focusCorners[0]).x;
+                var right = viewport.InverseTransformPoint(focusCorners[3]).x;
+                var shift = left < viewport.rect.xMin ? viewport.rect.xMin - left
+                    : right > viewport.rect.xMax ? viewport.rect.xMax - right : 0;
+                if (Mathf.Abs(shift) > LayoutEpsilon)
+                {
+                    scrollRect?.StopMovement();
+                    content.anchoredPosition = new Vector2(Mathf.Clamp(content.anchoredPosition.x + shift,
+                        -Mathf.Max(0,content.rect.width-viewport.rect.width), 0), 0);
+                }
+                return;
+            }
+            var bottom = viewport.InverseTransformPoint(focusCorners[0]).y;
+            var top = viewport.InverseTransformPoint(focusCorners[1]).y;
+            var delta = top > viewport.rect.yMax ? viewport.rect.yMax - top
+                : bottom < viewport.rect.yMin ? viewport.rect.yMin - bottom : 0f;
+            if (Mathf.Abs(delta) <= LayoutEpsilon) return;
+            scrollRect?.StopMovement();
+            var position = content.anchoredPosition;
+            position.y = Mathf.Clamp(position.y + delta, 0, Mathf.Max(0, content.rect.height - viewport.rect.height));
+            content.anchoredPosition = position;
+        }
+
+        public void NotifyUserScroll()
+        {
+            if (!IsSingleRow) return;
+            initialScrollPending = false;
+            initialContentSetupHeld = false;
+            Canvas.willRenderCanvases -= ResolveInitialScrollBeforeRender;
+        }
+
+        private void ScrollNavigatedCellIntoView(int index)
+        {
+            if (IsSingleRow) NotifyUserScroll();
+            ScrollFocusedCellIntoView(index);
         }
 
         private void ConfigureNavigation()

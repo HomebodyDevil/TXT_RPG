@@ -2,6 +2,32 @@
 
 ## 이미지 메뉴와 가방 창 설정
 
+### 네 메뉴 아이콘 교체 및 이전
+
+현재 기본 Sprite는 `Assets/TxTRPG/UI/Icons/TemporaryMenu/{system,inventory,status,action}.png`입니다. 각 파일은 Sprite (Single), Alpha Is Transparency, Bilinear, Clamp, mipmap 없음, 압축 없음으로 임포트합니다. PNG 생성은 최초 임시 적용에서만 수행하며 생성기는 이미 저장된 Sprite를 읽습니다.
+
+Play Mode를 종료하고 새 이미지를 Sprite로 임포트합니다. 공유 메뉴는 `Assets/TxTRPG/UI/Prefabs/GameMenuPanel.prefab`의 `Viewport/Content/{System,Inventory,Status}/VisualRoot/Icon`에서 Image의 Source Image를 교체합니다. 행동은 `TMP_MainScene` 메뉴의 `TemporaryDiceRoll/VisualRoot/Icon`을 교체합니다. 버튼의 GameMenuButtonView에서 Display Mode=ImageOnly, Icon Color=흰색(다색 원본 보존), Icon Padding, Icon Visible을 조절합니다. Label 참조와 문자열을 삭제하지 않습니다. Prefab 저장 또는 의도한 Scene override만 저장하며 전체 재생성은 필요하지 않습니다. 런타임에서는 `SetIcon(sprite, visible)` 및 `ConfigureDisplay(mode, padding, color)`를 사용합니다.
+
+이번 변경은 운영 Prefab과 TMP_MainScene에 적용하여 저장했습니다. 기존 체크아웃 자산을 선택적으로 이전할 때만 다음 절차를 사용합니다. 이미 적용된 자산과 사용자 Sprite는 재실행해도 보존하지만 빈 Sprite/옛 기본 가방 아이콘은 새 기본값으로 대체합니다. 변경 전 버전 관리 또는 백업을 확보합니다.
+
+```text
+1. 컴파일 완료를 기다리고 Play Mode를 종료합니다. TMP_MainScene 및 Prefab Stage의 사용자 변경을 저장하고 Prefab Stage를 닫습니다.
+2. Tools > TxT RPG > Application > Temporary > Apply Menu Icons Only를 실행합니다. 선택 오브젝트는 필요하지 않습니다.
+   공용 메뉴와 중첩 메뉴, TMP_MainScene의 비어 있거나 옛 기본값인 아이콘만 갱신하며 대상 자산을 자동 저장합니다.
+   Console의 MENU_ICONS 완료 로그를 확인합니다. 오류가 발생하면 이후 단계를 중단하고 원인을 해결합니다.
+3. Assets/Scenes/AppScene.unity에서 Play합니다. 네 도형과 기존 창 열기/닫기, 전투 노드에서 행동 실행을 확인합니다.
+```
+
+이 메뉴는 일회성 이전용이며 안전하게 재실행할 수 있습니다. 이전이 필요한 자산이 남아 있는 동안 유지합니다. 별도의 광범위한 Apply Player Dice Roll Menu는 이미지 적용에 필요하지 않습니다. GameMenuLayoutTests, TemporaryMenuIconTests, QuickItemsUiProjectBuilderTests 및 MainSceneMenuInputPlayModeTests가 관련 검증입니다.
+
+2026-09-27 검증: Edit Mode에서 TemporaryMenuIconTests 3개(저장 Sprite·연결·대체 표시·커스텀 Sprite 저장/재로드/반복 이전), GameMenuLayoutTests 17개, QuickItemsUiProjectBuilderTests 3개가 통과했습니다. Play Mode Test Runner 작업은 도메인 재로드 복구 실패로 0개 실행 상태에서 중단되었습니다. 대체 Editor 어댑터로 실제 Play Mode에서 동일한 MainSceneMenuInputPlayModeTests의 두 IEnumerator를 실행하여 모두 통과했습니다. Scene 로드 완료만으로 초기화가 끝났다고 가정하던 테스트를 탐험 Run 초기화까지 기다리도록 보완했습니다. Submit/Cancel 이벤트로 세 창과 포커스 복귀, 비전투 행동 제한, 전투 처리/Story 기록, 운영 체력 보존을 검증했습니다. 실제 마우스·게임패드·터치 하드웨어 입력 검증과는 구분합니다.
+
+이 검증을 재현하려면 AppScene에서 Play하고 `Tools > TxT RPG > Application > Temporary > Verify Menu Icons Runtime`을 실행합니다. 현재 런타임 Scene을 AppScene부터 다시 로드하므로 진행 중인 임시 전투/탐험은 초기화됩니다. 자산 및 사용자 저장 데이터를 저장하지 않으며 Console의 두 `MENU_ICON_RUNTIME: PASS` 로그가 성공 기준입니다. 실패하면 첫 예외에서 중단합니다. 행동만 분리하려면 `Verify Menu Action Runtime`을 사용합니다. 두 메뉴는 검증용 임시 어댑터이며 일반 사용에 필수인 적용 절차는 아닙니다.
+
+1920×1080 실제 Game View에서 네 아이콘을 확인했고 `Assets/Screenshots/game-menu-temporary-icons.png`, `Assets/Screenshots/game-menu-icons-combat.png`에 기록했습니다. 좁은/모바일/태블릿/울트라와이드 실제 화면, safe area·회전, 모든 버튼 상태 캡처, 세로·가로 커스텀 이미지의 실제 렌더링, Player 빌드와 대상 기기 압축 결과는 아직 검증하지 않았습니다. 기존 GameMenuScreen은 중첩 GameMenuPanel을 상속하므로 별도 불필요한 override를 추가하지 않았습니다. 현재 체크아웃에 남은 필수 수동 Tools 적용 단계는 없습니다.
+
+선별 적용 메뉴 재실행 전후에 TMP_MainScene, GameMenuPanel, GameMenuScreen의 파일 해시가 동일한 것도 확인했습니다. 검증 중 `NotoSansKR-Fallback.asset`의 atlas 이미지 데이터 한 줄이 변경되었습니다. 자동 원복은 사용자 변경 보존 정책에 의해 차단되어 이 파일은 원복하지 않은 상태로 남겨 두었습니다. 이 폰트 캐시 변경은 메뉴 이미지 구현에 필요한 변경이 아닙니다.
+
 1. `ItemDefinition`의 `Category Id`에 안정적인 ID를 입력합니다. 기본 소비품은 `consumable`이며 빈 값과 미등록 값은 `misc`로 표시합니다.
 2. `InventoryWindowPage.prefab`의 `InventoryGameWindowPage`에서 `Display Mode`, `Items Per Page`, `Fill Page With Empty Slots`와 `Categories`의 ID·이름·순서를 설정합니다.
 3. 런타임에서는 `SetDisplayMode`, `SelectCategory`, `GoToPage`를 사용합니다. 카테고리와 페이지를 바꾸면 열린 컨텍스트 메뉴가 먼저 닫힙니다.
@@ -570,3 +596,265 @@ Play Mode 회귀 테스트는 `ExplorationCardFeedbackPlayModeTests`입니다. T
 - 실행: `Assets/Scenes/AppScene.unity`에서 시작합니다. 후보를 선택하면 전투 노드는 `행동` 버튼을 활성화하고, 회복·강화 노드는 미구현 안내와 `계속` 버튼을 표시합니다. 완료 뒤 새 후보가 나타나며 상태 문구의 체력이 이전 노드 결과를 유지해야 합니다.
 - 진단: `ExplorationRunController.Run.Nodes`에서 부모 ID, 형제 순서, 깊이, 상태와 완료 이유를 읽을 수 있습니다. 미선택 형제는 `Unchosen`이며 자식을 갖지 않아야 합니다.
 - 제거: 정식 탐험으로 교체할 때 Scene의 `ExplorationRunController`와 `ExplorationNodePanel`, 임시 설정 자산 및 명령 바인딩을 제거합니다. 저장 데이터 마이그레이션은 필요하지 않습니다.
+
+## Bag 빈 상태와 공통 모달 바깥 입력 검증
+
+운영 자산에는 `TemporaryModalInteractionUpgrade.Apply`의 선별 적용을 완료했습니다. `InventoryWindowPage.prefab`의 EmptyState 초기 비활성·raycast 해제와 `ModalWindowHost.prefab`, `GameMenuScreen.prefab`의 Window 참조만 저장했습니다. AppScene과 TMP_MainScene은 재생성하거나 저장하지 않습니다. TMP_MainScene의 운영 모달은 공용 Prefab의 Window 참조를 상속합니다.
+
+기존 복사본을 이전해야 할 때에만 다음 임시 메뉴를 사용합니다. 현재 작업 사본에는 수동 적용 단계가 남아 있지 않습니다.
+
+```text
+1. Play Mode를 종료하고 컴파일 완료를 기다립니다. Prefab Stage의 변경을 저장하고 Stage를 닫습니다.
+2. InventoryWindowPage.prefab, ModalWindowHost.prefab, GameMenuScreen.prefab의 미저장 변경을 먼저 보존합니다.
+   적용 메뉴는 이 세 자산의 빈 문구 초기 활성·raycast, Host/Window raycast와 Window 참조를 설정하고 자동 저장합니다.
+   전체 재생성은 하지 않으며 같은 자산에 다시 실행해도 요소를 중복 생성하지 않습니다.
+3. Tools > TxT RPG > Application > Temporary > Apply Modal Outside Close And Bag Empty State를 실행합니다.
+   선택할 오브젝트나 추가 확인 창은 없습니다. Console의 MODAL_INTERACTION_UPGRADE 메시지를 확인합니다.
+   오류가 나오면 중단하고 누락된 Window/EmptyState 참조를 복구한 뒤 재실행합니다. 다른 Scene은 저장하지 않습니다.
+4. Assets/Scenes/AppScene.unity에서 Play Mode를 시작하고 TMP_MainScene 진입을 기다립니다.
+   Bag에 빈 슬롯이 있으면 빈 문구가 숨겨지고, Paged에서 빈 칸 채우기를 끈 0개 결과에서는 문구가 표시되는지 확인합니다.
+5. Bag·System·Status의 내부 조작은 창을 유지하고 바깥 클릭·탭은 창을 닫으며 호출 버튼으로 포커스가 돌아오는지 확인합니다.
+   드래그·취소된 터치는 닫지 않고, 바깥 닫기로 뒤의 버튼이 실행되지 않아야 합니다.
+```
+
+집중 Edit Mode 테스트는 `InventoryEmptyStateTests`이며 최소 슬롯 0/1/12, Paged 0/1/12/13개와 빈 칸 채우기, 필터·미등록 아이템·제거·모드 전환, 저장 Prefab과 Scene 상속을 검사합니다. `InventoryProjectionTests`와 `QuickItemsUiProjectBuilderTests`는 기존 표시 정책과 자산 구성을 회귀 검사합니다.
+
+`ModalOutsideClosePlayModeTests`는 실제 `InputSystemUIInputModule`과 `GraphicRaycaster`에 가상 Mouse/Touchscreen 이벤트를 공급하여 내부·외부 클릭, 방향별 드래그, 휠·우클릭, 취소·다중 터치, 소속 Overlay, 클릭 관통, 재개방과 느린 준비의 취소·오래된 완료를 검증합니다. Cancel 핸들러 직접 호출 검사는 물리 키보드·컨트롤러 입력 검증과 구분합니다. 가상 장치와 Canvas scale 검사는 실제 휴대폰·태블릿·컨트롤러 및 safe area·방향 전환 검증을 대체하지 않습니다.
+
+`Tools > TxT RPG > Application > Temporary > Inspect Bag Empty State`는 AppScene에서 시작한 Play Mode에서 Bag을 열고 현재 표시 모드·슬롯 수·빈 문구 상태를 Console에 기록합니다. 자산과 저장 파일을 수정하지 않습니다. 두 임시 도구는 기존 작업 사본의 이전과 회귀 확인이 끝나면 폐기할 수 있습니다.
+
+이 환경에서 Unity Test Runner의 Play Mode 작업은 Domain Reload 후 복구에 실패할 수 있습니다. 그 경우 AppScene에서 Play Mode를 시작하고 초기 Scene 전환을 기다린 뒤 `Tools > TxT RPG > Application > Temporary > Verify Modal Input Runtime`을 실행합니다. 이 임시 어댑터는 동일한 `ModalOutsideClosePlayModeTests` 코루틴과 Test Framework 로그 범위를 사용하고 `MODAL_INPUT_RUNTIME: PASS`를 테스트별로 기록합니다. 운영 Scene 진입 검증을 위해 AppScene을 다시 로드하므로 저장하지 않은 런타임 플레이 진행은 유지하지 않습니다. 저장 파일·PlayerPrefs·Prefab·Scene 파일은 쓰지 않으며 테스트용 장치와 오브젝트는 종료 시 정리합니다. 오류가 발생하면 Console의 FAIL 원인을 확인하고 다음 검증으로 진행하지 않습니다. Test Framework 내부 LogScope API가 달라진 버전에서는 어댑터를 갱신하거나 정상 Test Runner로 실행해야 합니다.
+
+### 2026-09-27 적용 검증 기록
+
+- 수정 전 AppScene 경로의 Bag은 VerticalScroll, Minimum Scroll Slots 12 설정에서 첫 개방 표시 슬롯 20개와 EmptyState 활성 상태가 겹쳤습니다. 기존 Grid 초기 풀 용량은 변경하지 않았습니다.
+- 수정 후 재개방한 Bag은 표시 슬롯 12개와 EmptyState 비활성 상태를 기록했으며, `Assets/Screenshots/bag-empty-state-fixed.png`에서 문구가 슬롯과 겹치지 않는 것을 확인했습니다.
+- Unity 6000.3.22f1 Windows Editor에서 `InventoryEmptyStateTests` 16개, `InventoryProjectionTests` 17개, `QuickItemsUiProjectBuilderTests` 3개가 통과했습니다.
+- 정식 Play Mode Test Runner는 Domain Reload 복구 실패로 테스트를 실행하지 못했습니다. 동일 테스트 코루틴 두 개를 임시 어댑터와 로그 범위로 직접 실행했고 모두 통과했습니다. 실제 Input System 가상 장치 → UI Input Module → GraphicRaycaster 경로를 사용했습니다.
+- 운영 AppScene의 Bag·System·Status 개방 클릭, 내부 제목, 바깥 클릭·터치와 포커스 복원, 실제 Bag 컨텍스트 메뉴 명령 실행 및 부모 닫기 시 정리를 확인했습니다. 격리 검증은 클릭 관통 방지, 우클릭·휠·드래그·취소·다중 터치, 외부 Overlay, 재개방·준비 중 취소·오래된 완료·오류 닫기와 Canvas 배율 0.5/0.75/1.25를 포함했습니다.
+- 물리 키보드·컨트롤러, 실제 모바일 장치, 모든 종횡비·safe area·방향 전환 및 대상 Player/IL2CPP 빌드는 미검증입니다. 기존 창 크기와 반응형 레이아웃 정책은 이번 작업에서 변경하지 않았습니다.
+- 수동으로 실행해야 할 적용 Tools 단계는 남아 있지 않습니다.
+
+## Actions Grid 표시 방식 선택과 이전 적용
+
+이 절은 Grid 프리셋 적용 단계의 기록입니다. 현재 운영 Actions는 아래의 단일 행 적용 절을 따릅니다.
+
+선택 위치는 `TMP_MainScene`의 `Canvas/Main_FlexibleLayoutPanel/ContentLayer/Character_FlexibleLayoutPanel/ContentLayer/ActionGridPanel`에 있는 ActionGridPanel Inspector의 `Display Settings / Mode`입니다. Balanced, Distributed Spacing, Large Slots를 선택하고 바로 아래 해당 설정을 펼쳐 조정합니다. 모든 크기는 Canvas UI 단위입니다. Manual로 돌아가면 보존한 Manual Layout 값이 다시 사용됩니다. Inspector 하단 Resolved Layout에서 열 수, 셀, 간격, 필요 높이와 공간 부족을 확인합니다. 런타임 API와 설정 계약은 [ActionGridPanel 설계](../architecture/action-grid-panel.md#개발자-표시-방식과-설정-소유권)에 설명합니다.
+
+Bag은 `InventoryWindowPage`의 `Grid Settings / Presentation`에서 선택합니다. ItemGrid 자식의 설정만 수정하면 Refresh에서 덮어써집니다. 기존 Bag과 공용 ActionGridPanel/ActionGridCell Prefab의 기본 외형은 유지합니다. 전체 Rebuild 메뉴는 이번 적용에 사용하지 않습니다.
+
+운영 적용은 완료했으며 사용자가 실행해야 하는 Tools 단계는 없습니다. 아래는 다른 작업 사본에서 동일한 선별 적용을 재현할 때의 절차입니다. 임시 도구는 기존 수동값과 프리셋별 조정값을 보존하면서 Actions의 모드를 Balanced로, Actions의 FlexibleLayoutItem Minimum Size를 184로, Character 부모의 Minimum Size를 190으로 지정합니다. 해당 세 설정은 기존 값을 덮어쓰므로 다른 의도로 조정한 작업 사본에서는 먼저 비교·백업합니다.
+
+```text
+1. Unity 컴파일 완료를 기다리고 Play Mode를 종료합니다.
+2. Assets/Scenes/TMP_MainScene.unity를 엽니다. 기존 미저장 편집은 개발자의 의도대로 먼저 저장합니다.
+   도구는 대상 Scene이 아니거나 미저장 상태이면 오류로 중단하며 임의로 버리지 않습니다.
+3. Tools > TxT RPG > UI > Actions > Temporary > Apply Balanced To Main Scene을 실행합니다.
+   선택 오브젝트는 필요하지 않습니다. QuickItemGridPresenter가 있는 운영 Actions만 참조합니다.
+   TMP_MainScene만 자동 저장합니다. Console의 ACTIONS_APPLY: PASS를 확인합니다.
+   오류이면 다음 단계로 진행하지 않습니다. 같은 값으로 재실행할 수 있습니다.
+4. Assets/Scenes/AppScene.unity에서 Play Mode를 시작하고 TMP_MainScene 전환을 기다립니다.
+   기존 퀵 슬롯 수와 순서를 유지하면서 좁은 화면에서는 열 수가 줄고 세로 스크롤로 마지막 슬롯까지 접근해야 합니다.
+5. 필요하면 Tools > TxT RPG > UI > Actions > Temporary > Capture Before와 Capture After를 각각 실행합니다.
+   각 작업의 ACTIONS_CAPTURE: PASS 로그가 나온 뒤 다음 작업을 시작합니다.
+   Before는 Play Mode에서만 기존 Manual과 부모 최소 크기 0을 잠시 재현합니다.
+   임시 노드 선택 화면의 알파와 Game View 설정, 표시 모드, 부모 배분값은 작업 종료 시 복원합니다.
+   자산/Scene/플레이어 저장은 변경하지 않습니다. 같은 이름의 PNG와 JSON 검증 기록은 덮어씁니다.
+6. Tools > TxT RPG > UI > Actions > Temporary > Verify Initial Scroll Runtime은
+   초기 스크롤 Play Mode 테스트 코루틴을 직접 실행합니다. ACTIONS_SCROLL_RUNTIME: PASS를 확인합니다.
+   FAIL이면 Console 원인을 확인하고 검증 완료로 처리하지 않습니다. 테스트 오브젝트는 종료 시 정리합니다.
+```
+
+`TemporaryActionsGridVerification`은 일회 적용·측정 도구이며 영구 생성기나 자동 재생성이 아닙니다. 모든 작업 사본에서 적용을 마친 뒤 제거할 수 있습니다. `TemporaryActionsScrollVerification`은 Test Runner가 Domain Reload 후 작업을 복구하지 못하는 환경의 검증 어댑터입니다. 정상 Play Mode Test Runner에서도 같은 테스트를 실행할 수 있습니다.
+
+변경 전후 측정은 [before JSON](verification/actions-grid-before.json)과 [after JSON](verification/actions-grid-after.json)에 있습니다. 이미지 경로는 `Assets/Screenshots/actions-{before,after}-{desktop,phone-portrait,phone-landscape,tablet,ultrawide}.png`입니다. 실제 게임 진행을 바꾸지 않고 비교하려고 노드 선택 Overlay의 표시만 임시로 숨깁니다. 이는 운영 노드 선택 화면 자체의 가독성 검증을 의미하지 않습니다.
+
+### 화면 검증 조건과 확인된 범위
+
+Windows Editor의 Game View 고정 해상도로 검증했습니다. 운영 Canvas Scaler는 Constant Pixel Size, Scale Factor 1입니다. 저장된 Reference Resolution 800×600과 Match 0은 현재 Constant Pixel Size 계산에 사용되지 않습니다. 정상 운영 슬롯 수는 5개이며 화면마다 같은 수를 유지했습니다. 좁은 화면에서 슬롯 자체가 사라지던 원인은 최대 6열·최소 셀 10인 수동 설정과 부모 영역의 부족한 배분이 함께 작용한 결과였습니다.
+
+균형형은 셀 56~72, 간격 16×16, Padding 각 14, 최대 6열로 정했습니다. 사용자 확인에 따라 Actions 최소 주축 크기 184와 Character 최소 주축 크기 190을 Scene에서만 적용했습니다. 기존 Weighted 정책과 Weight는 유지하며 주변 화면을 재구성하지 않습니다.
+
+| Game View | 변경 전 열 / 셀 | 변경 후 열 / 셀 | 변경 후 Viewport |
+| --- | --- | --- | --- |
+| 1920×1080 | 6 / 42.37 | 6 / 60 | 468×242.46 |
+| 390×844 | 1 / 10, Viewport 너비 음수 | 1 / 72 | 128×201.05 |
+| 844×390 | 3 / 15.04, Viewport 높이 음수 | 3 / 56.30 | 228.89×121.40 |
+| 1024×768 | 5 / 13.02 | 3 / 69.63 | 268.89×187.72 |
+| 2560×1080 | 6 / 66.07 | 6 / 72 | 610.22×242.46 |
+| 390×844, safe area 모사 | Viewport 너비 음수 | 1 / 72 | 112.89×183.86 |
+
+기존 간격은 모든 화면에서 10×10이었고 적용 후에는 16×16입니다. safe area 모사는 Main Rect의 좌우 24, 아래 34, 위 44 UI 단위를 제외한 조건이며 실제 Screen.safeArea API·노치·시스템 제스처·물리 기기 검증을 대신하지 않습니다. 화면 크기 변경 순서에 세로→가로→태블릿→울트라와이드→세로 전환을 포함했습니다. 사진은 Assets/Screenshots에 저장했으며 [측정 데이터](verification/actions-grid-after.json)와 일치합니다.
+
+`Tools > TxT RPG > UI > Actions > Temporary > Capture Cell Details`는 같은 화면 목록에서 실제 셀 Prefab에 임시 UI 항목을 넣어 수량 99·단축키·쿨다운·선택 프레임을 표시합니다. 플레이어 인벤토리와 퀵 슬롯 데이터는 쓰지 않으며, 끝나면 원래 Presenter 항목과 선택을 복원합니다. `ACTIONS_CAPTURE: PASS details`와 `Assets/Screenshots/actions-details-*.png`를 확인합니다. 결과 JSON은 [details 측정](verification/actions-grid-details.json)에 기록됩니다. 임시 입력 중에는 명령을 실행하지 말고 캡처 완료까지 기다립니다.
+
+휴대폰에서는 Actions의 한 행과 세로 스크롤 영역을 확보했습니다. 기존 주변 Story·상태 표시·하단 메뉴의 작은 화면 가독성/잘림은 전체 화면 반응형 설계 범위에 해당하며 이번 작업에서 해결했다고 간주하지 않습니다. 실제 기기 터치 목표 크기, 장치별 safe area, 물리 키보드·컨트롤러·터치, 대상 Player/IL2CPP 빌드는 별도 검증이 필요합니다.
+
+### 이번 작업의 테스트 결과
+
+- Edit Mode는 고유 항목 95개가 통과했습니다. ActionGridPanelTests는 전체 실행에서 53개 통과 후 초기 빈 풀 테스트 1개를 집중 재실행하여 통과했습니다. ActionGridCellRatioCappedSizingTests 9개, ActionGridDisplayTests 14개, InventoryEmptyStateTests 17개, InventoryGridPresentationTests 1개가 포함됩니다. 포커스 연결 추가 후 ActionGridDisplayTests 14개도 다시 통과했습니다.
+- 기존 Edit Mode 테스트의 초기 풀 검사는 Awake를 명시적으로 호출하도록 보완했습니다. Content와 Viewport 높이가 같아 스크롤 범위가 0일 때는 정규화 위치 1을 강제하지 않고 실제 Content 위치 0을 검증합니다. 초기 스크롤 Play Mode 테스트용 셀에는 필수 시각 참조와 실제 셀을 따르는 Anchor를 보완했습니다.
+- Play Mode에서는 `ActionGridInitialScrollPlayModeTests`의 두 코루틴을 임시 어댑터로 실행하여 통과했습니다. 지연된 첫 콘텐츠의 상단 배치와 이후 위치 유지, 네 표시 방식·4가지 Viewport에서 슬롯 수/번호/선택 유지, Navigation, 안정적인 Content 높이, 새 모드의 마지막 셀 포커스 스크롤을 검증했습니다. 이 검사는 EventSystem 선택 콜백 경로의 검증이며 물리 키보드/컨트롤러 입력 시험은 아닙니다.
+- Unity Test Runner 작업 복구가 Domain Reload에서 실패한 실행은 성공 수에 포함하지 않았습니다. 직접 코루틴 실행은 Test Runner 자체의 완료 기록과 구분합니다. [집중 테스트 결과](verification/actions-grid-tests.json)에 Edit Mode 상세 결과를 보관합니다.
+- 기존 ActionGridPanelTests의 생성기 검사는 공용 Panel/Cell/ContextMenu와 데모 3개 자산을 덮어쓰므로 실행 전에 각 자산과 meta 총 12개를 백업했고, 테스트 후 바이트 단위로 복원·확인했습니다. 운영 적용을 위해 Prefab을 전체 재생성하지 않았으며 공유 자산의 기본값은 보존했습니다.
+- Unity 6000.3.22f1 Windows Editor 컴파일과 저장 Scene 재실행을 확인했습니다. Player/IL2CPP 빌드 및 다른 기기/플랫폼 빌드는 수행하지 않았습니다. 이미지 비교에서는 빈 슬롯과 수량·단축키·선택 프레임을 확인했고, 셀 내부 크기 상한은 위 회귀 테스트로 확인했습니다.
+
+
+## Actions 단일 행과 Header 적용
+
+운영 `Assets/Scenes/TMP_MainScene.unity`의 Actions에 SingleRow, ConditionalCenterOrEnds, K=4, 세로 Center, 가로 Scrollbar Hidden, Header 비활성을 적용했습니다. Balanced의 목표 셀 64×64, 기본 간격 16, Padding 각 14를 사용합니다. Header를 켤 때의 높이는 58, Header/Body 간격은 8이며 Body Margins는 각 18입니다. 기존 Actions 부모의 크기·FlexibleLayout 정책·주변 패널 구성은 유지합니다. 공통 `ActionGridPanel.prefab`과 `InventoryWindowPage.prefab`에는 필수 참조만 추가했고 기본 Grid와 Header 정책은 유지합니다.
+
+사용자가 수행해야 하는 추가 Tools 적용 단계는 없습니다. 다른 작업 사본에서 적용을 재현할 경우에만 다음 절차를 사용합니다. 적용 메뉴는 기존 계층을 재생성하지 않으며 반복 실행할 수 있지만, 운영 Actions의 flow, K, 행 정렬, Header 표시/높이/간격/바깥 여백, 가로 바 표시 정책을 위 값으로 덮어씁니다. 기존 프리셋 크기·간격·Padding 조정값은 보존합니다. 변경한 사용자 자산은 먼저 버전 관리 또는 별도 사본으로 보관합니다.
+
+```text
+1. Unity 컴파일이 완료될 때까지 기다린 뒤 Play Mode를 종료합니다.
+2. Assets/Scenes/TMP_MainScene.unity를 엽니다.
+   저장하지 않은 사용자 변경을 버리지 말고 먼저 별도로 저장하거나 백업합니다.
+   적용 메뉴는 Scene이 dirty 상태이면 중단합니다.
+3. Tools > TxT RPG > UI > Actions > Temporary > Apply Single Row And Header를 실행합니다.
+   선택 오브젝트와 추가 확인창은 없습니다.
+   ActionGridPanel.prefab와 InventoryWindowPage.prefab의 필수 참조 및 운영 Actions 설정을 저장합니다.
+   ACTIONS_SINGLE_ROW_APPLY: PASS 로그가 나와야 합니다. 오류가 있으면 다음 단계로 진행하지 않습니다.
+   두 Prefab과 TMP_MainScene은 자동 저장되며, 별도의 Ctrl+S는 필요하지 않습니다.
+4. Assets/Scenes/AppScene.unity에서 Play Mode를 시작하고 TMP_MainScene 로딩을 기다립니다.
+   Actions의 Header가 없어야 하며 슬롯 5개가 모두 한 행에 있어야 합니다.
+   넓은 화면에서는 첫 슬롯과 마지막 슬롯의 바깥 변이 Padding 경계에 맞아야 합니다.
+   좁은 화면에서는 휠/드래그/방향 탐색으로 나머지 슬롯을 볼 수 있어야 합니다.
+   숨긴 가로 바와 그 예약 영역이 보이면 검증 실패입니다.
+5. Tools > TxT RPG > UI > Actions > Temporary > Verify Single Row Runtime을 실행합니다.
+   세 개 테스트의 ACTIONS_SCROLL_RUNTIME: PASS 로그를 기다립니다.
+   검증 도구는 임시 UI와 가상 입력 장치를 만들고 종료 시 정리합니다.
+   검증 중에는 UI를 직접 조작하지 않습니다.
+6. Tools > TxT RPG > UI > Actions > Temporary > Verify Initial Scroll Runtime을 실행합니다.
+   기존 두 개 테스트의 PASS가 나온 뒤 다음 단계로 진행합니다.
+7. Tools > TxT RPG > UI > Actions > Temporary > Capture Single Row After를 실행합니다.
+   여섯 화면의 캡처와 JSON 측정 후 ACTIONS_CAPTURE: PASS single-row-after를 확인합니다.
+   원래 Game View 크기 선택과 검증용 safe-area 여백은 자동 복원됩니다.
+8. Play Mode를 종료합니다. 실제 기기 및 Player 패키지 검증은 별도 절차입니다.
+```
+
+`Capture Single Row Before`는 적용 이전 화면 측정용이며 기존 Grid 설정을 강제로 복원하는 메뉴가 아닙니다. `Capture Before`와 구분합니다. 측정은 `Assets/Screenshots/actions-single-row-{before,after}-*.png` 및 [변경 전 JSON](verification/actions-grid-single-row-before.json), [변경 후 JSON](verification/actions-grid-single-row-after.json)에 저장됩니다. safe-area 시나리오는 Game View 390×844에서 외곽 여백을 좌우 24, 아래 34, 위 44로 모사하며 실제 `Screen.safeArea` 기기 검증과는 구분합니다.
+
+`TemporaryActionsSingleRowUpgrade`는 한정 적용 도구이고 `ActionGridSurfaceAuthoring.Ensure`는 기존 생성기와 공유하는 참조 구성 함수입니다. 별도의 전체 Prefab 생성 작업이나 자동 재생성 콜백을 추가하지 않습니다. 초기 자산 적용 후 Save/Reload 경로에서 확인된 RectOffset 공유 문제를 막기 위해, LayoutGroup에는 설정 원본과 분리된 Padding 사본을 전달합니다. 레이아웃 재구축 도중의 갱신 요청은 Canvas 처리 이후 한 번으로 합칩니다. Hidden 바는 ScrollRect의 가로 바 바인딩도 해제하여 Unity가 다시 활성화하지 않도록 합니다.
+
+Windows/Android 스크립트 검증은 Edit Mode에서 `Tools > TxT RPG > UI > Actions > Temporary > Compile Windows And Android Scripts`로 재현할 수 있습니다. `PlayerBuildInterface.CompilePlayerScripts`가 각 대상의 관리 어셈블리를 시스템 임시 폴더 `TxTRPG-Actions-SingleRow-Scripts/{StandaloneWindows64,Android}`에 생성합니다. 두 대상의 `ACTIONS_PLAYER_SCRIPTS: PASS` 로그를 확인합니다. 활성 플랫폼 전환이나 자산 저장은 하지 않으며, 반복 실행 시 해당 검증 산출물을 갱신합니다. 이는 APK/실행 파일 패키징, IL2CPP 링크, 기기 실행 검증이 아닙니다. 이번 검증에서 발견한 기존 `GameMenuLayoutGroup.OnValidate`의 Player 선언 오류는 `UNITY_EDITOR` 범위로 한정하여 수정했습니다.
+
+임시 도구는 적용 완료가 확인된 작업 사본에서는 향후 별도 정리할 수 있습니다. Play Mode 검증 어댑터는 기존 Test Runner의 도메인 재로드 작업 복구 문제 때문에 동일 NUnit 코루틴과 LogScope를 직접 실행합니다. 이를 Test Runner에서 실행한 결과와 혼동하지 않습니다.
+
+
+### 단일 행 최종 검증 기록 (2026-09-27)
+
+Edit Mode Test Runner에서 `ActionGridSingleRowTests` 17개, `ActionGridPanelTests` 54개, `ActionGridDisplayTests` 14개, `InventoryEmptyStateTests` 18개가 통과했습니다(합계 103개). [Test Runner 결과](verification/actions-single-row-edit-tests.json)를 보관합니다. 넓은 이름 필터 `ActionGrid`는 테스트 0개를 선택해 REST 시작 대기 제한에 도달했으므로 성공 집계에 포함하지 않았습니다. 이후 네 클래스의 정확한 이름으로 실행한 결과만 기록했습니다. 생성기를 사용하는 테스트가 변경한 공통/데모 자산 6개와 meta는 적용 직후 보관한 사본으로 복원했습니다.
+
+재생 중에는 신규 코루틴 3개와 기존 `ActionGridInitialScrollPlayModeTests` 2개가 모두 통과했습니다. N=0/1/2/4/5, K=0/1/6 및 잘못된 값, exact fit/1단위 초과, 비대칭 Padding, 조건부/고정 간격 정렬, Top/Center/Bottom, Header 직접 토글, fit/overflow 전환, Viewport 미준비, 데이터 갱신 후 이동량 보존, Grid 왕복 복원, Hidden/Auto 바 정책을 검증했습니다. 가상 Mouse/Touchscreen/Keyboard/Gamepad로 휠 양방향·가로 델타·드래그·빈 슬롯 탐색·컨텍스트 메뉴 포커스 복원을 확인했습니다. 드래그로 슬롯 버튼 클릭이 발생하지 않았습니다. [재생 및 플랫폼 컴파일 기록](verification/actions-single-row-runtime-checks.json)을 참조합니다.
+
+여섯 Game View 화면의 변경 전후를 캡처하고 최종 이미지를 확인했습니다. 모두 N=5, K=4, 셀 64×64, Padding 각 14, Header 예약 0, 가로 바 예약 0, 최초 가로 위치 0(부동소수점 허용 오차 이내)입니다. Canvas는 Constant Pixel Size/Scale=1이며 reference 800×600, match=0은 이 정책에서 적용되지 않습니다. 모든 시나리오에서 Actions 부모의 측정 크기는 변경 전후가 동일합니다.
+
+| 화면 | 이전 Viewport | 이후 Viewport | 이후 가로 간격 | 동작 |
+| --- | --- | --- | --- | --- |
+| desktop (1920×1080) | 468.0×96 | 498.0×144 | 37.50 | 양 끝 정렬 |
+| phone-portrait (390×844) | 128.0×96 | 158.0×144 | 16.00 | 가로 스크롤 |
+| phone-landscape (844×390) | 228.9×96 | 258.9×144 | 16.00 | 가로 스크롤 |
+| tablet (1024×768) | 268.9×96 | 298.9×144 | 16.00 | 가로 스크롤 |
+| ultrawide (2560×1080) | 610.2×96 | 640.2×144 | 73.06 | 양 끝 정렬 |
+| phone-safe-area (390×844) | 112.9×96 | 142.9×144 | 16.00 | 가로 스크롤 |
+
+최종 화면 전환·입력 검증 후 Console Error는 0건입니다. 코드·문서·asmdef의 `git diff --check`는 통과했고, Unity가 생성한 YAML의 빈 필드 뒤 공백은 별도로 확인했습니다. Scene 저장에는 Story 스크롤바의 자동 계산 Size 값이 함께 직렬화되었지만, Story 코드나 부모 배분 정책은 변경하지 않았습니다.
+
+Windows64와 Android Player 관리 스크립트는 각각 39개 어셈블리로 컴파일되었습니다. iOS 지원 모듈은 설치되어 있지 않아 컴파일하지 않았습니다. 물리 장치의 마우스·키보드·컨트롤러·터치·트랙패드, 실제 safe area, iOS, IL2CPP 링크와 최종 Player 패키지/스토어 빌드는 미검증입니다. 작은 화면에서 기존 Story·상태·하단 메뉴의 잘림은 이번 Actions/Header 범위에서 수정하지 않았습니다. 추가 수동 Tools 적용 단계는 없습니다.
+
+## 탐험 카드 초기 무선택 적용과 검증
+
+`ExplorationNodeChoiceCardList`의 Window Service는 TMP_MainScene의 기존 `GameWindowService`를 참조해야 합니다. 기존 카드 Prefab의 장식·버튼·레이아웃을 재생성할 필요는 없습니다. 임시 메뉴는 아래 절차로 해당 참조 하나만 저장하며 안전하게 반복 실행할 수 있습니다. 기존 Scene의 미저장 변경이 있으면 중단하므로 먼저 사용자 변경을 보존하십시오. 적용 완료 후 임시 적용 메뉴를 폐기할 수 있습니다.
+
+```text
+1. Play Mode를 종료하고 컴파일이 끝날 때까지 기다립니다.
+2. 사용자 미저장 변경을 보존한 뒤 Assets/Scenes/TMP_MainScene.unity를 엽니다.
+3. Tools > TxT RPG > UI > Exploration > Temporary > Apply Input Ownership을 실행합니다.
+   선택할 오브젝트와 확인 대화상자는 없습니다. 목록의 Window Service 참조만 연결하고 Scene을 자동 저장합니다.
+   Console의 EXPLORATION_SELECTION_APPLIED를 확인합니다. 오류가 있으면 다음 단계로 진행하지 않습니다.
+4. Assets/Scenes/AppScene.unity에서 Play Mode를 시작하고 TMP_MainScene 진입을 기다립니다.
+5. 포인터를 카드 밖에 두고 초기 포커스와 박동이 없는지 확인합니다. 장식 테두리는 유지됩니다.
+6. 초기 Submit은 무동작이어야 합니다. 첫 방향 입력은 방향과 관계없이 첫 카드에 포커스만 주고,
+   다음 방향 입력은 탐색하며 별도 Submit은 한 번만 노드를 선택해야 합니다.
+7. 다음 후보, 길게 누른 입력, 동시 방향/Submit, 마우스 호버/클릭, 터치 탭/드래그,
+   모달 로딩/개방/닫기와 포커스 복원, 좁은 화면의 세로 탐색을 확인합니다.
+```
+
+집중 Edit Mode 테스트는 `ExplorationInitialSelectionTests`, 기존 카드 회귀 테스트는 `ExplorationNodeChoiceCardTests`입니다. Play Mode의 `ExplorationInitialSelectionPlayModeTests`는 실제 InputSystemUIInputModule에 가상 키보드·게임패드·마우스·터치 상태를 주입합니다. 물리 기기 시험과 구분합니다. 박동과 접근성 회귀는 기존 `ExplorationCardFeedbackPlayModeTests`로 확인합니다.
+
+Test Runner의 Domain Reload 작업 복구가 실패할 경우 AppScene 실행 후 `Tools > TxT RPG > UI > Exploration > Temporary > Verify Initial Selection Runtime`으로 같은 IEnumerator 테스트를 프레임 단위로 실행할 수 있습니다. 기존 공용 임시 어댑터를 사용하므로 Console 결과 접두사는 `ACTIONS_SCROLL_RUNTIME`입니다. 테스트는 임시 Canvas/EventSystem/가상 장치를 생성하며 종료 시 제거하고 기존 EventSystem과 입력 설정을 복원합니다. 오류 시 Play Mode를 종료하여 정리하십시오. `Inspect Initial Selection`은 운영 카드의 선택·FocusVisual·ShapeBorder·배율을 읽기만 하며 자산을 저장하지 않습니다.
+
+2026-09-27 적용 결과: TMP_MainScene의 목록에 기존 모달 서비스 참조를 저장했습니다. Unity 저장 과정에서 생긴 무관한 Viewport 가로 크기 변경은 작업 전 백업과 비교하여 복원했으며, 이번 작업의 Scene 차이는 `windowService` 참조 한 줄뿐입니다. 사용자 수동 Tools 적용 단계는 남아 있지 않습니다. 수정 전 운영 화면에서 첫 카드의 자동 선택·FocusVisual·박동을 확인했고, 수정 후에는 세 카드 모두 무선택·FocusVisual 꺼짐·배율 1.0과 기본 ShapeBorder 유지를 확인했습니다. 집중 Edit Mode 3개와 기존 카드 Edit Mode 24개가 통과했습니다. Play Mode Test Runner는 Domain Reload 작업 복구에 실패하여 0개 실행으로 종료되었으며, 대체 어댑터에서 실제 Input System 경로의 5개 코루틴과 기존 피드백 회귀 검증이 통과했습니다. 가상 장치 입력 검증이며 실제 휴대폰·컨트롤러 하드웨어 시험은 포함하지 않습니다.
+
+검증 원본 기록은 [exploration-no-initial-selection.json](verification/exploration-no-initial-selection.json)에 보관합니다. 최종 플랫폼 스크립트 컴파일은 Unity 메인 스레드 응답 복구 후 확인해야 합니다.
+
+## 탐험 기록 트리
+
+대상은 `Assets/Scenes/TMP_MainScene.unity`의 `Canvas/MainScreenViewport/Main_FlexibleLayoutPanel/ContentLayer/NodeTreePanel`입니다. 사용자 패널의 이름과 활성 상태를 보존하여 통합했습니다. 기존 FlexibleLayoutPanel·FlexibleLayoutItem·배경·여백·형제 순서는 유지하며 ContentLayer에 TreeBody만 추가합니다. Controller의 Tree Panel 참조는 같은 Scene의 해당 컴포넌트를 가리킵니다.
+
+### 이미지와 외형 교체
+
+1. `Assets/TxTRPG/UI/Styles/ExplorationTreeDefaultStyle.asset`을 선택합니다.
+2. Types의 `combat`, `recovery-upgrade` 항목에서 Display Name과 Sprite를 바꿉니다. 미등록 TypeId에는 Fallback Icon과 안전한 이름을 사용합니다. 기본 임시 이미지는 `UI/Icons/TemporaryMenu/action.png`, `system.png`, `status.png`를 공유합니다. 원본 아이콘 파일을 바꾸면 메뉴도 영향을 받으므로 트리에만 적용하려면 새 Sprite를 지정합니다.
+3. 새 이미지의 Texture Type은 Sprite (2D and UI), Sprite Mode는 Single 또는 명시적으로 선택한 Multiple 하위 Sprite를 사용합니다. 노드 Icon은 Preserve Aspect를 사용하므로 비정사각형 이미지도 비율을 유지합니다.
+4. Line Sprite에는 가로축(+X)이 선의 진행 방향인 Sprite를 지정합니다. 선 Root를 부모 아래 연결점→자식 위 연결점 방향으로 회전하고, X축을 연결 길이, Y축을 Line Width 또는 Visited Line Width로 늘입니다. Image Type은 Simple이며 Preserve Aspect는 사용하지 않습니다. 비워 두면 기본 연속 실선으로 대체합니다. Tiled 반복 이미지는 이번 구현에서 지원하지 않습니다.
+5. Node Size, Spacing, Padding, 상태 색상과 두 선 색상을 설정합니다. 상태 문구는 색상과 함께 표시됩니다. 노드 이미지가 크더라도 레이아웃 Root 대신 `ExplorationTreeNode.prefab/VisualRoot` 아래 Icon을 수정합니다.
+6. 설정 자산을 저장하고 AppScene에서 다시 실행합니다. 실행 중 스타일을 코드로 갱신할 경우 공유 자산을 수정하지 말고 별도 사본을 사용하며 `ExplorationNodeTreePanel.RefreshStyle()`로 다시 표시합니다.
+
+`ExplorationTreeNode.prefab`과 `ExplorationTreeEdge.prefab`은 개발자가 편집하는 자산입니다. 최초 적용 도구는 이미 존재하는 자산을 재생성하지 않습니다. 효과는 VisualRoot/EffectOverlay에 추가하며 선의 기하 Root와 노드의 배치 Root를 움직이지 않습니다. 비동기 효과는 View의 RunId·NodeId·Generation을 검사하고 OnDisable에서 자체 Tween·구독을 해제해야 합니다. 지속 효과를 추가할 때에는 기존 `ExplorationCardPlayerPreferences`의 효과 끄기·움직임 줄이기를 준수합니다.
+
+### 다른 작업 사본에 적용할 때의 임시 절차
+
+현재 운영 씬에는 자동 적용을 수행했습니다. 아래 절차는 아직 통합하지 않은 작업 사본을 위한 것입니다. `temporary.exploration-tree-integration`은 기존 사용자 Scene에 연결하는 일회성 작업이므로 production Prefab batch에서 제외합니다. 입력은 위 대상 Scene·기존 메뉴 아이콘·TMP 기본 폰트이며 출력은 두 Tree Prefab·DefaultStyle과 대상 Scene 참조입니다. 이후 자산 편집은 Inspector를 기준으로 합니다.
+
+```text
+1. Play Mode를 종료하고 컴파일 완료를 기다립니다. 현재 열린 TMP_MainScene의 사용자 작업을 보존합니다.
+   지정된 NodeTreePanel이 없으면 중복 패널을 만들지 말고 작업을 중단합니다.
+2. Tools > TxT RPG > UI > Exploration > Temporary > Snapshot Tree Target을 실행합니다.
+   임시 폴더 TxTRPG-TreePanel/BeforeIntegration.unity와 Target.json에 현재 상태를 보존합니다.
+   원본 씬은 저장하지 않습니다. 이전 진단 사본이 있다면 먼저 별도로 보존하십시오.
+3. Tools > TxT RPG > UI > Exploration > Temporary > Apply Tree Panel을 실행합니다.
+   선택은 필요하지 않으며 정확한 대상 경로를 사용합니다. 빈 ContentLayer에 내부 트리만 추가하고
+   없는 Prefab·설정만 생성합니다. 자산은 저장되지만 씬은 검토를 위해 미저장 상태로 남습니다.
+   이미 통합되어 있으면 검증만 수행합니다. 오류가 있으면 다음 단계로 진행하지 않습니다.
+4. Tools > TxT RPG > UI > Exploration > Temporary > Constrain Choices To Center를 실행합니다.
+   선택 창을 중앙 Text_FlexibleLayoutPanel/ContentLayer 안으로 옮기고 Stretch 및 ignoreLayout을 적용합니다.
+   선택은 필요 없으며 씬은 자동 저장하지 않습니다. 반복 실행이 가능하지만 선택 창의 수동 배치를 덮어씁니다.
+   사용자와 확정한 중앙 패널 제한을 적용하는 작업이므로 다른 작업 사본에서는 해당 방향을 먼저 확인합니다.
+   변경 범위를 검토합니다. 대상 내부·Controller 참조·선택 창 영역 외의 사용자 배치를 보존해야 합니다.
+   무관한 미저장 변경을 함께 저장하지 않도록 분리한 뒤 씬을 저장합니다.
+5. Tools > TxT RPG > UI > Exploration > Temporary > Validate Tree Panel을 실행합니다.
+   TREE_VALIDATE 성공 로그를 확인한 뒤 저장된 씬을 다시 열어 참조를 검증합니다.
+6. Assets/Scenes/AppScene.unity에서 Play Mode를 시작합니다.
+   TMP_MainScene의 기록 패널에서 시작→현재 후보, 카드 선택 후 진행 중·미선택,
+   완료 후 다음 후보와 정확한 부모선을 확인합니다. 전투 동안 트리는 계속 표시되어야 합니다.
+7. 기록 탐색 Button에 방향 탐색으로 진입하고 Submit을 누릅니다.
+   방향 입력으로 스크롤하고 Submit 또는 최신 Button으로 최신 기록에 복귀합니다.
+   Cancel은 기록 탐색 Button으로 돌아갑니다. 마우스 휠·드래그와 터치 드래그도 확인합니다.
+```
+
+`Snapshot Applied Tree`와 `Commit Reviewed Tree`는 에이전트의 선별 저장 검토용 임시 메뉴입니다. 전자는 AfterIntegration.unity 사본을 만들고, 후자는 현재 상태가 해당 사본과 완전히 같을 때만 원본을 저장한 뒤 빈 Scene으로 전환합니다. 변경이 생겼으면 중단하므로 새 diff를 검토해야 합니다. 일반적인 자산 교체에는 필요하지 않습니다. 자동 통합과 검증이 완료된 작업 사본에서는 적용·사본 메뉴를 폐기할 수 있습니다.
+
+검증 위치는 Application Edit Mode의 `ExplorationTreeProjectionTests`, 기존 Gameplay의 `ExplorationRunStateTests`, UI Play Mode의 `ExplorationTreePlayModeTests`입니다. Play Mode Test Runner의 도메인 재로드 복구가 실패하는 환경에서는 AppScene 실행 후 `Tools > TxT RPG > UI > Exploration > Temporary > Verify Tree Runtime`으로 같은 코루틴을 실행합니다. 결과는 기존 어댑터의 `ACTIONS_SCROLL_RUNTIME` 접두사로 기록되며, 긴 기록 측정은 `TREE_PROJECTION_MEASUREMENT`, `TREE_VIEW_MEASUREMENT`로 기록됩니다. 합성 기록은 테스트 객체에만 넣으며 실제 플레이어 탐험에 추가하지 않습니다.
+
+화면 캡처는 AppScene Play Mode에서 `Tools > TxT RPG > UI > Exploration > Temporary > Capture Tree Screens`로 수행합니다. Game View 크기와 임시 Safe Area 인셋을 복원하며 Scene을 저장하지 않습니다. PNG는 `Assets/Screenshots/exploration-tree-*.png`, 크기 기록은 `DOCS/development/verification/exploration-tree-screens.txt`입니다.
+
+### 좁은 화면의 전체 스크롤 적용
+
+사용자는 이번 작업에서 좁은 화면의 세로 배치·전체 스크롤을 확정했습니다. 현재 Scene에는 적용 도구로 연결한 뒤 저장·재로드를 수행했습니다. 다른 작업 사본에 동일한 방향을 적용할 때에는 다음 절차를 사용합니다.
+
+```text
+1. TMP_MainScene을 Edit Mode에서 열고 컴파일 완료를 기다립니다. 기존 미저장 작업을 보존합니다.
+2. Tools > TxT RPG > UI > Exploration > Temporary > Apply Narrow Screen Scroll을 실행합니다.
+   기존 Main_FlexibleLayoutPanel 앞에 MainScreenViewport를 추가하며 내부 패널·자산을 재생성하지 않습니다.
+   기존 전체 경로 앞에 MainScreenViewport가 추가됩니다. 처음 실행할 때 구조를 연결하며 이미 있으면 이 도구가 소유한 메뉴 참조만 보완합니다.
+   Scene은 자동 저장하지 않습니다. 오류가 있으면 중단하고 기존 Scene 또는 검토 사본으로 복구합니다.
+3. 변경 범위와 명시적인 ScrollRect 참조를 검토한 뒤 Scene을 저장합니다.
+4. AppScene에서 Play Mode를 시작하고 390×844 및 가로 화면으로 전환합니다.
+   좁은 화면에서 트리→중앙 선택→캐릭터가 세로로 표시되고 전체 페이지를 스크롤할 수 있어야 합니다.
+   내부 스크롤 끝에서 바깥 페이지로 드래그가 전달되고, 넓은 화면에서는 원래 가로 배치로 복원되어야 합니다.
+5. 실제 휴대폰에서 Safe Area·회전·터치와 키보드/게임패드 포커스 이동을 확인합니다.
+```
+
+이 도구도 일회성 Scene 통합이므로 production Prefab batch에서 제외합니다. 적용이 끝난 작업 사본에서는 필수 수동 메뉴 실행이 남지 않습니다.

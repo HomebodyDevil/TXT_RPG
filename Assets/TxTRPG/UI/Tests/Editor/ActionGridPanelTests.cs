@@ -481,7 +481,7 @@ namespace TxTRPG.UI.Tests
                 Canvas.ForceUpdateCanvases();
 
                 Assert.That(grid.childAlignment, Is.EqualTo(TextAnchor.MiddleCenter));
-                Assert.That(scrollRect.verticalNormalizedPosition, Is.EqualTo(1f).Within(0.001f));
+                // With equal viewport/content heights the normalized value is undefined (zero scroll range).
                 Assert.That(scrollRect.content.anchoredPosition.y, Is.Zero.Within(0.5f));
 
                 panel.SetVerticalPlacement(ActionGridVerticalPlacement.Top);
@@ -535,6 +535,8 @@ namespace TxTRPG.UI.Tests
             try
             {
                 var panel = instance.GetComponent<ActionGridPanel>();
+                // Edit Mode does not automatically invoke the runtime Awake on this component.
+                typeof(ActionGridPanel).GetMethod("Awake", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).Invoke(panel, null);
                 var activeCells = instance.GetComponentsInChildren<ActionGridCell>(false);
 
                 Assert.That(panel.PopulationMode,

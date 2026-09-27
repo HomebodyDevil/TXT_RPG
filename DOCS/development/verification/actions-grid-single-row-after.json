@@ -1,0 +1,256 @@
+{
+    "screens": [
+        {
+            "screen": "desktop",
+            "path": "Canvas/Main_FlexibleLayoutPanel/ContentLayer/Character_FlexibleLayoutPanel/ContentLayer/ActionGridPanel",
+            "width": 1920,
+            "height": 1080,
+            "slots": 5,
+            "columns": 5,
+            "canvasScale": 1.0,
+            "match": 0.0,
+            "reservedInset": 0.0,
+            "requiredHeight": 92.0,
+            "headerReservation": 0.0,
+            "horizontalPosition": 0.0,
+            "singleRow": true,
+            "headerVisible": false,
+            "centerThreshold": 4,
+            "fittingAlignment": "ConditionalCenterOrEnds",
+            "referenceResolution": {
+                "x": 800.0,
+                "y": 600.0
+            },
+            "viewport": {
+                "x": 498.0,
+                "y": 144.0
+            },
+            "parentSize": {
+                "x": 534.0,
+                "y": 180.0
+            },
+            "cell": {
+                "x": 64.0,
+                "y": 64.0
+            },
+            "spacing": {
+                "x": 37.5,
+                "y": 0.0
+            },
+            "picture": {
+                "x": 52.19999694824219,
+                "y": 52.19999694824219
+            }
+        },
+        {
+            "screen": "phone-portrait",
+            "path": "Canvas/Main_FlexibleLayoutPanel/ContentLayer/Character_FlexibleLayoutPanel/ContentLayer/ActionGridPanel",
+            "width": 390,
+            "height": 844,
+            "slots": 5,
+            "columns": 5,
+            "canvasScale": 1.0,
+            "match": 0.0,
+            "reservedInset": 0.0,
+            "requiredHeight": 92.0,
+            "headerReservation": 0.0,
+            "horizontalPosition": 0.0,
+            "singleRow": true,
+            "headerVisible": false,
+            "centerThreshold": 4,
+            "fittingAlignment": "ConditionalCenterOrEnds",
+            "referenceResolution": {
+                "x": 800.0,
+                "y": 600.0
+            },
+            "viewport": {
+                "x": 158.0,
+                "y": 144.0
+            },
+            "parentSize": {
+                "x": 194.0,
+                "y": 180.0
+            },
+            "cell": {
+                "x": 64.0,
+                "y": 64.0
+            },
+            "spacing": {
+                "x": 16.0,
+                "y": 0.0
+            },
+            "picture": {
+                "x": 52.19999694824219,
+                "y": 52.19999694824219
+            }
+        },
+        {
+            "screen": "phone-landscape",
+            "path": "Canvas/Main_FlexibleLayoutPanel/ContentLayer/Character_FlexibleLayoutPanel/ContentLayer/ActionGridPanel",
+            "width": 844,
+            "height": 390,
+            "slots": 5,
+            "columns": 5,
+            "canvasScale": 1.0,
+            "match": 0.0,
+            "reservedInset": 0.0,
+            "requiredHeight": 92.0,
+            "headerReservation": 0.0,
+            "horizontalPosition": 9.965827274527328e-8,
+            "singleRow": true,
+            "headerVisible": false,
+            "centerThreshold": 4,
+            "fittingAlignment": "ConditionalCenterOrEnds",
+            "referenceResolution": {
+                "x": 800.0,
+                "y": 600.0
+            },
+            "viewport": {
+                "x": 258.8888854980469,
+                "y": 144.0
+            },
+            "parentSize": {
+                "x": 294.8888854980469,
+                "y": 180.0
+            },
+            "cell": {
+                "x": 64.0,
+                "y": 64.0
+            },
+            "spacing": {
+                "x": 16.0,
+                "y": 0.0
+            },
+            "picture": {
+                "x": 52.19999694824219,
+                "y": 52.19999694824219
+            }
+        },
+        {
+            "screen": "tablet",
+            "path": "Canvas/Main_FlexibleLayoutPanel/ContentLayer/Character_FlexibleLayoutPanel/ContentLayer/ActionGridPanel",
+            "width": 1024,
+            "height": 768,
+            "slots": 5,
+            "columns": 5,
+            "canvasScale": 1.0,
+            "match": 0.0,
+            "reservedInset": 0.0,
+            "requiredHeight": 92.0,
+            "headerReservation": 0.0,
+            "horizontalPosition": 1.3490088690559788e-7,
+            "singleRow": true,
+            "headerVisible": false,
+            "centerThreshold": 4,
+            "fittingAlignment": "ConditionalCenterOrEnds",
+            "referenceResolution": {
+                "x": 800.0,
+                "y": 600.0
+            },
+            "viewport": {
+                "x": 298.8888854980469,
+                "y": 144.0
+            },
+            "parentSize": {
+                "x": 334.8888854980469,
+                "y": 180.0
+            },
+            "cell": {
+                "x": 64.0,
+                "y": 64.0
+            },
+            "spacing": {
+                "x": 16.0,
+                "y": 0.0
+            },
+            "picture": {
+                "x": 52.19999694824219,
+                "y": 52.19999694824219
+            }
+        },
+        {
+            "screen": "ultrawide",
+            "path": "Canvas/Main_FlexibleLayoutPanel/ContentLayer/Character_FlexibleLayoutPanel/ContentLayer/ActionGridPanel",
+            "width": 2560,
+            "height": 1080,
+            "slots": 5,
+            "columns": 5,
+            "canvasScale": 1.0,
+            "match": 0.0,
+            "reservedInset": 0.0,
+            "requiredHeight": 92.0,
+            "headerReservation": 0.0,
+            "horizontalPosition": 0.0,
+            "singleRow": true,
+            "headerVisible": false,
+            "centerThreshold": 4,
+            "fittingAlignment": "ConditionalCenterOrEnds",
+            "referenceResolution": {
+                "x": 800.0,
+                "y": 600.0
+            },
+            "viewport": {
+                "x": 640.2222290039063,
+                "y": 144.0
+            },
+            "parentSize": {
+                "x": 676.2222290039063,
+                "y": 180.0
+            },
+            "cell": {
+                "x": 64.0,
+                "y": 64.0
+            },
+            "spacing": {
+                "x": 73.05555725097656,
+                "y": 0.0
+            },
+            "picture": {
+                "x": 52.19999694824219,
+                "y": 52.19999694824219
+            }
+        },
+        {
+            "screen": "phone-safe-area",
+            "path": "Canvas/Main_FlexibleLayoutPanel/ContentLayer/Character_FlexibleLayoutPanel/ContentLayer/ActionGridPanel",
+            "width": 390,
+            "height": 844,
+            "slots": 5,
+            "columns": 5,
+            "canvasScale": 1.0,
+            "match": 0.0,
+            "reservedInset": 0.0,
+            "requiredHeight": 92.0,
+            "headerReservation": 0.0,
+            "horizontalPosition": 0.0,
+            "singleRow": true,
+            "headerVisible": false,
+            "centerThreshold": 4,
+            "fittingAlignment": "ConditionalCenterOrEnds",
+            "referenceResolution": {
+                "x": 800.0,
+                "y": 600.0
+            },
+            "viewport": {
+                "x": 142.88888549804688,
+                "y": 144.0
+            },
+            "parentSize": {
+                "x": 178.88888549804688,
+                "y": 180.0
+            },
+            "cell": {
+                "x": 64.0,
+                "y": 64.0
+            },
+            "spacing": {
+                "x": 16.0,
+                "y": 0.0
+            },
+            "picture": {
+                "x": 52.19999694824219,
+                "y": 52.19999694824219
+            }
+        }
+    ]
+}

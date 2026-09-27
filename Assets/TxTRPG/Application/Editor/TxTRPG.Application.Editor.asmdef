@@ -5,6 +5,7 @@
     "TxTRPG.Application",
     "TxTRPG.Content",
     "TxTRPG.UI",
+    "TxTRPG.UI.Editor",
     "Unity.TextMeshPro",
     "Unity.ugui"
   ],

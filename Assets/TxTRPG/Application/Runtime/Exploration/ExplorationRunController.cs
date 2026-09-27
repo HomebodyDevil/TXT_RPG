@@ -25,6 +25,7 @@ namespace TxTRPG.Application.Exploration
         [SerializeField] private GameObject panel;
         [SerializeField] private TMP_Text statusText;
         [SerializeField] private ExplorationNodeChoiceCardList choiceCardList;
+        [SerializeField] private ExplorationNodeTreePanel treePanel;
         [SerializeField] private Button[] choiceButtons = Array.Empty<Button>();
         [SerializeField] private TMP_Text[] choiceLabels = Array.Empty<TMP_Text>();
         [SerializeField] private Button continueButton;
@@ -98,6 +99,7 @@ namespace TxTRPG.Application.Exploration
             {
                 SetChoicesInteractable(false);
                 var node = run.Select(choiceSetId, nodeId);
+                RefreshTree();
                 storyPanel.AddMessage($"[탐험] {DisplayName(node.TypeId)} 노드를 선택했습니다. ({node.Id})");
                 if (node.TypeId == ExplorationNodeTypeIds.Combat)
                 {
@@ -111,6 +113,7 @@ namespace TxTRPG.Application.Exploration
                 else
                 {
                     run.FailActive(node.Id, "HandlerNotRegistered");
+                    RefreshTree();
                     statusText.text = $"처리기가 등록되지 않은 노드입니다: {node.TypeId}";
                     storyPanel.AddMessage($"[탐험] 노드 처리기를 찾지 못해 탐험이 중단되었습니다: {node.TypeId}");
                 }
@@ -149,6 +152,7 @@ namespace TxTRPG.Application.Exploration
             else
             {
                 run.FailActive(node.Id, "CombatDefeat");
+                RefreshTree();
                 storyPanel.AddMessage("[탐험] 전투 패배로 탐험이 종료되었습니다.");
                 panel.SetActive(true); statusText.text = "탐험 종료: 패배"; SetChoiceButtons(false); continueButton.gameObject.SetActive(false);
             }
@@ -157,6 +161,7 @@ namespace TxTRPG.Application.Exploration
         private void RefreshRunPresentation()
         {
             if (run.Phase == ExplorationPhase.AwaitingChoice) { ShowChoices(); return; }
+            RefreshTree();
             if (run.Phase == ExplorationPhase.Failed)
             {
                 panel.SetActive(true); statusText.text = "탐험 종료: 패배"; SetChoiceButtons(false); continueButton.gameObject.SetActive(false); return;
@@ -167,6 +172,7 @@ namespace TxTRPG.Application.Exploration
         }
         private void ShowChoices()
         {
+            RefreshTree();
             panel.SetActive(true); statusText.text = $"다음 노드 선택 · 현재 체력 {run.PlayerHealth.Current}/{run.PlayerHealth.Maximum}"; continueButton.gameObject.SetActive(false);
             var choices = run.CurrentChoices;
             for (var i = 0; i < choiceButtons.Length; i++)
@@ -203,6 +209,17 @@ namespace TxTRPG.Application.Exploration
         private ExplorationNodeRecord FindNode(string id) { foreach (var node in run.Nodes) if (node.Id == id) return node; return null; }
         private static string DisplayName(string typeId) => typeId == ExplorationNodeTypeIds.Combat ? "전투" : typeId == ExplorationNodeTypeIds.RecoveryUpgrade ? "회복 및 강화 (미구현)" : typeId;
 
+        private void RefreshTree()
+        {
+            if(treePanel==null||run==null)return;
+            try { treePanel.Show(ExplorationTreeProjection.Create(run)); }
+            catch(Exception exception)
+            {
+                Debug.LogWarning($"Exploration history display failed: {exception.Message}",treePanel);
+                treePanel.ShowError("탐험 기록을 표시하지 못했습니다.");
+            }
+        }
+
         private void Unbind()
         {
             if (combatController != null) combatController.CombatFinished -= OnCombatFinished;
@@ -222,6 +239,7 @@ namespace TxTRPG.Application.Exploration
 #if UNITY_EDITOR
         public void ConfigureForEditor(ExplorationRunConfiguration targetConfiguration, TemporaryDiceRollMenuController targetCombat, StoryTextPanel targetStory, GameObject targetPanel, TMP_Text targetStatus, Button[] buttons, TMP_Text[] labels, Button targetContinue)
         { configuration = targetConfiguration; combatController = targetCombat; storyPanel = targetStory; panel = targetPanel; statusText = targetStatus; choiceButtons = buttons ?? Array.Empty<Button>(); choiceLabels = labels ?? Array.Empty<TMP_Text>(); continueButton = targetContinue; }
+        public void ConfigureTreeForEditor(ExplorationNodeTreePanel targetTree) => treePanel = targetTree;
         public void ConfigureCardsForEditor(ExplorationNodeChoiceCardList targetCardList) => choiceCardList = targetCardList;
 #endif
 

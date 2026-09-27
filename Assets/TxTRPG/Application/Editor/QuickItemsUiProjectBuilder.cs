@@ -520,6 +520,7 @@ namespace TxTRPG.Application.Editor
             var contentContainer = contentContainerRect.gameObject.AddComponent<ModalContentContainer>();
             contentContainer.ConfigureForEditor(pagesRoot, overlayRoot, new RectOffset());
             var host = modalRoot.gameObject.AddComponent<ModalWindowHost>(); host.ConfigureForEditor(group, title, loading, error, close, contentContainer, errorRoot.gameObject, retry);
+            host.ConfigureOutsideCloseForEditor(panel);
             var inventoryPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(InventoryWindowPrefabPath);
             var inventory = inventoryPrefab != null
                 ? ((GameObject)PrefabUtility.InstantiatePrefab(inventoryPrefab, pagesRoot)).GetComponent<InventoryGameWindowPage>()
@@ -553,6 +554,7 @@ namespace TxTRPG.Application.Editor
             gridRect.offsetMin = new Vector2(8, 62); gridRect.offsetMax = new Vector2(-8, -64);
             var grid = gridObject.GetComponent<ActionGridPanel>();
             var empty = CreateText("EmptyState", root, "No items in this category.", 20, Vector2.zero, new Vector2(360, 48));
+            empty.raycastTarget = false; empty.gameObject.SetActive(false);
             var result = CreateText("Result", root, string.Empty, 16, new Vector2(0, -188), new Vector2(420, 34));
             var pagination = CreateRect("PaginationControls", root);
             pagination.anchorMin = pagination.anchorMax = new Vector2(.5f, 0); pagination.pivot = new Vector2(.5f, 0);
@@ -603,9 +605,10 @@ namespace TxTRPG.Application.Editor
 
             var systemView = CreateMenuButton("System", content, "System");
             var inventoryView = CreateMenuButton("Inventory", content, "Bag");
-            inventoryView.SetIcon(CreateOrUpdateBagIcon());
-            inventoryView.ConfigureDisplay(GameMenuButtonDisplayMode.ImageWithLabel, 8f, Color.white);
             var statusView = CreateMenuButton("Status", content, "Status");
+            TemporaryMenuIconUtility.ApplyDefault(systemView, "system");
+            TemporaryMenuIconUtility.ApplyDefault(inventoryView, "inventory");
+            TemporaryMenuIconUtility.ApplyDefault(statusView, "status");
             var system = MakeBinding(GamePageIds.System, systemView, ModalContentKind.CustomContent, "System Settings");
             var inventory = MakeBinding(GamePageIds.Inventory, inventoryView, ModalContentKind.ItemGrid, "Bag");
             var status = MakeBinding(GamePageIds.Status, statusView);

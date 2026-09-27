@@ -2509,6 +2509,7 @@ MonoBehaviour:
   retryButton: {fileID: 4508440921892733568}
   closeButton: {fileID: 4169380498894349528}
   contentContainer: {fileID: 6263819808185318613}
+  windowRect: {fileID: 2763762845235302808}
 --- !u!114 &5547238836655502991
 MonoBehaviour:
   m_ObjectHideFlags: 0
