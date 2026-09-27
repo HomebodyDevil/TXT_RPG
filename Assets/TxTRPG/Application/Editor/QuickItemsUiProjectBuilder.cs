@@ -4,6 +4,7 @@ using TMPro;
 using TxTRPG.Application.Items;
 using TxTRPG.Content.Items;
 using TxTRPG.UI;
+using TxTRPG.UI.Exploration;
 using TxTRPG.UI.Windows;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -134,6 +135,14 @@ namespace TxTRPG.Application.Editor
             UpdateSystemPageInPrefab(GameMenuScreenPrefabPath);
             AssetDatabase.SaveAssets();
             IntegrateInventoryIntoMainScene();
+        }
+
+        [MenuItem("Tools/TxT RPG/UI/Exploration/Apply Card Accessibility Settings")]
+        public static void ApplyExplorationCardAccessibilitySettings()
+        {
+            UpdateSystemPageInPrefab(ModalWindowPrefabPath);
+            UpdateSystemPageInPrefab(GameMenuScreenPrefabPath);
+            AssetDatabase.SaveAssets(); AssetDatabase.Refresh();
         }
 
         public static void ApplyModalContentContainerAndGridConfiguration()
@@ -340,6 +349,7 @@ namespace TxTRPG.Application.Editor
                 var message = system.GetComponentInChildren<TMP_Text>(true);
                 system.ConfigureForEditor(GamePageIds.System, host.CloseButton.gameObject, "System Settings");
                 system.ConfigureMessageForEditor(message, string.Empty);
+                ConfigureExplorationSettings(system.transform);
                 if (message != null)
                 {
                     message.text = string.Empty;
@@ -519,6 +529,7 @@ namespace TxTRPG.Application.Editor
             var system = BuildMessagePage<MessageGameWindowPage>(pagesRoot, GamePageIds.System, string.Empty,
                 close.gameObject, "System Settings");
             system.ConfigureMessageForEditor(system.GetComponentInChildren<TMP_Text>(), string.Empty);
+            ConfigureExplorationSettings(system.transform);
             var service = modalRoot.gameObject.AddComponent<GameWindowService>(); service.ConfigureForEditor(host, new GameWindowPage[] { inventory, status, system });
             modalRoot.gameObject.SetActive(true);
             return service;
@@ -705,6 +716,31 @@ namespace TxTRPG.Application.Editor
         { var rect = CreateRect(name, parent); rect.anchorMin = rect.anchorMax = new Vector2(.5f, .5f); rect.anchoredPosition = position; rect.sizeDelta = dimensions; var text = rect.gameObject.AddComponent<TextMeshProUGUI>(); text.text = value; text.fontSize = size; text.alignment = TextAlignmentOptions.Center; return text; }
         private static Button CreateButton(string name, Transform parent, string label, Vector2 position, Vector2 dimensions, bool upperRight = false)
         { var rect = CreateRect(name, parent); rect.anchorMin = rect.anchorMax = upperRight ? Vector2.one : new Vector2(.5f, .5f); rect.pivot = upperRight ? Vector2.one : new Vector2(.5f, .5f); rect.anchoredPosition = position; rect.sizeDelta = dimensions; var image = rect.gameObject.AddComponent<Image>(); image.color = new Color(.2f, .24f, .32f, 1); var button = rect.gameObject.AddComponent<Button>(); var text = CreateText("Label", rect, label, 18, Vector2.zero, Vector2.zero); Stretch((RectTransform)text.transform, 4, 4, 4, 4); return button; }
+        private static void ConfigureExplorationSettings(Transform systemPage)
+        {
+            var root = systemPage.Find("ExplorationCardSettings") as RectTransform;
+            if (root == null)
+            {
+                root = CreateRect("ExplorationCardSettings", systemPage);
+                root.anchorMin = root.anchorMax = new Vector2(.5f, .5f); root.sizeDelta = new Vector2(440, 160);
+            }
+            var effects = GetOrCreateToggle(root, "CardEffects", "카드 효과 사용", new Vector2(0, 34));
+            var reduce = GetOrCreateToggle(root, "ReduceMotion", "움직임 줄이기", new Vector2(0, -34));
+            var view = root.GetComponent<ExplorationCardSettingsView>() ?? root.gameObject.AddComponent<ExplorationCardSettingsView>();
+            view.ConfigureForEditor(effects, reduce);
+            var page = systemPage.GetComponent<GameWindowPage>();
+            if (page != null) page.ConfigureForEditor(GamePageIds.System, effects.gameObject, "System Settings");
+        }
+        private static Toggle GetOrCreateToggle(Transform parent, string name, string label, Vector2 position)
+        {
+            var existing = parent.Find(name)?.GetComponent<Toggle>(); if (existing != null) return existing;
+            var rect = CreateRect(name, parent); rect.anchorMin = rect.anchorMax = new Vector2(.5f, .5f); rect.sizeDelta = new Vector2(400, 52); rect.anchoredPosition = position;
+            var backgroundRect = CreateRect("Background", rect); backgroundRect.anchorMin = backgroundRect.anchorMax = new Vector2(0, .5f); backgroundRect.pivot = new Vector2(0, .5f); backgroundRect.sizeDelta = new Vector2(36, 36);
+            var background = backgroundRect.gameObject.AddComponent<Image>(); background.color = new Color(.18f, .22f, .3f, 1f);
+            var checkRect = CreateRect("Checkmark", backgroundRect); Stretch(checkRect, 8, 8, 8, 8); var check = checkRect.gameObject.AddComponent<Image>(); check.color = new Color(.55f, .75f, 1f, 1f);
+            var text = CreateText("Label", rect, label, 20, Vector2.zero, Vector2.zero); var textRect = (RectTransform)text.transform; textRect.anchorMin = Vector2.zero; textRect.anchorMax = Vector2.one; textRect.offsetMin = new Vector2(52, 0); textRect.offsetMax = Vector2.zero; text.alignment = TextAlignmentOptions.MidlineLeft; text.raycastTarget = false;
+            var toggle = rect.gameObject.AddComponent<Toggle>(); toggle.targetGraphic = background; toggle.graphic = check; toggle.isOn = true; return toggle;
+        }
         private static void EnsureFolder(string path) { var parts = path.Split('/'); var current = parts[0]; for (var i = 1; i < parts.Length; i++) { var next = current + "/" + parts[i]; if (!AssetDatabase.IsValidFolder(next)) AssetDatabase.CreateFolder(current, parts[i]); current = next; } }
     }
 }

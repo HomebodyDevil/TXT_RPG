@@ -14,6 +14,8 @@ namespace TxTRPG.UI.Exploration
         [SerializeField] private ExplorationNodeChoiceCardView cardPrefab;
         [SerializeField] private ExplorationNodeChoiceLayoutGroup layout;
         private readonly List<ExplorationNodeChoiceCardView> cards = new();
+        private int generation;
+        private bool selectionPending;
 
         public IReadOnlyList<ExplorationNodeChoiceCardView> Cards => cards;
         public ExplorationNodeChoiceLayoutGroup Layout => layout;
@@ -21,10 +23,15 @@ namespace TxTRPG.UI.Exploration
         public void Show(IReadOnlyList<ExplorationNodeChoiceCardData> items, Action<ExplorationNodeChoiceRequest> onSelected)
         {
             if (items == null) throw new ArgumentNullException(nameof(items));
+            generation++; selectionPending = false; StopAllCoroutines();
             EnsureCapacity(items.Count);
             for (var i = 0; i < cards.Count; i++)
             {
-                if (i < items.Count) cards[i].Bind(items[i], onSelected);
+                if (i < items.Count)
+                {
+                    var card = cards[i]; var currentGeneration = generation;
+                    card.Bind(items[i], request => RequestSelection(card, request, currentGeneration, onSelected));
+                }
                 else { cards[i].Unbind(); cards[i].gameObject.SetActive(false); }
             }
             Canvas.ForceUpdateCanvases();
@@ -35,7 +42,37 @@ namespace TxTRPG.UI.Exploration
 
         public void Hide()
         {
+            generation++; selectionPending = false; StopAllCoroutines();
             foreach (var card in cards) { card.Unbind(); card.gameObject.SetActive(false); }
+        }
+
+        public void SetInteractable(bool value)
+        {
+            if (value) selectionPending = false;
+            foreach (var card in cards) if (card != null && card.gameObject.activeSelf) card.Button.interactable = value;
+        }
+
+        private void RequestSelection(ExplorationNodeChoiceCardView card, ExplorationNodeChoiceRequest request, int requestGeneration, Action<ExplorationNodeChoiceRequest> onSelected)
+        {
+            if (selectionPending || requestGeneration != generation || card == null || !card.gameObject.activeInHierarchy) return;
+            selectionPending = true;
+            foreach (var item in cards) if (item != null) item.Button.interactable = false;
+            StartCoroutine(ConfirmAndSelect(card, request, requestGeneration, onSelected));
+        }
+
+        private System.Collections.IEnumerator ConfirmAndSelect(ExplorationNodeChoiceCardView card, ExplorationNodeChoiceRequest request, int requestGeneration, Action<ExplorationNodeChoiceRequest> onSelected)
+        {
+            var animation = card.PlayConfirmation();
+            while (true)
+            {
+                bool moveNext;
+                try { moveNext = animation.MoveNext(); }
+                catch (Exception exception) { Debug.LogWarning($"Exploration card confirmation was skipped: {exception.Message}", card); break; }
+                if (!moveNext) break;
+                yield return animation.Current;
+            }
+            if (requestGeneration != generation || card == null || !card.gameObject.activeInHierarchy) yield break;
+            onSelected?.Invoke(request);
         }
 
         private void EnsureCapacity(int count)
@@ -49,6 +86,7 @@ namespace TxTRPG.UI.Exploration
             }
         }
 
+        private void OnDisable() => Hide();
         private void OnDestroy() { foreach (var card in cards) if (card != null) card.Unbind(); }
 
 #if UNITY_EDITOR

@@ -32,7 +32,11 @@ namespace TxTRPG.UI.Windows
             if (retryButton != null) retryButton.onClick.RemoveListener(RequestRetry);
         }
         public void SetVisible(bool visible)
-        { gameObject.SetActive(true); canvasGroup.alpha = visible ? 1f : 0f; canvasGroup.interactable = visible; canvasGroup.blocksRaycasts = visible; }
+        {
+            gameObject.SetActive(true);
+            if (visible) transform.SetAsLastSibling();
+            canvasGroup.alpha = visible ? 1f : 0f; canvasGroup.interactable = visible; canvasGroup.blocksRaycasts = visible;
+        }
         public void SetLoading(bool loading) { if (loadingState != null) loadingState.SetActive(loading); }
         public void SetError(string value)
         {

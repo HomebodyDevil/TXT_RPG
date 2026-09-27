@@ -135,3 +135,6 @@ ModalWindowHost
 ## 임시 명령 버튼
 
 `GameMenuButtonBinding.actionKind`의 기본값 `OpenPage(0)`은 기존 직렬화 자산의 창 열기 동작을 보존합니다. `Command` 바인딩은 가짜 Page ID를 만들지 않고 `IGameMenuCommandHandler`로 전달됩니다. TMP_MainScene의 `TemporaryDiceRoll`만 이 경로를 사용하며, 세션과 StoryTextPanel이 모두 준비되고 보유 주사위가 있을 때만 활성화됩니다. 기존 Inventory, System, Status 버튼은 계속 `GameWindowService`를 사용합니다.
+# 시스템 표시 설정
+
+System 페이지는 기존 `GameWindowService`와 `ModalWindowHost` 경로를 그대로 사용하며 `ExplorationCardSettingsView`의 두 Toggle을 표시합니다. `카드 효과 사용`은 기본적으로 켜져 있고 `움직임 줄이기`는 기본적으로 꺼져 있습니다. 값은 캐릭터·탐험 저장 데이터와 분리된 PlayerPrefs 키에 저장되고, 손상되거나 누락된 값에는 안전한 기본값을 사용합니다. Toggle 변경 이벤트는 현재 표시 중인 카드에 즉시 전달되며 페이지를 다시 열 때 저장값을 `SetIsOnWithoutNotify`로 복원하여 초기 바인딩 중 불필요한 저장을 방지합니다.

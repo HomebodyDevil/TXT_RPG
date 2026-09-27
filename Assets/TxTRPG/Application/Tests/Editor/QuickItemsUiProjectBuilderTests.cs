@@ -3,6 +3,7 @@ using NUnit.Framework;
 using TxTRPG.Application.Editor;
 using TxTRPG.Application.Items;
 using TxTRPG.UI;
+using TxTRPG.UI.Exploration;
 using TxTRPG.UI.Windows;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -91,7 +92,9 @@ namespace TxTRPG.Application.Tests
             Assert.That(system, Is.TypeOf<MessageGameWindowPage>());
             Assert.That(system.DisplayTitle, Is.EqualTo("System Settings"));
             Assert.That(((MessageGameWindowPage)system).ConfiguredMessage, Is.Empty);
-            Assert.That(system.InitialFocus, Is.SameAs(service.Host.CloseButton.gameObject));
+            Assert.That(system.InitialFocus, Is.Not.Null);
+            Assert.That(system.InitialFocus.name, Is.EqualTo("CardEffects"));
+            Assert.That(system.GetComponentInChildren<ExplorationCardSettingsView>(true), Is.Not.Null);
         }
 
         private static void AssertModalContainer(GameWindowService service)

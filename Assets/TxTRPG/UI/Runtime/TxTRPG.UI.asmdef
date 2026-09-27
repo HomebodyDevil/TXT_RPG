@@ -5,6 +5,7 @@
     "TxTRPG.Gameplay",
     "Unity.TextMeshPro",
     "Unity.ugui",
+    "Unity.InputSystem",
     "Unity.Addressables",
     "Unity.ResourceManager"
   ],

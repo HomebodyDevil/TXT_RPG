@@ -199,7 +199,7 @@ namespace TxTRPG.Application.Exploration
 
         private void SetChoiceButtons(bool value) { if (choiceCardList != null) { if (!value) choiceCardList.Hide(); choiceCardList.gameObject.SetActive(value); } SetLegacyChoicesVisible(value && choiceCardList == null); }
         private void SetLegacyChoicesVisible(bool value) { foreach (var button in choiceButtons) if (button != null) button.gameObject.SetActive(value); }
-        private void SetChoicesInteractable(bool value) { if (choiceCardList != null) foreach (var card in choiceCardList.Cards) if (card != null) card.Button.interactable = value; foreach (var button in choiceButtons) if (button != null) button.interactable = value; }
+        private void SetChoicesInteractable(bool value) { choiceCardList?.SetInteractable(value); foreach (var button in choiceButtons) if (button != null) button.interactable = value; }
         private ExplorationNodeRecord FindNode(string id) { foreach (var node in run.Nodes) if (node.Id == id) return node; return null; }
         private static string DisplayName(string typeId) => typeId == ExplorationNodeTypeIds.Combat ? "전투" : typeId == ExplorationNodeTypeIds.RecoveryUpgrade ? "회복 및 강화 (미구현)" : typeId;
 

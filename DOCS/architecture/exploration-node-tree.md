@@ -47,7 +47,7 @@ Root(Completed)
 
 `ExplorationRunController`는 도메인 후보를 표시 데이터로 변환하며, `ExplorationNodeChoiceCardList`는 카드 생성·재사용·포커스와 세로 스크롤을 담당합니다. 선택 요청에는 Run ID, Choice Set ID와 Node ID가 함께 포함되므로 재사용된 이전 카드가 새로운 후보를 선택할 수 없습니다.
 
-카드 Prefab은 `CardRoot > MotionRoot > VisualRoot` 구조를 사용합니다. 부모 Layout은 CardRoot만 배치하며 향후 이동·회전·확대 효과는 MotionRoot에, 외형과 알파 효과는 VisualRoot에 적용합니다. Artwork, Border, FocusVisual과 EffectOverlay는 서로 분리되어 있고 장식 Graphic은 Raycast를 차단하지 않습니다. 현재 기본 표현은 정적이며 실제 Tween, Animator와 셰이더 효과는 구현하지 않았습니다.
+카드 Prefab은 `CardRoot > MotionRoot > VisualRoot` 구조를 사용합니다. 부모 Layout은 CardRoot만 배치하며 확대 효과는 MotionRoot에, 외형과 알파 효과는 VisualRoot에 적용합니다. Artwork, Border, FocusVisual과 EffectOverlay는 서로 분리되어 있고 장식 Graphic은 Raycast를 차단하지 않습니다. 피드백 제어기가 unscaled time 기반 확대를 소유하며 별도 Tween 패키지나 Animator는 사용하지 않습니다.
 
 `ExplorationNodeChoiceLayoutGroup`은 실제 Viewport 너비를 기준으로 열 수를 계산하고 각 행을 중앙 정렬합니다. 카드 크기를 축소하지 않고 공간이 부족하면 다음 행으로 줄바꿈하며, 높이가 부족하면 외부 ScrollRect가 세로 접근을 제공합니다.
 
@@ -63,6 +63,7 @@ CardRoot
       ├─ ShapeVisual (도형 Graphic + Mask)
       │  └─ Artwork
       ├─ ShapeBorder
+      ├─ TextBackdrop (두 외형 모드에서 유지되는 불투명 텍스트 배경)
       ├─ Title / Description / StatusBadge
       ├─ FocusVisual
       └─ EffectOverlay
@@ -71,3 +72,31 @@ CardRoot
 | 넓은 부모 영역 | 좁은 부모 영역 |
 | --- | --- |
 | ![넓은 화면의 탐험 노드 카드](../images/exploration-node-cards-wide.png) | ![좁은 화면의 탐험 노드 카드](../images/exploration-node-cards-narrow.png) |
+
+## 카드 입력 피드백과 텍스트 효과
+
+`ExplorationCardDefaultPresentation.asset`은 카드 입력 색상·배율·전환 시간, 제목·설명·상태 색상과 선택적인 TMP 효과를 보유하는 읽기 전용 원본입니다. 카드별 런타임 상태는 `ExplorationCardFeedbackController`와 `ExplorationCardTextEffectController`가 소유하며 공유 프로필 자산을 변경하지 않습니다. 기본 텍스트 색상은 제목 `#F3F6FA`, 설명 `#D3DCE8`, 상태 `#FFF1CF`이고, 일렁임과 움직이는 그라데이션은 세 역할 모두 기본적으로 꺼져 있습니다.
+
+`ExplorationNodeChoiceCardList`는 클릭 또는 Submit을 받으면 목록 전체를 먼저 잠그고 선택 카드의 확정 연출을 unscaled time으로 기다립니다. 표시 세대가 바뀌거나 목록이 숨겨지면 이전 Coroutine을 취소하며, 살아 있는 요청만 기존 `ExplorationRunController` 선택 경로로 한 번 전달합니다. 효과가 꺼졌거나 움직임 줄이기가 활성화되면 공간 애니메이션과 확정 대기를 생략하지만 ID 검증과 입력 잠금은 유지합니다.
+
+TMP 효과는 문자열을 변경하지 않고 원본 Mesh 정점과 색상 사본에서 계산합니다. `OnPreRenderText`가 새 메시를 생성할 때만 캐시를 갱신합니다. 문자열·속성·submesh 배열 길이가 달라지면 오래된 캐시는 폐기하고 TMP의 다음 정상 재생성을 사용합니다. Disable, 재바인딩과 효과 해제 시 유효한 원본만 복원합니다. 프로필이 없으면 불투명 흰색과 정적 표시를 사용합니다. 매 프레임 ForceMeshUpdate는 호출하지 않습니다.
+
+## 가독성과 느린 박동
+
+실행 화면에서 기존 Border의 Image와 Outline이 카드 면 전체를 겹쳐 그리며 글자를 덮는 현상을 재현했습니다. 투명 Image에 `useGraphicAlpha=false`를 지정하는 방식도 Outline이 복제하는 사각 면을 제거하지 못합니다. 저장된 Border와 FocusVisual은 이제 `ExplorationCardShapeGraphic.InnerBorder`를 사용하며, 텍스트 위의 면을 그리지 않습니다. TextBackdrop은 이미지·절차적 도형 모드 모두 `(.105, .14, .21, 1)`을 사용하고 배지는 `(.28, .16, .06, 1)`을 사용합니다. 임의 Artwork와 도형 색상이 필수 문구의 배경을 바꾸지 않습니다. 세 역할의 기존 글자색과 한국어 fallback은 유지합니다.
+
+프로필의 Pulse Enabled, Pulse Min Scale, Pulse Max Scale, Pulse Period 기본값은 활성·1.00·1.03·1.8초입니다. 코사인 곡선으로 절대 배율을 계산하며 Highlighted Scale을 다시 곱하지 않습니다. 역전 범위는 정렬하고 비정상 배율은 1, 비정상 주기는 정적 1로 처리합니다. 상태 진입·이탈은 현재 크기에서 보간하며, 눌림·확정·비활성 상태가 반복 효과보다 우선합니다. Button이나 CanvasGroup의 외부 잠금도 반영합니다.
+
+포인터와 포커스는 별도 상태입니다. 현재 EventSystem의 InputSystemUIInputModule에 연결된 Point·Click·Move·Submit으로 입력 출처를 구분합니다. 터치 선택은 정적 포커스만 남기고 지속 박동을 시작하지 않습니다. ScrollRect가 소유한 드래그를 가로채지 않고 PointerEventData.dragging을 확인하여 눌림과 호버를 해제합니다. 효과 끄기·움직임 줄이기는 입력 상태를 보존하면서 즉시 기본 크기로 복원합니다. Hide·Disable·Unbind는 선택 세대와 효과 위상을 무효화합니다. 플레이어 저장 형식과 기존 두 PlayerPrefs 키는 바뀌지 않습니다.
+
+피드백 tint는 CanvasRenderer에 적용하므로 개발자가 지정한 Graphic 색상과 런타임 도형 색상을 덮어쓰지 않습니다. 배경·장식에만 적용하고 텍스트 배경·글자·배지에는 적용하지 않으므로 비활성 상태에서도 필수 문구의 대비를 유지합니다.
+
+### 2026-09-27 검증 기록
+
+AppScene에서 TMP_MainScene에 진입한 1920×1080 Game View를 캡처했습니다. 수정 전에는 카드 면을 겹쳐 그리는 장식으로 문구가 가려졌고, 수정 후 제목·설명·배지의 CanvasGroup 알파와 Face Color 알파는 모두 1, 정상 문구의 overflow는 false, 한국어 fallback을 포함한 materialCount는 2였습니다. 글리프 누락을 이번 현상의 원인으로 확인하지는 않았습니다.
+
+대비는 sRGB 채널을 선형화한 상대 휘도 `(L밝음 + .05) / (L어두움 + .05)`로 계산했습니다. 기본 불투명 팔레트의 제목/설명/배지 대비는 약 14.33/11.22/11.77:1입니다. 실제 `Assets/Screenshots/exploration-readability-after.png`에서 글자 내부의 가장 밝은 픽셀과 인접한 평탄 배경을 표본 추출하면 각각 14.57/9.22/9.89:1입니다. 안티앨리어싱 가장자리를 글자 원색으로 취급하지 않았으며, 이 수치는 해당 캡처의 표본 결과이지 임의 프로필·디스플레이에 대한 보장은 아닙니다.
+
+Edit Mode 카드 테스트는 24/24 통과했습니다. Play Mode Test Runner는 Domain Reload 뒤 작업 복구 실패로 0개 실행되어 성공으로 기록하지 않았습니다. 대신 같은 Play Mode 테스트 IEnumerator를 실행 중 Editor의 프레임에 맞추어 진행하여 3주기 박동 범위, timeScale=0, 포커스 유지, 설정 변경, 외부 입력 잠금, 터치·드래그 이벤트, 한글/영문/숫자 메시 교체, 효과 해제와 재사용 검증을 통과했습니다. 실제 버튼 onClick 경로로 미구현 노드를 선택하고 계속한 뒤 새 후보와 Story 기록을 확인했습니다. 280px 카드 컨테이너에서는 한 열 줄바꿈과 세로 스크롤 콘텐츠를 확인했습니다.
+
+실제 컨트롤러·터치 기기의 물리 입력, 모바일 safe area·회전·울트라와이드, 확대 접근성 글자, Player/IL2CPP 빌드 및 성능 측정은 수행하지 않았습니다. 입력 이벤트 시뮬레이션과 좁은 컨테이너 검증을 실제 기기 검증으로 간주하지 않습니다.

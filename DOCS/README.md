@@ -32,6 +32,8 @@
 
 | 문서 | 설명 |
 | --- | --- |
+| [노드 선택 카드 가독성과 느린 박동 효과](instructions/exploration-card-readability-and-hover-pulse.md) | 텍스트 표시 원인 수정, 고대비 기본값과 호버·포커스의 1.8초 반복 확대·축소를 구현하는 지침입니다. |
+| [탐험 카드 피드백·텍스트 효과](instructions/exploration-card-feedback-and-text-effects.md) | 입력 피드백, 선택 확정 연출, 텍스트 효과·색상과 플레이어 표시 설정을 구현하는 지침입니다. |
 | [탐험 카드 정렬·간격·도형](instructions/exploration-card-layout-and-shapes.md) | 가로·세로 정렬, Padding·간격, 절차적 도형과 이미지 마스킹을 확장하는 작업 지침입니다. |
 | [탐험 노드 선택 카드 UI](instructions/exploration-node-choice-cards.md) | 선택 버튼을 줄바꿈 가능한 세로 카드로 교체하고 이미지·회전·애니메이션·효과 확장 경계를 구성합니다. |
 | [점진 생성 노드 트리와 탐험 흐름](instructions/incremental-run-node-tree.md) | 무작위 후보 선택·노드 완료·탐험 상태 연속성과 선택/미선택 분기 기록을 구현합니다. |

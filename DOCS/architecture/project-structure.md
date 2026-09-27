@@ -2,6 +2,8 @@
 
 ## 기술 기반
 
+`TxTRPG.UI`는 탐험 카드의 입력 출처와 포커스를 현재 `InputSystemUIInputModule`의 의미 기반 액션에서 읽기 위해 `Unity.InputSystem`을 참조합니다. Gameplay 도메인에는 입력 장치 의존성을 추가하지 않습니다.
+
 | 항목 | 현재 값 또는 역할 |
 | --- | --- |
 | Unity | `6000.3.22f1` |

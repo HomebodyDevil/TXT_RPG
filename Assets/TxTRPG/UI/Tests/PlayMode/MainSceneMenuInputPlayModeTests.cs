@@ -75,7 +75,7 @@ namespace TxTRPG.UI.Tests
             Assert.That(((MessageGameWindowPage)system).ConfiguredMessage, Is.Empty);
             Assert.That(service.LastRequest.ContentKind, Is.EqualTo(ModalContentKind.CustomContent));
             Assert.That(service.LastRequest.DataProvider, Is.Null);
-            Assert.That(EventSystem.current.currentSelectedGameObject, Is.SameAs(service.Host.CloseButton.gameObject));
+            Assert.That(EventSystem.current.currentSelectedGameObject.name, Is.EqualTo("CardEffects"));
 
             ExecuteEvents.Execute(service.Host.gameObject, new BaseEventData(EventSystem.current), ExecuteEvents.cancelHandler);
             yield return null;

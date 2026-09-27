@@ -40,6 +40,7 @@ namespace TxTRPG.UI.Exploration
         [SerializeField] private TMP_Text descriptionText;
         [SerializeField] private TMP_Text statusText;
         [SerializeField] private ExplorationCardShapePresentation shapePresentation;
+        [SerializeField] private ExplorationCardFeedbackController feedback;
 
         private Action<ExplorationNodeChoiceRequest> selected;
         private ExplorationNodeChoiceRequest request;
@@ -47,6 +48,7 @@ namespace TxTRPG.UI.Exploration
         public Button Button => button;
         public ExplorationNodeChoiceRequest Request => request;
         public ExplorationCardShapePresentation ShapePresentation => shapePresentation;
+        public ExplorationCardFeedbackController Feedback => feedback;
 
         public void Bind(in ExplorationNodeChoiceCardData data, Action<ExplorationNodeChoiceRequest> onSelected)
         {
@@ -84,7 +86,11 @@ namespace TxTRPG.UI.Exploration
                 motionRoot.localScale = Vector3.one;
             }
             if (visualRoot != null) visualRoot.alpha = 1f;
+            feedback?.ResetState();
         }
+
+        public System.Collections.IEnumerator PlayConfirmation() => feedback != null ? feedback.PlayConfirmation() : EmptyConfirmation();
+        private static System.Collections.IEnumerator EmptyConfirmation() { yield break; }
 
         public void ApplyShape(ExplorationCardShapeSettings settings) => shapePresentation?.Apply(settings);
 
@@ -94,8 +100,8 @@ namespace TxTRPG.UI.Exploration
 
 #if UNITY_EDITOR
         public void ConfigureForEditor(Button targetButton, RectTransform targetMotionRoot, CanvasGroup targetVisualRoot,
-            Image targetArtwork, GameObject targetArtworkViewport, TMP_Text targetTitle, TMP_Text targetDescription, TMP_Text targetStatus, ExplorationCardShapePresentation targetShapePresentation)
-        { button = targetButton; motionRoot = targetMotionRoot; visualRoot = targetVisualRoot; artwork = targetArtwork; artworkViewport = targetArtworkViewport; titleText = targetTitle; descriptionText = targetDescription; statusText = targetStatus; shapePresentation = targetShapePresentation; }
+            Image targetArtwork, GameObject targetArtworkViewport, TMP_Text targetTitle, TMP_Text targetDescription, TMP_Text targetStatus, ExplorationCardShapePresentation targetShapePresentation, ExplorationCardFeedbackController targetFeedback)
+        { button = targetButton; motionRoot = targetMotionRoot; visualRoot = targetVisualRoot; artwork = targetArtwork; artworkViewport = targetArtworkViewport; titleText = targetTitle; descriptionText = targetDescription; statusText = targetStatus; shapePresentation = targetShapePresentation; feedback = targetFeedback; }
 #endif
     }
 }

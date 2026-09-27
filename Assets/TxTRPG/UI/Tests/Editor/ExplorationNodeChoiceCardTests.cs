@@ -4,6 +4,7 @@ using TxTRPG.UI.Editor;
 using TxTRPG.UI.Exploration;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEditor;
 
 namespace TxTRPG.UI.Tests
 {
@@ -124,6 +125,96 @@ namespace TxTRPG.UI.Tests
                 }
             }
             finally { Object.DestroyImmediate(instance); }
+        }
+
+        [Test]
+        public void SavedPrefab_HasFeedbackTextEffectsAndReadableProfile()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(ExplorationNodeChoiceCardPrefabBuilder.PrefabPath);
+            var profile = AssetDatabase.LoadAssetAtPath<ExplorationCardPresentationProfile>(ExplorationNodeChoiceCardPrefabBuilder.ProfilePath);
+            Assert.That(profile, Is.Not.Null);
+            Assert.That(prefab.GetComponent<ExplorationNodeChoiceCardView>().Feedback, Is.Not.Null);
+            Assert.That(prefab.GetComponentsInChildren<ExplorationCardTextEffectController>(true).Length, Is.EqualTo(3));
+            Assert.That(Contrast(profile.descriptionColor, new Color(.105f, .14f, .21f, 1f)), Is.GreaterThanOrEqualTo(4.5f));
+            Assert.That(profile.titleEffect.waveEnabled || profile.titleEffect.gradientEnabled, Is.False);
+        }
+
+        [Test]
+        public void PlayerPreferences_UseSafeDefaultsForCorruptValues()
+        {
+            const string effects = "TxTRPG.UI.ExplorationCardEffects";
+            const string motion = "TxTRPG.UI.ExplorationReduceMotion";
+            var effectsExisting = PlayerPrefs.HasKey(effects); var effectsValue = PlayerPrefs.GetInt(effects);
+            var motionExisting = PlayerPrefs.HasKey(motion); var motionValue = PlayerPrefs.GetInt(motion);
+            try
+            {
+                PlayerPrefs.SetInt(effects, 42); PlayerPrefs.SetInt(motion, -4);
+                Assert.That(ExplorationCardPlayerPreferences.EffectsEnabled, Is.True);
+                Assert.That(ExplorationCardPlayerPreferences.ReduceMotion, Is.False);
+            }
+            finally
+            {
+                if (effectsExisting) PlayerPrefs.SetInt(effects, effectsValue); else PlayerPrefs.DeleteKey(effects);
+                if (motionExisting) PlayerPrefs.SetInt(motion, motionValue); else PlayerPrefs.DeleteKey(motion);
+            }
+        }
+
+        private static float Contrast(Color first, Color second)
+        {
+            return ContrastRatio(first, second);
+        }
+
+        [TestCase(0d, 1f)]
+        [TestCase(.9d, 1.03f)]
+        [TestCase(1.8d, 1f)]
+        [TestCase(4.5d, 1.03f)]
+        public void Pulse_HasExpectedPeriodAndAbsoluteBounds(double elapsed, float expected)
+        {
+            var profile = ScriptableObject.CreateInstance<ExplorationCardPresentationProfile>();
+            try { Assert.That(profile.EvaluatePulse(elapsed), Is.EqualTo(expected).Within(.0001f)); }
+            finally { Object.DestroyImmediate(profile); }
+        }
+
+        [Test]
+        public void Pulse_InvalidAndReversedSettingsStayFinite()
+        {
+            var profile = ScriptableObject.CreateInstance<ExplorationCardPresentationProfile>();
+            try
+            {
+                foreach (var period in new[] { 0f, -1f, float.NaN, float.PositiveInfinity })
+                { profile.pulsePeriod = period; Assert.That(profile.EvaluatePulse(10d), Is.EqualTo(1f)); }
+                profile.pulsePeriod = 1.8f; profile.pulseMinScale = 1.03f; profile.pulseMaxScale = 1f;
+                Assert.That(profile.EvaluatePulse(0), Is.EqualTo(1f));
+                Assert.That(profile.EvaluatePulse(.9), Is.EqualTo(1.03f).Within(.0001f));
+                profile.pulseMinScale = float.NaN; profile.pulseMaxScale = float.PositiveInfinity;
+                Assert.That(profile.EvaluatePulse(double.NaN), Is.EqualTo(1f));
+            }
+            finally { Object.DestroyImmediate(profile); }
+        }
+
+        [Test]
+        public void SavedCard_TextHasOpaqueBackingAndRingOnlyDecorations()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(ExplorationNodeChoiceCardPrefabBuilder.PrefabPath);
+            var visual = prefab.transform.Find("MotionRoot/VisualRoot");
+            var backing = visual.Find("TextBackdrop").GetComponent<Image>();
+            var badge = visual.Find("StatusBadge").GetComponent<Image>();
+            var profile = AssetDatabase.LoadAssetAtPath<ExplorationCardPresentationProfile>(ExplorationNodeChoiceCardPrefabBuilder.ProfilePath);
+            Assert.That(backing.color.a, Is.EqualTo(1f));
+            Assert.That(backing.transform.GetSiblingIndex(), Is.LessThan(visual.Find("Title").GetSiblingIndex()));
+            Assert.That(visual.Find("Border").GetComponent<Outline>(), Is.Null);
+            Assert.That(visual.Find("Border").GetComponent<ExplorationCardShapeGraphic>(), Is.Not.Null);
+            Assert.That(visual.Find("FocusVisual").GetComponent<ExplorationCardShapeGraphic>(), Is.Not.Null);
+            Assert.That(ContrastRatio(profile.titleColor, backing.color), Is.GreaterThanOrEqualTo(7f));
+            Assert.That(ContrastRatio(profile.descriptionColor, backing.color), Is.GreaterThanOrEqualTo(7f));
+            Assert.That(ContrastRatio(profile.statusColor, badge.color), Is.GreaterThanOrEqualTo(7f));
+        }
+
+        private static float ContrastRatio(Color first, Color second)
+        {
+            static float Channel(float value) => value <= .04045f ? value / 12.92f : Mathf.Pow((value + .055f) / 1.055f, 2.4f);
+            static float Luminance(Color value) => .2126f * Channel(value.r) + .7152f * Channel(value.g) + .0722f * Channel(value.b);
+            var a = Luminance(first); var b = Luminance(second); return (Mathf.Max(a, b) + .05f) / (Mathf.Min(a, b) + .05f);
         }
     }
 }

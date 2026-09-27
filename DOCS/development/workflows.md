@@ -545,6 +545,27 @@ Scene 연결을 복구할 때에는 기존 메뉴의 Transform, 형제 순서, �
 - 카드 배치: TMP_MainScene의 `ExplorationNodePanel/CardScroll/Viewport/Content`에 있는 `ExplorationNodeChoiceLayoutGroup`에서 Card Width, Card Height, 수평·수직 간격과 Padding을 설정합니다. 실제 Viewport 너비가 부족하면 카드 크기를 줄이지 않고 다음 행으로 넘기며, 높이가 부족하면 세로 ScrollRect를 사용합니다.
 - 카드 정렬: 같은 LayoutGroup의 `Child Alignment`에서 9방향 정렬을 선택합니다. 런타임에서는 `SetAlignment`, `SetCardSize`, `SetSpacing`, `SetPadding`을 호출합니다. 후보가 새로 표시될 때만 스크롤이 맨 위로 이동하며 단순 레이아웃 변경은 후보를 재생성하지 않습니다.
 - 카드 도형: `ExplorationNodeChoiceCard.prefab`의 `VisualRoot > ExplorationCardShapePresentation`에서 `Visual Mode`, `Shape`, `Size`, `Corner Radius`, `Border Thickness`와 색상을 설정합니다. 원은 Size의 짧은 축을 지름으로 사용하고 타원은 두 축을 독립적으로 사용합니다. 런타임에서는 카드 View의 `ApplyShape`에 설정 사본을 전달합니다. 개별 카드 Margin, 꼭짓점별 반경과 임의 다각형은 지원하지 않습니다.
+- 카드 피드백: `Assets/TxTRPG/UI/Styles/ExplorationCardDefaultPresentation.asset`에서 Normal·Highlighted·Pressed·Confirming·Disabled 색상, 강조·눌림 배율, 상태 전환 시간과 확정 대기 시간을 설정합니다. 확정 시간이 0이면 프레임을 기다리지 않고 기존 선택 경로를 실행합니다.
+- 느린 박동: 같은 프로필의 `Pulse Enabled`, `Pulse Min Scale`, `Pulse Max Scale`, `Pulse Period`를 설정합니다. 기본값은 켜짐, 1.00, 1.03, 왕복 1.8초입니다. 주기가 유효하지 않으면 정적 크기를 사용합니다. 텍스트 Wave·Gradient는 계속 기본 꺼짐입니다.
+- 가독성: `TextBackdrop`은 두 외형 모드에서 필수 문구 뒤의 불투명 배경을 유지합니다. `Border`와 `FocusVisual`에는 면 전체를 복제하는 Image+Outline 대신 테두리 전용 Graphic을 사용합니다.
+- 선별 이전: 임시 메뉴 `Tools > TxT RPG > UI > Exploration > Temporary > Upgrade Card Readability And Pulse`는 공유 기본 카드의 장식 Graphic·내부 참조·텍스트 배경과 기본 프로필의 박동 값만 저장합니다. Scene 배치·도형 설정·다른 프로필·Variant·플레이어 데이터는 변경하지 않습니다. 전체 카드 재생성은 필요하지 않습니다. 반복 실행 시 요소는 중복되지 않지만 기본 프로필의 박동 값은 1.00~1.03/1.8초로 재설정되므로 사용자 조정값을 먼저 백업하십시오. 프로젝트 기본 자산의 이전이 끝나면 해당 임시 메뉴를 폐기할 수 있습니다.
+
+기존 복사본에 대한 수동 이전 절차는 다음과 같습니다. 현재 저장된 기본 자산에는 이미 적용되어 있으므로 다시 실행할 필요가 없습니다.
+
+```text
+1. Play Mode를 종료하고 컴파일 완료를 기다립니다. 미저장 Scene과 기본 표시 프로필의 사용자 변경을 저장하거나 백업합니다.
+2. 카드 Prefab Stage가 열려 있으면 변경을 저장하고 닫습니다. 기본 프로필의 사용자 박동 조정값을 백업합니다.
+3. Tools > TxT RPG > UI > Exploration > Temporary > Upgrade Card Readability And Pulse를 실행합니다.
+   기본 카드와 기본 프로필만 자동 저장됩니다. Scene은 저장하지 않습니다.
+   Console의 'Card readability and pulse upgraded'와 필수 참조 검증 성공을 확인합니다. 오류가 발생하면 중단합니다.
+4. Assets/Scenes/AppScene.unity에서 Play합니다. TMP_MainScene에 진입한 뒤 제목·설명·상태 배지와 호버·포커스 박동을 확인합니다.
+5. System에서 카드 효과와 움직임 줄이기를 전환하고, 카드 선택 → 미구현 안내 → 계속 → 새 후보의 문구와 입력을 확인합니다.
+```
+
+Play Mode 회귀 테스트는 `ExplorationCardFeedbackPlayModeTests`입니다. Test Runner가 Domain Reload에서 작업을 복구하지 못하는 환경에서는 AppScene 실행 후 `Tools > TxT RPG > UI > Exploration > Temporary > Verify Card Runtime Lifecycle`로 같은 IEnumerator 검증을 실행할 수 있습니다. Console의 `CARD_RUNTIME_VERIFICATION: PASS` 또는 `FAIL`을 확인합니다. 검증은 임시 Canvas와 프로필 사본만 사용하며 기존 두 PlayerPrefs 값과 timeScale을 finally에서 복원합니다. `Inspect Runtime Card Text`는 운영 문구·색상·Face Color·Canvas 알파·넘침·submesh 정보를 읽습니다. `Capture Runtime Card States`는 운영 카드의 런타임 상태를 잠시 바꾸어 `Assets/Screenshots/exploration-state-*.png`에 캡처한 후 복원합니다. 자산이나 Scene은 저장하지 않으며 기존 동일 이름의 검증 이미지는 덮어씁니다. 임시 검증 도구는 정식 Test Runner 환경이 복구된 후 제거할 수 있습니다.
+- 텍스트 효과: 같은 프로필에서 Title·Description·Status의 색상과 Wave·Gradient를 독립적으로 설정합니다. 두 효과의 기본값은 꺼짐입니다. Wave는 진폭·속도·문자 위상, Gradient는 두 색·속도·방향을 설정합니다.
+- 플레이어 설정: System 모달에서 `카드 효과 사용`과 `움직임 줄이기`를 변경합니다. 값은 즉시 적용되고 PlayerPrefs에 저장됩니다. 움직임 줄이기는 배율·눌림·텍스트 Mesh 애니메이션과 확정 대기를 생략하지만 포커스 표식과 선택 잠금은 유지합니다.
+- 기존 시스템 모달 Prefab만 선별 이전하려면 `Tools > TxT RPG > UI > Exploration > Apply Card Accessibility Settings`를 실행합니다. 이 메뉴는 `ModalWindowHost.prefab`과 `GameMenuScreen.prefab`의 System 페이지에 두 Toggle과 바인딩만 추가하거나 갱신하며 Scene Transform과 가방 설정은 변경하지 않습니다.
 - Prefab만 다시 생성하려면 `Tools > TxT RPG > UI > Exploration > Rebuild Node Choice Card Prefab`을 실행합니다. 이 메뉴는 카드 Prefab을 기본 외형으로 다시 생성하므로 사용자 정의 기본 Prefab에는 실행하지 말고 Variant를 사용합니다. production batch에서는 `ui.exploration-node-choice-card` 작업으로 등록되어 있습니다.
 - 실행: `Assets/Scenes/AppScene.unity`에서 시작합니다. 후보를 선택하면 전투 노드는 `행동` 버튼을 활성화하고, 회복·강화 노드는 미구현 안내와 `계속` 버튼을 표시합니다. 완료 뒤 새 후보가 나타나며 상태 문구의 체력이 이전 노드 결과를 유지해야 합니다.
 - 진단: `ExplorationRunController.Run.Nodes`에서 부모 ID, 형제 순서, 깊이, 상태와 완료 이유를 읽을 수 있습니다. 미선택 형제는 `Unchosen`이며 자식을 갖지 않아야 합니다.
