@@ -2,7 +2,7 @@
 
 ## 목적과 현재 근거
 
-이 문서는 Sol Light에게 전달할 구현 명세입니다. 구현 완료를 의미하지 않습니다. AGENTS.md, DOCS/architecture/character-status-ui.md, DOCS/development/workflows.md를 읽고 최신 소스와 사용자 변경을 확인하십시오.
+이 문서는 작업을 수행하는 AI 에이전트에게 전달할 모델 독립적인 구현 명세입니다. 구현 완료를 의미하지 않습니다. AGENTS.md, DOCS/architecture/character-status-ui.md, DOCS/development/workflows.md를 읽고 최신 소스와 사용자 변경을 확인하십시오.
 
 확인한 기존 CharacterStatusPrefabBuilder는 BarRoot의 세로 앵커를 0~0.58로, TextLayer를 0.58~1로 설정합니다. Slider는 BarRoot를 채우므로 배경 전체의 중앙에 있지 않습니다. HealthBarPanel은 체력값과 문구를 적용하고 HealthBarEffect를 호출하지만 정렬 설정은 없습니다. 이번 작업은 Slider의 기본 수직 중앙 정렬, 개발자 정렬 설정, 런타임 변경과 효과용 계층 분리를 구현합니다.
 
