@@ -32,18 +32,6 @@
 
 기능별 작업 지침서의 목록과 설명은 [작업 지침서 목록](instructions/README.md)에서 볼 수 있습니다.
 
-- [탐험 기록 트리 패널](instructions/exploration-node-tree-panel.md): 전체 후보 기록과 선택 경로, 노드·연결선 표시 및 효과 확장 경계를 정의합니다.
-
-- [노드 카드 초기 자동 선택 제거](instructions/exploration-card-no-initial-selection.md): 초기 무선택과 첫 방향 입력의 포커스 진입을 정의합니다.
-
-- [Actions 한 줄 탐색과 Header 정렬](instructions/actions-single-row-scroll-and-header-layout.md): 슬롯 개수에 따른 정렬, 가로 스크롤과 숨긴 Header·Scrollbar의 여백을 정의합니다.
-
-- [Actions 슬롯 간격과 표시 방식](instructions/actions-grid-spacing-and-display-presets.md): Actions의 균형형 기본 배치와 개발자가 선택하는 표시 정책을 정의합니다.
-
-- [Bag 빈 상태와 모달 바깥 클릭 닫기](instructions/inventory-empty-state-and-modal-outside-close.md): 표시 슬롯 기준의 빈 문구와 공통 모달의 외부 클릭·탭 닫기를 정의합니다.
-
-- [메뉴 버튼 임시 이미지 적용](instructions/game-menu-temporary-icons.md): System·Bag·Status·행동 버튼의 이미지 적용과 개발자 교체 절차를 정의합니다.
-
 ## 현재 구현 범위
 
 현재 프로젝트에서 직접 구현한 제품 UI 기능은 메시지 표시 영역인 `StoryTextPanel`, 캐릭터 표시 영역인 `CharacterDisplayPanel`, 다중 적 표시 영역인 `EnemyDisplayPanel`, 아이템·스킬 선택 영역인 `ActionGridPanel`과 이 영역들을 재귀적으로 조합하는 `FlexibleLayoutPanel`입니다. 기본 Unity 샘플 씬과 튜토리얼 자산은 제품 아키텍처에 포함하지 않습니다.

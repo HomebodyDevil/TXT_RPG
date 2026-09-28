@@ -10,6 +10,9 @@ namespace TxTRPG.UI
     [ExecuteAlways]
     [DisallowMultipleComponent]
     public sealed class HealthBarLayoutController : MonoBehaviour
+#if UNITY_EDITOR
+        , IEditorValidationRefresh
+#endif
     {
         [SerializeField] private RectTransform referenceArea;
         [SerializeField] private RectTransform barRoot;
@@ -166,18 +169,32 @@ namespace TxTRPG.UI
                 height);
         }
 
-        private void OnEnable() => ApplyLayout();
-        private void OnRectTransformDimensionsChange() => ApplyLayout();
-        private void OnTransformParentChanged() => ApplyLayout();
-        private void OnDidApplyAnimationProperties() => ApplyLayout();
+        private void OnEnable() => ApplyForLifecycle();
+        private void OnRectTransformDimensionsChange() => ApplyForLifecycle();
+        private void OnTransformParentChanged() => ApplyForLifecycle();
+        private void OnDidApplyAnimationProperties() => ApplyForLifecycle();
+
+        private void ApplyForLifecycle()
+        {
+#if UNITY_EDITOR
+            if (!Application.isPlaying)
+            {
+                EditorValidationRefreshPump.Enqueue(this);
+                return;
+            }
+#endif
+            ApplyLayout();
+        }
 
 #if UNITY_EDITOR
         private void OnValidate()
         {
             fixedSize = ClampSize(fixedSize);
             ClampPadding();
-            ApplyLayout();
+            EditorValidationRefreshPump.Enqueue(this);
         }
+
+        void IEditorValidationRefresh.ApplyDeferredValidation() => ApplyLayout();
 #endif
 
         private RectTransform ResolveReferenceArea()

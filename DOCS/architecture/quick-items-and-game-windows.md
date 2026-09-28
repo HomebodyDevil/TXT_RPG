@@ -82,6 +82,10 @@ GameMenuPanel                 ScrollRect, FlexibleLayoutItem
 
 메뉴는 계산한 `Required Width`, `Required Height`, 열 수, 행 수와 `LayoutInsufficientSpace`를 Inspector에서 제공합니다. 부모가 필요한 높이를 배정하지 않으면 버튼을 축소하거나 모드를 암묵적으로 변경하지 않고 Viewport에서 클리핑하며, 동일한 부족 상태에 대한 경고는 한 번만 출력합니다. `FlexibleLayoutItem`의 크기 정책은 부모가 소유하므로 개발자가 계산된 필요 높이를 기준으로 해당 항목의 최소 또는 고정 크기를 조정해야 합니다.
 
+활성 메뉴의 Viewport가 유한한 양수 크기를 얻기 전에는 `HasValidLayout`과 `LayoutInsufficientSpace`가 모두 false이며 공간 부족 경고를 내지 않습니다. 크기가 바뀌면 런타임에서 재계산하고, `LayoutReadinessReason`으로 0 크기 Viewport와 부모 크기를 확인할 수 있습니다. 유효한 배치에서 실제 공간이 부족하면 한 번 경고하며, 회복 후 다시 부족해지면 새 경고를 냅니다. 스크롤바 공간 예약을 적용한 최종 Viewport 크기를 기준으로 판정합니다. Editor의 직렬화 검증은 갱신만 예약하고, `GameMenuLayoutGroup`의 재배치와 `GameMenuPanel`의 UI 변경은 메인 스레드 갱신에서 수행합니다.
+
+`ConfigurableScrollbarController`와 `ActionGridPanel`도 Editor의 연속 직렬화 변경을 공통 갱신 큐에서 합쳐 처리합니다. Scrollbar의 런타임 속성 변경과 `ViewportLayoutChanged` 알림은 기존과 같이 값이 바뀔 때 즉시 적용합니다. 큐는 파괴되거나 비활성화된 Scene 대상을 건너뛰며, 컴파일·Play Mode 전환 때 이전 예약을 실행하지 않습니다.
+
 버튼의 `pageId`, `Button`, `visible`, `windowService`, `quickItemGrid` 직렬화 필드와 기존 `Button.onClick` 리스너는 유지됩니다. 런타임 리스너만 개별적으로 등록하고 해제하며 `RemoveAllListeners`는 사용하지 않습니다. 중복 버튼 바인딩은 첫 번째 항목만 사용하고 진단 경고를 출력합니다.
 
 ## 운영 자산과 데모 데이터

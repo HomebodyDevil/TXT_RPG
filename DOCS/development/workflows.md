@@ -858,3 +858,15 @@ Test Runner의 Domain Reload 작업 복구가 실패할 경우 AppScene 실행 �
 ```
 
 이 도구도 일회성 Scene 통합이므로 production Prefab batch에서 제외합니다. 적용이 끝난 작업 사본에서는 필수 수동 메뉴 실행이 남지 않습니다.
+
+### Editor Console의 UI 레이아웃 경고와 자동화 연결
+
+`ConfigurableScrollbarController`, `HealthBarLayoutController`, `GameMenuPanel`, `GameMenuLayoutGroup`, `ActionGridPanel`의 Inspector 직렬화 변경은 `EditorValidationRefreshPump`가 Editor 메인 스레드에서 합쳐 적용합니다. `OnValidate`에서 UI 계층을 직접 변경하지 않습니다. 컴파일·Play Mode 전환이나 대상 파괴·비활성화 후 예약 작업은 실행하지 않으며, 재활성화 시 현재 값으로 다시 갱신합니다. 런타임의 공개 설정 API는 즉시 적용됩니다. 이 변경은 코드와 새 스크립트 메타데이터에 적용되며 Scene·Prefab 재생성 메뉴가 필요하지 않습니다.
+
+메뉴가 공간 부족을 보고할 때에는 `GameMenuPanel.HasValidLayout`을 먼저 확인합니다. false이면 `LayoutReadinessReason`에서 Viewport와 부모 크기를 확인하고 부모 레이아웃, 활성 상태, 연결된 참조를 점검합니다. 0 크기 준비 중에는 공간 부족 경고를 내지 않으며, 크기가 정해지면 자동 갱신합니다. 실제 부족 상태는 최종 Viewport 크기에서 한 번씩 진단하고 정상 크기로 회복되면 경고 상태를 초기화합니다.
+
+일반 대화형 Editor에서는 Pipeline의 자동 시작과 기존 자동화 연결을 유지합니다. 이번 적용·테스트 클라이언트는 UnitySkills의 로컬 REST 서버를 사용했고 Pipeline 서버를 호출하지 않았습니다. 설치된 Pipeline `0.5.0-exp.1`은 일반 세션에 `-automated`가 없으면 안내 경고를 내므로 이를 UI 오류로 취급하거나 로그 필터로 숨기지 않습니다. 별도 Pipeline 자동화 세션이 실제로 필요할 때만, 진행 중인 Editor와 미저장 작업을 보존하고 동일 프로젝트의 동시 실행을 피한 뒤 Unity 실행 인자에 `-automated`를 추가합니다. 이 인자의 별도 자동화 세션 동작은 현재 대화형 Editor에서 검증되지 않았습니다. Pipeline 설정은 `Window > Pipeline > Settings...`에서 확인하며 자동 시작을 임의로 끄지 않습니다.
+
+UnitySkills는 `Window > UnitySkills`에서 포트와 서버 상태를 확인하고, REST `GET /health`의 `projectName`, `instanceId`, `port`를 함께 대조합니다. 설치된 Git 패키지는 8090~8100에서 대체 포트를 탐색하고 마지막 사용 포트를 EditorPrefs에 저장하므로, 클라이언트에서 실제 응답 포트를 사용합니다. 2026-09-28 점검에서는 이 프로젝트 Unity 프로세스가 8090과 8091을 모두 수신했습니다. 처음에는 8090이 응답하지 않고 8091이 `TxT-RPG` / `TxTRPG_826AB322`로 응답했으며, 이후 Domain Reload에서는 8091이 응답하지 않고 8090이 같은 프로젝트로 응답했습니다. 직전 포트가 같은 프로세스의 이전 리스너에 점유되어 대체 포트로 전환되는 현상으로 추정되지만, 리스너가 남는 정확한 원인은 확인되지 않았습니다. 재컴파일 후 포트가 달라질 수 있으므로 고정 포트만 재시도하지 말고 인스턴스를 다시 탐색합니다. 정상 프로세스를 종료하거나 패키지 캐시를 수정하지 않습니다.
+
+회귀 확인은 Unity Test Runner의 Edit Mode에서 `TxTRPG.UI.Tests.EditorValidationLayoutTests`, `TxTRPG.UI.Tests.GameMenuLayoutTests`와 관련 UI 테스트를 실행합니다. 기존 `ActionGridPanelTests`와 `HealthBarPanelTests`의 일부는 전체 Prefab 생성기를 호출하므로, 저장 자산을 보존해야 하는 점검에서는 생성기를 호출하지 않는 테스트만 선별합니다. `Assets/Scenes/AppScene.unity`에서 Play Mode를 시작해 `TMP_MainScene.unity`의 메뉴·Bag·Actions·체력 바를 확인하고, Console 새 로그의 발생 시각을 이전 기록과 구분합니다. 실제 기기 입력과 Player 빌드는 별도 확인이 필요합니다.

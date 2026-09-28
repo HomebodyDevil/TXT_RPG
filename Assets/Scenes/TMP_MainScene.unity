@@ -947,11 +947,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 245895500473356421, guid: a8df080f67f80eb4fa0b14d4cb60df66, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 520
+      value: 388.88892
       objectReference: {fileID: 0}
     - target: {fileID: 245895500473356421, guid: a8df080f67f80eb4fa0b14d4cb60df66, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 35.95337
+      value: 35.95343
       objectReference: {fileID: 0}
     - target: {fileID: 245895500473356421, guid: a8df080f67f80eb4fa0b14d4cb60df66, type: 3}
       propertyPath: m_AnchoredPosition.x
@@ -1472,6 +1472,10 @@ PrefabInstance:
       propertyPath: m_AnchorMax.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5569213878491360316, guid: 710e05e333125844981c6a744671bbf0, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 5737722645205652242, guid: 710e05e333125844981c6a744671bbf0, type: 3}
       propertyPath: m_fontAsset
       value: 
@@ -1650,7 +1654,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 9161654177319963763, guid: 710e05e333125844981c6a744671bbf0, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -3575,7 +3579,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.68, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 2, y: 0}
+  m_AnchoredPosition: {x: 1.9999847, y: 0}
   m_SizeDelta: {x: -4, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &919013412
@@ -4808,7 +4812,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 901234567890123456, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 901234567890123457, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       propertyPath: m_SizeDelta.x
@@ -5292,7 +5296,7 @@ MonoBehaviour:
   sizeMode: 0
   weight: 1
   fixedSize: 100
-  minimumSize: 190
+  minimumSize: 30
   maximumSize: 0
 --- !u!1 &1401302463
 GameObject:
@@ -5786,6 +5790,10 @@ PrefabInstance:
       propertyPath: spacing
       value: 20
       objectReference: {fileID: 0}
+    - target: {fileID: 8992195014108772992, guid: 6fc79b8f9fd5236499cfca7ab6827177, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 9134192191214517861, guid: 6fc79b8f9fd5236499cfca7ab6827177, type: 3}
       propertyPath: m_SizeDelta.x
       value: -30
@@ -6050,7 +6058,7 @@ MonoBehaviour:
   sizeMode: 0
   weight: 1
   fixedSize: 100
-  minimumSize: 0
+  minimumSize: 30
   maximumSize: 0
 --- !u!114 &1847634248
 MonoBehaviour:

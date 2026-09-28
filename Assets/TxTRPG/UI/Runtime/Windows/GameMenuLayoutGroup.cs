@@ -6,6 +6,9 @@ namespace TxTRPG.UI.Windows
 {
     [ExecuteAlways, DisallowMultipleComponent]
     public sealed class GameMenuLayoutGroup : LayoutGroup
+#if UNITY_EDITOR
+        , IEditorValidationRefresh
+#endif
     {
         [SerializeField] private RectTransform viewport;
         [SerializeField] private GameMenuLayoutMode layoutMode = GameMenuLayoutMode.HorizontalScroll;
@@ -64,13 +67,15 @@ namespace TxTRPG.UI.Windows
 #if UNITY_EDITOR
         protected override void OnValidate()
         {
-            base.OnValidate();
             buttonSize.x = Mathf.Max(1f, buttonSize.x);
             buttonSize.y = Mathf.Max(1f, buttonSize.y);
             spacing.x = Mathf.Max(0f, spacing.x);
             spacing.y = Mathf.Max(0f, spacing.y);
             maximumColumns = Mathf.Max(1, maximumColumns);
+            EditorValidationRefreshPump.Enqueue(this);
         }
+
+        void IEditorValidationRefresh.ApplyDeferredValidation() => SetDirty();
 
 #endif
 

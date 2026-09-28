@@ -6,6 +6,9 @@ namespace TxTRPG.UI
 {
     [DisallowMultipleComponent]
     public sealed class ConfigurableScrollbarController : MonoBehaviour
+#if UNITY_EDITOR
+        , IEditorValidationRefresh
+#endif
     {
         [SerializeField] private ScrollRect scrollRect;
         [SerializeField] private RectTransform viewport;
@@ -98,6 +101,13 @@ namespace TxTRPG.UI
             if (scrollRect != null) scrollRect.verticalScrollbar = null;
             if (scrollRect != null) scrollRect.onValueChanged.AddListener(OnScrollRectChanged);
             if (scrollbar != null) scrollbar.onValueChanged.AddListener(OnScrollbarChanged);
+#if UNITY_EDITOR
+            if (!Application.isPlaying)
+            {
+                EditorValidationRefreshPump.Enqueue(this);
+                return;
+            }
+#endif
             Refresh();
         }
 
@@ -325,8 +335,10 @@ namespace TxTRPG.UI
         {
             width = Mathf.Max(1f, width);
             gap = Mathf.Max(0f, gap);
-            Refresh();
+            EditorValidationRefreshPump.Enqueue(this);
         }
+
+        void IEditorValidationRefresh.ApplyDeferredValidation() => Refresh();
 #endif
     }
 }

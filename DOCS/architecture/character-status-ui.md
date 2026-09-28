@@ -54,6 +54,8 @@ Slider는 표시 전용입니다. `Interactable = false`, `Navigation = None`, H
 
 `HealthBarLayoutController`는 애니메이션하지 않는 `BackgroundLayer`의 사각형을 기준으로 `BarRoot`만 배치합니다. 새 기본값은 양 축 `Stretch`, 사방 Padding 12, 가로 `Center`, 세로 `Middle`입니다. 따라서 520×64 기준 영역에서는 BarRoot와 Slider의 효과 전 크기가 496×40이 됩니다. 문구는 Overlay이므로 문구 유무가 이 크기에 영향을 주지 않습니다.
 
+Inspector의 직렬화 변경을 검사하는 `OnValidate`는 값만 보정하고, Editor 갱신 큐가 다음 메인 스레드 갱신에서 `BarRoot` 배치를 적용합니다. 편집 모드의 활성화·부모 변경·크기 변경·애니메이션 적용도 같은 경로로 합쳐집니다. 비활성 상태에서 미룬 변경은 다시 활성화될 때 적용합니다. 런타임 수명주기와 공개 설정 메서드의 즉시 적용 동작은 유지합니다.
+
 Padding은 Canvas 로컬 UI 단위이며, 비대칭 Padding을 사용하면 Center는 Padding을 제외한 영역의 중앙을 의미합니다. Padding 합이 기준 크기를 넘으면 저장된 원본 값은 유지하고 계산에 사용하는 두 값을 비례 축소하여 결과 크기를 0으로 제한합니다. 음수 Padding과 NaN·무한대 크기 또는 Offset은 안전한 0으로 보정합니다. Offset은 계산이 끝난 뒤 적용하므로 의도적으로 Padding 경계 밖으로 이동할 수 있습니다.
 
 기존 직렬화 데이터와 API의 호환성을 위해 축별 `Fixed` 모드와 `Fixed Size`는 유지합니다. Fixed 축은 가용 크기와 Fixed Size 중 작은 값을 사용하고 남은 영역에서 Left·Center·Right 또는 Bottom·Middle·Top으로 정렬합니다. Stretch 축은 Padding 내부를 모두 채우므로 해당 축의 Alignment 값은 결과에 영향을 주지 않습니다. 기준 참조가 없거나 패널 밖을 가리키거나 `BarRoot`와 순환 관계이면 패널 루트를 안전한 기준으로 사용합니다.

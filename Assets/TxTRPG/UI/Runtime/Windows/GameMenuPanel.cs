@@ -49,6 +49,9 @@ namespace TxTRPG.UI.Windows
 
     [DisallowMultipleComponent]
     public sealed class GameMenuPanel : MonoBehaviour
+#if UNITY_EDITOR
+        , IEditorValidationRefresh
+#endif
     {
         [SerializeField] private List<GameMenuButtonBinding> buttons = new();
         [SerializeField] private GameWindowService windowService;
@@ -67,11 +70,29 @@ namespace TxTRPG.UI.Windows
         private readonly Dictionary<Button, UnityAction> runtimeListeners = new();
         private readonly HashSet<Button> duplicateGuard = new();
         private bool refreshQueued;
+        private bool hasValidLayout;
+        private Vector2 lastObservedViewportSize = new(float.NaN, float.NaN);
         private bool warnedInsufficientSpace;
         private GameObject lastSelection;
 
         public GameMenuLayoutResult CurrentLayout => layout != null ? layout.Current : default;
-        public bool LayoutInsufficientSpace => CurrentLayout.HasInsufficientSpace;
+        public bool LayoutInsufficientSpace => hasValidLayout && CurrentLayout.HasInsufficientSpace;
+        public bool HasValidLayout => hasValidLayout;
+        public string LayoutReadinessReason
+        {
+            get
+            {
+                if (!isActiveAndEnabled || !gameObject.activeInHierarchy) return "Menu is inactive.";
+                if (layout == null || viewport == null || content == null)
+                    return "Required layout references are incomplete.";
+                if (HasPositiveFiniteSize(viewport.rect.size))
+                    return hasValidLayout ? string.Empty : "Viewport is sized; layout is pending.";
+                var parent = viewport.parent as RectTransform;
+                return $"Viewport has no usable size ({viewport.rect.width:0.#}x{viewport.rect.height:0.#}); " +
+                    $"parent {(parent != null ? parent.name : "<none>")} " +
+                    $"({(parent != null ? parent.rect.width : 0f):0.#}x{(parent != null ? parent.rect.height : 0f):0.#}).";
+            }
+        }
         public IReadOnlyList<GameMenuButtonBinding> Buttons => buttons;
         public GameWindowService WindowService => windowService;
         public ActionGridPanel QuickItemGrid => quickItemGrid;
@@ -87,10 +108,26 @@ namespace TxTRPG.UI.Windows
 
         private void OnEnable() { BindButtons(); RefreshExecutionState(); QueueRefresh(); }
         private void Start() { BindButtons(); RefreshExecutionState(); QueueRefresh(); }
-        private void OnDisable() => UnbindButtons();
+        private void OnDisable()
+        {
+            UnbindButtons();
+            hasValidLayout = false;
+            refreshQueued = false;
+            warnedInsufficientSpace = false;
+            lastObservedViewportSize = new Vector2(float.NaN, float.NaN);
+        }
         private void OnRectTransformDimensionsChange() => QueueRefresh();
         private void LateUpdate()
         {
+            if (viewport != null)
+            {
+                var size = viewport.rect.size;
+                if (size != lastObservedViewportSize)
+                {
+                    lastObservedViewportSize = size;
+                    QueueRefresh();
+                }
+            }
             if (refreshQueued)
             {
                 refreshQueued = false;
@@ -257,13 +294,30 @@ namespace TxTRPG.UI.Windows
         private void QueueRefresh()
         {
             refreshQueued = true;
+#if UNITY_EDITOR
+            if (!Application.isPlaying)
+            {
+                EditorValidationRefreshPump.Enqueue(this);
+                return;
+            }
+#endif
             if (layout != null)
                 LayoutRebuilder.MarkLayoutForRebuild(layout.transform as RectTransform);
         }
 
         private void ApplyLayout()
         {
-            if (layout == null || viewport == null || content == null) return;
+            if (layout == null || viewport == null || content == null)
+            {
+                hasValidLayout = false;
+                return;
+            }
+            var size = viewport.rect.size;
+            if (!HasPositiveFiniteSize(size))
+            {
+                hasValidLayout = false;
+                return;
+            }
             var horizontal = layout.LayoutMode == GameMenuLayoutMode.HorizontalScroll;
             if (scrollRect != null)
             {
@@ -298,6 +352,8 @@ namespace TxTRPG.UI.Windows
                 content.offsetMax = Vector2.zero;
             }
             LayoutRebuilder.ForceRebuildLayoutImmediate(content);
+            hasValidLayout = HasPositiveFiniteSize(viewport.rect.size);
+            if (!hasValidLayout) return;
             if (layout.Current.HasInsufficientSpace && !warnedInsufficientSpace)
             {
                 warnedInsufficientSpace = true;
@@ -307,6 +363,11 @@ namespace TxTRPG.UI.Windows
             }
             else if (!layout.Current.HasInsufficientSpace) warnedInsufficientSpace = false;
         }
+
+        private static bool HasPositiveFiniteSize(Vector2 size) =>
+            size.x > 0f && size.y > 0f &&
+            !float.IsInfinity(size.x) && !float.IsInfinity(size.y) &&
+            !float.IsNaN(size.x) && !float.IsNaN(size.y);
 
         private void KeepSelectionVisible()
         {
@@ -330,10 +391,19 @@ namespace TxTRPG.UI.Windows
         {
             scrollbarHeight = Mathf.Max(0f, scrollbarHeight);
             scrollbarGap = Mathf.Max(0f, scrollbarGap);
-            QueueRefresh();
+#if UNITY_EDITOR
+            EditorValidationRefreshPump.Enqueue(this);
+#endif
         }
 
 #if UNITY_EDITOR
+        void IEditorValidationRefresh.ApplyDeferredValidation()
+        {
+            if (layout != null)
+                LayoutRebuilder.MarkLayoutForRebuild(layout.transform as RectTransform);
+            ApplyLayout();
+        }
+
         public void ConfigureForEditor(GameWindowService service, ActionGridPanel grid,
             IEnumerable<GameMenuButtonBinding> configuredButtons, RectTransform targetViewport = null,
             RectTransform targetContent = null, ScrollRect targetScrollRect = null,

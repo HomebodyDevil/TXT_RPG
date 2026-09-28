@@ -10,6 +10,9 @@ using UnityEngine.UI;
 namespace TxTRPG.UI
 {
     public sealed class ActionGridPanel : MonoBehaviour, IPanelInitialLayoutParticipant
+#if UNITY_EDITOR
+        , IEditorValidationRefresh
+#endif
     {
         private const float LayoutEpsilon = 0.5f;
 
@@ -250,13 +253,9 @@ namespace TxTRPG.UI
             displaySettings ??= new();
             displaySettings.Normalize();
             NormalizeManualLayout();
-            UnityEditor.EditorApplication.delayCall -= RefreshAfterValidation;
-            UnityEditor.EditorApplication.delayCall += RefreshAfterValidation;
+            EditorValidationRefreshPump.Enqueue(this);
         }
-        private void RefreshAfterValidation()
-        {
-            if (this != null && isActiveAndEnabled && !UnityEditor.EditorUtility.IsPersistent(this)) RefreshDisplayLayout();
-        }
+        void IEditorValidationRefresh.ApplyDeferredValidation() => RefreshDisplayLayout();
 #endif
 
         public void SetGridAlignment(ActionGridHorizontalAlignment alignment)
