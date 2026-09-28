@@ -791,7 +791,7 @@ Test Runner의 Domain Reload 작업 복구가 실패할 경우 AppScene 실행 �
 
 ## 탐험 기록 트리
 
-대상은 `Assets/Scenes/TMP_MainScene.unity`의 `Canvas/MainScreenViewport/Main_FlexibleLayoutPanel/ContentLayer/NodeTreePanel`입니다. 사용자 패널의 이름과 활성 상태를 보존하여 통합했습니다. 기존 FlexibleLayoutPanel·FlexibleLayoutItem·배경·여백·형제 순서는 유지하며 ContentLayer에 TreeBody만 추가합니다. Controller의 Tree Panel 참조는 같은 Scene의 해당 컴포넌트를 가리킵니다.
+대상은 `Assets/Scenes/TMP_MainScene.unity`의 `Canvas/MainScreenViewport/Main_FlexibleLayoutPanel/ContentLayer/ExplorationAndDicePanel/ContentLayer/NodeTreePanel`입니다. 기록 트리 적용 당시의 사용자 패널을 보존했으며, 이후 보유 주사위 표시를 위해 새 부모 아래로 옮겼습니다. 기존 트리 내부의 TreeBody와 Controller의 Tree Panel 참조는 유지합니다.
 
 ### 이미지와 외형 교체
 
@@ -870,3 +870,13 @@ Test Runner의 Domain Reload 작업 복구가 실패할 경우 AppScene 실행 �
 UnitySkills는 `Window > UnitySkills`에서 포트와 서버 상태를 확인하고, REST `GET /health`의 `projectName`, `instanceId`, `port`를 함께 대조합니다. 설치된 Git 패키지는 8090~8100에서 대체 포트를 탐색하고 마지막 사용 포트를 EditorPrefs에 저장하므로, 클라이언트에서 실제 응답 포트를 사용합니다. 2026-09-28 점검에서는 이 프로젝트 Unity 프로세스가 8090과 8091을 모두 수신했습니다. 처음에는 8090이 응답하지 않고 8091이 `TxT-RPG` / `TxTRPG_826AB322`로 응답했으며, 이후 Domain Reload에서는 8091이 응답하지 않고 8090이 같은 프로젝트로 응답했습니다. 직전 포트가 같은 프로세스의 이전 리스너에 점유되어 대체 포트로 전환되는 현상으로 추정되지만, 리스너가 남는 정확한 원인은 확인되지 않았습니다. 재컴파일 후 포트가 달라질 수 있으므로 고정 포트만 재시도하지 말고 인스턴스를 다시 탐색합니다. 정상 프로세스를 종료하거나 패키지 캐시를 수정하지 않습니다.
 
 회귀 확인은 Unity Test Runner의 Edit Mode에서 `TxTRPG.UI.Tests.EditorValidationLayoutTests`, `TxTRPG.UI.Tests.GameMenuLayoutTests`와 관련 UI 테스트를 실행합니다. 기존 `ActionGridPanelTests`와 `HealthBarPanelTests`의 일부는 전체 Prefab 생성기를 호출하므로, 저장 자산을 보존해야 하는 점검에서는 생성기를 호출하지 않는 테스트만 선별합니다. `Assets/Scenes/AppScene.unity`에서 Play Mode를 시작해 `TMP_MainScene.unity`의 메뉴·Bag·Actions·체력 바를 확인하고, Console 새 로그의 발생 시각을 이전 기록과 구분합니다. 실제 기기 입력과 Player 빌드는 별도 확인이 필요합니다.
+
+## 보유 주사위 3D 패널과 결과 기록
+
+운영 자산은 `Assets/Scenes/TMP_MainScene.unity`, `Assets/TxTRPG/UI/Prefabs/Dice/`, `Assets/TxTRPG/UI/Styles/Dice/`에 저장합니다. `Tools > TxT RPG > UI > Dice > Temporary > Create Base Dice Assets`는 기본 D4·D6·D8의 생성기 소유 메시·모델 라벨과 Stage를 생성·동기화합니다. 형태 정의와 카탈로그가 이미 있으면 보존하며, 기존 모델은 생성기 소유 면 라벨의 방향과 크기만 갱신합니다. 이 메뉴는 자산을 자동 저장하고 재실행할 수 있습니다. 다른 모델로 교체하기 전에는 모델 Prefab을 별도 이름으로 복제한 뒤 Shape의 참조를 바꿉니다.
+
+`Tools > TxT RPG > UI > Dice > Temporary > Apply Owned Dice To TMP Main Scene`은 저장된 `TMP_MainScene`이 Edit Mode에서 열려 있고 미저장 변경이 없을 때 한 번 실행합니다. 기존 `NodeTreePanel`을 새 `ExplorationAndDicePanel` 안으로 옮기고 `OwnedDicePanel`, 격리된 `DiceStage`, 공통 결과 페이지, 명시적 Binder 참조와 좁은 화면 높이를 연결합니다. 기존 패널을 다시 생성하지 않습니다. Scene은 자동 저장하지 않으므로 `Tools > TxT RPG > UI > Dice > Temporary > Validate Owned Dice Scene`의 성공 로그를 확인하고 변경 범위를 검토한 뒤 저장합니다. 같은 부모가 이미 있으면 적용 메뉴는 연결 상태만 검증하고 기존 값을 보존합니다. 오류가 나면 추가 저장을 멈추고 Editor Undo나 작업 전 Scene 사본으로 복구합니다. 운영 Scene에는 이미 적용·저장되어 있으므로 현재 작업 사본에서 사용자가 이 메뉴를 다시 실행할 필요는 없습니다. 임시 메뉴는 다른 작업 사본의 적용 가능성을 확인한 후 퇴역할 수 있습니다. Scene 작업이 섞여 있으므로 production Prefab rebuild batch에는 등록하지 않습니다.
+
+초기 보유 주사위는 `TemporaryDiceConfiguration`의 Dice와 각 Faces에서 조정합니다. 실행 중 변경은 `PlayerSessionHost.TemporaryDice.TryAdd(instanceId, definitionId, displayName, faces, minimumValue, maximumValue, out reason)`와 `TryRemove(instanceId)`를 사용합니다. 같은 형태를 여러 개 보유하려면 서로 다른 인스턴스 ID와 같은 정의 ID를 전달합니다. 새 다면체는 `DieModelView`가 붙은 Prefab과 `DieShapeDefinition`의 면 인덱스별 자세·읽기 규칙을 만든 뒤 `DieShapeCatalog`에 등록합니다. `OwnedDicePanel`의 `rollDuration`, `reducedMotionDuration`, `maximumTextureDimension`, 내부 FlexibleLayoutItem의 가중치·최소 높이와 `ResponsiveMainScreen.narrowHeights[0]`은 Inspector에서 조정합니다. `TemporaryDiceRollMenuController`의 `historyMode`, `maximumHistoryCombats`, `rollTimeoutSeconds`는 전투별 기록·실패 시간을 정합니다. 자동 결과 표시와 모션 감소는 세션의 `TemporaryDicePreferences.AutoShowResults`, `ReduceMotion`에서 런타임 변경하며 영구 저장·옵션 UI는 아직 없습니다.
+
+검증은 `Assets/Scenes/AppScene.unity`의 시작 경로 또는 저장된 `TMP_MainScene`의 Play Mode에서 합니다. 전투 카드를 선택하고 Actions의 주사위 명령을 실행하면 모든 모델이 결과 면으로 정지한 뒤 체력·Story·기록이 한 번 갱신되고 결과 창이 열려야 합니다. 확인 또는 바깥 클릭·탭으로 닫고 `OwnedDicePanel/ResultsButton`으로 다시 엽니다. `Tools > TxT RPG > UI > Dice > Temporary > Validate Play Flow`는 새 탐험의 전투 후보가 있는 Play Mode에서 두 행동, 연타 차단, 패널 숨김 중 수락 결과 완료, 자동 표시 끄기와 수동 재열기, Story·기록 및 390×844 가상 Viewport의 전체 스크롤·RenderTexture를 검사하는 일회성 검증 메뉴이며 Play 상태만 변경합니다. 검증이 통과하면 결과 창을 열어 둔 채 종료하므로 화면을 확인한 뒤 Play Mode를 끝냅니다. Edit Mode의 `OwnedDiceIntegrationTests`, `TemporaryPlayerDiceStateTests`와 탐험 트리의 Play Mode 회귀 테스트도 확인합니다. 실제 휴대폰·태블릿의 Safe Area와 터치, 컨트롤러, 대상 Player 빌드와 지속 성능은 별도 장치 검증이 필요합니다.

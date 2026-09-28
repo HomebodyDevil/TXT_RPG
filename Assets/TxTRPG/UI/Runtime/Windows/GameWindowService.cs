@@ -15,6 +15,7 @@ namespace TxTRPG.UI.Windows
         private IGameWindowPage currentPage;
         private GameObject focusReturnTarget;
         private ModalOpenRequest lastRequest;
+        public event Action Closed;
         public bool IsOpen => currentPage != null || (host != null && host.IsVisible);
         public string CurrentPageId => currentPage?.PageId ?? string.Empty;
         public bool BlocksGameplayInput => IsOpen;
@@ -67,7 +68,7 @@ namespace TxTRPG.UI.Windows
             await OpenAsync(lastRequest);
         }
         public void Close()
-        { requestCancellation?.Cancel(); requestCancellation?.Dispose(); requestCancellation = null; currentPage?.Hide(); currentPage = null; host.SetVisible(false); if (EventSystem.current != null && focusReturnTarget != null && focusReturnTarget.activeInHierarchy) EventSystem.current.SetSelectedGameObject(focusReturnTarget); focusReturnTarget = null; lastRequest = null; }
+        { requestCancellation?.Cancel(); requestCancellation?.Dispose(); requestCancellation = null; currentPage?.Hide(); currentPage = null; host.SetVisible(false); if (EventSystem.current != null && focusReturnTarget != null && focusReturnTarget.activeInHierarchy) EventSystem.current.SetSelectedGameObject(focusReturnTarget); focusReturnTarget = null; lastRequest = null; Closed?.Invoke(); }
 #if UNITY_EDITOR
         public void ConfigureForEditor(ModalWindowHost targetHost, IEnumerable<GameWindowPage> configuredPages) { host = targetHost; pages = new List<GameWindowPage>(configuredPages); }
 #endif

@@ -1,6 +1,6 @@
 # 탐험 기록 트리
 
-탐험 기록은 기존 `Canvas/MainScreenViewport/Main_FlexibleLayoutPanel/ContentLayer/NodeTreePanel` 안에 표시합니다. 패널 이름, 부모의 FlexibleLayoutItem, 형제 순서, 여백과 배경은 유지합니다. 실제 노드 선택은 기존 후보 카드에서만 수행합니다. 노드와 선에는 Button과 Raycast가 없습니다.
+탐험 기록은 `Canvas/MainScreenViewport/Main_FlexibleLayoutPanel/ContentLayer/ExplorationAndDicePanel/ContentLayer/NodeTreePanel` 안에 표시합니다. 기존 `NodeTreePanel` 오브젝트와 내부 참조는 유지한 채 새 부모로 옮겼으며, 아래에는 `OwnedDicePanel`이 있습니다. 실제 노드 선택은 기존 후보 카드에서만 수행합니다. 노드와 선에는 Button과 Raycast가 없습니다.
 
 ## 책임과 데이터 흐름
 
@@ -65,8 +65,8 @@ View의 Generation은 재바인딩·비활성화에 따라 변경됩니다. 향�
 
 ## 좁은 화면의 페이지 스크롤
 
-사용자는 실제 휴대폰 캡처에서 기존 가로 3열의 트리 폭이 사라지는 문제를 확인한 뒤, 좁은 화면의 세로 배치와 전체 화면 스크롤을 확정했습니다. `Canvas/MainScreenViewport`를 추가하고 기존 Main_FlexibleLayoutPanel과 그 내부 패널을 그대로 옮겼습니다. NodeTreePanel 자체의 내부 경로·형제 순서·배경은 유지합니다.
+사용자는 실제 휴대폰 캡처에서 기존 가로 3열의 트리 폭이 사라지는 문제를 확인한 뒤, 좁은 화면의 세로 배치와 전체 화면 스크롤을 확정했습니다. `Canvas/MainScreenViewport` 안의 기존 Main_FlexibleLayoutPanel은 유지합니다. 주사위 표시를 위해 그 첫 영역에 `ExplorationAndDicePanel`을 추가했지만 NodeTreePanel 자체와 내부 기록은 보존합니다.
 
-`ResponsiveMainScreen`은 720 UI 단위 미만에서 기존 트리·중앙·캐릭터 패널의 높이를 각각 360/520/640으로 배분합니다. 부모의 여백과 간격을 포함한 Content 높이를 계산하여 전체 화면을 세로 스크롤합니다. 넓은 화면으로 돌아오면 시작 시 보관한 축·가중치·최소/최대 크기·RectTransform을 복원합니다. 좁은 화면에서 메뉴 영역 높이는 실제 메뉴의 RequiredHeight만큼 확보하고 넓어지면 원래 배분으로 복원합니다. Scene의 개발자 설정을 런타임에 저장하지 않습니다. 카드의 폭은 좁은 Viewport에서 120~210 범위로 조정하고 넓어지면 원래 폭을 복원합니다.
+`ResponsiveMainScreen`은 720 UI 단위 미만에서 트리와 주사위를 합친 첫 영역, 중앙, 캐릭터 패널의 높이를 각각 620/520/640으로 배분합니다. 부모의 여백과 간격을 포함한 Content 높이를 계산하여 전체 화면을 세로 스크롤합니다. 넓은 화면으로 돌아오면 시작 시 보관한 축·가중치·최소/최대 크기·RectTransform을 복원합니다. 좁은 화면에서 메뉴 영역 높이는 실제 메뉴의 RequiredHeight만큼 확보하고 넓어지면 원래 배분으로 복원합니다. Scene의 개발자 설정을 런타임에 저장하지 않습니다. 카드의 폭은 좁은 Viewport에서 120~210 범위로 조정하고 넓어지면 원래 폭을 복원합니다.
 
 Viewport는 Screen.safeArea를 Canvas의 비율 앵커로 적용합니다. 키보드·게임패드 포커스가 이동하면 해당 UI를 전체 페이지에서도 표시합니다. `NestedScrollRectBridge`는 내부 ScrollRect가 끝에 도달했거나 스크롤할 내용이 없을 때 세로 드래그·휠을 부모 페이지에 전달합니다. 가로 트리 탐색은 내부 ScrollRect가 계속 소유합니다. 참조는 Scene에 명시적으로 저장하며 런타임 객체 이름 검색을 사용하지 않습니다.

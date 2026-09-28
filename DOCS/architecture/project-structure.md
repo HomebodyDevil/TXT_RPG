@@ -305,6 +305,8 @@ flowchart TD
 
 `Assets/TxTRPG/Application/Runtime/Dice/`는 PlayerSession 수명의 임시 주사위 보유 상태와 TMP_MainScene 표시 어댑터와 로컬라이제이션 가능한 효과 표시명 경계를 포함합니다. 영구 Gameplay Dice 규칙은 계속 `Assets/TxTRPG/Gameplay/Runtime/Dice/`에 있으며 저장 모델과 분리됩니다.
 
+`Application/Runtime/Dice`의 `TemporaryDiceRollHistory`와 `OwnedDiceSessionBinder`는 전투별 결과 수명 및 UI 바인딩을 담당합니다. `UI/Runtime/Dice`에는 Application 역참조 없이 3D 모델·Stage 표시, 형태 카탈로그와 결과 창이 있습니다. `UI/Prefabs/Dice`와 `UI/Styles/Dice`는 기본 D4·D6·D8 모델, Stage, 메시·형태 정의를 저장합니다. 적용 메뉴 `Application/Editor/TemporaryOwnedDiceIntegration.cs`는 Scene 작업이 섞이므로 생산 Prefab 배치에서 제외하며 일회성 자산 생성·Scene 통합·검증에만 사용합니다. 자세한 내용은 [보유 주사위 3D 표시](owned-dice-presentation.md)를 참고합니다.
+
 
 ### 임시 적 전투
 

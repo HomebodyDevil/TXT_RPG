@@ -6,6 +6,7 @@
 
 | 문서 | 설명 |
 | --- | --- |
+| [보유 주사위 3D 패널과 굴림 결과](owned-dice-3d-panel-and-roll-results.md) | 트리 부모 레이아웃, D4·D6·D8 보유 표시, 확률 기반 굴림 연출과 전투별 결과 모달을 구현합니다. |
 | [Editor 레이아웃·자동화 경고 수정](editor-console-layout-and-automation-warnings.md) | OnValidate의 안전한 UI 갱신, 메뉴 준비 상태 판정과 Pipeline·UnitySkills 연결 진단을 정의합니다. |
 | [탐험 기록 트리 패널](exploration-node-tree-panel.md) | 선택·미선택 후보와 실제 진행 경로를 세로 트리로 표시하고 노드·선 이미지 교체 및 효과 확장을 지원합니다. |
 | [노드 카드 초기 자동 선택 제거](exploration-card-no-initial-selection.md) | 새 후보의 자동 포커스를 제거하고 첫 방향 입력으로 탐색을 시작하며 초기 확인 입력의 진행을 차단합니다. |

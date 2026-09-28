@@ -5,6 +5,7 @@ using TMPro;
 using TxTRPG.Application.Dice;
 using TxTRPG.Application.Players;
 using TxTRPG.Gameplay.Characters;
+using TxTRPG.Gameplay.Combat;
 using TxTRPG.Gameplay.Exploration;
 using TxTRPG.SceneTransition;
 using TxTRPG.UI;
@@ -33,6 +34,7 @@ namespace TxTRPG.Application.Exploration
         private ExplorationRunState run;
         private bool initialized;
         private bool processing;
+        private PlayerSessionHost boundHost;
         private UnityAction[] legacyChoiceListeners = Array.Empty<UnityAction>();
 
         public int InitializationOrder => -790;
@@ -54,10 +56,13 @@ namespace TxTRPG.Application.Exploration
                 return new ExplorationRunState(Guid.NewGuid().ToString("N"), explorationHealth,
                     new ExplorationNodeGenerator(configuration.ChoiceCount, configuration.CreateWeights(), new SystemExplorationRandomSource()));
             });
-            combatController.CombatFinished += OnCombatFinished;
+            boundHost = host;
+            host.TemporaryCombatCompleted += OnTemporaryCombatCompleted;
             BindLegacyChoices();
             continueButton.onClick.AddListener(ContinuePlaceholder);
             initialized = true;
+            if (combatController.Combat != null && combatController.Combat.IsComplete)
+                OnCombatFinished(combatController.Combat.EnemyHealth.IsDefeated);
             if (created) storyPanel.AddMessage("[탐험] 새로운 탐험을 시작했습니다. 다음 노드를 선택하세요.");
             RefreshRunPresentation();
         }
@@ -158,6 +163,11 @@ namespace TxTRPG.Application.Exploration
             }
         }
 
+        private void OnTemporaryCombatCompleted(TemporaryCombatState finishedCombat, bool victory)
+        {
+            if (finishedCombat == combatController.Combat) OnCombatFinished(victory);
+        }
+
         private void RefreshRunPresentation()
         {
             if (run.Phase == ExplorationPhase.AwaitingChoice) { ShowChoices(); return; }
@@ -222,7 +232,8 @@ namespace TxTRPG.Application.Exploration
 
         private void Unbind()
         {
-            if (combatController != null) combatController.CombatFinished -= OnCombatFinished;
+            if (boundHost != null) boundHost.TemporaryCombatCompleted -= OnTemporaryCombatCompleted;
+            boundHost = null;
             for (var i = 0; i < choiceButtons.Length && i < legacyChoiceListeners.Length; i++) if (choiceButtons[i] != null && legacyChoiceListeners[i] != null) choiceButtons[i].onClick.RemoveListener(legacyChoiceListeners[i]);
             legacyChoiceListeners = Array.Empty<UnityAction>();
             if (choiceCardList != null) choiceCardList.Hide();

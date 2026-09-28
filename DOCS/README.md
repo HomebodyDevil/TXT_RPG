@@ -24,6 +24,7 @@
 | [점진 생성 탐험 노드 트리](architecture/exploration-node-tree.md) | 선택·미선택 기록, 지연 후보 생성, 탐험 체력·전투 연결과 반응형 노드 선택 카드 구조를 설명합니다. |
 | [임시 적 전투](architecture/temporary-combat.md) | 격리된 플레이어·적 체력, 주사위 효과 적용, 적 행동 예고와 Scene 수명 경계를 설명합니다. |
 | [설정 가능한 주사위 Gameplay 도메인](architecture/dice-domain.md) | 면별 효과·수치 구성, 런타임 변경, 외부 면 판정과 결과 스냅샷 계약을 설명합니다. |
+| [보유 주사위 3D 표시와 결과 기록](architecture/owned-dice-presentation.md) | D4·D6·D8 표시, 굴림 후 판정 적용, 전투별 결과 창과 Scene 연결을 설명합니다. |
 | [Main Scene 시각 개선 제안안](development/main-scene-visual-proposal.md) | 원본과 격리된 제안 Scene의 구성, 생성·실행·비교 절차와 검증 범위를 설명합니다. |
 | [등록 기반 Prefab Rebuild](architecture/prefab-rebuild-registry.md) | 안전한 생성 작업의 명시적 등록, 계획 검증, 실행과 제외 정책을 설명합니다. |
 | [한국어 TMP 대체 폰트](architecture/korean-font-fallback.md) | 기존 영문 폰트를 유지하는 전역 Noto Sans KR fallback, 라이선스, 적용과 검증 절차를 설명합니다. |

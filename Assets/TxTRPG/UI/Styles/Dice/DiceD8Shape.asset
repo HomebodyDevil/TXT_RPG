@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e394d7ddc6c07c240afabfe253966fbf, type: 3}
+  m_Name: DiceD8Shape
+  m_EditorClassIdentifier: TxTRPG.UI::TxTRPG.UI.Dice.DieShapeDefinition
+  definitionId: temporary.d8
+  modelPrefab: {fileID: 4377848363273155988, guid: f519a5040476edf448e9e872fef146e3, type: 3}
+  facePoseEuler:
+  - {x: 287.87512, y: 2.1888309, z: 43.391727}
+  - {x: 287.87512, y: 357.81116, z: 316.60828}
+  - {x: 1.5465243, y: 337.91135, z: 331.04144}
+  - {x: 1.5465243, y: 22.088665, z: 28.95856}
+  - {x: 288.1828, y: 12.626357, z: 125.75643}
+  - {x: 288.1828, y: 347.37366, z: 234.24356}
+  - {x: 38.858803, y: 279.2905, z: 271.48608}
+  - {x: 38.858803, y: 80.7095, z: 88.5139}
+  readingRule: "\uC704\uCABD\uC774\uBA70 \uCE74\uBA54\uB77C\uC5D0\uC11C \uBCF4\uC774\uB294
+    \uC0BC\uAC01\uD615 \uBA74\uC744 \uC77D\uC2B5\uB2C8\uB2E4."

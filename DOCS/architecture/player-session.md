@@ -25,7 +25,7 @@ flowchart LR
 | `NewGameProfile` | 새 게임에 사용할 `CharacterContentCatalog`와 최초 `CharacterContentDefinition`을 명시하고 연결 무결성을 검사합니다. |
 | `PlayerSession` | 저장 데이터가 있으면 복원하고, 없으면 Profile의 최초 캐릭터로 `PlayerState`를 생성합니다. |
 | `IPlayerSaveRepository` | 저장 매체를 추상화합니다. 현재 기본 구현은 로컬 JSON 파일을 사용합니다. |
-| `PlayerSessionHost` | AppScene 수명 동안 Session을 한 번 소유하고 초기화 및 저장 진입점을 제공합니다. |
+| `PlayerSessionHost` | AppScene 수명 동안 Session을 한 번 소유하고 초기화 및 저장 진입점을 제공합니다. 임시 전투의 보유 주사위, 굴림 기록·표시 설정, 수락된 행동과 Scene 전환 중 보류된 결과 알림도 소유합니다. |
 | `ActiveCharacterDisplayBinder` | 활성 캐릭터의 외형만 Presenter에 반영하고, Addressables 표시 자산 준비를 Scene 준비 계약에 포함합니다. |
 | `ActiveCharacterStatusBinder` | 선택적으로 배치된 상태 컨테이너에 이름과 Health 표시 모델을 전달합니다. 상태 UI가 없으면 배치하지 않습니다. |
 

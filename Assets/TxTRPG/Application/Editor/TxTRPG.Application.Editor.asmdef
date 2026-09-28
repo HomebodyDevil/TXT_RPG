@@ -4,6 +4,7 @@
   "references": [
     "TxTRPG.Application",
     "TxTRPG.Content",
+    "TxTRPG.Gameplay",
     "TxTRPG.UI",
     "TxTRPG.UI.Editor",
     "Unity.TextMeshPro",

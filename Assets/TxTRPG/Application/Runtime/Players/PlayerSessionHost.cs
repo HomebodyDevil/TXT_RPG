@@ -26,16 +26,74 @@ namespace TxTRPG.Application.Players
         private PlayerSession session;
         private Task initializationTask;
         private TemporaryPlayerDiceState temporaryDice;
+        private readonly TemporaryDiceRollHistory temporaryDiceHistory = new();
+        private readonly TemporaryDiceResultPreferences temporaryDicePreferences = new();
         private ExplorationRunState temporaryExploration;
         private TemporaryCombatState temporaryExplorationCombat;
+        private long temporaryDiceActionSequence;
+        private long pendingTemporaryDiceAction;
+        private TemporaryDiceTurnRecord pendingDiceResult;
+        private TemporaryDiceTurnRecord pendingDiceStory;
+        public event Action<TemporaryCombatState, bool> TemporaryCombatCompleted;
+        public event Action<TemporaryDiceTurnRecord> TemporaryDiceResultReady;
+        public event Action<TemporaryDiceTurnRecord> TemporaryDiceStoryReady;
 
         public static PlayerSessionHost Instance => instance;
         public IPlayerSession Session => session;
         public bool IsReady => session != null && session.IsReady;
         public Task WhenReady => EnsureInitializedAsync();
         public TemporaryPlayerDiceState TemporaryDice => temporaryDice;
+        public TemporaryDiceRollHistory TemporaryDiceHistory => temporaryDiceHistory;
+        public TemporaryDiceResultPreferences TemporaryDicePreferences => temporaryDicePreferences;
         public ExplorationRunState TemporaryExploration => temporaryExploration;
         public TemporaryCombatState TemporaryExplorationCombat => temporaryExplorationCombat;
+        public bool IsTemporaryDiceActionPending => pendingTemporaryDiceAction != 0;
+        public TemporaryDiceTurnRecord PendingDiceResult => pendingDiceResult;
+        public TemporaryDiceTurnRecord PendingDiceStory => pendingDiceStory;
+
+        public void PublishTemporaryDiceStory(TemporaryDiceTurnRecord record)
+        {
+            pendingDiceStory = record ?? throw new ArgumentNullException(nameof(record));
+            TemporaryDiceStoryReady?.Invoke(record);
+        }
+
+        public void ClearPendingDiceStory(TemporaryDiceTurnRecord record)
+        {
+            if (ReferenceEquals(pendingDiceStory, record)) pendingDiceStory = null;
+        }
+
+        public void NotifyTemporaryCombatCompleted(TemporaryCombatState completedCombat, bool victory)
+        {
+            TemporaryCombatCompleted?.Invoke(completedCombat, victory);
+        }
+
+        public void QueueTemporaryDiceResult(TemporaryDiceTurnRecord record)
+        {
+            pendingDiceResult = record ?? throw new ArgumentNullException(nameof(record));
+            TemporaryDiceResultReady?.Invoke(record);
+        }
+
+        public void ClearPendingDiceResult(TemporaryDiceTurnRecord record)
+        {
+            if (ReferenceEquals(pendingDiceResult, record)) pendingDiceResult = null;
+        }
+
+        public bool TryBeginTemporaryDiceAction(TemporaryCombatState expectedCombat, out long actionId)
+        {
+            actionId = 0;
+            if (pendingTemporaryDiceAction != 0 || expectedCombat == null ||
+                !ReferenceEquals(temporaryExplorationCombat, expectedCombat)) return false;
+            actionId = ++temporaryDiceActionSequence;
+            if (actionId == 0) actionId = ++temporaryDiceActionSequence;
+            pendingTemporaryDiceAction = actionId;
+            return true;
+        }
+
+        public void EndTemporaryDiceAction(long actionId)
+        {
+            if (actionId != 0 && pendingTemporaryDiceAction == actionId)
+                pendingTemporaryDiceAction = 0;
+        }
 
         private void Awake()
         {

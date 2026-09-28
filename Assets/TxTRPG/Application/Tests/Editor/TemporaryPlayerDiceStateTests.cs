@@ -64,6 +64,48 @@ namespace TxTRPG.Application.Tests
             finally { Object.DestroyImmediate(config); }
         }
 
+        [Test]
+        public void RuntimeChanges_KeepInstanceIdentityAndDoNotAlterAcceptedRolls()
+        {
+            var config = ScriptableObject.CreateInstance<TemporaryDiceConfiguration>();
+            try
+            {
+                config.ConfigureForEditor(false, System.Array.Empty<TemporaryDieDefinition>());
+                var state = new TemporaryPlayerDiceState(config);
+                var faces = new[] { new DiceFace(DiceEffectKind.Attack, 1), new DiceFace(DiceEffectKind.Heal, 2) };
+                var changes = 0;
+                state.Changed += () => changes++;
+                Assert.That(state.TryAdd("first", "shared", "첫째", faces, 1, 2, out _), Is.True);
+                Assert.That(state.TryAdd("second", "shared", "둘째", faces, 1, 2, out _), Is.True);
+                var accepted = state.RollAll(new SequenceRandom(0, 1));
+                faces[0] = new DiceFace(DiceEffectKind.Heal, 2);
+                Assert.That(state.TryRemove("first"), Is.True);
+                Assert.That(state.Snapshot()[0].InstanceId, Is.EqualTo("second"));
+                Assert.That(accepted[0].Result.EffectKind, Is.EqualTo(DiceEffectKind.Attack));
+                Assert.That(accepted[1].Result.EffectKind, Is.EqualTo(DiceEffectKind.Heal));
+                Assert.That(changes, Is.EqualTo(3));
+            }
+            finally { Object.DestroyImmediate(config); }
+        }
+
+        [Test]
+        public void InvalidAddition_DoesNotChangeCollection()
+        {
+            var config = ScriptableObject.CreateInstance<TemporaryDiceConfiguration>();
+            try
+            {
+                config.ConfigureForEditor(false, System.Array.Empty<TemporaryDieDefinition>());
+                var state = new TemporaryPlayerDiceState(config);
+                var faces = new[] { new DiceFace(DiceEffectKind.Attack, 1) };
+                Assert.That(state.TryAdd("one", "shape", "One", faces, 1, 1, out _), Is.True);
+                Assert.That(state.TryAdd("one", "shape", "Duplicate", faces, 1, 1, out _), Is.False);
+                Assert.That(state.TryAdd("two", "shape", "Invalid", System.Array.Empty<DiceFace>(), 1, 1, out _), Is.False);
+                Assert.That(state.Count, Is.EqualTo(1));
+                Assert.That(state.TryRemove("missing"), Is.False);
+            }
+            finally { Object.DestroyImmediate(config); }
+        }
+
         private static TemporaryDieDefinition Make(string id, string name, int faces)
         {
             var definition = new TemporaryDieDefinition();

@@ -10,6 +10,7 @@ using TxTRPG.Gameplay.Combat;
 using TxTRPG.Gameplay.Dice;
 using TxTRPG.SceneTransition;
 using TxTRPG.UI;
+using TxTRPG.UI.Dice;
 using TxTRPG.UI.Windows;
 using UnityEngine;
 
@@ -27,6 +28,10 @@ namespace TxTRPG.Application.Dice
         [SerializeField] private HealthBarPanel playerHealthBar;
         [SerializeField] private HealthBarPanel enemyHealthBar;
         [SerializeField] private TMP_Text nextEnemyActionText;
+        [SerializeField] private OwnedDiceSessionBinder ownedDiceBinder;
+        [SerializeField] private TemporaryDiceHistoryMode historyMode = TemporaryDiceHistoryMode.LatestCombatNode;
+        [SerializeField, Min(1)] private int maximumHistoryCombats = 4;
+        [SerializeField, Range(1f, 15f)] private float rollTimeoutSeconds = 3f;
 
         private PlayerSessionHost sessionHost;
         private TemporaryCombatState combat;
@@ -41,12 +46,18 @@ namespace TxTRPG.Application.Dice
 
         public async Task InitializeAsync(SceneInitializationContext context, CancellationToken cancellationToken)
         {
+            if (sessionHost != null) sessionHost.TemporaryDiceStoryReady -= OnStoryReady;
+            if (ownedDiceBinder != null) ownedDiceBinder.BlockingChanged -= RefreshMenuExecution;
             ReleaseCombat();
             initialized = false;
             sessionHost = PlayerSessionHost.Instance;
             if (sessionHost == null) throw new InvalidOperationException("Temporary combat requires PlayerSessionHost.");
             await sessionHost.EnsureInitializedAsync(cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
+            sessionHost.TemporaryDiceHistory.Configure(historyMode, maximumHistoryCombats);
+            sessionHost.TemporaryDiceStoryReady += OnStoryReady;
+            if (sessionHost.PendingDiceStory != null) OnStoryReady(sessionHost.PendingDiceStory);
+            if (ownedDiceBinder != null) ownedDiceBinder.BlockingChanged += RefreshMenuExecution;
 
             if (combatConfiguration == null || !combatConfiguration.EnabledForScene)
             {
@@ -68,6 +79,7 @@ namespace TxTRPG.Application.Dice
             ReleaseCombat();
             combat = new TemporaryCombatState(playerHealth, combatConfiguration.EnemyMaximumHealth, combatConfiguration.EnemyAttackAmount, combatConfiguration.EnemyHealAmount);
             sessionHost.SetTemporaryExplorationCombat(combat);
+            BeginHistoryScope();
             SubscribeCombat();
             ApplyEnemyPresentation();
             RefreshPresentation();
@@ -87,6 +99,11 @@ namespace TxTRPG.Application.Dice
             if (!string.Equals(commandId?.Trim(), RollAllCommandId, StringComparison.Ordinal))
             { unavailableReason = "Unknown game-menu command."; return false; }
             if (executing) { unavailableReason = "The temporary combat action is already being processed."; return false; }
+            if (sessionHost != null && sessionHost.IsTemporaryDiceActionPending)
+            { unavailableReason = "A temporary dice action is still being completed."; return false; }
+            if (ownedDiceBinder != null && ownedDiceBinder.BlocksNextAction ||
+                menu != null && menu.WindowService != null && menu.WindowService.BlocksGameplayInput)
+            { unavailableReason = "A result or game window is open."; return false; }
             if (!IsReady) { unavailableReason = "Temporary combat is not ready."; return false; }
             if (combat.IsComplete) { unavailableReason = "The temporary combat is complete."; return false; }
             if (storyPanel == null || !storyPanel.isActiveAndEnabled)
@@ -100,40 +117,140 @@ namespace TxTRPG.Application.Dice
         public bool TryExecute(string commandId)
         {
             if (!CanExecute(commandId, out var reason)) { Debug.LogWarning(reason, this); return false; }
+            if (!sessionHost.TryBeginTemporaryDiceAction(combat, out var actionId)) return false;
             executing = true;
             menu.RefreshExecutionState();
             try
             {
                 var rolls = sessionHost.TemporaryDice.RollAll(random);
-                var diceResults = new List<DiceRollResult>(rolls.Count);
-                for (var i = 0; i < rolls.Count; i++) diceResults.Add(rolls[i].Result);
-                var result = combat.ExecuteTurn(diceResults);
-                RecordTurn(rolls, result);
-                ApplyEnemyPresentation();
-                RefreshPresentation();
-                if (combat.IsComplete) CombatFinished?.Invoke(combat.EnemyHealth.IsDefeated);
+                var acceptedHost = sessionHost;
+                var acceptedCombat = combat;
+                var runId = acceptedHost.TemporaryExploration?.RunId ?? string.Empty;
+                var nodeId = acceptedHost.TemporaryExploration?.ActiveNodeId ?? string.Empty;
+                _ = CompleteAcceptedActionAsync(acceptedHost, acceptedCombat, runId, nodeId,
+                    actionId, rolls);
                 return true;
             }
             catch (Exception exception)
             {
-                Debug.LogError($"Temporary combat action failed after any already-applied changes: {exception.Message}", this);
-                storyPanel.AddMessage("[전투] 행동 처리 중 오류가 발생했습니다. 이미 적용된 결과는 다시 실행하지 않습니다.");
-                return false;
-            }
-            finally
-            {
+                Debug.LogError($"Temporary combat action could not be accepted: {exception.Message}", this);
+                sessionHost.EndTemporaryDiceAction(actionId);
                 executing = false;
                 menu.RefreshExecutionState();
+                return false;
             }
         }
 
-        private void RecordTurn(IReadOnlyList<PlayerDieRoll> rolls, TemporaryCombatTurnResult turn)
+        private async Task CompleteAcceptedActionAsync(PlayerSessionHost acceptedHost,
+            TemporaryCombatState acceptedCombat, string runId, string nodeId,
+            long actionId, IReadOnlyList<PlayerDieRoll> rolls)
+        {
+            try
+            {
+                await AnimateOrFallbackAsync(acceptedHost, rolls);
+                if (PlayerSessionHost.Instance != acceptedHost ||
+                    acceptedHost.TemporaryExplorationCombat != acceptedCombat ||
+                    (acceptedHost.TemporaryExploration?.RunId ?? string.Empty) != runId ||
+                    (acceptedHost.TemporaryExploration?.ActiveNodeId ?? string.Empty) != nodeId)
+                {
+                    Debug.LogWarning("An accepted dice roll belongs to a previous session or combat and was not applied.");
+                    return;
+                }
+                var diceResults = new List<DiceRollResult>(rolls.Count);
+                for (var i = 0; i < rolls.Count; i++) diceResults.Add(rolls[i].Result);
+                // ExecuteTurn is deliberately invoked once; a partial failure is reported, never retried.
+                var result = acceptedCombat.ExecuteTurn(diceResults);
+                var record = acceptedHost.TemporaryDiceHistory.AddTurn(runId, nodeId, rolls, result);
+                try { acceptedHost.PublishTemporaryDiceStory(record); }
+                catch (Exception exception) { Debug.LogError($"Combat Story display failed: {exception}"); }
+                if (this != null)
+                {
+                    try { ApplyEnemyPresentation(); RefreshPresentation(); }
+                    catch (Exception exception) { Debug.LogWarning($"Combat UI refresh failed: {exception.Message}"); }
+                }
+                if (acceptedCombat.IsComplete)
+                {
+                    try
+                    {
+                        acceptedHost.NotifyTemporaryCombatCompleted(acceptedCombat, acceptedCombat.EnemyHealth.IsDefeated);
+                        if (this != null) CombatFinished?.Invoke(acceptedCombat.EnemyHealth.IsDefeated);
+                    }
+                    catch (Exception exception) { Debug.LogError($"Combat completion notification failed: {exception}"); }
+                }
+                try { acceptedHost.QueueTemporaryDiceResult(record); }
+                catch (Exception exception) { Debug.LogWarning($"Dice result modal could not open: {exception.Message}"); }
+            }
+            catch (Exception exception)
+            {
+                Debug.LogError($"Temporary combat action failed after any already-applied changes: {exception}");
+                if (storyPanel != null)
+                    storyPanel.AddMessage("[전투] 행동 처리 중 오류가 발생했습니다. 이미 적용된 결과는 다시 실행하지 않습니다.");
+            }
+            finally
+            {
+                acceptedHost.EndTemporaryDiceAction(actionId);
+                executing = false;
+                if (menu != null) menu.RefreshExecutionState();
+            }
+        }
+
+        private async Task AnimateOrFallbackAsync(PlayerSessionHost acceptedHost, IReadOnlyList<PlayerDieRoll> rolls)
+        {
+            var panel = ownedDiceBinder != null ? ownedDiceBinder.Panel : null;
+            if (panel == null || !panel.isActiveAndEnabled) return;
+            var display = new DieRollDisplay[rolls.Count];
+            for (var i = 0; i < display.Length; i++)
+                display[i] = new DieRollDisplay(rolls[i].Id, rolls[i].Result.FaceIndex,
+                    rolls[i].Result.EffectKind, rolls[i].Result.Amount);
+            using var cancellation = new CancellationTokenSource();
+            try
+            {
+                var animation = panel.PlayRollAsync(display,
+                    acceptedHost.TemporaryDicePreferences.ReduceMotion, cancellation.Token);
+                var finished = await Task.WhenAny(animation,
+                    Task.Delay(Mathf.CeilToInt(Mathf.Clamp(rollTimeoutSeconds, 1f, 15f) * 1000f)));
+                if (finished != animation)
+                {
+                    cancellation.Cancel();
+                    _ = ObserveLateAnimationAsync(animation);
+                    panel.ShowRollFallback(display);
+                    return;
+                }
+                if (!await animation) panel.ShowRollFallback(display);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning($"Dice animation failed; applying the accepted result: {exception.Message}");
+                if (panel != null) panel.ShowRollFallback(display);
+            }
+        }
+
+        private static async Task ObserveLateAnimationAsync(Task task)
+        { try { await task; } catch (Exception exception) { Debug.LogWarning($"Late dice animation failed: {exception.Message}"); } }
+
+        private void BeginHistoryScope()
+        {
+            var runId = sessionHost?.TemporaryExploration?.RunId ?? string.Empty;
+            var nodeId = sessionHost?.TemporaryExploration?.ActiveNodeId ?? string.Empty;
+            sessionHost?.TemporaryDiceHistory.BeginCombat(runId, nodeId);
+        }
+
+        private void RefreshMenuExecution() => menu?.RefreshExecutionState();
+
+        private void OnStoryReady(TemporaryDiceTurnRecord record)
+        {
+            if (storyPanel == null || !storyPanel.isActiveAndEnabled) return;
+            RecordTurn(record.Rolls, record.Events);
+            sessionHost?.ClearPendingDiceStory(record);
+        }
+
+        private void RecordTurn(IReadOnlyList<PlayerDieRoll> rolls, IReadOnlyList<TemporaryCombatEvent> events)
         {
             var eventIndex = 0;
             for (var i = 0; i < rolls.Count; i++, eventIndex++)
             {
                 var roll = rolls[i];
-                var combatEvent = turn.Events[eventIndex];
+                var combatEvent = events[eventIndex];
                 storyPanel.AddMessage(DiceRollStoryFormatter.Format(roll));
                 switch (combatEvent.Kind)
                 {
@@ -149,9 +266,9 @@ namespace TxTRPG.Application.Dice
                 }
             }
 
-            for (; eventIndex < turn.Events.Count; eventIndex++)
+            for (; eventIndex < events.Count; eventIndex++)
             {
-                var combatEvent = turn.Events[eventIndex];
+                var combatEvent = events[eventIndex];
                 switch (combatEvent.Kind)
                 {
                     case TemporaryCombatEventKind.EnemyAttack:
@@ -174,6 +291,7 @@ namespace TxTRPG.Application.Dice
         {
             ReleaseCombat();
             combat = existingCombat;
+            BeginHistoryScope();
             SubscribeCombat();
             ApplyEnemyPresentation();
             RefreshPresentation();
@@ -238,7 +356,12 @@ namespace TxTRPG.Application.Dice
             combat = null;
         }
 
-        private void OnDestroy() => ReleaseCombat();
+        private void OnDestroy()
+        {
+            if (ownedDiceBinder != null) ownedDiceBinder.BlockingChanged -= RefreshMenuExecution;
+            if (sessionHost != null) sessionHost.TemporaryDiceStoryReady -= OnStoryReady;
+            ReleaseCombat();
+        }
 
 #if UNITY_EDITOR
         public void ConfigureForEditor(
@@ -260,6 +383,7 @@ namespace TxTRPG.Application.Dice
         }
 
         public void SetRandomForTests(IRandomIndexSource source) => random = source;
+        public void ConfigureOwnedDiceForEditor(OwnedDiceSessionBinder binder) => ownedDiceBinder = binder;
 #endif
     }
 }

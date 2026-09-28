@@ -48,6 +48,8 @@ null·빈 면 목록, 역전된 범위, 범위 밖 수치, 미지원 효과와 �
 
 `TemporaryDiceConfiguration`은 AppScene 수명의 `PlayerSessionHost`가 복사하여 소유하는 임시 D4/D6/D8 구성을 제공합니다. 각 기본 주사위는 공격부터 시작하여 공격과 회복이 교대로 배치되고, 수치는 1부터 면 개수까지 증가합니다. Inspector의 각 `Faces` 항목에서 `Effect Kind`와 `Amount`를 개별 설정할 수 있습니다.
 
+`TemporaryPlayerDiceState.Snapshot`, `TryAdd`, `TryRemove`와 `Changed`는 실행 중 보유 변경을 지원합니다. 보유 인스턴스 ID는 같은 정의의 여러 주사위를 구별하며 정의 ID는 `DieShapeCatalog`의 3D 형태를 찾는 데 사용합니다. 추가 시 면 구성을 복사한 뒤 유효한 경우에만 목록에 넣고, 수락된 굴림의 결과는 뒤이은 보유 변경과 무관하게 유지합니다. 표시 구조와 결과 보관 정책은 [보유 주사위 3D 표시](owned-dice-presentation.md)에 설명합니다.
+
 기존 숫자형 기본 자산은 ID, 면 개수, 범위와 `1..N` 값이 모두 알려진 D4/D6/D8 기본 구성과 일치할 때만 생성기가 자동 변환합니다. 사용자 정의 숫자형 구성은 공격과 회복을 임의로 추정하지 않으며, 개발자가 각 효과를 명시할 때까지 생성기가 오류로 중단합니다.
 
 `DiceRollStoryFormatter`는 효과 표시명을 한곳에서 관리합니다. 현재 한국어 기본 공급자는 공격, 회복과 알 수 없는 효과를 구분하며, 향후 로컬라이제이션 공급자로 교체할 수 있습니다. `TemporaryDiceRollMenuController`는 다음 형식으로 결과 사실만 StoryTextPanel에 누적합니다.
