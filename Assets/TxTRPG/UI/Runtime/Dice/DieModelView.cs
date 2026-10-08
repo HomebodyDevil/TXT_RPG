@@ -10,6 +10,8 @@ namespace TxTRPG.UI.Dice
     {
         [SerializeField] private TMP_Text[] faceLabels = Array.Empty<TMP_Text>();
         public int LabelCount => faceLabels?.Length ?? 0;
+        public Transform LabelTransform(int faceIndex) =>
+            (uint)faceIndex < (uint)LabelCount && faceLabels[faceIndex] != null ? faceLabels[faceIndex].transform : null;
         public void SetFaces(IReadOnlyList<DiceFace> faces)
         {
             if (faces == null || faces.Count != LabelCount)

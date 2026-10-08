@@ -39,6 +39,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void GeneratedPrefab_HasPanelAndReplaceable2DView()
         {
             CharacterDisplayPanelPrefabBuilder.CreateOrUpdatePrefab();
@@ -68,6 +69,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void GeneratedStatusPrefabs_UseComposableNonInteractiveHealthBar()
         {
             CharacterStatusPrefabBuilder.CreateOrUpdatePrefabs();
@@ -138,6 +140,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void GeneratedDemo_HasVisiblePreviewAndConnectedLoader()
         {
             CharacterDisplayPanelDemoBuilder.CreateOrUpdateDemo();

@@ -103,6 +103,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void GeneratedPrefab_IsCenteredAndUsesIndependentEffectRoots()
         {
             CharacterStatusPrefabBuilder.CreateOrUpdatePrefabs();
@@ -231,6 +232,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void GeneratedDemo_ContainsNineAlignmentsAndRuntimePulseExample()
         {
             HealthBarPanelDemoBuilder.CreateOrUpdateDemo();

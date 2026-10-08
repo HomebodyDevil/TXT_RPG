@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: TxTRPG.Application::TxTRPG.Application.Dice.TemporaryDiceConfiguration
   enabledForSession: 1
   dice:
-  - id: temporary.d4
-    displayName: D4
+  - id: temporary.d6-secondary
+    displayName: "D6 (보조)"
     faces:
     - effectKind: 1
       amount: 1
@@ -25,9 +25,13 @@ MonoBehaviour:
       amount: 3
     - effectKind: 2
       amount: 4
+    - effectKind: 1
+      amount: 5
+    - effectKind: 2
+      amount: 6
     legacyFaceValues: []
     minimumValue: 1
-    maximumValue: 4
+    maximumValue: 6
   - id: temporary.d6
     displayName: D6
     faces:

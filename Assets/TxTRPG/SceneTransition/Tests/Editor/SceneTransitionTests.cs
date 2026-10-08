@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.TestTools;
 
 namespace TxTRPG.SceneTransition.Tests
 {
@@ -24,6 +26,7 @@ namespace TxTRPG.SceneTransition.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void GeneratedAppScene_HasRequiredHierarchyReferencesAndBuildOrder()
         {
             SceneTransitionPrefabBuilder.CreateOrUpdateAssets();
@@ -295,8 +298,8 @@ namespace TxTRPG.SceneTransition.Tests
             }
         }
 
-        [Test]
-        public async Task FailureAfterLoadThenUnloadCommit_KeepsDestinationScene()
+        [UnityTest]
+        public IEnumerator FailureAfterLoadThenUnloadCommit_KeepsDestinationScene()
         {
             var fixture = CreateServiceFixture();
             var sourceScene = EditorSceneManager.NewPreviewScene();
@@ -309,7 +312,9 @@ namespace TxTRPG.SceneTransition.Tests
                     fixture.Profile,
                     fixture.Blocker,
                     fixture.ErrorFallback);
-                await fixture.Service.LoadInitialContentSceneAsync("Source Scene");
+                var initialLoad = fixture.Service.LoadInitialContentSceneAsync("Source Scene");
+                yield return WaitForCompletion(initialLoad);
+                Assert.That(initialLoad.IsCompletedSuccessfully, Is.True, initialLoad.Exception?.ToString());
 
                 var loader = new TrackingLoader(destinationScene);
                 fixture.Service.Configure(
@@ -319,8 +324,9 @@ namespace TxTRPG.SceneTransition.Tests
                     fixture.Blocker,
                     fixture.ErrorFallback);
 
-                Assert.ThrowsAsync<InvalidOperationException>(async () =>
-                    await fixture.Service.LoadContentSceneAsync("Destination Scene"));
+                var contentLoad = fixture.Service.LoadContentSceneAsync("Destination Scene");
+                yield return WaitForCompletion(contentLoad);
+                AssertFaultedWith<InvalidOperationException>(contentLoad);
 
                 Assert.That(loader.UnloadedScenes, Is.EqualTo(new[] { sourceScene }));
                 Assert.That(fixture.Service.CurrentContentScene, Is.EqualTo(destinationScene));
@@ -375,8 +381,8 @@ namespace TxTRPG.SceneTransition.Tests
             }
         }
 
-        [Test]
-        public void InitializerFailure_UnloadsFailedInitialContentScene()
+        [UnityTest]
+        public IEnumerator InitializerFailure_UnloadsFailedInitialContentScene()
         {
             var fixture = CreateServiceFixture();
             var destination = EditorSceneManager.NewPreviewScene();
@@ -388,8 +394,9 @@ namespace TxTRPG.SceneTransition.Tests
                 loader, new RecordingEffect(), fixture.Profile, fixture.Blocker, fixture.ErrorFallback);
             try
             {
-                Assert.ThrowsAsync<InvalidOperationException>(async () =>
-                    await fixture.Service.LoadInitialContentSceneAsync("Failed Initial Content"));
+                var initialLoad = fixture.Service.LoadInitialContentSceneAsync("Failed Initial Content");
+                yield return WaitForCompletion(initialLoad);
+                AssertFaultedWith<InvalidOperationException>(initialLoad);
                 Assert.That(loader.UnloadedScene, Is.EqualTo(destination));
                 Assert.That(fixture.Service.CurrentContentScene.IsValid(), Is.False);
             }
@@ -421,6 +428,28 @@ namespace TxTRPG.SceneTransition.Tests
             {
                 UnityEngine.Object.DestroyImmediate(root);
             }
+        }
+
+        // Assert.ThrowsAsync blocks the Editor main thread, so a continuation posted back to
+        // Unity's synchronization context never runs. Yield to Editor updates instead.
+        private static IEnumerator WaitForCompletion(Task task, double timeoutSeconds = 10d)
+        {
+            var deadline = EditorApplication.timeSinceStartup + timeoutSeconds;
+            while (!task.IsCompleted)
+            {
+                if (EditorApplication.timeSinceStartup > deadline)
+                {
+                    Assert.Fail($"The asynchronous operation did not finish within {timeoutSeconds} seconds.");
+                }
+                yield return null;
+            }
+        }
+
+        private static void AssertFaultedWith<TException>(Task task)
+            where TException : Exception
+        {
+            Assert.That(task.IsFaulted, Is.True, "The operation was expected to fail.");
+            Assert.That(task.Exception?.GetBaseException(), Is.TypeOf<TException>());
         }
 
         private static ServiceFixture CreateServiceFixture()

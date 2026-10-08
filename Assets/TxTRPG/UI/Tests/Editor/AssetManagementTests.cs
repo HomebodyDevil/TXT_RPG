@@ -53,6 +53,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public async Task ActionGrid_DeduplicatesIconsAndContinuesAfterIndividualFailure()
         {
             ActionGridPrefabBuilder.CreateOrUpdatePrefabs();

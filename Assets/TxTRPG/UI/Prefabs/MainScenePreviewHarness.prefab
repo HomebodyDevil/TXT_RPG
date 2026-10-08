@@ -45,5 +45,5 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TxTRPG.Application::TxTRPG.Application.Presentation.MainScenePreviewHarness
   target: {fileID: 0}
-  profile: {fileID: 0}
+  profile: {fileID: 11400000, guid: 6256ad81721045240ab58fc6e24c5d90, type: 2}
   runOnEnable: 0

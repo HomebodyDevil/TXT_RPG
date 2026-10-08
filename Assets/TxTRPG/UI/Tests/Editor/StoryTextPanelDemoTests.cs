@@ -8,6 +8,7 @@ namespace TxTRPG.UI.Tests
     public sealed class StoryTextPanelDemoTests
     {
         [Test]
+        [Category("AssetWriting")]
         public void GeneratedDemo_ContainsMixedMessagesAndConnectedLoader()
         {
             StoryTextPanelDemoBuilder.CreateOrUpdateDemo();

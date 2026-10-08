@@ -55,6 +55,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void GeneratedPrefab_HasIndependentPanelPooledBackendAndSafeImages()
         {
             EnemyDisplayPanelPrefabBuilder.CreateOrUpdatePrefab();
@@ -84,6 +85,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void Backend_PreservesViewsByInstanceIdAndReusesReleasedView()
         {
             EnemyDisplayPanelPrefabBuilder.CreateOrUpdatePrefab();
@@ -124,6 +126,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void GeneratedDemo_HasThreeVisibleEnemiesAndStartupLoader()
         {
             EnemyDisplayPanelPrefabBuilder.CreateOrUpdatePrefab();

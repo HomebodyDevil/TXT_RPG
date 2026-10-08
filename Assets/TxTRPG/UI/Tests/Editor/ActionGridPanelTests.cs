@@ -146,6 +146,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void RuntimeAlignmentSetters_UpdateIndependentLayoutResponsibilities()
         {
             ActionGridPrefabBuilder.CreateOrUpdatePrefabs();
@@ -206,6 +207,7 @@ namespace TxTRPG.UI.Tests
 
         [TestCase(ScrollbarSide.Left, 24f, 0f)]
         [TestCase(ScrollbarSide.Right, 0f, -24f)]
+        [Category("AssetWriting")]
         public void RuntimeScrollbarSettings_UpdateViewportOffsets(
             ScrollbarSide side,
             float expectedMinX,
@@ -240,6 +242,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void AutoScrollbar_UpdatesVisibilityAndViewportWhenContentOverflowChanges()
         {
             ActionGridPrefabBuilder.CreateOrUpdatePrefabs();
@@ -275,6 +278,7 @@ namespace TxTRPG.UI.Tests
 
         [TestCase(ScrollbarSide.Left)]
         [TestCase(ScrollbarSide.Right)]
+        [Category("AssetWriting")]
         public void SymmetricReservation_UsesSameViewportForEitherScrollbarSide(
             ScrollbarSide side)
         {
@@ -331,6 +335,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void SymmetricReservation_WithoutOppositeArea_KeepsInsetsWithoutException()
         {
             ActionGridPrefabBuilder.CreateOrUpdatePrefabs();
@@ -377,6 +382,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void Capacity_RejectsOccupiedOverflowByDefault()
         {
             ActionGridPrefabBuilder.CreateOrUpdatePrefabs();
@@ -395,6 +401,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void RemoveEntry_CompactsEntriesAndKeepsCapacityCells()
         {
             ActionGridPrefabBuilder.CreateOrUpdatePrefabs();
@@ -416,6 +423,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void GeneratedPanel_HasConfigurableScrollbar()
         {
             ActionGridPrefabBuilder.CreateOrUpdatePrefabs();
@@ -424,6 +432,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void GeneratedPanel_ActionGridOwnsContentHeight()
         {
             ActionGridPrefabBuilder.CreateOrUpdatePrefabs();
@@ -438,6 +447,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void VerticalPlacement_CentersFittingContentAndTopsOverflowingContent()
         {
             ActionGridPrefabBuilder.CreateOrUpdatePrefabs();
@@ -493,6 +503,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void GeneratedPanel_ScrollViewOuterMarginsPreservePanelCenter()
         {
             ActionGridPrefabBuilder.CreateOrUpdatePrefabs();
@@ -526,6 +537,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void GeneratedPanel_InitiallyShowsCapacityAsEmptySlots()
         {
             ActionGridPrefabBuilder.CreateOrUpdatePrefabs();
@@ -566,6 +578,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void InitialContentCompletion_ResetsOverflowToTopOnlyOnce()
         {
             ActionGridPrefabBuilder.CreateOrUpdatePrefabs();
@@ -597,6 +610,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void AddingEntry_ReplacesFirstEmptySlotAndPreservesCapacitySlots()
         {
             ActionGridPrefabBuilder.CreateOrUpdatePrefabs();
@@ -674,6 +688,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void GeneratedPrefabs_HaveRequiredBoundariesAndReferences()
         {
             ActionGridPrefabBuilder.CreateOrUpdatePrefabs();
@@ -701,6 +716,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void GeneratedDemo_ShowsMixedEntriesAndContextMenuPreview()
         {
             ActionGridPrefabBuilder.CreateOrUpdatePrefabs();

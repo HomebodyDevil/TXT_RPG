@@ -63,6 +63,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void UpgradedPrefab_PersistsRelativeLayoutAndOtherOverlayRects()
         {
             ActionGridPrefabBuilder.UpgradeCellIconLayout();

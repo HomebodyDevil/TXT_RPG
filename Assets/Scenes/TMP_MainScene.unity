@@ -386,7 +386,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6452058876995974523, guid: e61ab21a9e7daec4eaa639cfc7a2138e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 151308961}
   m_SourcePrefab: {fileID: 100100000, guid: e61ab21a9e7daec4eaa639cfc7a2138e, type: 3}
 --- !u!20 &151308958 stripped
 Camera:
@@ -398,6 +401,40 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 3190949810810599401, guid: e61ab21a9e7daec4eaa639cfc7a2138e, type: 3}
   m_PrefabInstance: {fileID: 151308957}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &151308960 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6452058876995974523, guid: e61ab21a9e7daec4eaa639cfc7a2138e, type: 3}
+  m_PrefabInstance: {fileID: 151308957}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &151308961
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 151308960}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
+  m_UsePipelineSettings: 1
+  m_AdditionalLightsShadowResolutionTier: 2
+  m_CustomShadowLayers: 0
+  m_LightCookieSize: {x: 1, y: 1}
+  m_LightCookieOffset: {x: 0, y: 0}
+  m_SoftShadowQuality: 0
+  m_RenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_ShadowRenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_Version: 4
+  m_LightLayerMask: 1
+  m_ShadowLayerMask: 1
+  m_RenderingLayers: 1
+  m_ShadowRenderingLayers: 1
 --- !u!1 &151493216
 GameObject:
   m_ObjectHideFlags: 0
@@ -1888,6 +1925,10 @@ PrefabInstance:
       propertyPath: m_AnchorMax.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5379984109691728325, guid: 710e05e333125844981c6a744671bbf0, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5569213878491360316, guid: 710e05e333125844981c6a744671bbf0, type: 3}
       propertyPath: m_AnchorMax.x
       value: 1
@@ -2070,7 +2111,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 9161654177319963763, guid: 710e05e333125844981c6a744671bbf0, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -5665,7 +5706,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2753455743794963697, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 144
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2753455743794963697, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       propertyPath: m_AnchoredPosition.y

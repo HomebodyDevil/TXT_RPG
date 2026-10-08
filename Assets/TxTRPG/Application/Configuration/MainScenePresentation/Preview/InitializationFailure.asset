@@ -9,10 +9,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 0}
+  m_Script: {fileID: 11500000, guid: a940b3619fdd152439ac8aed7492042a, type: 3}
   m_Name: InitializationFailure
-  m_EditorClassIdentifier: TxTRPG.Application:TxTRPG.Application.Presentation:MainScenePreviewProfile
-  scenario: 0
-  storyData: {fileID: 0}
-  enemyData: {fileID: 0}
-  simulatedDelay: 0.5
+  m_EditorClassIdentifier: TxTRPG.Application::TxTRPG.Application.Presentation.MainScenePreviewProfile
+  scenario: 5
+  storyData: {fileID: 11400000, guid: 024d8acfa9461954a8ede9a10cd03b77, type: 2}
+  enemyData: {fileID: 11400000, guid: 860d214cb3bf0e648924653a1cfd49ca, type: 2}
+  simulatedDelay: 0

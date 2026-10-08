@@ -8,6 +8,7 @@ namespace TxTRPG.UI.Tests
     public sealed class StoryTextPanelEditModePreviewTests
     {
         [Test]
+        [Category("AssetWriting")]
         public void RebuiltDemoPrefab_ContainsOnePreviewItemPerDemoEntry()
         {
             StoryTextPanelDemoBuilder.CreateOrUpdateDemo();

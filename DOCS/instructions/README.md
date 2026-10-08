@@ -6,6 +6,8 @@
 
 | 문서 | 설명 |
 | --- | --- |
+| [Edit Mode 테스트 실패 5건 정리](editmode-test-failure-cleanup.md) | 멈춤 수정 후 드러난 SceneTransition·Main Scene·StoryTextPanel·메뉴 테스트 실패의 원인을 확정하고 테스트·메뉴·자산을 정리합니다. |
+| [보유 주사위 던지기 연출](owned-dice-physics-throw.md) | 확정 결과를 유지한 채 표시 영역 안으로 주사위를 던지는 물리 사전 계산·보정 재생과 윗면 평행 조건, 기본 D4의 D6 교체를 구현합니다. |
 | [보유 주사위 3D 패널과 굴림 결과](owned-dice-3d-panel-and-roll-results.md) | 트리 부모 레이아웃, D4·D6·D8 보유 표시, 확률 기반 굴림 연출과 전투별 결과 모달을 구현합니다. |
 | [Editor 레이아웃·자동화 경고 수정](editor-console-layout-and-automation-warnings.md) | OnValidate의 안전한 UI 갱신, 메뉴 준비 상태 판정과 Pipeline·UnitySkills 연결 진단을 정의합니다. |
 | [탐험 기록 트리 패널](exploration-node-tree-panel.md) | 선택·미선택 후보와 실제 진행 경로를 세로 트리로 표시하고 노드·선 이미지 교체 및 효과 확장을 지원합니다. |

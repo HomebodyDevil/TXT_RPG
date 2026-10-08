@@ -38,6 +38,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void GeneratedPanelPrefab_HasRequiredReferences()
         {
             StoryTextPanelPrefabBuilder.CreateOrUpdatePrefabs();
@@ -83,6 +84,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void Panel_CanClearAndResetDefaultBackground()
         {
             StoryTextPanelPrefabBuilder.CreateOrUpdatePrefabs();

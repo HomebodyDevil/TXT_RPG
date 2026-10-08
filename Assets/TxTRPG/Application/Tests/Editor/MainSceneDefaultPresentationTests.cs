@@ -22,6 +22,7 @@ namespace TxTRPG.Application.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void AssetBuilder_CreatesDeploymentAndIsolatedPreviewProfiles()
         {
             var defaults = MainSceneDefaultContentBuilder.CreateOrUpdateAssets();

@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,6 +11,7 @@ using TxTRPG.Application.Players;
 using TxTRPG.Gameplay.Players;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace TxTRPG.Application.Tests
 {
@@ -90,8 +92,8 @@ namespace TxTRPG.Application.Tests
                 Does.Not.Contain("PanelStartupController"));
         }
 
-        [Test]
-        public void StatusBinder_WithoutStatusPanel_IsAValidOptionalConfiguration()
+        [UnityTest]
+        public IEnumerator StatusBinder_WithoutStatusPanel_IsAValidOptionalConfiguration()
         {
             var instance = new GameObject(
                 "OptionalStatusBinder",
@@ -99,8 +101,10 @@ namespace TxTRPG.Application.Tests
             try
             {
                 var binder = instance.GetComponent<ActiveCharacterStatusBinder>();
-                Assert.DoesNotThrowAsync(async () =>
-                    await binder.InitializeAsync(default, CancellationToken.None));
+                var initialization = binder.InitializeAsync(default, CancellationToken.None);
+                yield return WaitForCompletion(initialization);
+                Assert.That(initialization.Exception, Is.Null);
+                Assert.That(initialization.IsCanceled, Is.False);
             }
             finally
             {
@@ -155,8 +159,8 @@ namespace TxTRPG.Application.Tests
             Assert.That(restoreGenerator.CallCount, Is.Zero);
         }
 
-        [Test]
-        public void InvalidSave_FailsWithoutReplacingStoredData()
+        [UnityTest]
+        public IEnumerator InvalidSave_FailsWithoutReplacingStoredData()
         {
             var repository = new FailingLoadRepository();
             var session = new PlayerSession(
@@ -164,14 +168,15 @@ namespace TxTRPG.Application.Tests
                 repository,
                 new FixedIdGenerator("unused"));
 
-            Assert.ThrowsAsync<InvalidDataException>(async () =>
-                await session.InitializeAsync(CancellationToken.None));
+            var initialization = session.InitializeAsync(CancellationToken.None);
+            yield return WaitForCompletion(initialization);
+            AssertFaultedWith<InvalidDataException>(initialization);
             Assert.That(session.IsReady, Is.False);
             Assert.That(repository.SaveCallCount, Is.Zero);
         }
 
-        [Test]
-        public void LocalRepository_InvalidJsonIsPreserved()
+        [UnityTest]
+        public IEnumerator LocalRepository_InvalidJsonIsPreserved()
         {
             var folder = Path.Combine(
                 Path.GetTempPath(),
@@ -182,8 +187,9 @@ namespace TxTRPG.Application.Tests
             try
             {
                 var repository = new LocalPlayerSaveRepository(path);
-                Assert.ThrowsAsync<InvalidDataException>(async () =>
-                    await repository.TryLoadAsync(CancellationToken.None));
+                var load = repository.TryLoadAsync(CancellationToken.None);
+                yield return WaitForCompletion(load);
+                AssertFaultedWith<InvalidDataException>(load);
                 Assert.That(File.ReadAllText(path), Is.EqualTo("{ invalid save"));
             }
             finally
@@ -193,6 +199,28 @@ namespace TxTRPG.Application.Tests
                     Directory.Delete(folder, true);
                 }
             }
+        }
+
+        // Assert.ThrowsAsync blocks the Editor main thread, so a continuation posted back to
+        // Unity's synchronization context never runs. Yield to Editor updates instead.
+        private static IEnumerator WaitForCompletion(Task task, double timeoutSeconds = 10d)
+        {
+            var deadline = EditorApplication.timeSinceStartup + timeoutSeconds;
+            while (!task.IsCompleted)
+            {
+                if (EditorApplication.timeSinceStartup > deadline)
+                {
+                    Assert.Fail($"The asynchronous operation did not finish within {timeoutSeconds} seconds.");
+                }
+                yield return null;
+            }
+        }
+
+        private static void AssertFaultedWith<TException>(Task task)
+            where TException : Exception
+        {
+            Assert.That(task.IsFaulted, Is.True, "The operation was expected to fail.");
+            Assert.That(task.Exception?.GetBaseException(), Is.TypeOf<TException>());
         }
 
         private sealed class FixedIdGenerator : ICharacterInstanceIdGenerator

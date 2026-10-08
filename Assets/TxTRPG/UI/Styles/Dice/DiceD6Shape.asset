@@ -13,13 +13,32 @@ MonoBehaviour:
   m_Name: DiceD6Shape
   m_EditorClassIdentifier: TxTRPG.UI::TxTRPG.UI.Dice.DieShapeDefinition
   definitionId: temporary.d6
+  additionalDefinitionIds:
+  - temporary.d6-secondary
   modelPrefab: {fileID: 2925345256245603717, guid: de24e85dff1edcf4a8189058ab4464ee, type: 3}
-  facePoseEuler:
-  - {x: 331.3146, y: 43.15239, z: 65.772255}
-  - {x: 331.3146, y: 316.8476, z: 294.22775}
-  - {x: 323.1301, y: 0, z: 0}
-  - {x: 36.869907, y: 180, z: 180}
-  - {x: 306.8699, y: 180, z: 180}
-  - {x: 53.130104, y: 0, z: 0}
   readingRule: "\uC704\uCABD\uC774\uBA70 \uCE74\uBA54\uB77C\uC5D0\uC11C \uBCF4\uC774\uB294
     \uC0AC\uAC01\uD615 \uBA74\uC744 \uC77D\uC2B5\uB2C8\uB2E4."
+  facePoseEuler:
+  - {x: -0, y: 90, z: 90}
+  - {x: -0, y: 270, z: 270}
+  - {x: -0.0000068301883, y: 0, z: 0}
+  - {x: 0.0000068301883, y: 0, z: 180}
+  - {x: 270, y: 180, z: 0}
+  - {x: 90, y: 0, z: 0}
+  faceNormals:
+  - {x: 1, y: -0, z: -0}
+  - {x: -1, y: -0, z: -0}
+  - {x: -0, y: 1, z: -0}
+  - {x: 0, y: -1, z: -0}
+  - {x: -0, y: -0, z: 1}
+  - {x: -0, y: -0, z: -1}
+  faceReadingUps:
+  - {x: 0, y: 1, z: 0}
+  - {x: 0, y: 1, z: 0}
+  - {x: 0, y: -0.00000011920929, z: 1.0000001}
+  - {x: 0, y: -0.00000011920929, z: 1.0000001}
+  - {x: 0, y: 1, z: 0}
+  - {x: 0, y: 1, z: 0}
+  colliderMesh: {fileID: 4300000, guid: 0045b2fb1d1da8647b7452a848e35957, type: 2}
+  restHeight: 1
+  boundingRadius: 1.7320508

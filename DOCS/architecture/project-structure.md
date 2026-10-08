@@ -20,6 +20,7 @@
 ```text
 TxT-RPG/
 ├── AGENTS.md
+├── CLAUDE.md
 ├── DOCS/
 │   ├── README.md
 │   ├── architecture/
@@ -77,6 +78,15 @@ TxT-RPG/
 ├── Packages/
 └── ProjectSettings/
 ```
+
+### 에이전트 지침 파일
+
+저장소 루트의 에이전트 지침은 `AGENTS.md` 하나를 원본으로 유지합니다. 지침을 추가하거나 변경할 때는 `AGENTS.md`만 수정합니다.
+
+| 파일 | 역할 |
+| --- | --- |
+| `AGENTS.md` | 모든 AI 에이전트가 따르는 프로젝트 지침의 원본입니다. Codex는 이 파일을 직접 읽습니다. |
+| `CLAUDE.md` | Claude Code가 자동으로 읽는 진입 파일입니다. `@AGENTS.md` import 한 줄만 포함하여 `AGENTS.md`의 내용을 그대로 불러옵니다. 별도 지침을 이 파일에 추가하지 않습니다. |
 
 ### `Assets/TxTRPG/SceneTransition`
 
@@ -305,7 +315,7 @@ flowchart TD
 
 `Assets/TxTRPG/Application/Runtime/Dice/`는 PlayerSession 수명의 임시 주사위 보유 상태와 TMP_MainScene 표시 어댑터와 로컬라이제이션 가능한 효과 표시명 경계를 포함합니다. 영구 Gameplay Dice 규칙은 계속 `Assets/TxTRPG/Gameplay/Runtime/Dice/`에 있으며 저장 모델과 분리됩니다.
 
-`Application/Runtime/Dice`의 `TemporaryDiceRollHistory`와 `OwnedDiceSessionBinder`는 전투별 결과 수명 및 UI 바인딩을 담당합니다. `UI/Runtime/Dice`에는 Application 역참조 없이 3D 모델·Stage 표시, 형태 카탈로그와 결과 창이 있습니다. `UI/Prefabs/Dice`와 `UI/Styles/Dice`는 기본 D4·D6·D8 모델, Stage, 메시·형태 정의를 저장합니다. 적용 메뉴 `Application/Editor/TemporaryOwnedDiceIntegration.cs`는 Scene 작업이 섞이므로 생산 Prefab 배치에서 제외하며 일회성 자산 생성·Scene 통합·검증에만 사용합니다. 자세한 내용은 [보유 주사위 3D 표시](owned-dice-presentation.md)를 참고합니다.
+`Application/Runtime/Dice`의 `TemporaryDiceRollHistory`와 `OwnedDiceSessionBinder`는 전투별 결과 수명 및 UI 바인딩을 담당합니다. `UI/Runtime/Dice`에는 Application 역참조 없이 3D 모델·Stage 표시, 형태 카탈로그, 결과 창과 던지기 연출(`DiceThrowSimulator`의 격리 물리 Scene, `DiceTrajectory` 재생, 순수 계산 `DieFaceGeometry`·`DiceArenaLayout`, Prefab 내부 참조 `DiceStageRig`)이 있습니다. UI 런타임은 Unity 내장 Physics 모듈만 사용합니다. `UI/Prefabs/Dice`와 `UI/Styles/Dice`는 기본 D6·D8 모델, 바닥이 있는 Stage, 메시·형태 정의와 재질을 저장합니다. 적용 메뉴 `Application/Editor/TemporaryOwnedDiceIntegration.cs`와 Play Mode 검증 메뉴 `Application/Editor/OwnedDiceThrowValidation.cs`는 Scene 작업이 섞이므로 생산 Prefab 배치에서 제외하며 일회성 자산 생성·Scene 통합·검증에만 사용합니다. 자세한 내용은 [보유 주사위 3D 표시](owned-dice-presentation.md)를 참고합니다.
 
 
 ### 임시 적 전투

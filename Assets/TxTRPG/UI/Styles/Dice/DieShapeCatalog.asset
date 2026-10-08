@@ -13,6 +13,5 @@ MonoBehaviour:
   m_Name: DieShapeCatalog
   m_EditorClassIdentifier: TxTRPG.UI::TxTRPG.UI.Dice.DieShapeCatalog
   shapes:
-  - {fileID: 11400000, guid: f6ea476dea2e26548b122ad3fd07ab75, type: 2}
   - {fileID: 11400000, guid: 486f73ff768ad184a89970dd0bece20f, type: 2}
   - {fileID: 11400000, guid: 7a81cad176c0d02469ccb6bc0fc81ba3, type: 2}

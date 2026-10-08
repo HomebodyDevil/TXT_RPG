@@ -51,6 +51,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void UpgradedPrefab_PersistsIndependentEmptySlotLayout()
         {
             ActionGridPrefabBuilder.UpgradeCellEmptySlotLayout();

@@ -353,6 +353,25 @@ Edit Mode 테스트는 `Assets/TxTRPG/UI/Tests/Editor`, `Assets/TxTRPG/Applicati
 - `CharacterDomainTests`는 Stat, Health, 피해 계산과 단일 캐릭터 저장 호환성을 검증합니다.
 - `PlayerStateTests`는 Definition ID와 Instance ID 분리, 활성 캐릭터 변경, 제거 규칙, 복수 캐릭터 저장과 기존 단일 저장 변환을 검증합니다.
 
+### 자산을 다시 쓰는 테스트와 실행 범위
+
+운영 Builder(`CreateOrUpdate*`, `Upgrade*`)를 호출해 저장된 Scene, Prefab, 설정 자산을 다시 쓰는 Edit Mode 테스트에는 `[Category("AssetWriting")]`이 붙어 있습니다. 대상은 `ActionGridPanelTests`, `ActionGridCell*SizingTests`, `AssetManagementTests`, `CharacterDisplayPanelTests`, `EnemyDisplayPanelTests`, `HealthBarPanelTests`, `FlexibleLayoutPanelTests`, `StoryTextPanel*Tests`, `MainSceneDefaultPresentationTests`, `SceneTransitionTests`, `MainSceneVisualProposalTests`의 해당 메서드입니다. 임시 폴더에 자산을 만들고 테스트 끝에 지우는 테스트와, 저장된 자산을 검증만 하는 테스트는 이 분류에 넣지 않습니다.
+
+`MainSceneVisualProposalTests`는 클래스 전체에 `[Explicit]`도 붙어 있습니다. 이 테스트는 `MainScene_VisualProposal.unity`, `MainScenePresentation/Preview/*.asset`, `MainScenePreviewHarness.prefab`과 Build Settings를 다시 쓰고 실행 시간이 길기 때문에, 전체 실행이나 분류 필터 실행에서 빠집니다. `MainSceneVisualProposalBuilder`를 변경했을 때만 Test Runner 창에서 이 클래스를 직접 선택하거나 이름으로 지정해서 실행합니다.
+
+평소에는 변경과 관련된 테스트 클래스나 어셈블리만 실행하고, `AssetWriting` 분류는 해당 Builder나 그 Builder가 만드는 자산을 변경했을 때만 실행합니다.
+
+- Test Runner 창에서는 실행할 테스트 클래스나 메서드를 선택해서 실행합니다. 창의 Category 필터는 선택한 분류를 포함하는 방식이므로, 분류를 제외하는 용도로는 쓸 수 없습니다.
+- 명령줄에서는 `-testCategory`에 `!`를 붙여 분류를 제외합니다. 여러 값은 세미콜론(`;`)으로 구분합니다. 프로젝트를 Editor에서 열어 둔 상태에서는 배치 모드로 같은 프로젝트를 실행할 수 없습니다.
+
+```text
+Unity.exe -batchmode -projectPath <프로젝트 경로> -runTests -testPlatform EditMode -assemblyNames "TxTRPG.UI.Tests.Editor" -testCategory "!AssetWriting" -testResults <결과 파일 경로>
+```
+
+Edit Mode 테스트에서 `Assert.ThrowsAsync`, `Assert.DoesNotThrowAsync`로 실제 비동기 대기(`Task.Yield`, 비동기 파일 입출력, Scene 전환 대기 등)를 기다리지 않습니다. 이 Assert는 Editor 메인 스레드를 막은 채 기다리는데, Unity 동기화 컨텍스트로 돌아와야 하는 후속 코드도 같은 메인 스레드에서 실행되므로 Test Runner가 교착됩니다. 이런 테스트는 `[UnityTest]` 코루틴에서 `Task.IsCompleted`를 프레임마다 확인하고 제한 시간을 두며, 완료 후 `Task.Exception`으로 예외 형식을 검증합니다. `PlayerSessionTests`와 `SceneTransitionTests`의 `WaitForCompletion` 헬퍼가 이 방식을 사용합니다.
+
+실행 전에 Git 상태를 기록해 두고, 실행 후 작업과 관계없는 자산이 바뀌었으면 실행 전에 깨끗했던 파일만 되돌립니다. 새 테스트가 운영 Builder를 호출하거나 임시 폴더 밖에 자산을 저장하면 같은 분류를 붙이고, 느리거나 관련 없는 자산에 diff를 남기면 이유와 함께 `[Explicit]`도 붙입니다.
+
 ## 캐릭터 콘텐츠 제작과 검사
 
 1. 프로젝트에 저장된 `CharacterContentCatalog`와 기본 Sprite를 준비합니다.
@@ -873,10 +892,31 @@ UnitySkills는 `Window > UnitySkills`에서 포트와 서버 상태를 확인하
 
 ## 보유 주사위 3D 패널과 결과 기록
 
-운영 자산은 `Assets/Scenes/TMP_MainScene.unity`, `Assets/TxTRPG/UI/Prefabs/Dice/`, `Assets/TxTRPG/UI/Styles/Dice/`에 저장합니다. `Tools > TxT RPG > UI > Dice > Temporary > Create Base Dice Assets`는 기본 D4·D6·D8의 생성기 소유 메시·모델 라벨과 Stage를 생성·동기화합니다. 형태 정의와 카탈로그가 이미 있으면 보존하며, 기존 모델은 생성기 소유 면 라벨의 방향과 크기만 갱신합니다. 이 메뉴는 자산을 자동 저장하고 재실행할 수 있습니다. 다른 모델로 교체하기 전에는 모델 Prefab을 별도 이름으로 복제한 뒤 Shape의 참조를 바꿉니다.
+운영 자산은 `Assets/Scenes/TMP_MainScene.unity`, `Assets/TxTRPG/UI/Prefabs/Dice/`, `Assets/TxTRPG/UI/Styles/Dice/`에 저장합니다. 구조와 연출 순서는 [보유 주사위 3D 표시](../architecture/owned-dice-presentation.md)를 참고합니다.
 
-`Tools > TxT RPG > UI > Dice > Temporary > Apply Owned Dice To TMP Main Scene`은 저장된 `TMP_MainScene`이 Edit Mode에서 열려 있고 미저장 변경이 없을 때 한 번 실행합니다. 기존 `NodeTreePanel`을 새 `ExplorationAndDicePanel` 안으로 옮기고 `OwnedDicePanel`, 격리된 `DiceStage`, 공통 결과 페이지, 명시적 Binder 참조와 좁은 화면 높이를 연결합니다. 기존 패널을 다시 생성하지 않습니다. Scene은 자동 저장하지 않으므로 `Tools > TxT RPG > UI > Dice > Temporary > Validate Owned Dice Scene`의 성공 로그를 확인하고 변경 범위를 검토한 뒤 저장합니다. 같은 부모가 이미 있으면 적용 메뉴는 연결 상태만 검증하고 기존 값을 보존합니다. 오류가 나면 추가 저장을 멈추고 Editor Undo나 작업 전 Scene 사본으로 복구합니다. 운영 Scene에는 이미 적용·저장되어 있으므로 현재 작업 사본에서 사용자가 이 메뉴를 다시 실행할 필요는 없습니다. 임시 메뉴는 다른 작업 사본의 적용 가능성을 확인한 후 퇴역할 수 있습니다. Scene 작업이 섞여 있으므로 production Prefab rebuild batch에는 등록하지 않습니다.
+`Tools > TxT RPG > UI > Dice > Temporary > Create Base Dice Assets`는 Edit Mode에서 컴파일이 끝난 뒤 실행하며, 자산을 자동 저장하고 재실행할 수 있습니다. 생성기가 소유하는 부분만 생성·동기화합니다.
 
-초기 보유 주사위는 `TemporaryDiceConfiguration`의 Dice와 각 Faces에서 조정합니다. 실행 중 변경은 `PlayerSessionHost.TemporaryDice.TryAdd(instanceId, definitionId, displayName, faces, minimumValue, maximumValue, out reason)`와 `TryRemove(instanceId)`를 사용합니다. 같은 형태를 여러 개 보유하려면 서로 다른 인스턴스 ID와 같은 정의 ID를 전달합니다. 새 다면체는 `DieModelView`가 붙은 Prefab과 `DieShapeDefinition`의 면 인덱스별 자세·읽기 규칙을 만든 뒤 `DieShapeCatalog`에 등록합니다. `OwnedDicePanel`의 `rollDuration`, `reducedMotionDuration`, `maximumTextureDimension`, 내부 FlexibleLayoutItem의 가중치·최소 높이와 `ResponsiveMainScreen.narrowHeights[0]`은 Inspector에서 조정합니다. `TemporaryDiceRollMenuController`의 `historyMode`, `maximumHistoryCombats`, `rollTimeoutSeconds`는 전투별 기록·실패 시간을 정합니다. 자동 결과 표시와 모션 감소는 세션의 `TemporaryDicePreferences.AutoShowResults`, `ReduceMotion`에서 런타임 변경하며 영구 저장·옵션 UI는 아직 없습니다.
+- 기본 D6·D8 메시와 모델 Prefab, 면 라벨의 위치·방향·크기(`fontSize` 11, 배율 0.34)
+- 생성 모델을 계속 쓰는 형태 자산의 `faceNormals`, `faceReadingUps`, `facePoseEuler`(새 카메라 기준 정지 자세), `colliderMesh`, `restHeight`, `boundingRadius`. 개발자가 `modelPrefab`을 다른 모델로 바꾼 형태는 경고만 남기고 덮어쓰지 않습니다.
+- D6 형태의 별칭 `temporary.d6-secondary`가 없으면 추가합니다. `definitionId`, 다른 별칭, `readingRule`은 개발자 값으로 보존합니다.
+- 카탈로그에서 이전 D4 형태와 누락된 참조를 빼고 D6·D8을 보장합니다.
+- `DiceStage.prefab`의 `DiceStageRig`, `Floor`(`DiceFloor.mat`), 기울인 직교 카메라 기본값. Stage 인스턴스의 Scene Override(이름, 위치, URP 조명 데이터)는 그대로 유지됩니다.
 
-검증은 `Assets/Scenes/AppScene.unity`의 시작 경로 또는 저장된 `TMP_MainScene`의 Play Mode에서 합니다. 전투 카드를 선택하고 Actions의 주사위 명령을 실행하면 모든 모델이 결과 면으로 정지한 뒤 체력·Story·기록이 한 번 갱신되고 결과 창이 열려야 합니다. 확인 또는 바깥 클릭·탭으로 닫고 `OwnedDicePanel/ResultsButton`으로 다시 엽니다. `Tools > TxT RPG > UI > Dice > Temporary > Validate Play Flow`는 새 탐험의 전투 후보가 있는 Play Mode에서 두 행동, 연타 차단, 패널 숨김 중 수락 결과 완료, 자동 표시 끄기와 수동 재열기, Story·기록 및 390×844 가상 Viewport의 전체 스크롤·RenderTexture를 검사하는 일회성 검증 메뉴이며 Play 상태만 변경합니다. 검증이 통과하면 결과 창을 열어 둔 채 종료하므로 화면을 확인한 뒤 Play Mode를 끝냅니다. Edit Mode의 `OwnedDiceIntegrationTests`, `TemporaryPlayerDiceStateTests`와 탐험 트리의 Play Mode 회귀 테스트도 확인합니다. 실제 휴대폰·태블릿의 Safe Area와 터치, 컨트롤러, 대상 Player 빌드와 지속 성능은 별도 장치 검증이 필요합니다.
+마지막에 자산 검증을 실행하고 `OWNED_DICE_ASSETS: ...` 로그를 남깁니다. 실패하면 오류 목록을 확인하고 원인을 고친 뒤 다시 실행합니다. 검증만 하려면 `Tools > TxT RPG > UI > Dice > Temporary > Validate Base Dice Assets`를 사용합니다. 이 메뉴는 카탈로그의 모든 형태가 윗면 평행 조건과 대칭 보정을 만족하는지, 면 인덱스·메시 면 순서·`Face{n}` 라벨·정지 자세가 일치하는지, Stage Rig가 완전한지 확인하며 자산을 바꾸지 않습니다.
+
+새 다면체를 추가하려면 `DieModelView`가 붙은 모델 Prefab과 면 인덱스 순서의 법선·라벨 위쪽 방향·정지 자세·볼록 충돌 메시·`restHeight`·`boundingRadius`를 가진 `DieShapeDefinition`을 만들고 `DieShapeCatalog`에 등록합니다. 모든 면에 평행한 반대 면이 있어야 하며(정육면체, 정팔면체, 정십이면체, 정이십면체), 정사면체처럼 조건을 만족하지 않는 형태는 카탈로그가 반환하지 않습니다. 같은 모델을 다른 정의 ID로 쓰려면 형태를 복제하지 말고 `additionalDefinitionIds`에 추가합니다.
+
+`Tools > TxT RPG > UI > Dice > Temporary > Apply Owned Dice To TMP Main Scene`은 저장된 `TMP_MainScene`이 Edit Mode에서 열려 있고 미저장 변경이 없을 때 한 번 실행합니다. 기존 `NodeTreePanel`을 새 `ExplorationAndDicePanel` 안으로 옮기고 `OwnedDicePanel`, 격리된 `DiceStage`, 공통 결과 페이지, 명시적 Binder 참조와 좁은 화면 높이를 연결합니다. 기존 패널을 다시 생성하지 않습니다. Scene은 자동 저장하지 않으므로 `Tools > TxT RPG > UI > Dice > Temporary > Validate Owned Dice Scene`의 성공 로그를 확인하고 변경 범위를 검토한 뒤 저장합니다. 같은 부모가 이미 있으면 적용 메뉴는 연결 상태만 검증하고 기존 값을 보존합니다. 운영 Scene에는 이미 적용·저장되어 있으므로 현재 작업 사본에서 다시 실행할 필요는 없습니다. Scene 작업이 섞여 있으므로 production Prefab rebuild batch에는 등록하지 않습니다. 물리 던지기 연출은 Scene 연결을 바꾸지 않았습니다. `OwnedDicePanel`의 새 `arenaSettings`, `throwSettings`, `fallbackDuration`, `debugThrowSeed`는 Scene에 아직 직렬화되지 않았으므로 코드 기본값을 사용하며, Inspector에서 값을 바꾸고 Scene을 저장하면 그 값이 기록됩니다. 이전 `rollDuration` 값은 Scene 파일에 남아 있어도 사용하지 않습니다.
+
+초기 보유 주사위는 `TemporaryDiceConfiguration`의 Dice와 각 Faces에서 조정합니다. 기본은 `D6 (보조)`, `D6`, `D8`입니다. `Tools > TxT RPG > Application > Temporary > Apply Player Dice Roll Menu`의 구성 생성 경로는 바뀌지 않은 이전 기본 D4 항목만 같은 위치의 `D6 (보조)`로 교체합니다. 실행 중 변경은 `PlayerSessionHost.TemporaryDice.TryAdd(instanceId, definitionId, displayName, faces, minimumValue, maximumValue, out reason)`와 `TryRemove(instanceId)`를 사용합니다. 같은 형태를 여러 개 보유하려면 서로 다른 인스턴스 ID와 같은 정의 ID를 전달합니다.
+
+연출 설정은 `OwnedDicePanel` Inspector의 `arenaSettings`(카메라 기울기·거리, 화면 여백, 천장 높이, 정돈 간격, 주사위당 칸 수, 최소 바닥 크기)와 `throwSettings`(시뮬레이션 간격·최대 시간·재시도, 중력, 정지 기준, 던지기 속도·회전, 반발·마찰·감쇠, 재생 속도, 들어 올리기 시간, 시드 로그), `fallbackDuration`, `reducedMotionDuration`, `maximumTextureDimension`에서 조정합니다. `debugThrowSeed`를 0이 아닌 값으로 두면 같은 연출을 재현합니다. Editor와 개발 빌드에서는 `OWNED_DICE_THROW: seed=... attempts=... simulateMs=... replay=...` 로그로 시드와 계산 시간을 확인합니다. `maximumSimulationSeconds / playbackSpeed + liftDuration`은 `TemporaryDiceRollMenuController.rollTimeoutSeconds`보다 충분히 짧게 유지합니다. 내부 FlexibleLayoutItem의 가중치·최소 높이와 `ResponsiveMainScreen.narrowHeights[0]`, `historyMode`, `maximumHistoryCombats`, `rollTimeoutSeconds`는 기존과 같습니다. 자동 결과 표시와 모션 감소는 세션의 `TemporaryDicePreferences.AutoShowResults`, `ReduceMotion`에서 런타임 변경하며 영구 저장·옵션 UI는 아직 없습니다.
+
+검증은 `Assets/Scenes/AppScene.unity`의 시작 경로 또는 저장된 `TMP_MainScene`의 Play Mode에서 합니다. Play를 시작하기 전에 Edit Mode에서 Scene을 디스크 상태로 다시 열어 두면 새 직렬화 필드가 코드 기본값으로 초기화됩니다.
+
+1. 전투 카드를 선택하고 Actions의 주사위 명령을 실행합니다. 주사위가 카메라 쪽에서 먼 쪽으로 던져져 벽과 서로에 부딪히며 구르고, 바닥과 평행한 윗면이 결과 창과 Story의 결과와 같아야 합니다. 체력·Story·기록은 한 번 갱신되고 결과 창이 열립니다.
+2. `Tools > TxT RPG > UI > Dice > Temporary > Validate Play Flow`는 새 탐험의 전투 후보가 있는 Play Mode에서 실행합니다. 두세 번의 수락 행동(물리 던지기, 모션 감소, 패널 숨김 중 완료), 연타 차단, 결과 면과 화면 안 배치, 자동 표시 끄기와 수동 재열기, Story·기록 및 390×844 가상 Viewport의 전체 스크롤·RenderTexture·주사위 배치를 검사합니다. Play 상태만 변경하며 통과하면 결과 창을 열어 둔 채 종료합니다.
+3. `Tools > TxT RPG > UI > Dice > Temporary > Validate Throw Presentation`은 Play Mode에서 `OwnedDicePanel.PlayRollAsync`를 직접 호출하는 임시 검증 메뉴입니다. 전투·기록·저장 데이터는 바꾸지 않고, 추가한 검증용 주사위는 끝에 제거합니다. 여러 시드에서 모든 면 강제, 모션 감소, 30·120fps에서 같은 시드의 최종 자세와 재생 길이, 시뮬레이션 실패 시 대체 배치, 굴림 중 화면 크기 변경, 6·12·20개 주사위, 런타임 4면 주사위의 텍스트 대체, 물리 Scene 누적 여부를 검사하고 `OWNED_DICE_THROW_VALIDATION: passed`와 측정값을 남깁니다. 재실행할 수 있으며, 물리 연출 기본값을 다시 조정할 필요가 없어지면 다른 Temporary 주사위 메뉴와 함께 퇴역합니다.
+4. Edit Mode의 `TxTRPG.Application.Tests.OwnedDiceIntegrationTests`(형태 데이터, 모든 (L, D) 보정, 정사면체 거부, 구도, 재생, 구성 교체)와 `TemporaryPlayerDiceStateTests`를 실행합니다. `Assets/TxTRPG/UI/Tests/PlayMode/DiceThrowSimulationPlayModeTests.cs`는 실제 격리 물리 경로를 검사하는 Play Mode 테스트입니다. 현재 Editor Play 시작 정책(`Project/TxT RPG/Play Mode Start`)이 AppScene을 Play 시작 Scene으로 지정하면 Test Runner의 Play Mode 실행이 시작 Scene 교체로 멈출 수 있으므로, 이 경우 위 메뉴 검증 결과를 사용합니다.
+
+실제 휴대폰·태블릿의 Safe Area와 터치, 컨트롤러, 대상 Player 빌드, 모바일 시뮬레이션 계산 시간과 지속 성능은 별도 장치 검증이 필요합니다.

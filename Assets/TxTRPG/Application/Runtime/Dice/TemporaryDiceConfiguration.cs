@@ -81,6 +81,21 @@ namespace TxTRPG.Application.Dice
             return true;
         }
 
+        // The effect-face default written by earlier builders: alternating attack/heal with amounts 1..count.
+        public bool IsKnownEffectDefaultForEditor(string expectedId, string expectedName, int expectedFaceCount)
+        {
+            if (!string.Equals(Id, expectedId, StringComparison.Ordinal) ||
+                !string.Equals(DisplayName, expectedName, StringComparison.Ordinal) ||
+                faces == null || faces.Length != expectedFaceCount || minimumValue != 1 ||
+                maximumValue != expectedFaceCount || legacyFaceValues != null && legacyFaceValues.Length > 0)
+                return false;
+            for (var i = 0; i < faces.Length; i++)
+                if (faces[i] == null || faces[i].Amount != i + 1 ||
+                    faces[i].EffectKind != (i % 2 == 0 ? DiceEffectKind.Attack : DiceEffectKind.Heal))
+                    return false;
+            return true;
+        }
+
         public void UpgradeKnownDefaultForEditor(int expectedFaceCount)
         {
             faces = CreateAlternatingFaces(expectedFaceCount);
@@ -100,6 +115,11 @@ namespace TxTRPG.Application.Dice
     [CreateAssetMenu(menuName = "TxT RPG/Temporary Dice Configuration", fileName = "TemporaryDiceConfiguration")]
     public sealed class TemporaryDiceConfiguration : ScriptableObject
     {
+        // The default tetrahedral D4 cannot rest with a face parallel to the floor, so it was replaced by a cube.
+        public const string RetiredD4Id = "temporary.d4";
+        public const string SecondaryD6Id = "temporary.d6-secondary";
+        public const string SecondaryD6DisplayName = "D6 (보조)";
+
         [SerializeField] private bool enabledForSession;
         [SerializeField] private List<TemporaryDieDefinition> dice = new();
 
@@ -114,6 +134,29 @@ namespace TxTRPG.Application.Dice
         }
 
         public bool TryUpgradeKnownDefaultsForEditor()
+        {
+            var upgraded = TryUpgradeLegacyNumericDefaultsForEditor();
+            return TryReplaceRetiredD4DefaultForEditor() || upgraded;
+        }
+
+        // Replaces only the unchanged default D4 entry, in the same list position. Other entries are preserved.
+        public bool TryReplaceRetiredD4DefaultForEditor()
+        {
+            if (dice == null) return false;
+            foreach (var definition in dice)
+                if (definition != null && string.Equals(definition.Id, SecondaryD6Id, StringComparison.Ordinal)) return false;
+            for (var i = 0; i < dice.Count; i++)
+            {
+                if (dice[i] == null || !dice[i].IsKnownEffectDefaultForEditor(RetiredD4Id, "D4", 4)) continue;
+                var replacement = new TemporaryDieDefinition();
+                replacement.ConfigureForEditor(SecondaryD6Id, SecondaryD6DisplayName, 6);
+                dice[i] = replacement;
+                return true;
+            }
+            return false;
+        }
+
+        private bool TryUpgradeLegacyNumericDefaultsForEditor()
         {
             if (!enabledForSession || dice == null || dice.Count != 3) return false;
             var expectedIds = new[] { "temporary.d4", "temporary.d6", "temporary.d8" };

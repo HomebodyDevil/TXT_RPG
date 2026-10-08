@@ -95,6 +95,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void GeneratedPrefabAndDemo_ContainRecursivePanelComposition()
         {
             FlexibleLayoutPrefabBuilder.CreateOrUpdatePrefab();
@@ -155,6 +156,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void GeneratedPlaceholder_IsEmptyActiveLayoutItem()
         {
             FlexibleLayoutPrefabBuilder.CreateOrUpdatePrefab();
@@ -183,6 +185,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void BackgroundAndContent_DistributeTheirDirectChildrenIndependently()
         {
             FlexibleLayoutPrefabBuilder.CreateOrUpdatePrefab();
@@ -220,6 +223,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void BackgroundIndependentMode_UsesOwnWidthClipAlphaAndInteraction()
         {
             FlexibleLayoutPrefabBuilder.CreateOrUpdatePrefab();
@@ -291,6 +295,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void BackgroundSharedMode_FollowsContentAndRestoresIndependentRectAndSettings()
         {
             FlexibleLayoutPrefabBuilder.CreateOrUpdatePrefab();
@@ -336,6 +341,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void BackgroundMarginOverride_RestoresAuthoredIndependentOffsets()
         {
             FlexibleLayoutPrefabBuilder.CreateOrUpdatePrefab();
@@ -444,6 +450,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void GeneratedSampleMainDemo_MirrorsSampleSceneColumnComposition()
         {
             FlexibleLayoutPrefabBuilder.CreateOrUpdateSampleMainDemo();
@@ -515,6 +522,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void ClipContent_TogglesContentMaskWithoutChangingSizingPolicy()
         {
             FlexibleLayoutPrefabBuilder.CreateOrUpdatePrefab();
@@ -540,6 +548,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void PanelInsets_ExposeIndependentPaddingAndMargins()
         {
             FlexibleLayoutPrefabBuilder.CreateOrUpdatePrefab();

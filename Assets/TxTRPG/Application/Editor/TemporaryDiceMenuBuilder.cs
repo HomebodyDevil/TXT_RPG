@@ -49,7 +49,7 @@ namespace TxTRPG.Application.Editor
             if (asset == null)
             {
                 asset = ScriptableObject.CreateInstance<TemporaryDiceConfiguration>(); AssetDatabase.CreateAsset(asset, ConfigurationPath);
-                asset.ConfigureForEditor(true, new[] { Create("temporary.d4", "D4", 4), Create("temporary.d6", "D6", 6), Create("temporary.d8", "D8", 8) }); EditorUtility.SetDirty(asset);
+                asset.ConfigureForEditor(true, new[] { Create(TemporaryDiceConfiguration.SecondaryD6Id, TemporaryDiceConfiguration.SecondaryD6DisplayName, 6), Create("temporary.d6", "D6", 6), Create("temporary.d8", "D8", 8) }); EditorUtility.SetDirty(asset);
             }
             else if (asset.TryUpgradeKnownDefaultsForEditor()) EditorUtility.SetDirty(asset);
             else if (asset.Dice.Any(definition => definition != null && definition.HasLegacyFaces)) throw new InvalidOperationException("The existing temporary dice configuration contains custom legacy numeric faces. Configure each effect explicitly; no effect was guessed.");

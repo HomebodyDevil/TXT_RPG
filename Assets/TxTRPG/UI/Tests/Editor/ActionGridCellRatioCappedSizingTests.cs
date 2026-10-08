@@ -38,6 +38,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void Upgrade_PersistsIndependentCappedSettingsAndActualRects()
         {
             ActionGridPrefabBuilder.UpgradeCellRatioCappedLayout();
@@ -69,6 +70,7 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        [Category("AssetWriting")]
         public void IconAndEmptySlotCaps_RemainIndependent()
         {
             ActionGridPrefabBuilder.UpgradeCellRatioCappedLayout();

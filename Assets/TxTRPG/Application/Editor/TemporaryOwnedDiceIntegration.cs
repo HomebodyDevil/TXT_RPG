@@ -29,7 +29,15 @@ namespace TxTRPG.Application.Editor
         private const string StagePath = PrefabFolder + "/DiceStage.prefab";
         private const string PanelPath = "Assets/TxTRPG/UI/Prefabs/FlexibleLayoutPanel.prefab";
         private const int DiceLayer = 30;
+        private const float LabelScale = .34f;
 
+        public const string SecondaryD6DefinitionId = TemporaryDiceConfiguration.SecondaryD6Id;
+        private const string RetiredD4ShapePath = StyleFolder + "/DiceD4Shape.asset";
+
+        // Rerunnable. Creates missing assets and synchronizes only generator-owned data: model face labels, per-face
+        // normals/reading directions/rest poses/collider data of shapes that still use the generated model, the D6
+        // alias for the secondary die, catalog cleanup of the retired D4 entry, and the DiceStage camera/floor rig.
+        // Developer-owned definition IDs, extra aliases, reading-rule text and replaced models are preserved.
         [MenuItem("Tools/TxT RPG/UI/Dice/Temporary/Create Base Dice Assets")]
         public static void CreateBaseAssets()
         {
@@ -37,32 +45,42 @@ namespace TxTRPG.Application.Editor
             EnsureFolder(PrefabFolder);
             EnsureFolder(StyleFolder);
             EnsureLayer();
-            var material = AssetDatabase.LoadAssetAtPath<Material>(StyleFolder + "/DiceBody.mat");
-            if (material == null)
-            {
-                var shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
-                if (shader == null) throw new InvalidOperationException("No supported lit shader is available.");
-                material = new Material(shader) { name = "DiceBody", color = new Color(.24f, .54f, .78f) };
-                AssetDatabase.CreateAsset(material, StyleFolder + "/DiceBody.mat");
-            }
-            var shapes = new[]
-            {
-                EnsureShape("D4", "temporary.d4", Tetrahedron(), material, "카메라를 향한 삼각형 면의 효과와 수치를 읽습니다."),
-                EnsureShape("D6", "temporary.d6", Cube(), material, "위쪽이며 카메라에서 보이는 사각형 면을 읽습니다."),
-                EnsureShape("D8", "temporary.d8", Octahedron(), material, "위쪽이며 카메라에서 보이는 삼각형 면을 읽습니다.")
-            };
+            var material = EnsureMaterial("DiceBody", new Color(.24f, .54f, .78f));
+            var floorMaterial = EnsureMaterial("DiceFloor", new Color(.1f, .15f, .21f));
+            var d6 = EnsureShape("D6", "temporary.d6", Cube(), material, "바닥과 평행하게 위를 향한 사각형 면을 읽습니다.");
+            var d8 = EnsureShape("D8", "temporary.d8", Octahedron(), material, "바닥과 평행하게 위를 향한 삼각형 면을 읽습니다.");
+            if (d6.EnsureAdditionalDefinitionIdForEditor(SecondaryD6DefinitionId)) EditorUtility.SetDirty(d6);
             var catalog = AssetDatabase.LoadAssetAtPath<DieShapeCatalog>(CatalogPath);
             if (catalog == null)
             {
                 catalog = ScriptableObject.CreateInstance<DieShapeCatalog>();
-                catalog.ConfigureForEditor(shapes);
+                catalog.ConfigureForEditor(new[] { d6, d8 });
                 AssetDatabase.CreateAsset(catalog, CatalogPath);
             }
-            if (AssetDatabase.LoadAssetAtPath<GameObject>(StagePath) == null)
-                CreateStagePrefab();
+            else
+            {
+                var retired = AssetDatabase.LoadAssetAtPath<DieShapeDefinition>(RetiredD4ShapePath);
+                var kept = catalog.Shapes.Where(shape => shape != null && shape != retired).ToList();
+                foreach (var required in new[] { d6, d8 })
+                    if (!kept.Contains(required)) kept.Add(required);
+                if (!kept.SequenceEqual(catalog.Shapes))
+                {
+                    catalog.ConfigureForEditor(kept);
+                    EditorUtility.SetDirty(catalog);
+                }
+            }
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(StagePath) == null) CreateStagePrefab(floorMaterial);
+            else EnsureStageRig(floorMaterial);
             AssetDatabase.SaveAssets();
             ValidateBaseAssets();
-            Debug.Log("OWNED_DICE_ASSETS: D4, D6, D8 and DiceStage assets ready. Existing assets were preserved.");
+            Debug.Log("OWNED_DICE_ASSETS: D6, D8 (with D6 secondary alias) and DiceStage rig ready. Developer-owned values were preserved.");
+        }
+
+        [MenuItem("Tools/TxT RPG/UI/Dice/Temporary/Validate Base Dice Assets")]
+        public static void ValidateBaseAssetsMenu()
+        {
+            ValidateBaseAssets();
+            Debug.Log("OWNED_DICE_ASSETS_VALIDATE: Catalog shapes, face data, collider proxies and DiceStage rig are valid.");
         }
 
         [MenuItem("Tools/TxT RPG/UI/Dice/Temporary/Apply Owned Dice To TMP Main Scene")]
@@ -268,6 +286,10 @@ namespace TxTRPG.Application.Editor
                 if (host.IsTemporaryDiceActionPending) throw new TimeoutException("The accepted action did not complete.");
                 if (host.TemporaryDiceHistory.CurrentTurns.Count != actionCount + 1 || story.MessageCount <= storyBefore)
                     throw new InvalidOperationException("The roll did not record exactly one turn and Story output.");
+                CheckShownFaces(binder.Panel, host, "physics throw");
+                var outcome = binder.Panel.LastThrowOutcome;
+                Debug.Log($"OWNED_DICE_PLAY_VALIDATION: throw seed={outcome?.Seed} attempts={outcome?.Attempts} " +
+                    $"simulateMs={outcome?.ElapsedMilliseconds:F1} placementFallback={binder.Panel.LastRollUsedPlacementFallback}");
                 await Task.Delay(100);
                 if (!windows.IsOpen) throw new InvalidOperationException("The automatic result modal did not open.");
                 if (combatController.CanExecute(TemporaryDiceRollMenuController.RollAllCommandId, out _))
@@ -278,10 +300,35 @@ namespace TxTRPG.Application.Editor
                 await Task.Delay(100);
                 if (!windows.IsOpen) throw new InvalidOperationException("Manual result reopening failed.");
                 windows.Close();
+                if (!combatController.Combat.IsComplete)
+                {
+                    host.TemporaryDicePreferences.AutoShowResults = false;
+                    host.TemporaryDicePreferences.ReduceMotion = true;
+                    try
+                    {
+                        var reducedCount = host.TemporaryDiceHistory.CurrentTurns.Count;
+                        if (!combatController.TryExecute(TemporaryDiceRollMenuController.RollAllCommandId))
+                            throw new InvalidOperationException("The reduced-motion dice action was not accepted.");
+                        deadline = EditorApplication.timeSinceStartup + 8d;
+                        while (host.IsTemporaryDiceActionPending && EditorApplication.timeSinceStartup < deadline)
+                            await Task.Delay(50);
+                        if (host.TemporaryDiceHistory.CurrentTurns.Count != reducedCount + 1)
+                            throw new InvalidOperationException("The reduced-motion roll did not record exactly one turn.");
+                        CheckShownFaces(binder.Panel, host, "reduced motion");
+                    }
+                    finally
+                    {
+                        host.TemporaryDicePreferences.ReduceMotion = false;
+                        host.TemporaryDicePreferences.AutoShowResults = true;
+                    }
+                }
+                else Debug.LogWarning("OWNED_DICE_PLAY_VALIDATION: combat ended early; reduced-motion and hidden-panel rolls were skipped.");
                 var secondCount = host.TemporaryDiceHistory.CurrentTurns.Count;
+                var runHiddenCheck = !combatController.Combat.IsComplete;
                 host.TemporaryDicePreferences.AutoShowResults = false;
                 try
                 {
+                    if (!runHiddenCheck) throw new OperationCanceledException();
                     if (!combatController.TryExecute(TemporaryDiceRollMenuController.RollAllCommandId))
                         throw new InvalidOperationException("The second dice action was not accepted.");
                     binder.Panel.gameObject.SetActive(false);
@@ -293,12 +340,14 @@ namespace TxTRPG.Application.Editor
                         throw new InvalidOperationException("The hidden dice panel prevented the accepted result from completing once.");
                     if (windows.IsOpen) throw new InvalidOperationException("Automatic results ignored the disabled setting.");
                 }
+                catch (OperationCanceledException) { }
                 finally
                 {
                     binder.Panel.gameObject.SetActive(true);
                     host.TemporaryDicePreferences.AutoShowResults = true;
                 }
                 await Task.Delay(100);
+                if (runHiddenCheck) CheckShownFaces(binder.Panel, host, "re-enabled after hidden roll");
                 binder.Panel.ResultsButton.onClick.Invoke();
                 await Task.Delay(100);
                 if (!windows.IsOpen) throw new InvalidOperationException("Results were lost while automatic display was off.");
@@ -321,6 +370,8 @@ namespace TxTRPG.Application.Editor
                     if (panelHeight < 190f || pageHeight <= viewport.rect.height ||
                         binder.Panel.CurrentTexture == null || binder.Panel.DisplayCount != host.TemporaryDice.Count)
                         throw new InvalidOperationException($"Narrow layout failed: dice={panelHeight:F1}, page={pageHeight:F1}, viewport={viewport.rect.height:F1}.");
+                    if (!binder.Panel.AreAllDiceVisibleAndSeparated(out var narrowDetail))
+                        throw new InvalidOperationException($"Narrow layout dice placement failed: {narrowDetail}");
                 }
                 finally
                 {
@@ -333,12 +384,24 @@ namespace TxTRPG.Application.Editor
                 binder.Panel.ResultsButton.onClick.Invoke();
                 await Task.Delay(100);
                 if (!windows.IsOpen) throw new InvalidOperationException("The result window did not reopen for visual inspection.");
-                Debug.Log("OWNED_DICE_PLAY_VALIDATION: two accepted turns, repeat blocked, hidden-panel fallback, auto-off history, Story, result windows, and narrow scroll passed.");
+                if (!binder.Panel.AreAllDiceVisibleAndSeparated(out var restoredDetail))
+                    throw new InvalidOperationException($"Restored layout dice placement failed: {restoredDetail}");
+                Debug.Log("OWNED_DICE_PLAY_VALIDATION: physics throw faces, reduced motion, repeat blocked, hidden-panel fallback, auto-off history, Story, result windows, and narrow scroll passed.");
             }
             catch (Exception exception)
             {
                 Debug.LogError($"OWNED_DICE_PLAY_VALIDATION_FAILED: {exception}");
             }
+        }
+
+        private static void CheckShownFaces(OwnedDicePanel panel, PlayerSessionHost host, string stage)
+        {
+            var turn = host.TemporaryDiceHistory.CurrentTurns.Last();
+            foreach (var roll in turn.Rolls)
+                if (!panel.TryGetUpFace(roll.Id, out var face) || face != roll.Result.FaceIndex)
+                    throw new InvalidOperationException($"{stage}: {roll.Id} shows face {face + 1}, accepted face {roll.Result.FaceIndex + 1}.");
+            if (!panel.AreAllDiceVisibleAndSeparated(out var detail))
+                throw new InvalidOperationException($"{stage}: {detail}");
         }
 
         private static DiceResultsGameWindowPage CreateResultPage(Transform pagesRoot, GameWindowService service)
@@ -375,13 +438,61 @@ namespace TxTRPG.Application.Editor
             return page;
         }
 
-        private static void ValidateBaseAssets()
+        public static void ValidateBaseAssets()
         {
             var catalog = AssetDatabase.LoadAssetAtPath<DieShapeCatalog>(CatalogPath);
-            if (catalog == null || AssetDatabase.LoadAssetAtPath<GameObject>(StagePath) == null ||
-                catalog.Find("temporary.d4", 4) == null || catalog.Find("temporary.d6", 6) == null ||
-                catalog.Find("temporary.d8", 8) == null)
-                throw new InvalidOperationException("Base D4/D6/D8 shape assets and stage must be created first.");
+            if (catalog == null || AssetDatabase.LoadAssetAtPath<GameObject>(StagePath) == null)
+                throw new InvalidOperationException("The shape catalog and DiceStage must be created first.");
+            var problems = new List<string>();
+            if (!catalog.TryValidate(out var diagnostics)) problems.AddRange(diagnostics);
+            foreach (var (id, count) in new[] { ("temporary.d6", 6), (SecondaryD6DefinitionId, 6), ("temporary.d8", 8) })
+                if (catalog.Find(id, count) == null) problems.Add($"No presentable {count}-face shape for '{id}'.");
+            foreach (var shape in catalog.Shapes)
+                if (shape != null && !TryValidateFaceLayout(shape, out var error)) problems.Add($"{shape.name}: {error}");
+            var stage = AssetDatabase.LoadAssetAtPath<GameObject>(StagePath).GetComponent<DiceStageRig>();
+            if (stage == null || !stage.IsComplete) problems.Add("DiceStage has no complete DiceStageRig (Camera, Models, Floor).");
+            if (problems.Count > 0)
+                throw new InvalidOperationException("Base dice assets are invalid:\n" + string.Join("\n", problems));
+        }
+
+        // Face index i must be the same face in the shape data, the mesh face order and the Face{i+1} label.
+        public static bool TryValidateFaceLayout(DieShapeDefinition shape, out string error)
+        {
+            error = string.Empty;
+            var model = shape.ModelPrefab != null ? shape.ModelPrefab.GetComponent<DieModelView>() : null;
+            var filter = shape.ModelPrefab != null ? shape.ModelPrefab.GetComponent<MeshFilter>() : null;
+            if (model == null || filter == null || filter.sharedMesh == null) { error = "Model, DieModelView or mesh is missing."; return false; }
+            if (model.LabelCount != shape.FaceCount || shape.FaceNormals.Count != shape.FaceCount)
+            { error = "Label, face-data and face counts differ."; return false; }
+            var mesh = filter.sharedMesh;
+            if (mesh.vertexCount % shape.FaceCount != 0) { error = "The mesh does not have one vertex block per face."; return false; }
+            var perFace = mesh.vertexCount / shape.FaceCount;
+            var meshNormals = mesh.normals;
+            for (var i = 0; i < shape.FaceCount; i++)
+            {
+                var normal = shape.FaceNormals[i];
+                if (Vector3.Dot(meshNormals[i * perFace], normal) < .999f) { error = $"Mesh face {i + 1} does not match face data."; return false; }
+                var label = model.LabelTransform(i);
+                if (label == null || Vector3.Dot(label.localPosition.normalized, normal) < .99f ||
+                    Vector3.Dot(label.localRotation * Vector3.up, shape.FaceReadingUps[i]) < .999f)
+                { error = $"Face{i + 1} label does not match face data."; return false; }
+                if (Vector3.Dot(shape.PoseFor(i) * normal, Vector3.up) < .999f ||
+                    Vector3.Dot(shape.PoseFor(i) * shape.FaceReadingUps[i], Vector3.forward) < .999f)
+                { error = $"Rest pose {i + 1} does not put the face up with its label readable."; return false; }
+            }
+            return true;
+        }
+
+        private static Material EnsureMaterial(string name, Color color)
+        {
+            var path = StyleFolder + $"/{name}.mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material != null) return material;
+            var shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+            if (shader == null) throw new InvalidOperationException("No supported lit shader is available.");
+            material = new Material(shader) { name = name, color = color };
+            AssetDatabase.CreateAsset(material, path);
+            return material;
         }
 
         private static DieShapeDefinition EnsureShape(string name, string id, (Vector3[], int[][]) geometry,
@@ -400,6 +511,11 @@ namespace TxTRPG.Application.Editor
                 AssetDatabase.CreateAsset(mesh, meshPath);
             }
             else CalculateFaces(geometry.Item1, geometry.Item2, normals, centers);
+            var readingUps = normals.Select(normal => LabelRotation(normal) * Vector3.up).ToArray();
+            var poses = normals.Select((normal, i) =>
+                DieFaceGeometry.RestPose(normal, readingUps[i], Vector3.up, Vector3.forward).eulerAngles).ToArray();
+            var restHeight = normals.Select((normal, i) => Vector3.Dot(centers[i], normal)).Min();
+            var boundingRadius = geometry.Item1.Max(point => point.magnitude);
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
             if (prefab == null)
             {
@@ -417,14 +533,13 @@ namespace TxTRPG.Application.Editor
                         label.gameObject.layer = DiceLayer;
                         label.text = $"{i + 1}";
                         label.font = TMP_Settings.defaultFontAsset;
-                        label.fontSize = 7f;
+                        label.fontSize = 11f;
                         label.alignment = TextAlignmentOptions.Center;
                         label.color = Color.white;
                         label.rectTransform.sizeDelta = new Vector2(3, 1.5f);
-                        label.transform.localScale = Vector3.one * .22f;
+                        label.transform.localScale = Vector3.one * LabelScale;
                         label.transform.localPosition = centers[i] + normals[i] * .035f;
-                        var up = Mathf.Abs(Vector3.Dot(normals[i], Vector3.up)) > .95f ? Vector3.forward : Vector3.up;
-                        label.transform.localRotation = Quaternion.LookRotation(-normals[i], up);
+                        label.transform.localRotation = LabelRotation(normals[i]);
                         labels[i] = label;
                     }
                     root.GetComponent<DieModelView>().ConfigureForEditor(labels);
@@ -445,12 +560,11 @@ namespace TxTRPG.Application.Editor
                     {
                         var label = contents.transform.Find($"Face{i + 1}")?.GetComponent<TextMeshPro>();
                         if (label == null) throw new InvalidOperationException($"Face{i + 1} is missing from {prefabPath}.");
-                        label.fontSize = 7f;
+                        label.fontSize = 11f;
                         label.rectTransform.sizeDelta = new Vector2(3, 1.5f);
-                        label.transform.localScale = Vector3.one * .22f;
+                        label.transform.localScale = Vector3.one * LabelScale;
                         label.transform.localPosition = centers[i] + normals[i] * .035f;
-                        var up = Mathf.Abs(Vector3.Dot(normals[i], Vector3.up)) > .95f ? Vector3.forward : Vector3.up;
-                        label.transform.localRotation = Quaternion.LookRotation(-normals[i], up);
+                        label.transform.localRotation = LabelRotation(normals[i]);
                     }
                     PrefabUtility.SaveAsPrefabAsset(contents, prefabPath);
                 }
@@ -460,14 +574,23 @@ namespace TxTRPG.Application.Editor
             if (shape == null)
             {
                 shape = ScriptableObject.CreateInstance<DieShapeDefinition>();
-                var target = name == "D4" ? new Vector3(0f, .35f, -.94f).normalized :
-                    new Vector3(0f, .8f, -.6f).normalized;
-                var poses = normals.Select(normal => Quaternion.FromToRotation(normal, target).eulerAngles).ToArray();
                 shape.ConfigureForEditor(id, prefab, poses, readingRule);
+                shape.ConfigureGeneratedDataForEditor(poses, normals, readingUps, mesh, restHeight, boundingRadius);
                 AssetDatabase.CreateAsset(shape, shapePath);
             }
+            else if (shape.ModelPrefab == prefab)
+            {
+                // Face data is generator-owned only while the shape still uses the generated model.
+                shape.ConfigureGeneratedDataForEditor(poses, normals, readingUps, mesh, restHeight, boundingRadius);
+                EditorUtility.SetDirty(shape);
+            }
+            else Debug.LogWarning($"OWNED_DICE_ASSETS: {shapePath} uses a developer model; its face data was not regenerated.");
             return shape;
         }
+
+        // Labels face outward; their up vector is the face's reading direction stored in the shape data.
+        private static Quaternion LabelRotation(Vector3 normal) =>
+            Quaternion.LookRotation(-normal, Mathf.Abs(Vector3.Dot(normal, Vector3.up)) > .95f ? Vector3.forward : Vector3.up);
 
         private static Mesh BuildMesh(Vector3[] points, int[][] polygons, Vector3[] normals, Vector3[] centers)
         {
@@ -511,11 +634,6 @@ namespace TxTRPG.Application.Editor
             }
         }
 
-        private static (Vector3[], int[][]) Tetrahedron() =>
-            (new[] { new Vector3(1, 1, 1), new Vector3(-1, -1, 1),
-                new Vector3(-1, 1, -1), new Vector3(1, -1, -1) },
-             new[] { new[] { 0, 1, 2 }, new[] { 0, 3, 1 }, new[] { 0, 2, 3 }, new[] { 1, 3, 2 } });
-
         private static (Vector3[], int[][]) Cube() =>
             (new[] { new Vector3(-1, -1, -1), new Vector3(1, -1, -1),
                 new Vector3(1, 1, -1), new Vector3(-1, 1, -1),
@@ -534,7 +652,7 @@ namespace TxTRPG.Application.Editor
                 new[] { 1, 3, 2 }, new[] { 1, 4, 3 },
                 new[] { 1, 5, 4 }, new[] { 1, 2, 5 } });
 
-        private static void CreateStagePrefab()
+        private static void CreateStagePrefab(Material floorMaterial)
         {
             var root = new GameObject("DiceStage");
             try
@@ -545,16 +663,10 @@ namespace TxTRPG.Application.Editor
                 models.layer = DiceLayer;
                 var camera = new GameObject("Camera", typeof(Camera)).GetComponent<Camera>();
                 camera.transform.SetParent(root.transform, false);
-                camera.transform.localPosition = new Vector3(0, 0, -20);
-                camera.transform.localRotation = Quaternion.identity;
                 camera.gameObject.layer = DiceLayer;
                 camera.cullingMask = 1 << DiceLayer;
                 camera.clearFlags = CameraClearFlags.SolidColor;
                 camera.backgroundColor = new Color(.035f, .055f, .085f, 1f);
-                camera.orthographic = true;
-                camera.orthographicSize = 3f;
-                camera.nearClipPlane = .1f;
-                camera.farClipPlane = 100f;
                 camera.enabled = false;
                 var light = new GameObject("Light", typeof(Light)).GetComponent<Light>();
                 light.transform.SetParent(root.transform, false);
@@ -563,9 +675,54 @@ namespace TxTRPG.Application.Editor
                 light.type = LightType.Directional;
                 light.intensity = 1.5f;
                 light.cullingMask = 1 << DiceLayer;
+                ConfigureStageRig(root, floorMaterial);
                 PrefabUtility.SaveAsPrefabAsset(root, StagePath);
             }
             finally { UnityEngine.Object.DestroyImmediate(root); }
+        }
+
+        // Generator-owned stage parts: tilted orthographic camera defaults, visible floor quad and the rig references.
+        // The panel recomputes camera and floor placement at runtime from the viewport aspect and dice count.
+        private static void EnsureStageRig(Material floorMaterial)
+        {
+            var contents = PrefabUtility.LoadPrefabContents(StagePath);
+            try
+            {
+                ConfigureStageRig(contents, floorMaterial);
+                PrefabUtility.SaveAsPrefabAsset(contents, StagePath);
+            }
+            finally { PrefabUtility.UnloadPrefabContents(contents); }
+        }
+
+        private static void ConfigureStageRig(GameObject root, Material floorMaterial)
+        {
+            var models = root.transform.Find("Models") ?? throw new InvalidOperationException("DiceStage/Models is missing.");
+            var camera = root.transform.Find("Camera")?.GetComponent<Camera>() ??
+                throw new InvalidOperationException("DiceStage/Camera is missing.");
+            models.localPosition = Vector3.zero;
+            models.localRotation = Quaternion.identity;
+            camera.orthographic = true;
+            camera.orthographicSize = 6f;
+            camera.transform.localRotation = Quaternion.Euler(55f, 0f, 0f);
+            camera.transform.localPosition = -(Quaternion.Euler(55f, 0f, 0f) * Vector3.forward) * 60f;
+            camera.nearClipPlane = .1f;
+            camera.farClipPlane = 150f;
+            var floor = root.transform.Find("Floor");
+            if (floor == null)
+            {
+                floor = new GameObject("Floor", typeof(MeshFilter), typeof(MeshRenderer)).transform;
+                floor.SetParent(root.transform, false);
+            }
+            floor.gameObject.layer = DiceLayer;
+            floor.GetComponent<MeshFilter>().sharedMesh = Resources.GetBuiltinResource<Mesh>("Quad.fbx");
+            var renderer = floor.GetComponent<MeshRenderer>();
+            renderer.sharedMaterial = floorMaterial;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            floor.localPosition = new Vector3(0f, -.01f, 0f);
+            floor.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            floor.localScale = new Vector3(20f, 14f, 1f);
+            var rig = root.GetComponent<DiceStageRig>() ?? root.AddComponent<DiceStageRig>();
+            rig.ConfigureForEditor(camera, models, floor);
         }
 
         private static void EnsureLayer()

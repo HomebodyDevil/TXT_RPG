@@ -10,6 +10,9 @@ using UnityEngine.SceneManagement;
 
 namespace TxTRPG.Application.Tests
 {
+    // Rewrites the proposal Scene, its presentation assets and Build Settings, so it only runs when selected by name.
+    [Category("AssetWriting")]
+    [Explicit("Rewrites MainScene_VisualProposal assets and Build Settings; run only after changing MainSceneVisualProposalBuilder.")]
     public sealed class MainSceneVisualProposalTests
     {
         [Test]
