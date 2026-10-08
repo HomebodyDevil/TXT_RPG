@@ -54,6 +54,42 @@ namespace TxTRPG.UI.Dice
         public float InnerHalfWidth => Mathf.Max(0f, HalfWidth - DieRadius);
         public float InnerNearZ => NearZ + DieRadius;
         public float InnerFarZ => FarZ - DieRadius;
+
+        public bool HasSameBounds(DiceArena other) =>
+            Mathf.Approximately(OrthographicSize, other.OrthographicSize) && Mathf.Approximately(Aspect, other.Aspect) &&
+            Mathf.Approximately(Pitch, other.Pitch) && Mathf.Approximately(HalfWidth, other.HalfWidth) &&
+            Mathf.Approximately(NearZ, other.NearZ) && Mathf.Approximately(FarZ, other.FarZ) &&
+            Mathf.Approximately(Ceiling, other.Ceiling) && Mathf.Approximately(DieRadius, other.DieRadius);
+    }
+
+    // Screen edge a rested die leaves through when a new roll starts. The declaration order is the tie-break order.
+    public enum DiceRecallEdge
+    {
+        Bottom = 0,
+        Left = 1,
+        Right = 2,
+        Top = 3
+    }
+
+    public enum DiceRecallResolution
+    {
+        NearestEdges = 0,
+        // A die was moved to its next-nearest edge because its nearest path met another die on screen.
+        Reassigned = 1,
+        // Per-die paths could not be separated; dice sharing an edge move by one common offset per edge.
+        EdgeGroups = 2,
+        // Nothing else separated the paths; every die slides by one common offset below the screen.
+        CommonBottom = 3
+    }
+
+    public sealed class DiceRecallPlan
+    {
+        public DiceRecallPlan(DiceRecallEdge[] edges, Vector3[] targets, DiceRecallResolution resolution, int reassigned)
+        { Edges = edges; Targets = targets; Resolution = resolution; Reassigned = reassigned; }
+        public IReadOnlyList<DiceRecallEdge> Edges { get; }
+        public IReadOnlyList<Vector3> Targets { get; }
+        public DiceRecallResolution Resolution { get; }
+        public int Reassigned { get; }
     }
 
     public static class DiceArenaLayout
@@ -107,20 +143,214 @@ namespace TxTRPG.UI.Dice
             return result;
         }
 
-        // Launch positions packed from the camera-side wall toward the far side.
-        public static Vector2[] ThrowStartPositions(DiceArena arena, int count)
+        // Gap kept between a die's bounding sphere and the bottom screen edge when it must be hidden.
+        public const float OffscreenMarginRadii = 0.1f;
+
+        // Rest footprints may touch but not overlap: two resting dice are at least their rest heights apart.
+        public const float RestSeparationFactor = 0.98f;
+
+        // Vertical orthographic view coordinate of a world point; the view spans [-OrthographicSize, OrthographicSize].
+        public static float ScreenHeight(DiceArena arena, float y, float z)
+        {
+            var pitch = arena.Pitch * Mathf.Deg2Rad;
+            return y * Mathf.Cos(pitch) + z * Mathf.Sin(pitch);
+        }
+
+        // True when a sphere around the point is entirely below the bottom screen edge (toward the camera).
+        public static bool IsBelowScreen(DiceArena arena, Vector3 center, float radius) =>
+            ScreenHeight(arena, center.y, center.z) + radius < -arena.OrthographicSize;
+
+        // Largest Z at which a sphere at the given height is still entirely below the bottom screen edge.
+        public static float BelowScreenZ(DiceArena arena, float height, float radius)
+        {
+            var pitch = arena.Pitch * Mathf.Deg2Rad;
+            return (-arena.OrthographicSize - radius - height * Mathf.Cos(pitch)) / Mathf.Sin(pitch);
+        }
+
+        // Launch positions below the bottom screen edge. Columns stay inside the side walls; further rows are placed
+        // further toward the camera so no two bounding spheres overlap.
+        public static Vector2[] OffscreenStartPositions(DiceArena arena, int count, float height)
         {
             var result = new Vector2[Mathf.Max(0, count)];
             var columns = Mathf.Max(1, arena.Columns);
+            var frontZ = BelowScreenZ(arena, height, arena.DieRadius) - arena.DieRadius * OffscreenMarginRadii;
             for (var i = 0; i < result.Length; i++)
             {
                 var row = i / columns;
                 var column = i % columns;
                 var inRow = Mathf.Min(columns, result.Length - row * columns);
-                result[i] = new Vector2((column - (inRow - 1) * 0.5f) * arena.Spacing,
-                    Mathf.Min(arena.InnerFarZ, arena.InnerNearZ + row * arena.Spacing));
+                result[i] = new Vector2((column - (inRow - 1) * 0.5f) * arena.Spacing, frontZ - row * arena.Spacing);
             }
             return result;
+        }
+
+        // One Z offset for all dice, applied together with an upward lift, that hides every die below the bottom
+        // screen edge. A shared rigid translation keeps the dice from crossing each other while they leave.
+        public static float RecallOffsetZ(DiceArena arena, IReadOnlyList<Vector3> positions, float lift)
+        {
+            var offset = 0f;
+            var margin = arena.DieRadius * OffscreenMarginRadii;
+            foreach (var position in positions)
+                offset = Mathf.Min(offset, BelowScreenZ(arena, position.y + lift, arena.DieRadius) - margin - position.z);
+            return offset;
+        }
+
+        // Number of evenly spaced progress samples used to check recall paths for overlaps.
+        public const int RecallOverlapSamples = 48;
+
+        public static bool IsAboveScreen(DiceArena arena, Vector3 center, float radius) =>
+            ScreenHeight(arena, center.y, center.z) - radius > arena.OrthographicSize;
+
+        public static bool IsOffscreen(DiceArena arena, Vector3 center, float radius) =>
+            IsBelowScreen(arena, center, radius) || IsAboveScreen(arena, center, radius) ||
+            Mathf.Abs(center.x) - radius > arena.OrthographicSize * arena.Aspect;
+
+        // Smallest Z at which a sphere at the given height is entirely above the top screen edge.
+        public static float AboveScreenZ(DiceArena arena, float height, float radius)
+        {
+            var pitch = arena.Pitch * Mathf.Deg2Rad;
+            return (arena.OrthographicSize + radius - height * Mathf.Cos(pitch)) / Mathf.Sin(pitch);
+        }
+
+        // Screen distances from a point to the four edges, indexed by DiceRecallEdge.
+        public static float[] EdgeDistances(DiceArena arena, Vector3 position)
+        {
+            var halfWidth = arena.OrthographicSize * arena.Aspect;
+            var height = ScreenHeight(arena, position.y, position.z);
+            return new[]
+            {
+                height + arena.OrthographicSize, position.x + halfWidth, halfWidth - position.x,
+                arena.OrthographicSize - height
+            };
+        }
+
+        // Edges ordered by screen distance; equal distances keep the Bottom, Left, Right, Top order.
+        public static DiceRecallEdge[] EdgesByDistance(DiceArena arena, Vector3 position)
+        {
+            var distances = EdgeDistances(arena, position);
+            var edges = new[] { DiceRecallEdge.Bottom, DiceRecallEdge.Left, DiceRecallEdge.Right, DiceRecallEdge.Top };
+            Array.Sort(edges, (a, b) =>
+            {
+                var difference = distances[(int)a] - distances[(int)b];
+                return Mathf.Abs(difference) <= 1e-4f ? ((int)a).CompareTo((int)b) : difference < 0f ? -1 : 1;
+            });
+            return edges;
+        }
+
+        public static DiceRecallEdge NearestEdge(DiceArena arena, Vector3 position) => EdgesByDistance(arena, position)[0];
+
+        // Nearest position outside the given edge, moving only perpendicular to it: X for Left and Right, Z plus the
+        // lift for Bottom and Top. The whole bounding sphere ends up outside with the usual margin.
+        public static Vector3 RecallTarget(DiceArena arena, Vector3 position, DiceRecallEdge edge, float lift)
+        {
+            var radius = arena.DieRadius;
+            var margin = radius * OffscreenMarginRadii;
+            var halfWidth = arena.OrthographicSize * arena.Aspect;
+            var lifted = position.y + lift;
+            switch (edge)
+            {
+                case DiceRecallEdge.Left:
+                    return new Vector3(Mathf.Min(position.x, -halfWidth - radius - margin), position.y, position.z);
+                case DiceRecallEdge.Right:
+                    return new Vector3(Mathf.Max(position.x, halfWidth + radius + margin), position.y, position.z);
+                case DiceRecallEdge.Top:
+                    return new Vector3(position.x, lifted, Mathf.Max(position.z, AboveScreenZ(arena, lifted, radius) + margin));
+                default:
+                    return new Vector3(position.x, lifted, Mathf.Min(position.z, BelowScreenZ(arena, lifted, radius) - margin));
+            }
+        }
+
+        // Chooses each die's recall edge. Every die moves along a straight path with the same progress curve, so two
+        // dice are compared at equal progress; a pair conflicts while either is on screen and their centres are closer
+        // than their rest footprints. Dice are assigned in order, each taking its nearest edge whose path meets no
+        // earlier die. If a die has no such edge, dice sharing an edge move by one common offset per edge (no crossing
+        // inside a group); if groups still meet, every die uses the common downward recall.
+        public static DiceRecallPlan PlanRecall(DiceArena arena, IReadOnlyList<Vector3> positions,
+            IReadOnlyList<float> restHeights, float lift)
+        {
+            var count = positions.Count;
+            var edges = new DiceRecallEdge[count];
+            var targets = new Vector3[count];
+            var reassigned = 0;
+            var separated = true;
+            for (var i = 0; i < count && separated; i++)
+            {
+                separated = false;
+                var options = EdgesByDistance(arena, positions[i]);
+                for (var option = 0; option < options.Length; option++)
+                {
+                    edges[i] = options[option];
+                    targets[i] = RecallTarget(arena, positions[i], edges[i], lift);
+                    if (FirstRecallConflict(arena, positions, targets, restHeights, i + 1, i) >= 0) continue;
+                    if (option > 0) reassigned++;
+                    separated = true;
+                    break;
+                }
+            }
+            if (separated)
+                return new DiceRecallPlan(edges, targets, reassigned > 0 ? DiceRecallResolution.Reassigned : DiceRecallResolution.NearestEdges, reassigned);
+
+            for (var i = 0; i < count; i++) edges[i] = NearestEdge(arena, positions[i]);
+            GroupTargets(arena, positions, edges, lift, targets);
+            if (FirstRecallConflict(arena, positions, targets, restHeights, count) < 0)
+                return new DiceRecallPlan(edges, targets, DiceRecallResolution.EdgeGroups, 0);
+
+            var offset = RecallOffsetZ(arena, positions, lift);
+            for (var i = 0; i < count; i++)
+            {
+                edges[i] = DiceRecallEdge.Bottom;
+                targets[i] = positions[i] + new Vector3(0f, lift, offset);
+            }
+            return new DiceRecallPlan(edges, targets, DiceRecallResolution.CommonBottom, 0);
+        }
+
+        // Index of the first die (among the first `count`, starting at `firstIndex`) whose path meets an earlier die's
+        // path on screen, or -1.
+        public static int FirstRecallConflict(DiceArena arena, IReadOnlyList<Vector3> from, IReadOnlyList<Vector3> to,
+            IReadOnlyList<float> restHeights, int count, int firstIndex = 1)
+        {
+            for (var sample = 0; sample <= RecallOverlapSamples; sample++)
+            {
+                var t = sample / (float)RecallOverlapSamples;
+                for (var i = Mathf.Max(1, firstIndex); i < count; i++)
+                {
+                    var a = Vector3.LerpUnclamped(from[i], to[i], t);
+                    var aHidden = IsOffscreen(arena, a, arena.DieRadius);
+                    for (var j = 0; j < i; j++)
+                    {
+                        var b = Vector3.LerpUnclamped(from[j], to[j], t);
+                        if (aHidden && IsOffscreen(arena, b, arena.DieRadius)) continue;
+                        var minimum = (restHeights[i] + restHeights[j]) * RestSeparationFactor;
+                        if ((a - b).sqrMagnitude < minimum * minimum) return i;
+                    }
+                }
+            }
+            return -1;
+        }
+
+        private static void GroupTargets(DiceArena arena, IReadOnlyList<Vector3> positions, DiceRecallEdge[] edges,
+            float lift, Vector3[] targets)
+        {
+            var offsets = new float[4];
+            var used = new bool[4];
+            for (var i = 0; i < positions.Count; i++)
+            {
+                var edge = (int)edges[i];
+                var target = RecallTarget(arena, positions[i], edges[i], lift);
+                var needed = edges[i] == DiceRecallEdge.Left || edges[i] == DiceRecallEdge.Right
+                    ? target.x - positions[i].x : target.z - positions[i].z;
+                var further = edges[i] == DiceRecallEdge.Right || edges[i] == DiceRecallEdge.Top
+                    ? Mathf.Max(offsets[edge], needed) : Mathf.Min(offsets[edge], needed);
+                offsets[edge] = used[edge] ? further : needed;
+                used[edge] = true;
+            }
+            for (var i = 0; i < positions.Count; i++)
+            {
+                var offset = offsets[(int)edges[i]];
+                targets[i] = edges[i] == DiceRecallEdge.Left || edges[i] == DiceRecallEdge.Right
+                    ? positions[i] + new Vector3(offset, 0f, 0f)
+                    : positions[i] + new Vector3(0f, lift, offset);
+            }
         }
 
         public static Vector2 Clamp(DiceArena arena, Vector2 position) =>
@@ -132,6 +362,18 @@ namespace TxTRPG.UI.Dice
             for (var i = 0; i < positions.Count; i++)
                 for (var j = 0; j < i; j++)
                     if ((positions[i] - positions[j]).sqrMagnitude < minimumDistance * minimumDistance) return true;
+            return false;
+        }
+
+        // Overlap of resting dice: closer than their rest footprints allow (dice touching after a throw do not count).
+        public static bool HasRestOverlap(IReadOnlyList<Vector2> positions, IReadOnlyList<float> restHeights)
+        {
+            for (var i = 0; i < positions.Count; i++)
+                for (var j = 0; j < i; j++)
+                {
+                    var minimum = (restHeights[i] + restHeights[j]) * RestSeparationFactor;
+                    if ((positions[i] - positions[j]).sqrMagnitude < minimum * minimum) return true;
+                }
             return false;
         }
 

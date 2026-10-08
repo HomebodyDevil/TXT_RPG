@@ -31,7 +31,12 @@ namespace TxTRPG.Application.Dice
         [SerializeField] private OwnedDiceSessionBinder ownedDiceBinder;
         [SerializeField] private TemporaryDiceHistoryMode historyMode = TemporaryDiceHistoryMode.LatestCombatNode;
         [SerializeField, Min(1)] private int maximumHistoryCombats = 4;
-        [SerializeField, Range(1f, 15f)] private float rollTimeoutSeconds = 3f;
+        [SerializeField, Range(1f, 15f), Tooltip("Minimum wait for the dice presentation before the text fallback is used.")]
+        private float rollTimeoutSeconds = 3f;
+        [SerializeField, Range(0f, 5f), Tooltip("Added to the panel's longest presentation to form the actual timeout.")]
+        private float rollTimeoutMarginSeconds = 1f;
+
+        public const float MaximumRollTimeoutSeconds = 15f;
 
         private PlayerSessionHost sessionHost;
         private TemporaryCombatState combat;
@@ -43,6 +48,10 @@ namespace TxTRPG.Application.Dice
         public bool IsReady => initialized && combat != null && sessionHost?.TemporaryDice != null;
         public TemporaryCombatState Combat => combat;
         public event Action<bool> CombatFinished;
+
+        // The timeout never cuts a normal presentation short: max(minimum, longest presentation + margin), within [1, 15]s.
+        public static float ResolveRollTimeout(float minimumSeconds, float presentationSeconds, float marginSeconds) =>
+            Mathf.Clamp(Mathf.Max(minimumSeconds, presentationSeconds + Mathf.Max(0f, marginSeconds)), 1f, MaximumRollTimeoutSeconds);
 
         public async Task InitializeAsync(SceneInitializationContext context, CancellationToken cancellationToken)
         {
@@ -205,15 +214,21 @@ namespace TxTRPG.Application.Dice
             using var cancellation = new CancellationTokenSource();
             try
             {
+                var timeout = ResolveRollTimeout(rollTimeoutSeconds, panel.MaximumPresentationSeconds, rollTimeoutMarginSeconds);
+#if UNITY_EDITOR
+                if (editorTimeoutOverrideSeconds > 0f) timeout = editorTimeoutOverrideSeconds;
+#endif
                 var animation = panel.PlayRollAsync(display,
                     acceptedHost.TemporaryDicePreferences.ReduceMotion, cancellation.Token);
-                var finished = await Task.WhenAny(animation,
-                    Task.Delay(Mathf.CeilToInt(Mathf.Clamp(rollTimeoutSeconds, 1f, 15f) * 1000f)));
+                var finished = await Task.WhenAny(animation, Task.Delay(Mathf.CeilToInt(timeout * 1000f)));
                 if (finished != animation)
                 {
                     cancellation.Cancel();
+                    // The dice are put at rest with the accepted faces before the text fallback and the result.
+                    if (panel != null) panel.StopRollAtResults();
                     _ = ObserveLateAnimationAsync(animation);
-                    panel.ShowRollFallback(display);
+                    if (panel != null) panel.ShowRollFallback(display);
+                    Debug.LogWarning($"OWNED_DICE_ROLL_TIMEOUT: presentation exceeded {timeout:F2}s; the dice were stopped at the accepted faces.");
                     return;
                 }
                 if (!await animation) panel.ShowRollFallback(display);
@@ -383,6 +398,9 @@ namespace TxTRPG.Application.Dice
         }
 
         public void SetRandomForTests(IRandomIndexSource source) => random = source;
+        private float editorTimeoutOverrideSeconds;
+        // Verification only: a positive value replaces the computed timeout; zero restores it.
+        public void SetRollTimeoutOverrideForEditor(float seconds) => editorTimeoutOverrideSeconds = Mathf.Max(0f, seconds);
         public void ConfigureOwnedDiceForEditor(OwnedDiceSessionBinder binder) => ownedDiceBinder = binder;
 #endif
     }

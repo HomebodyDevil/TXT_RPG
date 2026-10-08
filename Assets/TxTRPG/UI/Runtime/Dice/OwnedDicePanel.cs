@@ -36,6 +36,26 @@ namespace TxTRPG.UI.Dice
         public int Amount { get; }
     }
 
+    // Verification record of the last PlayRollAsync call. Times are Time.realtimeSinceStartup values.
+    public sealed class OwnedDiceRollTimeline
+    {
+        public bool UsedThrow { get; internal set; }
+        // Every participant was outside one of the four screen edges when the recalled pose was replaced by the launch
+        // pose, and still is in the launch pose.
+        public bool HiddenAtSwap { get; internal set; } = true;
+        public string SwapDetail { get; internal set; } = string.Empty;
+        // Recall edge chosen per participant (results order) and how path overlaps were resolved.
+        public IReadOnlyList<DiceRecallEdge> RecallEdges { get; internal set; } = Array.Empty<DiceRecallEdge>();
+        public DiceRecallResolution RecallResolution { get; internal set; }
+        public float StartedAt { get; internal set; }
+        public float RecallEndedAt { get; internal set; }
+        public float ThrowStartedAt { get; internal set; }
+        public float SettledAt { get; internal set; }
+        public float RevealedAt { get; internal set; }
+        // Largest position change of any die between the settled pose and the end of the roll (hold and final layout).
+        public float ShiftAfterSettle { get; internal set; }
+    }
+
     // Presents an already decided roll. The physics throw is pre-computed in an isolated physics Scene and replayed;
     // a symmetry rotation on each visual makes the decided face the one that ends up pointing at the ceiling.
     [DisallowMultipleComponent]
@@ -98,7 +118,12 @@ namespace TxTRPG.UI.Dice
         public DiceThrowOutcome LastThrowOutcome { get; private set; }
         public bool LastRollUsedPlacementFallback { get; private set; }
         public DiceArena CurrentArena => arena;
-        public float MaximumPresentationSeconds => throwSettings.MaximumPresentationSeconds;
+        public OwnedDiceRollTimeline LastRollTimeline { get; private set; }
+        // Upper bound of PlayRollAsync after the synchronous simulation: the throw path, or the placement paths, plus the
+        // result hold. Callers derive their timeout from it.
+        public float MaximumPresentationSeconds =>
+            Mathf.Max(throwSettings.MaximumThrowPresentationSeconds,
+                Mathf.Max(fallbackDuration, reducedMotionDuration) + throwSettings.ResultRevealDelay);
 
         private void OnEnable()
         {
@@ -205,7 +230,10 @@ namespace TxTRPG.UI.Dice
             rolling = true;
             interrupted = false;
             LastRollUsedPlacementFallback = false;
+            var timeline = new OwnedDiceRollTimeline { StartedAt = Time.realtimeSinceStartup };
+            LastRollTimeline = timeline;
             var shown = false;
+            Vector3[] settled = null;
             foreach (var roll in results) visuals[roll.InstanceId].RestFace = roll.FaceIndex;
             try
             {
@@ -220,11 +248,20 @@ namespace TxTRPG.UI.Dice
                         LastRollUsedPlacementFallback = true;
                         shown = await PlaceResultsAsync(fallbackDuration, token, cancellationToken);
                     }
-                    else shown = await PlayThrowAsync(plan, token, cancellationToken);
+                    else
+                    {
+                        timeline.UsedThrow = true;
+                        shown = await PlayThrowAsync(plan, timeline, token, cancellationToken);
+                    }
                 }
                 if (!shown) return false;
                 EnsureResultFaces(results);
-                return true;
+                // Dice added during the roll and a viewport resize are applied now, before the dice are read as still.
+                ApplyDeferredLayout();
+                timeline.SettledAt = Time.realtimeSinceStartup;
+                settled = CapturePositions();
+                shown = await HoldAsync(throwSettings.ResultRevealDelay, token, cancellationToken);
+                return shown;
             }
             finally
             {
@@ -236,9 +273,23 @@ namespace TxTRPG.UI.Dice
                         // A cancelled or timed-out replay must not leave dice mid-air: show the accepted faces at rest.
                         if (!shown) layoutPending = true;
                         FinishRollLayout();
+                        if (shown && settled != null) timeline.ShiftAfterSettle = MaximumShift(settled);
                     }
                 }
+                timeline.RevealedAt = Time.realtimeSinceStartup;
             }
+        }
+
+        // Used when the caller stops waiting (timeout): ends the running presentation at once and leaves every die at
+        // rest with its accepted face up, so the caller can apply the result afterwards. Does nothing when idle.
+        public void StopRollAtResults()
+        {
+            if (!rolling) return;
+            generation++;
+            rolling = false;
+            if (this == null || !isActiveAndEnabled) return;
+            layoutPending = true;
+            FinishRollLayout();
         }
 
         public void ShowRollFallback(IReadOnlyList<DieRollDisplay> results)
@@ -274,14 +325,13 @@ namespace TxTRPG.UI.Dice
                 if (visual.Root != null && !visual.Hidden) active.Add(visual);
             foreach (var visual in active)
             {
-                var renderer = visual.Body.GetComponent<Renderer>();
-                if (renderer == null) continue;
-                var bounds = renderer.bounds;
-                for (var corner = 0; corner < 8; corner++)
+                // Mesh vertices, not the renderer's world AABB: a rotated die's AABB reaches far past its real outline.
+                var mesh = visual.Shape.ColliderMesh;
+                if (mesh == null || !mesh.isReadable) continue;
+                var toWorld = visual.Body.localToWorldMatrix;
+                foreach (var vertex in mesh.vertices)
                 {
-                    var point = bounds.center + Vector3.Scale(bounds.extents,
-                        new Vector3((corner & 1) == 0 ? -1 : 1, (corner & 2) == 0 ? -1 : 1, (corner & 4) == 0 ? -1 : 1));
-                    var viewport = stageCamera.WorldToViewportPoint(point);
+                    var viewport = stageCamera.WorldToViewportPoint(toWorld.MultiplyPoint3x4(vertex));
                     if (viewport.x < -0.001f || viewport.x > 1.001f || viewport.y < -0.001f || viewport.y > 1.001f)
                     { detail = $"{visual.Root.name} leaves the dice viewport ({viewport.x:F3}, {viewport.y:F3})."; return false; }
                 }
@@ -290,7 +340,7 @@ namespace TxTRPG.UI.Dice
                 for (var j = 0; j < i; j++)
                 {
                     var a = active[i].Root.localPosition; var b = active[j].Root.localPosition;
-                    var minimum = (active[i].Shape.RestHeight + active[j].Shape.RestHeight) * 0.98f;
+                    var minimum = (active[i].Shape.RestHeight + active[j].Shape.RestHeight) * DiceArenaLayout.RestSeparationFactor;
                     if (new Vector2(a.x - b.x, a.z - b.z).magnitude < minimum)
                     { detail = $"{active[i].Root.name} overlaps {active[j].Root.name}."; return false; }
                 }
@@ -343,22 +393,80 @@ namespace TxTRPG.UI.Dice
             }
         }
 
-        private async Task<bool> PlayThrowAsync(ThrowPlan plan, int token, CancellationToken cancellationToken)
+        private async Task<bool> PlayThrowAsync(ThrowPlan plan, OwnedDiceRollTimeline timeline, int token,
+            CancellationToken cancellationToken)
         {
             var count = plan.Dice.Length;
+            // Recall: every die leaves through its nearest screen edge in the same time with the same progress curve.
             var fromPositions = new Vector3[count];
             var fromRotations = new Quaternion[count];
-            var fromBodies = new Quaternion[count];
+            var restHeights = new float[count];
             for (var i = 0; i < count; i++)
             {
                 fromPositions[i] = plan.Dice[i].Root.localPosition;
                 fromRotations[i] = plan.Dice[i].Root.localRotation;
-                fromBodies[i] = plan.Dice[i].Body.localRotation;
+                restHeights[i] = plan.Dice[i].Shape.RestHeight;
             }
-            var lift = throwSettings.LiftDuration;
+            var lift = arena.DieRadius * throwSettings.RecallLiftRadii;
+            var recallPlan = DiceArenaLayout.PlanRecall(arena, fromPositions, restHeights, lift);
+            timeline.RecallEdges = recallPlan.Edges;
+            timeline.RecallResolution = recallPlan.Resolution;
+            if (recallPlan.Resolution == DiceRecallResolution.CommonBottom)
+                Debug.LogWarning("OWNED_DICE_RECALL_FALLBACK: nearest-edge recall paths overlapped; all dice leave below the screen together.", this);
+            // Each die rolls toward its own direction of travel (axis = up x direction).
+            var tumbleAxes = new Vector3[count];
+            for (var i = 0; i < count; i++)
+            {
+                var travel = recallPlan.Targets[i] - fromPositions[i];
+                travel.y = 0f;
+                tumbleAxes[i] = travel.sqrMagnitude > 1e-6f ? Vector3.Cross(Vector3.up, travel.normalized) : Vector3.zero;
+            }
+            var tumble = throwSettings.RecallTumbleDegrees;
+            var recall = throwSettings.RecallDuration;
+            var start = Time.realtimeSinceStartup;
+            while (recall > 0f)
+            {
+                if (IsStale(token, cancellationToken)) return false;
+                var t = Mathf.Clamp01((Time.realtimeSinceStartup - start) / recall);
+                var eased = t * t;
+                for (var i = 0; i < count; i++)
+                {
+                    var visual = plan.Dice[i];
+                    if (visual.Root == null) continue;
+                    visual.Root.localPosition = Vector3.LerpUnclamped(fromPositions[i], recallPlan.Targets[i], eased);
+                    visual.Root.localRotation = tumbleAxes[i] == Vector3.zero ? fromRotations[i] :
+                        Quaternion.AngleAxis(tumble * eased, tumbleAxes[i]) * fromRotations[i];
+                }
+                if (t >= 1f) break;
+                await Task.Yield();
+            }
+            if (IsStale(token, cancellationToken)) return false;
+            for (var i = 0; i < count; i++)
+                if (plan.Dice[i].Root != null) plan.Dice[i].Root.localPosition = recallPlan.Targets[i];
+            timeline.RecallEndedAt = Time.realtimeSinceStartup;
+            var recalledHidden = AreOffscreen(plan.Dice, "recalled", out var swapDetail);
+
+            // Hidden outside the screen: switch to the launch pose and the new symmetry correction in a single step.
+            for (var i = 0; i < count; i++)
+            {
+                var visual = plan.Dice[i];
+                if (visual.Root == null) continue;
+                plan.Trajectory.Sample(i, 0f, out var position, out var rotation);
+                visual.Root.localPosition = position;
+                visual.Root.localRotation = rotation;
+                visual.Body.localRotation = plan.Corrections[i];
+            }
+            var launchHidden = AreOffscreen(plan.Dice, "launch", out var launchDetail);
+            timeline.HiddenAtSwap = recalledHidden && launchHidden;
+            timeline.SwapDetail = recalledHidden ? launchDetail : swapDetail;
+
+            // Fixed pause with the screen clear of participants before the throw enters.
+            if (!await HoldAsync(throwSettings.ThrowDelay, token, cancellationToken)) return false;
+            timeline.ThrowStartedAt = Time.realtimeSinceStartup;
+
             var speed = throwSettings.PlaybackSpeed;
             var replay = plan.Trajectory.Duration / speed;
-            var start = Time.realtimeSinceStartup;
+            start = Time.realtimeSinceStartup;
             while (true)
             {
                 if (IsStale(token, cancellationToken)) return false;
@@ -367,24 +475,11 @@ namespace TxTRPG.UI.Dice
                 {
                     var visual = plan.Dice[i];
                     if (visual.Root == null) continue;
-                    if (elapsed < lift)
-                    {
-                        // Pick-up: move to the launch pose while the symmetry correction blends in, hidden by motion.
-                        var t = Mathf.SmoothStep(0f, 1f, elapsed / Mathf.Max(0.0001f, lift));
-                        plan.Trajectory.Sample(i, 0f, out var position, out var rotation);
-                        visual.Root.localPosition = Vector3.Lerp(fromPositions[i], position, t);
-                        visual.Root.localRotation = Quaternion.Slerp(fromRotations[i], rotation, t);
-                        visual.Body.localRotation = Quaternion.Slerp(fromBodies[i], plan.Corrections[i], t);
-                    }
-                    else
-                    {
-                        plan.Trajectory.Sample(i, (elapsed - lift) * speed, out var position, out var rotation);
-                        visual.Root.localPosition = position;
-                        visual.Root.localRotation = rotation;
-                        visual.Body.localRotation = plan.Corrections[i];
-                    }
+                    plan.Trajectory.Sample(i, elapsed * speed, out var position, out var rotation);
+                    visual.Root.localPosition = position;
+                    visual.Root.localRotation = rotation;
                 }
-                if (elapsed >= lift + replay) break;
+                if (elapsed >= replay) break;
                 await Task.Yield();
             }
             for (var i = 0; i < count; i++)
@@ -435,6 +530,63 @@ namespace TxTRPG.UI.Dice
         private bool IsStale(int token, CancellationToken cancellationToken) =>
             cancellationToken.IsCancellationRequested || token != generation || this == null || !isActiveAndEnabled;
 
+        // Result hold: the dice stay where they stopped so the faces can be read before the result is applied.
+        private async Task<bool> HoldAsync(float duration, int token, CancellationToken cancellationToken)
+        {
+            var start = Time.realtimeSinceStartup;
+            while (Time.realtimeSinceStartup - start < duration)
+            {
+                if (IsStale(token, cancellationToken)) return false;
+                await Task.Yield();
+            }
+            return !IsStale(token, cancellationToken);
+        }
+
+        // Applies layout work deferred while rolling (dice added during the roll, viewport size changes).
+        private void ApplyDeferredLayout()
+        {
+            rolling = false;
+            try { FinishRollLayout(); }
+            finally { rolling = true; }
+        }
+
+        // Each bounding sphere must lie entirely outside one of the four edges of the orthographic stage camera's view.
+        private bool AreOffscreen(Visual[] dice, string stage, out string detail)
+        {
+            detail = string.Empty;
+            if (stageCamera == null || !stageCamera.orthographic) { detail = "Orthographic stage camera is missing."; return false; }
+            var height = stageCamera.orthographicSize * 2f;
+            var width = height * stageCamera.aspect;
+            foreach (var visual in dice)
+            {
+                if (visual.Root == null) continue;
+                var radius = visual.Shape.BoundingRadius * visual.Root.lossyScale.x;
+                var viewport = stageCamera.WorldToViewportPoint(visual.Root.position);
+                var rx = radius / width; var ry = radius / height;
+                if (viewport.x + rx < 0f || viewport.x - rx > 1f || viewport.y + ry < 0f || viewport.y - ry > 1f) continue;
+                detail = $"{visual.Root.name} is visible in the {stage} pose (viewport {viewport.x:F3}, {viewport.y:F3}).";
+                return false;
+            }
+            return true;
+        }
+
+        private Vector3[] CapturePositions()
+        {
+            var ordered = OrderedVisuals();
+            var result = new Vector3[ordered.Count];
+            for (var i = 0; i < result.Length; i++) result[i] = ordered[i].Root.localPosition;
+            return result;
+        }
+
+        private float MaximumShift(Vector3[] before)
+        {
+            var ordered = OrderedVisuals();
+            if (ordered.Count != before.Length) return float.PositiveInfinity;
+            var shift = 0f;
+            for (var i = 0; i < before.Length; i++) shift = Mathf.Max(shift, Vector3.Distance(before[i], ordered[i].Root.localPosition));
+            return shift;
+        }
+
         private void EnsureResultFaces(IReadOnlyList<DieRollDisplay> results)
         {
             foreach (var roll in results)
@@ -476,19 +628,24 @@ namespace TxTRPG.UI.Dice
             var aspect = textureSize.x > 0 && textureSize.y > 0 ? textureSize.x / (float)textureSize.y :
                 diceViewport != null && diceViewport.rectTransform.rect.height > 0f ?
                     diceViewport.rectTransform.rect.width / diceViewport.rectTransform.rect.height : 1.6f;
+            var previous = arena;
+            var hadArena = hasArena;
             try { arena = DiceArenaLayout.Compute(aspect, ordered.Count, radius, arenaSettings); }
             catch (Exception exception) { Debug.LogWarning($"Dice arena could not be computed: {exception.Message}", this); return false; }
             hasArena = true;
             rig.ApplyComposition(arena, arenaSettings.CameraDistance);
-            if (!layoutPending)
+            // Rested dice keep their pose while the bounds are unchanged; the physics walls already kept them inside.
+            if (!layoutPending && !(hadArena && arena.HasSameBounds(previous)))
             {
                 var clamped = new Vector2[ordered.Count];
+                var restHeights = new float[ordered.Count];
                 for (var i = 0; i < ordered.Count; i++)
                 {
                     var position = ordered[i].Root.localPosition;
                     clamped[i] = DiceArenaLayout.Clamp(arena, new Vector2(position.x, position.z));
+                    restHeights[i] = ordered[i].Shape.RestHeight;
                 }
-                if (DiceArenaLayout.HasOverlap(clamped, radius * 1.5f)) layoutPending = true;
+                if (DiceArenaLayout.HasRestOverlap(clamped, restHeights)) layoutPending = true;
                 else
                     for (var i = 0; i < ordered.Count; i++)
                         ordered[i].Root.localPosition = new Vector3(clamped[i].x, ordered[i].Root.localPosition.y, clamped[i].y);
@@ -561,6 +718,20 @@ namespace TxTRPG.UI.Dice
           modelRoot = models; shapeCatalog = catalog; }
 
         public void SetThrowSeedForEditor(int seed) => debugThrowSeed = seed;
+
+        // Verification only: rests the displayed dice (display order) at the given floor positions, showing their last face.
+        public void PlaceDiceForEditor(IReadOnlyList<Vector2> positions)
+        {
+            if (rolling) throw new InvalidOperationException("Dice cannot be placed during a roll.");
+            var ordered = OrderedVisuals();
+            for (var i = 0; i < ordered.Count && i < positions.Count; i++)
+            {
+                var visual = ordered[i];
+                visual.Root.localPosition = new Vector3(positions[i].x, visual.Shape.RestHeight, positions[i].y);
+                visual.Root.localRotation = visual.Shape.PoseFor(Mathf.Clamp(visual.RestFace, 0, visual.Shape.FaceCount - 1));
+                visual.Body.localRotation = Quaternion.identity;
+            }
+        }
         public DiceThrowSettings ThrowSettingsForEditor => throwSettings;
 #endif
     }

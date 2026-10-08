@@ -43,6 +43,22 @@ namespace TxTRPG.Editor.Tests
                 [TxTRPGEditorMenuPaths.UiPrefabs +
                  "Convert Selected Health Bars to Padding Sizing"] =
                     TxTRPGEditorMenuPriorities.Refresh + 1,
+                [TxTRPGEditorMenuPaths.UiPrefabs + "Upgrade Action Grid Cell Icon Layout"] =
+                    TxTRPGEditorMenuPriorities.Rebuild + 1,
+                [TxTRPGEditorMenuPaths.UiPrefabs + "Upgrade Action Grid Cell Empty Slot Layout"] =
+                    TxTRPGEditorMenuPriorities.Rebuild + 2,
+                [TxTRPGEditorMenuPaths.UiPrefabs + "Upgrade Action Grid Cell Ratio Capped Layout"] =
+                    TxTRPGEditorMenuPriorities.Rebuild + 3,
+                [TxTRPGEditorMenuPaths.UiExploration + "Rebuild Node Choice Card Prefab"] =
+                    TxTRPGEditorMenuPriorities.Rebuild,
+                [TxTRPGEditorMenuPaths.UiExplorationTemporary + "Verify Card Runtime Lifecycle"] =
+                    TxTRPGEditorMenuPriorities.Validate,
+                [TxTRPGEditorMenuPaths.UiExplorationTemporary + "Capture Runtime Card States"] =
+                    TxTRPGEditorMenuPriorities.Validate + 1,
+                [TxTRPGEditorMenuPaths.UiExplorationTemporary + "Inspect Runtime Card Text"] =
+                    TxTRPGEditorMenuPriorities.Validate + 2,
+                [TxTRPGEditorMenuPaths.UiFonts + "Apply Korean Font Fallback"] =
+                    TxTRPGEditorMenuPriorities.Refresh,
                 [TxTRPGEditorMenuPaths.UiDemos + "Rebuild Story Text Panel Demo"] =
                     TxTRPGEditorMenuPriorities.Rebuild,
                 [TxTRPGEditorMenuPaths.UiDemos +

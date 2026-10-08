@@ -100,7 +100,7 @@ TxT-RPG/
 
 `TxTRPG.Content`는 Gameplay의 `CharacterDefinition`, UI의 `CharacterAppearanceDefinition`과 체력 기반 `CharacterVisualStatePolicy`를 `CharacterContentDefinition`으로 조합하는 콘텐츠 계층입니다. `CharacterDisplayPresenter`는 Health 이벤트를 Presentation 갱신으로 변환하며, `CharacterContentCatalog`는 로드된 가벼운 정의를 안정적인 Definition ID로 조회합니다. `TxTRPG.Content.Editor`는 `Tools > TxT RPG > Content > Characters > Open Authoring`에서 네 에셋 생성·연결, 상태별 Sprite, 카탈로그 및 선택적 Addressables 등록을 수행하고, `Tools > TxT RPG > Content > Characters > Validate All`에서 누락 참조, ID 불일치, 상태 정책, Variant 모호성, Addressable artwork ID와 프로젝트 전체 중복 ID를 검사합니다. 고해상도 Sprite는 Content 에셋이 직접 소유하지 않고 기존 `Character2DView`가 ID로 지연 로드합니다.
 
-`Assets/TxTRPG/Editor/Common/Menu`는 `Tools > TxT RPG` 아래의 공통 메뉴 경로와 의미별 우선순위를 소유합니다. 각 기능의 Editor 어셈블리는 이 상수를 참조하므로 메뉴 계층과 정렬 정책을 개별 문자열로 중복하지 않습니다. `Assets/TxTRPG/Editor/Tests/Editor/EditorMenuTests.cs`는 Content, UI와 Scene Transition Editor 어셈블리에서 등록한 메뉴 계약을 한 곳에서 검증합니다.
+`Assets/TxTRPG/Editor/Common/Menu`는 `Tools > TxT RPG` 아래의 공통 메뉴 경로와 의미별 우선순위를 소유합니다. 각 기능의 Editor 어셈블리는 이 상수를 참조하므로 메뉴 계층과 정렬 정책을 개별 문자열로 중복하지 않습니다. 경로 상수는 `CharacterContent`, `UiPrefabs`, `UiDemos`, `UiPreview`, `UiExploration`, `UiExplorationTemporary`, `UiFonts`, `Application`, `Addressables`, `Validation`, `Build`이며, 우선순위는 `Authoring`·`Create`·`Rebuild`·`Refresh`·`Register`·`Validate`·`Build` 의미를 따릅니다. `Assets/TxTRPG/Editor/Tests/Editor/EditorMenuTests.cs`는 Content, Editor Common, UI와 Scene Transition Editor 어셈블리에서 등록한 메뉴(남겨 둔 Temporary 검증 메뉴 포함)의 경로·우선순위·중복을 한 곳에서 검증합니다. Application Editor 어셈블리의 메뉴는 이 테스트의 검사 대상이 아닙니다.
 
 `Assets/TxTRPG/Editor/Common/PrefabRebuild`는 생성형 운영 Prefab 작업의 등록 계약, 의존 계획, 사전 검사, 순차 실행과 선택 창을 제공합니다. 기능별 Editor 어셈블리가 Provider를 구현하므로 공통 어셈블리는 UI나 Application Editor를 역참조하지 않습니다.
 

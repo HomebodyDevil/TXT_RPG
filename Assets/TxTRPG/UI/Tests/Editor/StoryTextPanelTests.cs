@@ -158,6 +158,8 @@ namespace TxTRPG.UI.Tests
             }
         }
 
+        // StoryTextPanel is not [ExecuteAlways], so Edit Mode never calls OnEnable or LateUpdate. Invoke the
+        // runtime lifecycle explicitly (enable, several frames, re-enable) and expect a single warning.
         [Test]
         public void ActiveUnconfiguredPanel_ReportsMissingReferencesOnceWithoutException()
         {
@@ -166,13 +168,22 @@ namespace TxTRPG.UI.Tests
             try
             {
                 var panel = gameObject.AddComponent<StoryTextPanel>();
+                gameObject.SetActive(true);
                 LogAssert.Expect(
                     LogType.Warning,
                     new System.Text.RegularExpressions.Regex(
                         "StoryTextPanel is waiting for required references:.*scrollRect.*"));
-                gameObject.SetActive(true);
-                ((RectTransform)gameObject.transform).sizeDelta = new Vector2(420f, 260f);
-                Canvas.ForceUpdateCanvases();
+                Assert.DoesNotThrow(() =>
+                {
+                    InvokeLifecycle(panel, "Awake");
+                    InvokeLifecycle(panel, "OnEnable");
+                    ((RectTransform)gameObject.transform).sizeDelta = new Vector2(420f, 260f);
+                    Canvas.ForceUpdateCanvases();
+                    for (var frame = 0; frame < 3; frame++) InvokeLifecycle(panel, "LateUpdate");
+                    InvokeLifecycle(panel, "OnDisable");
+                    InvokeLifecycle(panel, "OnEnable");
+                    InvokeLifecycle(panel, "LateUpdate");
+                });
                 Assert.That(panel.HasRequiredReferences, Is.False);
                 LogAssert.NoUnexpectedReceived();
             }
@@ -180,6 +191,14 @@ namespace TxTRPG.UI.Tests
             {
                 Object.DestroyImmediate(gameObject);
             }
+        }
+
+        private static void InvokeLifecycle(StoryTextPanel panel, string methodName)
+        {
+            var method = typeof(StoryTextPanel).GetMethod(methodName,
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            Assert.That(method, Is.Not.Null, methodName);
+            method.Invoke(panel, null);
         }
     }
 }

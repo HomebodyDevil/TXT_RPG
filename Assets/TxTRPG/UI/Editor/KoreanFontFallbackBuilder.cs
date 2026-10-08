@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using TMPro;
+using TxTRPG.Editor.Common.Menu;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.TextCore.LowLevel;
@@ -13,7 +14,10 @@ namespace TxTRPG.UI.Editor
         public const string FontAssetPath = "Assets/TxTRPG/UI/Fonts/Korean/NotoSansKR-Fallback.asset";
         public const string TmpSettingsPath = "Assets/TextMesh Pro/Resources/TMP Settings.asset";
 
-        [MenuItem("Tools/TxT RPG/UI/Fonts/Apply Korean Font Fallback")]
+        [MenuItem(
+            TxTRPGEditorMenuPaths.UiFonts + "Apply Korean Font Fallback",
+            false,
+            TxTRPGEditorMenuPriorities.Refresh)]
         public static void Apply()
         {
             var source = AssetDatabase.LoadAssetAtPath<Font>(SourceFontPath)

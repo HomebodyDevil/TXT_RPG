@@ -7,6 +7,9 @@ namespace TxTRPG.Editor.Common.Menu
         public const string UiPrefabs = Root + "UI/Prefabs/";
         public const string UiDemos = Root + "UI/Demos/";
         public const string UiPreview = Root + "UI/Preview/";
+        public const string UiExploration = Root + "UI/Exploration/";
+        public const string UiExplorationTemporary = UiExploration + "Temporary/";
+        public const string UiFonts = Root + "UI/Fonts/";
         public const string Application = Root + "Application/";
         public const string Addressables = Root + "Addressables/";
         public const string Validation = Root + "Validation/";

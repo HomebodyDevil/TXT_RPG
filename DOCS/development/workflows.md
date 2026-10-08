@@ -336,6 +336,8 @@ Editor fallback Sprite는 미리보기 용도로만 사용합니다. 새 런타�
 
 ## TMP_MainScene 기본 표시와 Preview
 
+현재 운영 `TMP_MainScene`에는 이 메뉴가 적용되어 있지 않습니다. 메뉴는 Scene을 저장하고 Story에 영어 안내 문구를 남기는 등 운영 화면을 바꾸므로, 적용하려면 별도 작업으로 범위를 정하고 Play Mode에서 확인합니다.
+
 1. `Tools > TxT RPG > Application > Configure Main Scene Default Content`를 실행합니다.
 2. 생성기는 기존 레이아웃 계층과 RectTransform을 유지하고 운영 Profile, 로컬 대체 Style, 여섯 Preview Profile과 Preview Harness Prefab을 갱신합니다.
 3. 운영 Scene의 `EnemyDisplayPanelDemoLoader`를 제거하고 같은 패널 인스턴스를 `MainScenePresentationController`에 연결합니다.
@@ -347,7 +349,9 @@ Editor fallback Sprite는 미리보기 용도로만 사용합니다. 새 런타�
 기존 자산을 이전하려면 Scene을 저장한 뒤 위 메뉴를 실행합니다. 생성기는 Panel Prefab을 재생성하거나 Unpack하지 않습니다. 적용 후 `Main_FlexibleLayoutPanel`의 Prefab Override와 자식 순서를 비교하고, `EnemyDisplayPanelContainer`에 Demo Loader가 남아 있지 않은지 확인합니다.
 ## 테스트
 
-Edit Mode 테스트는 `Assets/TxTRPG/UI/Tests/Editor`, `Assets/TxTRPG/Application/Tests/Editor`, `Assets/TxTRPG/SceneTransition/Tests/Editor`와 `Assets/TxTRPG/Editor/Tests/Editor`에 있습니다. `EditorMenuTests`는 등록된 Editor 메뉴의 전체 경로, 우선순위와 중복 여부를 검증합니다.
+Edit Mode 테스트는 `Assets/TxTRPG/UI/Tests/Editor`, `Assets/TxTRPG/Application/Tests/Editor`, `Assets/TxTRPG/SceneTransition/Tests/Editor`와 `Assets/TxTRPG/Editor/Tests/Editor`에 있습니다. `EditorMenuTests`는 Content, Editor Common, UI, Scene Transition Editor 어셈블리에 등록된 `Tools/TxT RPG/` 메뉴의 전체 경로, 우선순위와 중복 여부를 검증합니다. 이 어셈블리에 메뉴를 추가하면 경로를 `TxTRPGEditorMenuPaths` 상수로, 우선순위를 `TxTRPGEditorMenuPriorities`로 지정하고 기대 목록에 넣습니다. 남겨 둔 Temporary 메뉴도 예외 없이 상수 경로와 기대 목록을 사용합니다.
+
+Edit Mode에서는 `[ExecuteAlways]`가 없는 MonoBehaviour의 `Awake`·`OnEnable`·`LateUpdate`가 호출되지 않습니다. 런타임 생명주기를 전제로 하는 Edit Mode 테스트는 `SceneTransitionTests`의 서비스 픽스처나 `StoryTextPanelTests`처럼 필요한 생명주기 메서드를 명시적으로 호출합니다. `UnitySceneLoader.ValidateScenePath`의 Build Settings 수락 경로는 `Application.CanStreamedLevelBeLoaded(string)`가 Edit Mode에서 활성 Scene에도 `false`를 반환하므로 Edit Mode에서 검증하지 않고, `BuildScenePathUtility` 테스트와 AppScene 시작·Player 빌드로 확인합니다.
 캐릭터 Gameplay 도메인 테스트는 `Assets/TxTRPG/Gameplay/Tests/Editor`에 있습니다.
 
 - `CharacterDomainTests`는 Stat, Health, 피해 계산과 단일 캐릭터 저장 호환성을 검증합니다.
@@ -593,21 +597,9 @@ Scene 연결을 복구할 때에는 기존 메뉴의 Transform, 형제 순서, �
 - 카드 피드백: `Assets/TxTRPG/UI/Styles/ExplorationCardDefaultPresentation.asset`에서 Normal·Highlighted·Pressed·Confirming·Disabled 색상, 강조·눌림 배율, 상태 전환 시간과 확정 대기 시간을 설정합니다. 확정 시간이 0이면 프레임을 기다리지 않고 기존 선택 경로를 실행합니다.
 - 느린 박동: 같은 프로필의 `Pulse Enabled`, `Pulse Min Scale`, `Pulse Max Scale`, `Pulse Period`를 설정합니다. 기본값은 켜짐, 1.00, 1.03, 왕복 1.8초입니다. 주기가 유효하지 않으면 정적 크기를 사용합니다. 텍스트 Wave·Gradient는 계속 기본 꺼짐입니다.
 - 가독성: `TextBackdrop`은 두 외형 모드에서 필수 문구 뒤의 불투명 배경을 유지합니다. `Border`와 `FocusVisual`에는 면 전체를 복제하는 Image+Outline 대신 테두리 전용 Graphic을 사용합니다.
-- 선별 이전: 임시 메뉴 `Tools > TxT RPG > UI > Exploration > Temporary > Upgrade Card Readability And Pulse`는 공유 기본 카드의 장식 Graphic·내부 참조·텍스트 배경과 기본 프로필의 박동 값만 저장합니다. Scene 배치·도형 설정·다른 프로필·Variant·플레이어 데이터는 변경하지 않습니다. 전체 카드 재생성은 필요하지 않습니다. 반복 실행 시 요소는 중복되지 않지만 기본 프로필의 박동 값은 1.00~1.03/1.8초로 재설정되므로 사용자 조정값을 먼저 백업하십시오. 프로젝트 기본 자산의 이전이 끝나면 해당 임시 메뉴를 폐기할 수 있습니다.
+- 선별 이전: 가독성·박동 이전용 임시 메뉴 `Upgrade Card Readability And Pulse`는 기본 카드 Prefab(`TextBackdrop`, 테두리 전용 Graphic)과 기본 프로필(박동 1.00~1.03/1.8초)에 적용이 끝난 것을 확인하고 퇴역했습니다. 이전 기본 자산을 가진 다른 작업 사본은 Git에 저장된 현재 자산을 받아 사용합니다.
 
-기존 복사본에 대한 수동 이전 절차는 다음과 같습니다. 현재 저장된 기본 자산에는 이미 적용되어 있으므로 다시 실행할 필요가 없습니다.
-
-```text
-1. Play Mode를 종료하고 컴파일 완료를 기다립니다. 미저장 Scene과 기본 표시 프로필의 사용자 변경을 저장하거나 백업합니다.
-2. 카드 Prefab Stage가 열려 있으면 변경을 저장하고 닫습니다. 기본 프로필의 사용자 박동 조정값을 백업합니다.
-3. Tools > TxT RPG > UI > Exploration > Temporary > Upgrade Card Readability And Pulse를 실행합니다.
-   기본 카드와 기본 프로필만 자동 저장됩니다. Scene은 저장하지 않습니다.
-   Console의 'Card readability and pulse upgraded'와 필수 참조 검증 성공을 확인합니다. 오류가 발생하면 중단합니다.
-4. Assets/Scenes/AppScene.unity에서 Play합니다. TMP_MainScene에 진입한 뒤 제목·설명·상태 배지와 호버·포커스 박동을 확인합니다.
-5. System에서 카드 효과와 움직임 줄이기를 전환하고, 카드 선택 → 미구현 안내 → 계속 → 새 후보의 문구와 입력을 확인합니다.
-```
-
-Play Mode 회귀 테스트는 `ExplorationCardFeedbackPlayModeTests`입니다. Test Runner가 Domain Reload에서 작업을 복구하지 못하는 환경에서는 AppScene 실행 후 `Tools > TxT RPG > UI > Exploration > Temporary > Verify Card Runtime Lifecycle`로 같은 IEnumerator 검증을 실행할 수 있습니다. Console의 `CARD_RUNTIME_VERIFICATION: PASS` 또는 `FAIL`을 확인합니다. 검증은 임시 Canvas와 프로필 사본만 사용하며 기존 두 PlayerPrefs 값과 timeScale을 finally에서 복원합니다. `Inspect Runtime Card Text`는 운영 문구·색상·Face Color·Canvas 알파·넘침·submesh 정보를 읽습니다. `Capture Runtime Card States`는 운영 카드의 런타임 상태를 잠시 바꾸어 `Assets/Screenshots/exploration-state-*.png`에 캡처한 후 복원합니다. 자산이나 Scene은 저장하지 않으며 기존 동일 이름의 검증 이미지는 덮어씁니다. 임시 검증 도구는 정식 Test Runner 환경이 복구된 후 제거할 수 있습니다.
+Play Mode 회귀 테스트는 `ExplorationCardFeedbackPlayModeTests`입니다. Test Runner가 Domain Reload에서 작업을 복구하지 못하는 환경에서는 AppScene 실행 후 `Tools > TxT RPG > UI > Exploration > Temporary > Verify Card Runtime Lifecycle`로 같은 IEnumerator 검증을 실행할 수 있습니다. Console의 `CARD_RUNTIME_VERIFICATION: PASS` 또는 `FAIL`을 확인합니다. 검증은 임시 Canvas와 프로필 사본만 사용하며 기존 두 PlayerPrefs 값과 timeScale을 finally에서 복원합니다. `Inspect Runtime Card Text`는 운영 문구·색상·Face Color·Canvas 알파·넘침·submesh 정보를 읽습니다. `Capture Runtime Card States`는 운영 카드의 런타임 상태를 잠시 바꾸어 `Assets/Screenshots/exploration-state-*.png`에 캡처한 후 복원합니다. 자산이나 Scene은 저장하지 않으며 기존 동일 이름의 검증 이미지는 덮어씁니다. 세 검증 메뉴는 메뉴 상수 `TxTRPGEditorMenuPaths.UiExplorationTemporary`와 `Validate` 우선순위를 사용하며 `EditorMenuTests`에 등록되어 있습니다. 임시 검증 도구는 정식 Play Mode Test Runner가 이 환경(AppScene Play 시작 정책 포함)에서 다시 동작한 후 제거할 수 있습니다.
 - 텍스트 효과: 같은 프로필에서 Title·Description·Status의 색상과 Wave·Gradient를 독립적으로 설정합니다. 두 효과의 기본값은 꺼짐입니다. Wave는 진폭·속도·문자 위상, Gradient는 두 색·속도·방향을 설정합니다.
 - 플레이어 설정: System 모달에서 `카드 효과 사용`과 `움직임 줄이기`를 변경합니다. 값은 즉시 적용되고 PlayerPrefs에 저장됩니다. 움직임 줄이기는 배율·눌림·텍스트 Mesh 애니메이션과 확정 대기를 생략하지만 포커스 표식과 선택 잠금은 유지합니다.
 - 기존 시스템 모달 Prefab만 선별 이전하려면 `Tools > TxT RPG > UI > Exploration > Apply Card Accessibility Settings`를 실행합니다. 이 메뉴는 `ModalWindowHost.prefab`과 `GameMenuScreen.prefab`의 System 페이지에 두 Toggle과 바인딩만 추가하거나 갱신하며 Scene Transform과 가방 설정은 변경하지 않습니다.
@@ -910,13 +902,13 @@ UnitySkills는 `Window > UnitySkills`에서 포트와 서버 상태를 확인하
 
 초기 보유 주사위는 `TemporaryDiceConfiguration`의 Dice와 각 Faces에서 조정합니다. 기본은 `D6 (보조)`, `D6`, `D8`입니다. `Tools > TxT RPG > Application > Temporary > Apply Player Dice Roll Menu`의 구성 생성 경로는 바뀌지 않은 이전 기본 D4 항목만 같은 위치의 `D6 (보조)`로 교체합니다. 실행 중 변경은 `PlayerSessionHost.TemporaryDice.TryAdd(instanceId, definitionId, displayName, faces, minimumValue, maximumValue, out reason)`와 `TryRemove(instanceId)`를 사용합니다. 같은 형태를 여러 개 보유하려면 서로 다른 인스턴스 ID와 같은 정의 ID를 전달합니다.
 
-연출 설정은 `OwnedDicePanel` Inspector의 `arenaSettings`(카메라 기울기·거리, 화면 여백, 천장 높이, 정돈 간격, 주사위당 칸 수, 최소 바닥 크기)와 `throwSettings`(시뮬레이션 간격·최대 시간·재시도, 중력, 정지 기준, 던지기 속도·회전, 반발·마찰·감쇠, 재생 속도, 들어 올리기 시간, 시드 로그), `fallbackDuration`, `reducedMotionDuration`, `maximumTextureDimension`에서 조정합니다. `debugThrowSeed`를 0이 아닌 값으로 두면 같은 연출을 재현합니다. Editor와 개발 빌드에서는 `OWNED_DICE_THROW: seed=... attempts=... simulateMs=... replay=...` 로그로 시드와 계산 시간을 확인합니다. `maximumSimulationSeconds / playbackSpeed + liftDuration`은 `TemporaryDiceRollMenuController.rollTimeoutSeconds`보다 충분히 짧게 유지합니다. 내부 FlexibleLayoutItem의 가중치·최소 높이와 `ResponsiveMainScreen.narrowHeights[0]`, `historyMode`, `maximumHistoryCombats`, `rollTimeoutSeconds`는 기존과 같습니다. 자동 결과 표시와 모션 감소는 세션의 `TemporaryDicePreferences.AutoShowResults`, `ReduceMotion`에서 런타임 변경하며 영구 저장·옵션 UI는 아직 없습니다.
+연출 설정은 `OwnedDicePanel` Inspector의 `arenaSettings`(카메라 기울기·거리, 화면 여백, 천장 높이, 정돈 간격, 주사위당 칸 수, 최소 바닥 크기)와 `throwSettings`(시뮬레이션 간격·최대 시간·재시도, 중력, 정지 기준, 진입 제한 시간(`maximumEntrySeconds`)·출발 높이(`launchHeightRadii`), 던지기 속도·회전과 속도 기준 깊이(`referenceDepthRadii`), 반발·마찰·감쇠, 재생 속도, 회수 시간·들림·회전(`recallDuration`, `recallLiftRadii`, `recallTumbleDegrees`), 던지기 전 고정 지연(`throwDelay`, 0~2초), 정지 후 결과 대기(`resultRevealDelay`), 시드 로그), `fallbackDuration`, `reducedMotionDuration`, `maximumTextureDimension`에서 조정합니다. `debugThrowSeed`를 0이 아닌 값으로 두면 같은 연출을 재현합니다. Editor와 개발 빌드에서는 `OWNED_DICE_THROW: seed=... attempts=... simulateMs=... replay=...` 로그로 시드와 계산 시간을 확인합니다. 실제 시간 제한은 `TemporaryDiceRollMenuController`가 `max(rollTimeoutSeconds, OwnedDicePanel.MaximumPresentationSeconds + rollTimeoutMarginSeconds)`(1~15초)로 계산하므로 연출 설정을 늘려도 정상 연출이 끊기지 않습니다. `rollTimeoutSeconds`(Scene 값 3)는 최소값이며, `rollTimeoutMarginSeconds`(기본 1초)는 Scene에 직렬화되지 않아 코드 기본값을 씁니다. 시간 초과 시에는 `OWNED_DICE_ROLL_TIMEOUT` 경고가 남습니다. 내부 FlexibleLayoutItem의 가중치·최소 높이와 `ResponsiveMainScreen.narrowHeights[0]`, `historyMode`, `maximumHistoryCombats`는 기존과 같습니다. 이전 `liftDuration` 설정은 삭제했습니다(Scene에 직렬화된 적이 없음). 자동 결과 표시와 모션 감소는 세션의 `TemporaryDicePreferences.AutoShowResults`, `ReduceMotion`에서 런타임 변경하며 영구 저장·옵션 UI는 아직 없습니다.
 
 검증은 `Assets/Scenes/AppScene.unity`의 시작 경로 또는 저장된 `TMP_MainScene`의 Play Mode에서 합니다. Play를 시작하기 전에 Edit Mode에서 Scene을 디스크 상태로 다시 열어 두면 새 직렬화 필드가 코드 기본값으로 초기화됩니다.
 
-1. 전투 카드를 선택하고 Actions의 주사위 명령을 실행합니다. 주사위가 카메라 쪽에서 먼 쪽으로 던져져 벽과 서로에 부딪히며 구르고, 바닥과 평행한 윗면이 결과 창과 Story의 결과와 같아야 합니다. 체력·Story·기록은 한 번 갱신되고 결과 창이 열립니다.
-2. `Tools > TxT RPG > UI > Dice > Temporary > Validate Play Flow`는 새 탐험의 전투 후보가 있는 Play Mode에서 실행합니다. 두세 번의 수락 행동(물리 던지기, 모션 감소, 패널 숨김 중 완료), 연타 차단, 결과 면과 화면 안 배치, 자동 표시 끄기와 수동 재열기, Story·기록 및 390×844 가상 Viewport의 전체 스크롤·RenderTexture·주사위 배치를 검사합니다. Play 상태만 변경하며 통과하면 결과 창을 열어 둔 채 종료합니다.
-3. `Tools > TxT RPG > UI > Dice > Temporary > Validate Throw Presentation`은 Play Mode에서 `OwnedDicePanel.PlayRollAsync`를 직접 호출하는 임시 검증 메뉴입니다. 전투·기록·저장 데이터는 바꾸지 않고, 추가한 검증용 주사위는 끝에 제거합니다. 여러 시드에서 모든 면 강제, 모션 감소, 30·120fps에서 같은 시드의 최종 자세와 재생 길이, 시뮬레이션 실패 시 대체 배치, 굴림 중 화면 크기 변경, 6·12·20개 주사위, 런타임 4면 주사위의 텍스트 대체, 물리 Scene 누적 여부를 검사하고 `OWNED_DICE_THROW_VALIDATION: passed`와 측정값을 남깁니다. 재실행할 수 있으며, 물리 연출 기본값을 다시 조정할 필요가 없어지면 다른 Temporary 주사위 메뉴와 함께 퇴역합니다.
-4. Edit Mode의 `TxTRPG.Application.Tests.OwnedDiceIntegrationTests`(형태 데이터, 모든 (L, D) 보정, 정사면체 거부, 구도, 재생, 구성 교체)와 `TemporaryPlayerDiceStateTests`를 실행합니다. `Assets/TxTRPG/UI/Tests/PlayMode/DiceThrowSimulationPlayModeTests.cs`는 실제 격리 물리 경로를 검사하는 Play Mode 테스트입니다. 현재 Editor Play 시작 정책(`Project/TxT RPG/Play Mode Start`)이 AppScene을 Play 시작 Scene으로 지정하면 Test Runner의 Play Mode 실행이 시작 Scene 교체로 멈출 수 있으므로, 이 경우 위 메뉴 검증 결과를 사용합니다.
+1. 전투 카드를 선택하고 Actions의 주사위 명령을 실행합니다. 바닥의 주사위가 각자 가장 가까운 화면 가장자리(위·아래·왼쪽·오른쪽) 밖으로 빠르게 빠지고, `throwDelay`만큼 화면이 빈 뒤 화면 아래 가장자리에서 먼 쪽으로 던져져 들어와 벽과 서로에 부딪히며 구르고 멈춰야 합니다. 모두 멈춘 뒤 약 `resultRevealDelay` 동안 아무것도 바뀌지 않다가 체력·Story·기록이 한 번 갱신되고 결과 창이 열립니다. 바닥과 평행한 윗면이 결과 창과 Story의 결과와 같아야 하며, 정지 후 주사위가 순간 이동하지 않아야 합니다.
+2. `Tools > TxT RPG > UI > Dice > Temporary > Validate Play Flow`는 새 탐험의 전투 후보가 있는 Play Mode에서 실행합니다. 서너 번의 수락 행동(물리 던지기, 모션 감소, 0.5초로 강제한 시간 초과, 패널 숨김 중 완료), 결과 적용이 "마지막 정지 + `resultRevealDelay`" 이후인지, 시간 초과 때 주사위가 멈춘 뒤 결과가 한 번만 적용되는지, 연타 차단, 결과 면과 화면 안 배치, 자동 표시 끄기와 수동 재열기, Story·기록 및 390×844 가상 Viewport의 전체 스크롤·RenderTexture·주사위 배치를 검사합니다. Play 상태만 변경하며 통과하면 결과 창을 열어 둔 채 종료합니다.
+3. `Tools > TxT RPG > UI > Dice > Temporary > Validate Throw Presentation`은 Play Mode에서 `OwnedDicePanel.PlayRollAsync`를 직접 호출하는 임시 검증 메뉴입니다. 전투·기록·저장 데이터는 바꾸지 않고, 추가한 검증용 주사위는 끝에 제거합니다. 현재 구도에서 3개×20시드·20개×10시드 시뮬레이션 측정(성공률, 재시도, 계산 시간, 최장 재생, 진입 시간, 천장 여유, 최종 프레임 교체 차이, 첫 프레임 화면 밖 여부, 정지 배치의 회수 처리 빈도), 회수 중 매 프레임 화면에 보이는 주사위 쌍의 최소 거리, 네 변·네 구석 근처 배치에서 가장 가까운 가장자리 회수, `throwDelay` 0초·2초의 실제 지연과 시간 제한, 지연 중 취소·패널 숨김, 여러 시드에서 모든 면 강제, 회수 후 교체가 화면 밖에서 일어나는지, 정지 후 결과 대기와 정지 후 이동 없음(이전 `1.5R` 겹침 기준이 재배치했을 횟수 포함), 정상 연출이 시간 제한 안에 끝나는지, 모션 감소, 30·120fps에서 같은 시드의 최종 자세와 연출 길이, 시뮬레이션 실패 시 대체 배치, 굴림 도중 취소 후 `StopRollAtResults`로 같은 프레임에 결과 면 정지, 굴림 중 화면 크기 변경, 6·12·20개 주사위, 런타임 4면 주사위의 텍스트 대체, 물리 Scene 누적 여부를 검사하고 `OWNED_DICE_THROW_VALIDATION: passed`와 측정값을 남깁니다. 재실행할 수 있으며, 물리 연출 기본값을 다시 조정할 필요가 없어지면 다른 Temporary 주사위 메뉴와 함께 퇴역합니다.
+4. Edit Mode의 `TxTRPG.Application.Tests.OwnedDiceIntegrationTests`(형태 데이터, 모든 (L, D) 보정, 정사면체 거부, 구도, 화면 밖 출발·공통 아래쪽 회수 위치, 가장 가까운 가장자리 선택과 동률 순서, 방향별 회수 목표(화면 비율·주사위 수·카메라 기울기별), 회수 경로 겹침 재배정과 대체, 정지 겹침 기준, `throwDelay`를 포함한 시간 제한 계산, 재생, 구성 교체)와 `TemporaryPlayerDiceStateTests`를 실행합니다. `Assets/TxTRPG/UI/Tests/PlayMode/DiceThrowSimulationPlayModeTests.cs`는 실제 격리 물리 경로를 검사하는 Play Mode 테스트입니다. 현재 Editor Play 시작 정책(`Project/TxT RPG/Play Mode Start`)이 AppScene을 Play 시작 Scene으로 지정하면 Test Runner의 Play Mode 실행이 시작 Scene 교체로 멈출 수 있으므로, 이 경우 위 메뉴 검증 결과를 사용합니다.
 
 실제 휴대폰·태블릿의 Safe Area와 터치, 컨트롤러, 대상 Player 빌드, 모바일 시뮬레이션 계산 시간과 지속 성능은 별도 장치 검증이 필요합니다.

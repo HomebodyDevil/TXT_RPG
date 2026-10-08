@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
@@ -121,23 +122,24 @@ namespace TxTRPG.SceneTransition.Tests
             Assert.That(BuildScenePathUtility.GetBuildSettingsErrors(), Is.Not.Empty);
         }
 
+        // Application.CanStreamedLevelBeLoaded(string) checks the Player build and loaded AssetBundles.
+        // In Edit Mode it returns false even for enabled Build Settings scenes, so acceptance of an
+        // enabled path is verified by BuildScenePathUtility tests here and by AppScene startup at runtime.
         [Test]
-        public void UnitySceneLoader_AcceptsEnabledFullPathAndRejectsLegacyName()
+        public void UnitySceneLoader_RejectsLegacyNameAndNonProjectPathsBeforeBuildLookup()
         {
-            using var scope = new BuildSettingsScope();
-            EditorBuildSettings.scenes = new[]
-            {
-                new EditorBuildSettingsScene(SceneTransitionPrefabBuilder.AppScenePath, true),
-                new EditorBuildSettingsScene("Assets/Scenes/TMP_MainScene.unity", true)
-            };
             var root = new GameObject("Scene Loader Test");
             try
             {
                 var loader = root.AddComponent<UnitySceneLoader>();
-                Assert.DoesNotThrow(() =>
-                    loader.ValidateScenePath("Assets/Scenes/TMP_MainScene.unity"));
+                Assert.Throws<ArgumentException>(() => loader.ValidateScenePath("TMP_MainScene"));
+                Assert.Throws<ArgumentException>(() => loader.ValidateScenePath(" "));
                 Assert.Throws<ArgumentException>(() =>
-                    loader.ValidateScenePath("TMP_MainScene"));
+                    loader.ValidateScenePath("Scenes/TMP_MainScene.unity"));
+                Assert.Throws<ArgumentException>(() =>
+                    loader.ValidateScenePath("Assets/Scenes/TMP_MainScene"));
+                Assert.Throws<InvalidOperationException>(() =>
+                    loader.ValidateScenePath("Assets/Scenes/NotInBuildSettings.unity"));
             }
             finally
             {
@@ -456,6 +458,11 @@ namespace TxTRPG.SceneTransition.Tests
         {
             var root = new GameObject("Transition Service Test");
             var service = root.AddComponent<SceneTransitionService>();
+            // Edit Mode does not run Awake for this non-ExecuteAlways component. Run it explicitly so
+            // the service records its App Scene like it does at runtime.
+            typeof(SceneTransitionService)
+                .GetMethod("Awake", BindingFlags.Instance | BindingFlags.NonPublic)
+                .Invoke(service, null);
             var blockerObject = new GameObject("Blocker", typeof(CanvasGroup));
             blockerObject.transform.SetParent(root.transform, false);
             var errorFallback = new GameObject("Error");

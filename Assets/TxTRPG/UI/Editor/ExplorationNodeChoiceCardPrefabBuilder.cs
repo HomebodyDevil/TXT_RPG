@@ -1,5 +1,6 @@
 using System;
 using TMPro;
+using TxTRPG.Editor.Common.Menu;
 using TxTRPG.UI.Exploration;
 using UnityEditor;
 using UnityEngine;
@@ -12,71 +13,10 @@ namespace TxTRPG.UI.Editor
         public const string PrefabPath = "Assets/TxTRPG/UI/Prefabs/ExplorationNodeChoiceCard.prefab";
         public const string ProfilePath = "Assets/TxTRPG/UI/Styles/ExplorationCardDefaultPresentation.asset";
 
-        [MenuItem("Tools/TxT RPG/UI/Exploration/Temporary/Upgrade Card Readability And Pulse")]
-        public static void UpgradeReadabilityAndPulse()
-        {
-            if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Exit Play Mode before upgrading the card.");
-            var stage = UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
-            if (stage != null && stage.assetPath == PrefabPath) throw new InvalidOperationException("Save and close the card Prefab Stage before upgrading.");
-            var profile = AssetDatabase.LoadAssetAtPath<ExplorationCardPresentationProfile>(ProfilePath);
-            if (profile == null || EditorUtility.IsDirty(profile)) throw new InvalidOperationException("Save the default profile before upgrading.");
-            var root = PrefabUtility.LoadPrefabContents(PrefabPath);
-            try
-            {
-                var visual = root.transform.Find("MotionRoot/VisualRoot");
-                var feedback = root.GetComponent<ExplorationCardFeedbackController>();
-                if (visual == null || feedback == null) throw new InvalidOperationException("Card references are incomplete.");
-                var backdrop = visual.Find("TextBackdrop") as RectTransform;
-                if (backdrop == null)
-                {
-                    backdrop = Rect("TextBackdrop", visual);
-                    backdrop.anchorMin = Vector2.zero; backdrop.anchorMax = new Vector2(1f, .47f);
-                    backdrop.offsetMin = backdrop.offsetMax = Vector2.zero;
-                    var image = backdrop.gameObject.AddComponent<Image>();
-                    image.color = new Color(.105f, .14f, .21f, 1f); image.raycastTarget = false;
-                    backdrop.SetSiblingIndex(visual.Find("Title").GetSiblingIndex());
-                }
-                UpgradeBorder(visual.Find("Border").gameObject, feedback, false);
-                UpgradeBorder(visual.Find("FocusVisual").gameObject, feedback, true);
-                var badge = visual.Find("StatusBadge").GetComponent<Image>();
-                if (badge.color == new Color(.55f, .31f, .12f, .95f)) badge.color = new Color(.28f, .16f, .06f, 1f);
-                PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
-            }
-            finally { PrefabUtility.UnloadPrefabContents(root); }
-            // Only the shipped default profile is migrated. Never touch custom profiles or variants.
-            var serialized = new SerializedObject(profile);
-            serialized.FindProperty("pulseEnabled").boolValue = true;
-            serialized.FindProperty("pulseMinScale").floatValue = 1f;
-            serialized.FindProperty("pulseMaxScale").floatValue = 1.03f;
-            serialized.FindProperty("pulsePeriod").floatValue = 1.8f;
-            serialized.ApplyModifiedPropertiesWithoutUndo();
-            EditorUtility.SetDirty(profile); // New fields may equal their C# defaults and still need serialization.
-            AssetDatabase.SaveAssetIfDirty(profile);
-            ValidatePrefab();
-            Debug.Log("Card readability and pulse upgraded. Scene layout and custom profiles were preserved.");
-        }
-
-        private static void UpgradeBorder(GameObject target, ExplorationCardFeedbackController feedback, bool focus)
-        {
-            if (target.GetComponent<ExplorationCardShapeGraphic>() != null) return;
-            var old = target.GetComponent<Image>();
-            if (old == null) throw new InvalidOperationException("Expected legacy card decoration Image.");
-            var serialized = new SerializedObject(feedback);
-            var targets = serialized.FindProperty("tintTargets");
-            var indices = new System.Collections.Generic.List<int>();
-            for (var i = 0; i < targets.arraySize; i++) if (targets.GetArrayElementAtIndex(i).objectReferenceValue == old) indices.Add(i);
-            foreach (var effect in target.GetComponents<BaseMeshEffect>()) UnityEngine.Object.DestroyImmediate(effect);
-            UnityEngine.Object.DestroyImmediate(old);
-            var graphic = target.AddComponent<ExplorationCardShapeGraphic>();
-            graphic.color = focus ? new Color(.4f, .68f, 1f, 1f) : new Color(.65f, .78f, 1f, .65f);
-            graphic.raycastTarget = false;
-            graphic.Configure(ExplorationCardShape.Rectangle, 0f, ExplorationCardShapeDrawMode.InnerBorder, focus ? 3f : 2f);
-            foreach (var index in indices) targets.GetArrayElementAtIndex(index).objectReferenceValue = graphic;
-            if (focus) serialized.FindProperty("focusVisual").objectReferenceValue = graphic;
-            serialized.ApplyModifiedPropertiesWithoutUndo();
-        }
-
-        [MenuItem("Tools/TxT RPG/UI/Exploration/Rebuild Node Choice Card Prefab")]
+        [MenuItem(
+            TxTRPGEditorMenuPaths.UiExploration + "Rebuild Node Choice Card Prefab",
+            false,
+            TxTRPGEditorMenuPriorities.Rebuild)]
         public static void CreateOrUpdatePrefab()
         {
             var profile = AssetDatabase.LoadAssetAtPath<ExplorationCardPresentationProfile>(ProfilePath);

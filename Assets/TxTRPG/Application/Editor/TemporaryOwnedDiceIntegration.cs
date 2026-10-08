@@ -280,13 +280,30 @@ namespace TxTRPG.Application.Editor
                     throw new InvalidOperationException("The dice action was not accepted.");
                 if (combatController.TryExecute(TemporaryDiceRollMenuController.RollAllCommandId))
                     throw new InvalidOperationException("A second action was accepted during the roll.");
+                // Poll every frame: the turn and Story must appear only after the dice stopped and the result hold ended.
                 var deadline = EditorApplication.timeSinceStartup + 8d;
+                var appliedAt = -1f;
                 while (host.IsTemporaryDiceActionPending && EditorApplication.timeSinceStartup < deadline)
-                    await Task.Delay(50);
+                {
+                    if (appliedAt < 0f && (host.TemporaryDiceHistory.CurrentTurns.Count != actionCount || story.MessageCount != storyBefore))
+                        appliedAt = Time.realtimeSinceStartup;
+                    await Task.Yield();
+                }
+                if (appliedAt < 0f) appliedAt = Time.realtimeSinceStartup;
                 if (host.IsTemporaryDiceActionPending) throw new TimeoutException("The accepted action did not complete.");
                 if (host.TemporaryDiceHistory.CurrentTurns.Count != actionCount + 1 || story.MessageCount <= storyBefore)
                     throw new InvalidOperationException("The roll did not record exactly one turn and Story output.");
                 CheckShownFaces(binder.Panel, host, "physics throw");
+                var timeline = binder.Panel.LastRollTimeline;
+                var hold = binder.Panel.ThrowSettingsForEditor.ResultRevealDelay;
+                if (timeline == null || timeline.SettledAt <= 0f || appliedAt < timeline.SettledAt + hold - 0.02f)
+                    throw new InvalidOperationException($"The result was applied {appliedAt - (timeline?.SettledAt ?? 0f):F2}s after the dice stopped (hold {hold:F2}s).");
+                Debug.Log($"OWNED_DICE_PLAY_VALIDATION: result applied {appliedAt - timeline.SettledAt:F2}s after the dice stopped " +
+                    $"({appliedAt - timeline.StartedAt:F2}s after acceptance), offscreen at swap (any edge)={timeline.HiddenAtSwap}, " +
+                    $"recall edges={string.Join(",", timeline.RecallEdges)} ({timeline.RecallResolution}), " +
+                    $"throw delay={timeline.ThrowStartedAt - timeline.RecallEndedAt:F2}s");
+                if (timeline.UsedThrow && !timeline.HiddenAtSwap)
+                    throw new InvalidOperationException($"A participant was visible at the swap: {timeline.SwapDetail}");
                 var outcome = binder.Panel.LastThrowOutcome;
                 Debug.Log($"OWNED_DICE_PLAY_VALIDATION: throw seed={outcome?.Seed} attempts={outcome?.Attempts} " +
                     $"simulateMs={outcome?.ElapsedMilliseconds:F1} placementFallback={binder.Panel.LastRollUsedPlacementFallback}");
@@ -323,6 +340,40 @@ namespace TxTRPG.Application.Editor
                     }
                 }
                 else Debug.LogWarning("OWNED_DICE_PLAY_VALIDATION: combat ended early; reduced-motion and hidden-panel rolls were skipped.");
+                if (!combatController.Combat.IsComplete)
+                {
+                    // Forced timeout: the panel is stopped at the accepted faces before the text fallback and the result.
+                    host.TemporaryDicePreferences.AutoShowResults = false;
+                    combatController.SetRollTimeoutOverrideForEditor(0.5f);
+                    try
+                    {
+                        var timeoutCount = host.TemporaryDiceHistory.CurrentTurns.Count;
+                        if (!combatController.TryExecute(TemporaryDiceRollMenuController.RollAllCommandId))
+                            throw new InvalidOperationException("The timeout dice action was not accepted.");
+                        deadline = EditorApplication.timeSinceStartup + 8d;
+                        var restingWhenApplied = true;
+                        while (host.IsTemporaryDiceActionPending && EditorApplication.timeSinceStartup < deadline)
+                        {
+                            if (host.TemporaryDiceHistory.CurrentTurns.Count != timeoutCount && binder.Panel.IsRolling) restingWhenApplied = false;
+                            await Task.Yield();
+                        }
+                        if (host.IsTemporaryDiceActionPending || host.TemporaryDiceHistory.CurrentTurns.Count != timeoutCount + 1)
+                            throw new InvalidOperationException("The timed-out roll did not record exactly one turn.");
+                        if (!restingWhenApplied || binder.Panel.IsRolling)
+                            throw new InvalidOperationException("The timed-out roll applied its result while the dice were still moving.");
+                        CheckShownFaces(binder.Panel, host, "forced timeout");
+                        await Task.Delay(300);
+                        if (host.TemporaryDiceHistory.CurrentTurns.Count != timeoutCount + 1)
+                            throw new InvalidOperationException("The timed-out roll applied its result twice.");
+                        CheckShownFaces(binder.Panel, host, "forced timeout after late frames");
+                        Debug.Log("OWNED_DICE_PLAY_VALIDATION: forced timeout stopped the dice at the accepted faces before applying once.");
+                    }
+                    finally
+                    {
+                        combatController.SetRollTimeoutOverrideForEditor(0f);
+                        host.TemporaryDicePreferences.AutoShowResults = true;
+                    }
+                }
                 var secondCount = host.TemporaryDiceHistory.CurrentTurns.Count;
                 var runHiddenCheck = !combatController.Combat.IsComplete;
                 host.TemporaryDicePreferences.AutoShowResults = false;

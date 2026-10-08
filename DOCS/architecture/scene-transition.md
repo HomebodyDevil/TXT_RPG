@@ -46,7 +46,7 @@ Play 직전에는 AppScene 자산, Build Settings 첫 활성 Scene, AppRoot의 `
 - 최초 콘텐츠 Scene이 AppScene과 다른지 확인합니다.
 - Build Settings에 중복 Scene 경로가 없는지 확인합니다.
 
-`UnitySceneLoader`도 로드 직전에 전체 `Assets/.../*.unity` 경로와 Player에서 로드 가능한지를 검사합니다. 이 검사는 Editor 작성 오류가 빌드를 통과하지 못하게 하는 검증을 대체하지 않으며, 손상되거나 외부에서 바뀐 런타임 구성에 대한 마지막 방어선입니다. Addressables Scene은 Build Settings 경로와 수명 규칙이 다르므로 현재 문자열 필드에 혼합하지 않습니다. 향후 별도의 참조 형식과 `ISceneLoader` 구현으로 추가합니다.
+`UnitySceneLoader`도 로드 직전에 전체 `Assets/.../*.unity` 경로와 Player에서 로드 가능한지를 검사합니다. Player 로드 가능 여부는 `Application.CanStreamedLevelBeLoaded(string)`로 확인하는데, 이 API는 Player 빌드와 로드된 AssetBundle을 기준으로 하므로 Edit Mode에서는 Build Settings에 활성화된 Scene에도 `false`를 반환합니다(배치 모드 Edit Mode에서 확인). 그래서 Edit Mode 테스트는 전체 경로 형식 요구와 이전 Scene 이름 거부, 미등록 경로의 예외 형식만 검증하고, 활성 경로의 Build Settings 포함 여부는 Editor의 `BuildScenePathUtility` 테스트가, 실제 수락은 AppScene 시작 경로와 Player 빌드가 확인합니다. 이 검사는 Editor 작성 오류가 빌드를 통과하지 못하게 하는 검증을 대체하지 않으며, 손상되거나 외부에서 바뀐 런타임 구성에 대한 마지막 방어선입니다. Addressables Scene은 Build Settings 경로와 수명 규칙이 다르므로 현재 문자열 필드에 혼합하지 않습니다. 향후 별도의 참조 형식과 `ISceneLoader` 구현으로 추가합니다.
 
 로드 완료 결과와 이미 로드된 Scene 검사는 `SceneManager.GetSceneByPath()` 및 `Scene.path`를 사용합니다. 파일명만 비교하지 않으므로 서로 다른 폴더의 같은 이름을 가진 Scene도 전체 경로로 구분합니다. 경로 구분자는 `/`로 정규화하며 비교 시 대소문자 차이는 허용합니다.
 

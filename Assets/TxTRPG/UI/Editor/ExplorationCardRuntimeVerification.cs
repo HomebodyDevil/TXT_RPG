@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
+using TxTRPG.Editor.Common.Menu;
 using TxTRPG.UI.Exploration;
 using UnityEditor;
 using UnityEngine;
@@ -19,7 +20,10 @@ namespace TxTRPG.UI.Editor
         private static int lastFrame = -1;
         private static string operation;
 
-        [MenuItem("Tools/TxT RPG/UI/Exploration/Temporary/Verify Card Runtime Lifecycle")]
+        [MenuItem(
+            TxTRPGEditorMenuPaths.UiExplorationTemporary + "Verify Card Runtime Lifecycle",
+            false,
+            TxTRPGEditorMenuPriorities.Validate)]
         public static void Run()
         {
             if (!EditorApplication.isPlaying || running.Count != 0) throw new InvalidOperationException("Enter Play Mode and wait for any previous verification.");
@@ -55,7 +59,10 @@ namespace TxTRPG.UI.Editor
             wait = null;
         }
 
-        [MenuItem("Tools/TxT RPG/UI/Exploration/Temporary/Capture Runtime Card States")]
+        [MenuItem(
+            TxTRPGEditorMenuPaths.UiExplorationTemporary + "Capture Runtime Card States",
+            false,
+            TxTRPGEditorMenuPriorities.Validate + 1)]
         public static void CaptureStates()
         {
             var scene = SceneManager.GetSceneByPath("Assets/Scenes/TMP_MainScene.unity");
@@ -109,7 +116,10 @@ namespace TxTRPG.UI.Editor
             yield return null; yield return null; yield return null;
         }
 
-        [MenuItem("Tools/TxT RPG/UI/Exploration/Temporary/Inspect Runtime Card Text")]
+        [MenuItem(
+            TxTRPGEditorMenuPaths.UiExplorationTemporary + "Inspect Runtime Card Text",
+            false,
+            TxTRPGEditorMenuPriorities.Validate + 2)]
         public static void Inspect()
         {
             var scene = SceneManager.GetSceneByPath("Assets/Scenes/TMP_MainScene.unity");

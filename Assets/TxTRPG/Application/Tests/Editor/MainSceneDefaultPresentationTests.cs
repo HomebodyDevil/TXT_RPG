@@ -36,8 +36,11 @@ namespace TxTRPG.Application.Tests
             Assert.That(harness.GetComponent<MainScenePreviewHarness>(), Is.Not.Null);
         }
 
+        // TMP_MainScene keeps the EnemyDisplayPanelDemo Prefab instance, but its startup no longer loads demo
+        // enemies; the temporary combat controller owns enemy display. MainScenePresentationController is not
+        // part of the operating Scene (it is used by MainScene_VisualProposal.unity only).
         [Test]
-        public void ConfiguredScene_UsesProductionControllerAndNoEnemyDemoWriter()
+        public void ConfiguredScene_HasNoEnemyDemoWriterAndKeepsCorePanels()
         {
             var loaded = SceneManager.GetSceneByPath(MainSceneDefaultContentBuilder.ScenePath);
             if (loaded.IsValid() && loaded.isLoaded && loaded.isDirty)
@@ -46,10 +49,21 @@ namespace TxTRPG.Application.Tests
             try
             {
                 var components = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<Component>(true)).ToArray();
-                Assert.That(components.OfType<MainScenePresentationController>().Count(), Is.EqualTo(1));
-                Assert.That(components.OfType<EnemyDisplayPanelDemoLoader>(), Is.Empty);
+                foreach (var startup in components.OfType<PanelStartupController>())
+                {
+                    var loader = new SerializedObject(startup).FindProperty("initialDataLoader").objectReferenceValue;
+                    Assert.That(loader, Is.Not.InstanceOf<EnemyDisplayPanelDemoLoader>(),
+                        $"{startup.name} must not load demo enemies in the operating Scene.");
+                }
+                Assert.That(components.OfType<TxTRPG.Application.Dice.TemporaryDiceRollMenuController>().Count(), Is.EqualTo(1));
+                Assert.That(components.OfType<EnemyDisplayPanel>().Count(), Is.EqualTo(1));
                 Assert.That(components.OfType<StoryTextPanel>().Count(), Is.EqualTo(1));
-                Assert.That(components.OfType<ActionGridPanel>().Count(), Is.EqualTo(1));
+                // One main Actions grid; the inventory window page owns a second, separate grid.
+                var grids = components.OfType<ActionGridPanel>().ToArray();
+                var inventoryGrids = grids.Where(grid =>
+                    grid.GetComponentInParent<TxTRPG.Application.Items.InventoryGameWindowPage>(true) != null).ToArray();
+                Assert.That(grids.Length - inventoryGrids.Length, Is.EqualTo(1), "Main Actions grid");
+                Assert.That(inventoryGrids.Length, Is.EqualTo(1), "Inventory window grid");
             }
             finally { EditorSceneManager.CloseScene(scene, true); }
         }
