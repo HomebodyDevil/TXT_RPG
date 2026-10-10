@@ -15,6 +15,7 @@ namespace TxTRPG.UI.Windows
         private IGameWindowPage currentPage;
         private GameObject focusReturnTarget;
         private ModalOpenRequest lastRequest;
+        public event Action Opened;
         public event Action Closed;
         public bool IsOpen => currentPage != null || (host != null && host.IsVisible);
         public string CurrentPageId => currentPage?.PageId ?? string.Empty;
@@ -47,6 +48,7 @@ namespace TxTRPG.UI.Windows
             requestCancellation?.Cancel(); requestCancellation?.Dispose(); requestCancellation = new CancellationTokenSource();
             var token = requestCancellation.Token; if (!IsOpen) focusReturnTarget = request.ReturnFocus;
             currentPage?.Hide(); currentPage = null; host.SetVisible(true); host.SetLoading(true); host.SetError(string.Empty);
+            Opened?.Invoke();
             host.SetTitle(string.IsNullOrEmpty(request.Title) ? page.DisplayTitle : request.Title);
             try { page.ApplyRequest(request); await page.PrepareAsync(token); token.ThrowIfCancellationRequested(); currentPage = page; page.Show(); host.SetLoading(false); if (EventSystem.current != null && page.InitialFocus != null) EventSystem.current.SetSelectedGameObject(page.InitialFocus); return true; }
             catch (OperationCanceledException) when (token.IsCancellationRequested) { return false; }
@@ -68,7 +70,14 @@ namespace TxTRPG.UI.Windows
             await OpenAsync(lastRequest);
         }
         public void Close()
-        { requestCancellation?.Cancel(); requestCancellation?.Dispose(); requestCancellation = null; currentPage?.Hide(); currentPage = null; host.SetVisible(false); if (EventSystem.current != null && focusReturnTarget != null && focusReturnTarget.activeInHierarchy) EventSystem.current.SetSelectedGameObject(focusReturnTarget); focusReturnTarget = null; lastRequest = null; Closed?.Invoke(); }
+        {
+            requestCancellation?.Cancel(); requestCancellation?.Dispose(); requestCancellation = null; currentPage?.Hide(); currentPage = null; host.SetVisible(false);
+            var eventSystem = EventSystem.current;
+            if (eventSystem != null && focusReturnTarget != null && focusReturnTarget.activeInHierarchy) eventSystem.SetSelectedGameObject(focusReturnTarget);
+            // Without a usable return target, do not leave focus on a control of the now-hidden window.
+            else if (eventSystem != null && eventSystem.currentSelectedGameObject != null && !eventSystem.currentSelectedGameObject.activeInHierarchy) eventSystem.SetSelectedGameObject(null);
+            focusReturnTarget = null; lastRequest = null; Closed?.Invoke();
+        }
 #if UNITY_EDITOR
         public void ConfigureForEditor(ModalWindowHost targetHost, IEnumerable<GameWindowPage> configuredPages) { host = targetHost; pages = new List<GameWindowPage>(configuredPages); }
 #endif

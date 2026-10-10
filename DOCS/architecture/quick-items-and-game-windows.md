@@ -20,7 +20,7 @@
 
 아이콘은 비율을 유지하며 `VisualRoot` 안에서만 배치되므로 입력 영역과 메뉴 레이아웃 크기를 변경하지 않습니다. Sprite/참조 누락, `Icon Visible` 해제, `SetIcon(sprite, false)` 또는 Image 컴포넌트 비활성 시 기존 Label을 표시합니다. `ExecuteAlways` View는 Inspector 변경을 감지할 때만 해당 표시를 갱신하며 OnValidate에서 자산을 생성하지 않습니다. Icon GameObject 활성 상태는 View가 관리합니다. 런타임은 저장된 Sprite를 기본값으로 덮어쓰지 않습니다.
 
-`TemporaryMenuIconUtility`의 임시 적용 메뉴는 빈 Sprite와 확인된 옛 기본 가방 이미지만 바꿉니다. 사용자 Sprite와 이미 설정된 새 기본 아이콘의 tint/padding은 재실행 시 보존됩니다. 공용 GameMenuPanel의 세 버튼은 GameMenuScreen에 상속되며, 행동 버튼은 TMP_MainScene에만 존재하고 `temporary-dice.roll-all` 명령을 유지합니다. 전체 생성기는 저장된 PNG를 읽어 기본 구성을 만들지만, 사용자 외형을 보존하는 이전 도구는 아니므로 이미지 교체에 사용하지 않습니다.
+`TemporaryMenuIconUtility`의 임시 적용 메뉴는 빈 Sprite와 확인된 옛 기본 가방 이미지만 바꿉니다. 사용자 Sprite와 이미 설정된 새 기본 아이콘의 tint/padding은 재실행 시 보존됩니다. 공용 GameMenuPanel의 세 버튼은 GameMenuScreen에 상속됩니다. TMP_MainScene의 "행동" 버튼은 메뉴에서 빠져 `EnemyDisplayPanel`과 `StoryTextPanel` 경계선의 `BoundaryCommandButton`으로 옮겨졌고([임시 적 전투](temporary-combat.md#행동-버튼)), 같은 `temporary-dice.roll-all` 명령을 사용합니다. 이 버튼도 `GameMenuButtonView`로 아이콘과 라벨 대체 표시를 처리하므로, `TemporaryMenuIconUtility.ApplyToBoundaryButton`이 같은 규칙(빈 Sprite만 action 기본 아이콘으로 채우고 사용자 Sprite·tint·padding은 보존)을 적용합니다. `ApplyToMenu`는 이제 페이지 버튼(system·inventory·status)만 처리합니다. 전체 생성기는 저장된 PNG를 읽어 기본 구성을 만들지만, 사용자 외형을 보존하는 이전 도구는 아니므로 이미지 교체에 사용하지 않습니다.
 
 가방은 기존 `inventory` 페이지 ID와 `GameWindowService`를 유지합니다. `InventoryWindowPage.prefab` 안에는 `CategoryTabs`, 재사용한 `ActionGridPanel`, `PaginationControls`, `EmptyState`와 결과 표시가 있습니다. 기본 카테고리는 `all`, `consumable`, `misc`이며, 비어 있거나 이전 버전에서 생성된 `ItemDefinition.categoryId`는 `misc`로 처리합니다. 필터와 페이지 이동은 `InventoryState`를 변경하지 않습니다.
 
@@ -142,7 +142,9 @@ ModalWindowHost
 
 ## 임시 명령 버튼
 
-`GameMenuButtonBinding.actionKind`의 기본값 `OpenPage(0)`은 기존 직렬화 자산의 창 열기 동작을 보존합니다. `Command` 바인딩은 가짜 Page ID를 만들지 않고 `IGameMenuCommandHandler`로 전달됩니다. TMP_MainScene의 `TemporaryDiceRoll`만 이 경로를 사용하며, 세션과 StoryTextPanel이 모두 준비되고 보유 주사위가 있을 때만 활성화됩니다. 기존 Inventory, System, Status 버튼은 계속 `GameWindowService`를 사용합니다.
+`GameMenuButtonBinding.actionKind`의 기본값 `OpenPage(0)`은 기존 직렬화 자산의 창 열기 동작을 보존합니다. `Command` 바인딩은 가짜 Page ID를 만들지 않고 `IGameMenuCommandHandler`로 전달됩니다. 현재 운영 Scene에는 `Command` 바인딩이 없습니다. TMP_MainScene의 옛 `TemporaryDiceRoll` 메뉴 버튼과 바인딩은 경계선 행동 버튼으로 옮기면서 제거했고, 명령 버튼이 없으므로 `GameMenuPanel.commandHandlerBehaviour`도 비웠습니다. `Command` 경로 자체는 다른 명령을 위해 유지됩니다. 경계선 버튼(`BoundaryCommandButton`)은 같은 `IGameMenuCommandHandler` 계약을 직접 사용합니다. Inventory, System, Status 버튼은 계속 `GameWindowService`를 사용합니다.
+
+`GameMenuPanel.RefreshExecutionState()`는 끝에 `ExecutionStateRefreshed`를 발생시킵니다. 메뉴는 연결된 `GameWindowService`의 `Opened`(창 표시 직후)와 `Closed`를 구독해 창이 열리고 닫힐 때도 실행 상태를 다시 계산합니다. 외부 명령 버튼은 이 이벤트로 "창이 열려 있으면 비활성" 규칙을 폴링 없이 따릅니다. `GameWindowService.Close()`는 돌아갈 포커스 대상이 활성 상태가 아니면, 숨겨진 창 컨트롤에 남은 선택을 해제합니다.
 # 시스템 표시 설정
 
 System 페이지는 기존 `GameWindowService`와 `ModalWindowHost` 경로를 그대로 사용하며 `ExplorationCardSettingsView`의 두 Toggle을 표시합니다. `카드 효과 사용`은 기본적으로 켜져 있고 `움직임 줄이기`는 기본적으로 꺼져 있습니다. 값은 캐릭터·탐험 저장 데이터와 분리된 PlayerPrefs 키에 저장되고, 손상되거나 누락된 값에는 안전한 기본값을 사용합니다. Toggle 변경 이벤트는 현재 표시 중인 카드에 즉시 전달되며 페이지를 다시 열 때 저장값을 `SetIsOnWithoutNotify`로 복원하여 초기 바인딩 중 불필요한 저장을 방지합니다.

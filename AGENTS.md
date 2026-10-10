@@ -43,6 +43,16 @@ Treat this project as a single shared codebase that may ship to Steam on desktop
 - Ensure text can expand for localization. Avoid fixed-size containers that only fit the current language, and do not encode meaningful text into raster images.
 - Validate scrolling, modal dialogs, tooltips, virtual keyboards, and focus behavior at constrained resolutions.
 
+## Visual Effect Readiness
+
+Assume that any user-visible element, whether UI, 2D, or 3D, may later receive effects such as glitch, noise, shape or mask shaders, borders, outlines, glows, and shakes. Do not implement unrequested effects, but keep them addable without breaking layout, input, physics, or data.
+
+- Separate Transforms controlled by layout, placement, or physics from the visual roots that effects modify.
+- Base alignment, sizing, and framing on pre-effect references, and reserve space for effects that draw outside them.
+- Keep input targets, physics, and shared Material assets unaffected by effects, and clear effect state on removal and reuse.
+
+Read `DOCS/development/visual-effect-readiness.md` when creating or restructuring visible elements or adding effects to them.
+
 ## Device Capability and Performance
 
 - Establish scalable quality tiers instead of maintaining unrelated scenes or gameplay implementations for each device class.

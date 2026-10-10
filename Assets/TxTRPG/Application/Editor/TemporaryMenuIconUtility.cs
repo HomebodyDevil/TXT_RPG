@@ -43,12 +43,20 @@ namespace TxTRPG.Application.Editor
             var changed = false;
             foreach (var binding in menu.Buttons)
             {
-                var key = binding.ActionKind == GameMenuButtonActionKind.Command
-                    ? binding.CommandId == TemporaryDiceRollMenuController.RollAllCommandId ? "action" : null
-                    : binding.PageId is "system" or "inventory" or "status" ? binding.PageId : null;
+                // The "행동" command moved to the panel-boundary button (ApplyToBoundaryButton); only pages remain here.
+                var key = binding.ActionKind == GameMenuButtonActionKind.OpenPage && binding.PageId is "system" or "inventory" or "status"
+                    ? binding.PageId : null;
                 if (key != null) changed |= ApplyDefault(binding.View, key);
             }
             return changed;
+        }
+
+        // Same rule as the menu: only an empty Sprite is filled; custom Sprites, tint, and padding are preserved.
+        public static bool ApplyToBoundaryButton(BoundaryCommandButton button)
+        {
+            if (button == null || button.CommandId != TemporaryDiceRollMenuController.RollAllCommandId || button.Button == null) return false;
+            var view = button.Button.GetComponent<GameMenuButtonView>();
+            return view != null && ApplyDefault(view, "action");
         }
 
         [MenuItem("Tools/TxT RPG/Application/Temporary/Apply Menu Icons Only")]
@@ -80,14 +88,17 @@ namespace TxTRPG.Application.Editor
             try
             {
                 var menu = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<GameMenuPanel>(true)).Single();
-                if (ApplyToMenu(menu))
+                var changed = ApplyToMenu(menu);
+                foreach (var boundary in scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<BoundaryCommandButton>(true)))
+                    changed |= ApplyToBoundaryButton(boundary);
+                if (changed)
                 {
                     EditorSceneManager.MarkSceneDirty(scene);
                     if (!EditorSceneManager.SaveScene(scene)) throw new InvalidOperationException("Could not save TMP_MainScene icons.");
                 }
             }
             finally { if (opened) EditorSceneManager.CloseScene(scene, true); }
-            Debug.Log("MENU_ICONS: Applied four temporary icons; custom Sprites and command/page bindings preserved.");
+            Debug.Log("MENU_ICONS: Applied temporary icons to the menu pages and the boundary action button; custom Sprites and bindings preserved.");
         }
 
         private static void CreateIcon(string key, string path)

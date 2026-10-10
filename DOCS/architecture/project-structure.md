@@ -118,6 +118,8 @@ TxT-RPG/
 
 `Exploration` 하위에는 노드 후보 표시 데이터와 선택 요청, 재사용 가능한 카드 View, 카드 목록 및 실제 Viewport 너비에 따라 중앙 정렬·줄바꿈하는 LayoutGroup이 있습니다. 탐험 규칙은 Gameplay에 남고 UI 어셈블리는 노드 생성이나 완료를 직접 수행하지 않습니다.
 
+`Shapes` 하위(`TxTRPG.UI.Shapes`)에는 공용 절차적 도형 기하 `UiShapeGeometry`, 도형 Graphic `UiShapeGraphic`, 그리지 않는 입력 영역 `UiShapeHitArea`와 모양·효과 Material 슬롯을 가진 `ShapedButtonView`가 있습니다. 탐험 카드 도형도 이 기하를 사용합니다. `PanelBoundaryPlacement.cs`는 두 패널 경계선에 대상을 놓는 배치 컴포넌트와 순수 계산 `PanelBoundaryCalculator`, `Windows/BoundaryCommandButton.cs`는 경계선 명령 버튼입니다. 자세한 내용은 [경계선 명령 버튼](boundary-command-button.md)을 참고합니다.
+
 | 파일 | 역할 |
 | --- | --- |
 | `StoryMessage.cs` | 표시가 준비된 본문과 선택적 발화자를 전달하는 불변 값 객체입니다. |
@@ -213,6 +215,7 @@ TxT-RPG/
 | `UI/DEMO/CharacterStatusPanel/HealthBarPanelDemo.prefab` | 9가지 정렬과 런타임 정렬·피해 pulse를 확인하는 개발용 Demo입니다. |
 | `EnemyDisplayPanel.prefab` | 풀링되는 2D 적 View와 반응형 포메이션을 포함하는 운영용 적 표시 패널입니다. |
 | `ActionGridCell.prefab` | 공통 행동 항목 하나의 표시와 선택 상태를 담당합니다. |
+| `BoundaryCommandButton.prefab` | 두 패널 경계선 위에 놓이는 명령 버튼(배치 컨테이너, 도형 버튼, 입력 영역, 효과 루트)입니다. 없을 때만 `BoundaryCommandButtonPrefabUtility`가 만들고 이후 개발자 소유입니다. TMP_MainScene의 `CombatActionBoundary`가 인스턴스입니다. |
 | `ActionContextMenu.prefab` | 선택 항목의 동적 명령 목록을 표시합니다. |
 | `ActionGridPanel.prefab` | 아이템과 스킬을 표시하며 Scroll View 아래에 비상호작용 `OppositeScrollbarArea`를 포함하는 반응형 선택 그리드입니다. |
 | `FlexibleLayoutPanel.prefab` | Background, BackgroundContent, Content와 Foreground 계층을 제공하는 운영용 레이아웃 컨테이너입니다. |

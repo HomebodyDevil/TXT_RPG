@@ -22,6 +22,8 @@ namespace TxTRPG.Application.Dice
         public const string RollAllCommandId = "temporary-dice.roll-all";
 
         [SerializeField] private GameMenuPanel menu;
+        [SerializeField, Tooltip("The combat action button on the EnemyDisplayPanel/StoryTextPanel boundary.")]
+        private BoundaryCommandButton actionButton;
         [SerializeField] private StoryTextPanel storyPanel;
         [SerializeField] private TemporaryCombatConfiguration combatConfiguration;
         [SerializeField] private EnemyDisplayPanel enemyPanel;
@@ -57,8 +59,10 @@ namespace TxTRPG.Application.Dice
         {
             if (sessionHost != null) sessionHost.TemporaryDiceStoryReady -= OnStoryReady;
             if (ownedDiceBinder != null) ownedDiceBinder.BlockingChanged -= RefreshMenuExecution;
+            if (menu != null) menu.ExecutionStateRefreshed -= RefreshActionButton;
             ReleaseCombat();
             initialized = false;
+            RefreshActionButton();
             sessionHost = PlayerSessionHost.Instance;
             if (sessionHost == null) throw new InvalidOperationException("Temporary combat requires PlayerSessionHost.");
             await sessionHost.EnsureInitializedAsync(cancellationToken);
@@ -67,11 +71,12 @@ namespace TxTRPG.Application.Dice
             sessionHost.TemporaryDiceStoryReady += OnStoryReady;
             if (sessionHost.PendingDiceStory != null) OnStoryReady(sessionHost.PendingDiceStory);
             if (ownedDiceBinder != null) ownedDiceBinder.BlockingChanged += RefreshMenuExecution;
+            if (menu != null) menu.ExecutionStateRefreshed += RefreshActionButton;
 
             if (combatConfiguration == null || !combatConfiguration.EnabledForScene)
             {
                 RefreshPresentation();
-                menu.RefreshExecutionState();
+                RefreshMenuExecution();
                 return;
             }
 
@@ -92,7 +97,7 @@ namespace TxTRPG.Application.Dice
             SubscribeCombat();
             ApplyEnemyPresentation();
             RefreshPresentation();
-            menu.RefreshExecutionState();
+            RefreshMenuExecution();
         }
 
         public void ClearCombat()
@@ -101,7 +106,7 @@ namespace TxTRPG.Application.Dice
             sessionHost?.SetTemporaryExplorationCombat(null);
             enemyPanel?.SetEnemies(Array.Empty<EnemyPresentation>());
             RefreshPresentation();
-            menu?.RefreshExecutionState();
+            RefreshMenuExecution();
         }
         public bool CanExecute(string commandId, out string unavailableReason)
         {
@@ -128,7 +133,7 @@ namespace TxTRPG.Application.Dice
             if (!CanExecute(commandId, out var reason)) { Debug.LogWarning(reason, this); return false; }
             if (!sessionHost.TryBeginTemporaryDiceAction(combat, out var actionId)) return false;
             executing = true;
-            menu.RefreshExecutionState();
+            RefreshMenuExecution();
             try
             {
                 var rolls = sessionHost.TemporaryDice.RollAll(random);
@@ -145,7 +150,7 @@ namespace TxTRPG.Application.Dice
                 Debug.LogError($"Temporary combat action could not be accepted: {exception.Message}", this);
                 sessionHost.EndTemporaryDiceAction(actionId);
                 executing = false;
-                menu.RefreshExecutionState();
+                RefreshMenuExecution();
                 return false;
             }
         }
@@ -199,7 +204,7 @@ namespace TxTRPG.Application.Dice
             {
                 acceptedHost.EndTemporaryDiceAction(actionId);
                 executing = false;
-                if (menu != null) menu.RefreshExecutionState();
+                if (this != null) RefreshMenuExecution();
             }
         }
 
@@ -250,7 +255,18 @@ namespace TxTRPG.Application.Dice
             sessionHost?.TemporaryDiceHistory.BeginCombat(runId, nodeId);
         }
 
-        private void RefreshMenuExecution() => menu?.RefreshExecutionState();
+        // The menu raises ExecutionStateRefreshed (also when game windows open or close), which refreshes the action button.
+        private void RefreshMenuExecution()
+        {
+            if (menu != null) menu.RefreshExecutionState();
+            else RefreshActionButton();
+        }
+
+        private void RefreshActionButton()
+        {
+            if (actionButton == null) return;
+            actionButton.SetAvailable(IsReady && !combat.IsComplete);
+        }
 
         private void OnStoryReady(TemporaryDiceTurnRecord record)
         {
@@ -310,7 +326,7 @@ namespace TxTRPG.Application.Dice
             SubscribeCombat();
             ApplyEnemyPresentation();
             RefreshPresentation();
-            menu?.RefreshExecutionState();
+            RefreshMenuExecution();
         }
 
         private void SubscribeCombat()
@@ -374,6 +390,7 @@ namespace TxTRPG.Application.Dice
         private void OnDestroy()
         {
             if (ownedDiceBinder != null) ownedDiceBinder.BlockingChanged -= RefreshMenuExecution;
+            if (menu != null) menu.ExecutionStateRefreshed -= RefreshActionButton;
             if (sessionHost != null) sessionHost.TemporaryDiceStoryReady -= OnStoryReady;
             ReleaseCombat();
         }
@@ -402,6 +419,8 @@ namespace TxTRPG.Application.Dice
         // Verification only: a positive value replaces the computed timeout; zero restores it.
         public void SetRollTimeoutOverrideForEditor(float seconds) => editorTimeoutOverrideSeconds = Mathf.Max(0f, seconds);
         public void ConfigureOwnedDiceForEditor(OwnedDiceSessionBinder binder) => ownedDiceBinder = binder;
+        public void ConfigureActionButtonForEditor(BoundaryCommandButton button) => actionButton = button;
+        public BoundaryCommandButton ActionButtonForEditor => actionButton;
 #endif
     }
 }

@@ -57,7 +57,15 @@ namespace TxTRPG.Application.Tests
                 finally { PrefabUtility.UnloadPrefabContents(root); }
             }
             var scene = EditorSceneManager.OpenScene(QuickItemsUiProjectBuilder.ScenePath, OpenSceneMode.Additive);
-            try { AssertMenu(scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<GameMenuPanel>(true)).Single(), true); }
+            try
+            {
+                var menu = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<GameMenuPanel>(true)).Single();
+                AssertMenu(menu, false);
+                Assert.That(menu.Buttons.Any(b => b.ActionKind == GameMenuButtonActionKind.Command), Is.False, "The action moved to the boundary button.");
+                var boundary = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<BoundaryCommandButton>(true))
+                    .Single(b => b.CommandId == TemporaryDiceRollMenuController.RollAllCommandId);
+                AssertView(boundary.Button.GetComponent<GameMenuButtonView>(), "action");
+            }
             finally { EditorSceneManager.CloseScene(scene, true); }
         }
 
@@ -68,14 +76,43 @@ namespace TxTRPG.Application.Tests
                 var binding = key == "action"
                     ? menu.Buttons.Single(b => b.ActionKind == GameMenuButtonActionKind.Command && b.CommandId == TemporaryDiceRollMenuController.RollAllCommandId)
                     : menu.Buttons.Single(b => b.PageId == key);
-                var view = binding.View;
-                Assert.That(view.Icon.sprite, Is.SameAs(TemporaryMenuIconUtility.GetDefault(key)));
-                Assert.That(view.DisplayMode, Is.EqualTo(GameMenuButtonDisplayMode.ImageOnly));
-                Assert.That(view.Icon.gameObject.activeSelf, Is.True);
-                Assert.That(view.Label.gameObject.activeSelf, Is.False);
-                Assert.That(view.Label.text, Is.EqualTo(key == "system" ? "System" : key == "inventory" ? "Bag" : key == "status" ? "Status" : "행동"));
-                Assert.That(view.Icon.raycastTarget, Is.False);
+                AssertView(binding.View, key);
             }
+        }
+
+        private static void AssertView(GameMenuButtonView view, string key)
+        {
+            Assert.That(view.Icon.sprite, Is.SameAs(TemporaryMenuIconUtility.GetDefault(key)));
+            Assert.That(view.DisplayMode, Is.EqualTo(GameMenuButtonDisplayMode.ImageOnly));
+            Assert.That(view.Icon.gameObject.activeSelf, Is.True);
+            Assert.That(view.Label.gameObject.activeSelf, Is.False);
+            Assert.That(view.Label.text, Is.EqualTo(key == "system" ? "System" : key == "inventory" ? "Bag" : key == "status" ? "Status" : "행동"));
+            Assert.That(view.Icon.raycastTarget, Is.False);
+        }
+
+        [Test]
+        public void BoundaryButton_FillsOnlyEmptySpriteAndPreservesCustomization()
+        {
+            var root = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/TxTRPG/UI/Prefabs/BoundaryCommandButton.prefab"));
+            try
+            {
+                var boundary = root.GetComponent<BoundaryCommandButton>();
+                boundary.ConfigureForEditor(boundary.Placement, boundary.Button.gameObject, boundary.Button, boundary.ShapedView, null,
+                    TemporaryDiceRollMenuController.RollAllCommandId, null);
+                var view = boundary.Button.GetComponent<GameMenuButtonView>();
+                Assert.That(TemporaryMenuIconUtility.ApplyToBoundaryButton(boundary), Is.True);
+                Assert.That(view.Icon.sprite, Is.SameAs(TemporaryMenuIconUtility.GetDefault("action")));
+                var custom = TemporaryMenuIconUtility.GetDefault("status");
+                view.SetIcon(custom);
+                view.ConfigureDisplay(GameMenuButtonDisplayMode.ImageWithLabel, 13f, Color.cyan);
+                Assert.That(TemporaryMenuIconUtility.ApplyToBoundaryButton(boundary), Is.False);
+                Assert.That(view.Icon.sprite, Is.SameAs(custom));
+                Assert.That(view.Icon.color, Is.EqualTo(Color.cyan));
+                Assert.That(view.DisplayMode, Is.EqualTo(GameMenuButtonDisplayMode.ImageWithLabel));
+                view.SetIcon(null);
+                Assert.That(view.Label.gameObject.activeSelf, Is.True, "A missing Sprite falls back to the label.");
+            }
+            finally { Object.DestroyImmediate(root); }
         }
 
         [Test]

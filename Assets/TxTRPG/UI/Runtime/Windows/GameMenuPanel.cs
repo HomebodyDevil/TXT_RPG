@@ -74,6 +74,7 @@ namespace TxTRPG.UI.Windows
         private Vector2 lastObservedViewportSize = new(float.NaN, float.NaN);
         private bool warnedInsufficientSpace;
         private GameObject lastSelection;
+        private GameWindowService observedWindowService;
 
         public GameMenuLayoutResult CurrentLayout => layout != null ? layout.Current : default;
         public bool LayoutInsufficientSpace => hasValidLayout && CurrentLayout.HasInsufficientSpace;
@@ -104,13 +105,16 @@ namespace TxTRPG.UI.Windows
         public bool HasValidInternalConfiguration => ValidateInternalConfiguration(out _);
         public bool IsReady => HasValidInternalConfiguration && windowService != null;
         public string UnavailableReason { get; private set; } = string.Empty;
+        // Raised after every execution-state refresh, including game windows opening or closing.
+        public event Action ExecutionStateRefreshed;
         private IGameMenuCommandHandler CommandHandler => commandHandlerBehaviour as IGameMenuCommandHandler;
 
-        private void OnEnable() { BindButtons(); RefreshExecutionState(); QueueRefresh(); }
+        private void OnEnable() { BindButtons(); ObserveWindowService(); RefreshExecutionState(); QueueRefresh(); }
         private void Start() { BindButtons(); RefreshExecutionState(); QueueRefresh(); }
         private void OnDisable()
         {
             UnbindButtons();
+            ObserveWindowService(null);
             hasValidLayout = false;
             refreshQueued = false;
             warnedInsufficientSpace = false;
@@ -219,6 +223,7 @@ namespace TxTRPG.UI.Windows
             if (windowService != null && windowService != service && !replaceExistingService) return false;
             windowService = service;
             quickItemGrid = grid;
+            if (isActiveAndEnabled) ObserveWindowService();
             RefreshExecutionState();
             return true;
         }
@@ -228,6 +233,7 @@ namespace TxTRPG.UI.Windows
             if (windowService != service) return;
             windowService = null;
             quickItemGrid = null;
+            ObserveWindowService(null);
             RefreshExecutionState();
         }
 
@@ -251,6 +257,22 @@ namespace TxTRPG.UI.Windows
             foreach (var binding in buttons)
                 if (binding?.Button != null)
                     binding.Button.interactable = internallyValid && CanExecute(binding);
+            ExecutionStateRefreshed?.Invoke();
+        }
+
+        private void ObserveWindowService() => ObserveWindowService(windowService);
+        private void ObserveWindowService(GameWindowService service)
+        {
+            if (observedWindowService == service) return;
+            if (observedWindowService != null)
+            {
+                observedWindowService.Opened -= RefreshExecutionState;
+                observedWindowService.Closed -= RefreshExecutionState;
+            }
+            observedWindowService = service;
+            if (service == null) return;
+            service.Opened += RefreshExecutionState;
+            service.Closed += RefreshExecutionState;
         }
 
         private void BindButtons()
@@ -424,6 +446,9 @@ namespace TxTRPG.UI.Windows
             buttons.RemoveAll(item => item != null && item.ActionKind == GameMenuButtonActionKind.Command && item.CommandId == binding.CommandId);
             buttons.Add(binding);
         }
+        public int RemoveCommandForEditor(string id) =>
+            buttons.RemoveAll(item => item != null && item.ActionKind == GameMenuButtonActionKind.Command && item.CommandId == id?.Trim());
+        public bool HasCommandBindingsForEditor => buttons.Exists(item => item != null && item.ActionKind == GameMenuButtonActionKind.Command);
 #endif
     }
 }

@@ -113,14 +113,17 @@ namespace TxTRPG.UI.Tests
             var components = mainScene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<Component>(true)).ToArray();
             var menu = components.OfType<GameMenuPanel>().Single();
             var story = components.OfType<StoryTextPanel>().Single();
-            var binding = menu.Buttons.Single(item => item.ActionKind == GameMenuButtonActionKind.Command && item.CommandId == TemporaryDiceRollMenuController.RollAllCommandId);
+            Assert.That(menu.Buttons.Any(item => item.ActionKind == GameMenuButtonActionKind.Command), Is.False, "The menu no longer hosts the action.");
+            var action = components.OfType<BoundaryCommandButton>().Single(item => item.CommandId == TemporaryDiceRollMenuController.RollAllCommandId);
+            var actionButton = action.Button;
             var controller = components.OfType<TemporaryDiceRollMenuController>().Single();
             var exploration = components.OfType<ExplorationRunController>().Single();
             var explorationPanel = components.First(item => item.gameObject.name == "ExplorationNodePanel").gameObject;
             var cardList = components.OfType<ExplorationNodeChoiceCardList>().Single();
             for (var frame = 0; frame < 600 && exploration.Run == null; frame++) yield return null;
             Assert.That(exploration.Run, Is.Not.Null, "Exploration startup did not complete.");
-            Assert.That(binding.Button.interactable, Is.False, "Action must remain unavailable before combat.");
+            Assert.That(action.IsShown, Is.False, "The action button is hidden while choosing a node.");
+            Assert.That(actionButton.interactable, Is.False, "Action must remain unavailable before combat.");
             for (var set = 0; set < 100 && exploration.Run.CurrentChoices.All(item => item.TypeId != ExplorationNodeTypeIds.Combat); set++)
             {
                 var placeholder = exploration.Run.CurrentChoices[0];
@@ -135,17 +138,18 @@ namespace TxTRPG.UI.Tests
             var combatButton = cardList.Cards[combatChoice.SiblingIndex].Button;
             ExecuteEvents.Execute(combatButton.gameObject, new BaseEventData(EventSystem.current), ExecuteEvents.submitHandler);
             yield return null;
-            for (var frame = 0; frame < 300 && !binding.Button.interactable; frame++) yield return null;
-            Assert.That(binding.Button.interactable, Is.True, menu.UnavailableReason);
-            Assert.That(binding.Button.GetComponentInChildren<TMPro.TMP_Text>(true).text, Is.EqualTo("행동"));
+            for (var frame = 0; frame < 300 && !actionButton.interactable; frame++) yield return null;
+            Assert.That(action.IsShown, Is.True);
+            Assert.That(actionButton.interactable, Is.True, action.UnavailableReason);
+            Assert.That(actionButton.GetComponentInChildren<TMPro.TMP_Text>(true).text, Is.EqualTo("행동"));
             var session = PlayerSessionHost.Instance.Session;
             var healthBefore = session.CurrentPlayer.ActiveCharacter.Health.Current;
             var before = story.MessageCount;
-            ExecuteEvents.Execute(binding.Button.gameObject, new BaseEventData(EventSystem.current), ExecuteEvents.submitHandler);
+            ExecuteEvents.Execute(actionButton.gameObject, new BaseEventData(EventSystem.current), ExecuteEvents.submitHandler);
             yield return null;
             Assert.That(story.MessageCount, Is.EqualTo(before + 7));
             Assert.That(controller.Combat.NextEnemyAction, Is.EqualTo(TxTRPG.Gameplay.Combat.EnemyActionKind.Heal));
-            ExecuteEvents.Execute(binding.Button.gameObject, new BaseEventData(EventSystem.current), ExecuteEvents.submitHandler);
+            ExecuteEvents.Execute(actionButton.gameObject, new BaseEventData(EventSystem.current), ExecuteEvents.submitHandler);
             yield return null;
             Assert.That(story.MessageCount, Is.EqualTo(before + 14));
             Assert.That(controller.Combat.NextEnemyAction, Is.EqualTo(TxTRPG.Gameplay.Combat.EnemyActionKind.Attack));

@@ -9,6 +9,7 @@ namespace TxTRPG.Editor.Common.PrefabRebuild
         {
             yield return new("application.quick-items", "Game Menu and Modal Windows", "The current prefab core also writes a Demo prefab. Split production and Demo outputs before registration.");
             yield return new("application.main-scene-defaults", "Main Scene Default Content", "Creates profiles and modifies TMP_MainScene; Scene and content configuration are excluded.");
+            yield return new("ui.boundary-command-button", "Boundary Command Button", "BoundaryCommandButtonPrefabUtility creates the Prefab only when missing (from TMP_MainScene apply steps); the stored Prefab is developer-owned and never regenerated.");
             yield return new("application.player-session", "Player Session/AppRoot setup", "Creates configuration assets and modifies Scene composition.");
             yield return new("content.default-character", "Default Character Content", "Creates and may roll back content and Addressables entries; it is not a prefab-only task.");
             yield return new("scene-transition.app-scene", "Scene Transition/AppScene", "Changes scenes, profiles and Build Settings in addition to AppRoot.prefab.");

@@ -6,6 +6,7 @@ using TxTRPG.Application.Dice;
 using TxTRPG.Application.Exploration;
 using TxTRPG.Application.Players;
 using TxTRPG.UI;
+using TxTRPG.UI.Editor;
 using TxTRPG.UI.Exploration;
 using TxTRPG.UI.Windows;
 using UnityEditor;
@@ -24,7 +25,9 @@ namespace TxTRPG.Application.Editor
         public const string HealthBarPrefabPath = "Assets/TxTRPG/UI/Prefabs/HealthBarPanel.prefab";
         public const string AppRootPrefabPath = "Assets/TxTRPG/SceneTransition/Prefabs/AppRoot.prefab";
         public const string ScenePath = "Assets/Scenes/TMP_MainScene.unity";
+        // Legacy game-menu action button; the apply step removes it together with its command binding.
         public const string ButtonName = "TemporaryDiceRoll";
+        public const string BoundaryButtonName = "CombatActionBoundary";
         public const string EnemyHealthName = "TemporaryEnemyHealthBar";
         public const string NextActionName = "TemporaryEnemyNextAction";
         public const string ExplorationPanelName = "ExplorationNodePanel";
@@ -93,8 +96,9 @@ namespace TxTRPG.Application.Editor
                 var playerHealth = components.OfType<HealthBarPanel>().First(panel => !panel.transform.IsChildOf(enemyPanel.transform)); DisableEnemyDemoLoader(enemyPanel);
                 var enemyHealth = EnsureEnemyHealthBar(enemyPanel); var nextAction = EnsureNextActionText(enemyPanel);
                 var combat = menu.GetComponent<TemporaryDiceRollMenuController>() ?? menu.gameObject.AddComponent<TemporaryDiceRollMenuController>();
-                combat.ConfigureForEditor(menu, story, combatConfiguration, enemyPanel, playerHealth, enemyHealth, nextAction); menu.SetCommandHandlerForEditor(combat);
-                EnsureActionButton(menu);
+                combat.ConfigureForEditor(menu, story, combatConfiguration, enemyPanel, playerHealth, enemyHealth, nextAction);
+                RemoveLegacyMenuActionButton(menu);
+                EnsureBoundaryActionButton(menu, story, enemyPanel, combat);
                 var ui = EnsureExplorationUi(menu.GetComponentInParent<Canvas>().transform);
                 var exploration = menu.GetComponent<ExplorationRunController>() ?? menu.gameObject.AddComponent<ExplorationRunController>();
                 exploration.ConfigureForEditor(explorationConfiguration, combat, story, ui.Root, ui.Status, ui.Buttons, ui.Labels, ui.Continue);
@@ -106,27 +110,93 @@ namespace TxTRPG.Application.Editor
             finally { if (opened) EditorSceneManager.CloseScene(scene, true); }
         }
 
-        private static void EnsureActionButton(GameMenuPanel menu)
+        // Removes the old game-menu "행동" button and its command binding. Safe to rerun: nothing happens once removed.
+        public static bool RemoveLegacyMenuActionButton(GameMenuPanel menu)
         {
-            var content = menu.Content ?? throw new InvalidOperationException("GameMenuPanel has no Content reference."); var existing = content.Find(ButtonName);
-            var view = existing != null ? existing.GetComponent<GameMenuButtonView>() : CreateMenuButton(content);
-            if (view == null) throw new InvalidOperationException("Temporary action button has no GameMenuButtonView.");
-            var label = view.GetComponentInChildren<TMP_Text>(true); if (label != null) label.text = "행동";
-            TemporaryMenuIconUtility.ApplyDefault(view, "action");
-            var binding = new GameMenuButtonBinding(); binding.ConfigureCommandForEditor(TemporaryDiceRollMenuController.RollAllCommandId, view.Button, true, view); menu.AddOrReplaceCommandForEditor(binding);
+            var changed = menu.RemoveCommandForEditor(TemporaryDiceRollMenuController.RollAllCommandId) > 0;
+            var legacy = menu.Content != null ? menu.Content.Find(ButtonName) : null;
+            if (legacy != null)
+            {
+                if (PrefabUtility.IsPartOfPrefabInstance(legacy.gameObject) && !PrefabUtility.IsAddedGameObjectOverride(legacy.gameObject))
+                    throw new InvalidOperationException($"{ButtonName} belongs to the GameMenuPanel Prefab asset; remove it from the Prefab instead of the Scene.");
+                UnityEngine.Object.DestroyImmediate(legacy.gameObject);
+                changed = true;
+            }
+            // No command buttons remain, so the menu no longer needs a command handler.
+            if (!menu.HasCommandBindingsForEditor) menu.SetCommandHandlerForEditor(null);
+            if (changed) { EditorUtility.SetDirty(menu); RecordInstance(menu); }
+            return changed;
+        }
+
+        // Finds or creates the boundary action button over EnemyDisplayPanel/StoryTextPanel. Structural references are
+        // refreshed on every run; shape, Sprite, effect, and navigation edits on an existing button are preserved.
+        public static BoundaryCommandButton EnsureBoundaryActionButton(GameMenuPanel menu, StoryTextPanel story, EnemyDisplayPanel enemyPanel, TemporaryDiceRollMenuController combat)
+        {
+            var content = story.transform.parent ?? throw new InvalidOperationException("StoryTextPanel has no parent ContentLayer.");
+            var first = DirectChildOf(content, enemyPanel.transform) ?? throw new InvalidOperationException("EnemyDisplayPanel and StoryTextPanel do not share the Text panel ContentLayer.");
+            var existing = content.Find(BoundaryButtonName);
+            var created = existing == null;
+            if (created)
+            {
+                var instance = (GameObject)PrefabUtility.InstantiatePrefab(BoundaryCommandButtonPrefabUtility.EnsurePrefab(), content);
+                instance.name = BoundaryButtonName;
+                existing = instance.transform;
+            }
+            var boundary = existing.GetComponent<BoundaryCommandButton>() ?? throw new InvalidOperationException($"{BoundaryButtonName} has no BoundaryCommandButton.");
+            var placement = boundary.Placement ?? throw new InvalidOperationException($"{BoundaryButtonName} has no PanelBoundaryPlacement.");
+            var buttonRoot = boundary.Button != null ? boundary.Button.gameObject : throw new InvalidOperationException($"{BoundaryButtonName} has no Button.");
+            var menuView = buttonRoot.GetComponent<GameMenuButtonView>() ?? throw new InvalidOperationException($"{BoundaryButtonName} has no GameMenuButtonView.");
+            // Drawn after (above) both panels and outside the layout: last sibling, stretched, ignoreLayout.
+            if (existing.GetSiblingIndex() != content.childCount - 1) existing.SetAsLastSibling();
+            var layoutElement = existing.GetComponent<LayoutElement>() ?? existing.gameObject.AddComponent<LayoutElement>();
+            layoutElement.ignoreLayout = true;
+            if (existing.GetComponent<FlexibleLayoutItem>() != null) throw new InvalidOperationException($"{BoundaryButtonName} must not have a FlexibleLayoutItem.");
+            var system = menu.Buttons.FirstOrDefault(binding => binding != null && binding.PageId == "system")?.Button;
+            placement.ConfigureForEditor((RectTransform)first, (RectTransform)story.transform, (RectTransform)buttonRoot.transform);
+            // No focus fallback: when the button hides while focused, focus is cleared so the exploration screen keeps its
+            // "no initial selection" rule (the first Navigate input enters the node cards).
+            boundary.ConfigureForEditor(placement, buttonRoot, boundary.Button, boundary.ShapedView, combat, TemporaryDiceRollMenuController.RollAllCommandId, null);
+            if (menuView.Label != null && (string.IsNullOrWhiteSpace(menuView.Label.text) || menuView.Label.text == "Action")) menuView.SetLabel("행동");
+            TemporaryMenuIconUtility.ApplyDefault(menuView, "action");
+            // Explicit navigation: Right/Down -> System. The menu buttons keep Automatic navigation.
+            var navigation = boundary.Button.navigation;
+            if (navigation.mode != Navigation.Mode.Explicit || navigation.selectOnRight == null && navigation.selectOnDown == null)
+            {
+                navigation.mode = Navigation.Mode.Explicit; navigation.selectOnRight = system; navigation.selectOnDown = system;
+                boundary.Button.navigation = navigation;
+            }
+            combat.ConfigureActionButtonForEditor(boundary);
+            foreach (var target in new UnityEngine.Object[] { boundary, placement, layoutElement, boundary.Button, menuView, menuView.Label, existing, combat })
+            { if (target == null) continue; EditorUtility.SetDirty(target); RecordInstance(target); }
+            return boundary;
+        }
+
+        private static Transform DirectChildOf(Transform parent, Transform descendant)
+        {
+            for (var current = descendant; current != null; current = current.parent)
+                if (current.parent == parent) return current;
+            return null;
+        }
+
+        private static void RecordInstance(UnityEngine.Object target)
+        {
+            if (PrefabUtility.IsPartOfPrefabInstance(target)) PrefabUtility.RecordPrefabInstancePropertyModifications(target);
         }
 
         private sealed class ExplorationUi { public GameObject Root; public TMP_Text Status; public Button[] Buttons; public TMP_Text[] Labels; public Button Continue; public ExplorationNodeChoiceCardList CardList; }
 
         private static ExplorationUi EnsureExplorationUi(Transform parent)
         {
-            var existing = parent.Find(ExplorationPanelName);
+            // The panel may have been moved into a layout panel (Text_FlexibleLayoutPanel/ContentLayer); keep that placement.
+            var existing = parent.Find(ExplorationPanelName) ?? parent.GetComponentsInChildren<Transform>(true).FirstOrDefault(item => item.name == ExplorationPanelName);
             if (existing != null)
             {
-                existing.SetParent(parent, false);
-                var existingRect = (RectTransform)existing;
-                existingRect.anchorMin = new Vector2(.08f, .12f); existingRect.anchorMax = new Vector2(.92f, .88f);
-                existingRect.pivot = new Vector2(.5f, .5f); existingRect.offsetMin = existingRect.offsetMax = Vector2.zero;
+                if (existing.parent == parent)
+                {
+                    var existingRect = (RectTransform)existing;
+                    existingRect.anchorMin = new Vector2(.08f, .12f); existingRect.anchorMax = new Vector2(.92f, .88f);
+                    existingRect.pivot = new Vector2(.5f, .5f); existingRect.offsetMin = existingRect.offsetMax = Vector2.zero;
+                }
                 var existingChoices = existing.Find("Choices"); if (existingChoices != null) existingChoices.gameObject.SetActive(false);
                 return new ExplorationUi { Root = existing.gameObject, Status = existing.Find("Status").GetComponent<TMP_Text>(), Buttons = Enumerable.Range(1, 3).Select(i => existing.Find($"Choices/Choice{i}").GetComponent<Button>()).ToArray(), Labels = Enumerable.Range(1, 3).Select(i => existing.Find($"Choices/Choice{i}/Label").GetComponent<TMP_Text>()).ToArray(), Continue = existing.Find("Continue").GetComponent<Button>(), CardList = EnsureExplorationCardList(existing) };
             }
@@ -162,8 +232,6 @@ namespace TxTRPG.Application.Editor
         { var existing=enemyPanel.transform.Find(EnemyHealthName); if(existing!=null)return existing.GetComponent<HealthBarPanel>(); var prefab=AssetDatabase.LoadAssetAtPath<GameObject>(HealthBarPrefabPath) ?? throw new InvalidOperationException("HealthBarPanel prefab is missing."); var instance=(GameObject)PrefabUtility.InstantiatePrefab(prefab,enemyPanel.transform); instance.name=EnemyHealthName; var rect=(RectTransform)instance.transform; rect.anchorMin=rect.anchorMax=new Vector2(.5f,1); rect.pivot=new Vector2(.5f,1); rect.anchoredPosition=new Vector2(0,-12); rect.sizeDelta=new Vector2(360,56); return instance.GetComponent<HealthBarPanel>(); }
         private static TMP_Text EnsureNextActionText(EnemyDisplayPanel enemyPanel)
         { var existing=enemyPanel.transform.Find(NextActionName); if(existing!=null)return existing.GetComponent<TMP_Text>(); var rect=CreateRect(NextActionName,enemyPanel.transform); rect.anchorMin=rect.anchorMax=new Vector2(.5f,1); rect.pivot=new Vector2(.5f,1); rect.anchoredPosition=new Vector2(0,-72); rect.sizeDelta=new Vector2(360,34); return AddText(rect,"전투 노드를 선택하세요",20); }
-        private static GameMenuButtonView CreateMenuButton(Transform parent)
-        { var root=CreateRect(ButtonName,parent); root.sizeDelta=new Vector2(150,48); var visual=CreateRect("VisualRoot",root); Stretch(visual); var bgRect=CreateRect("Background",visual); Stretch(bgRect); var bg=bgRect.gameObject.AddComponent<Image>(); bg.color=new Color(.2f,.24f,.32f,1); var iconRect=CreateRect("Icon",visual); Stretch(iconRect); var icon=iconRect.gameObject.AddComponent<Image>(); icon.raycastTarget=false; icon.gameObject.SetActive(false); var labelRect=CreateRect("Label",visual); Stretch(labelRect,8,6,8,6); var label=AddText(labelRect,"행동",16); label.textWrappingMode=TextWrappingModes.NoWrap; label.overflowMode=TextOverflowModes.Ellipsis; var borderRect=CreateRect("Border",visual); Stretch(borderRect); var border=borderRect.gameObject.AddComponent<Image>(); border.color=new Color(.65f,.72f,.9f,.35f); border.raycastTarget=false; var effect=CreateRect("EffectOverlay",visual); Stretch(effect); var button=root.gameObject.AddComponent<Button>(); button.targetGraphic=bg; var view=root.gameObject.AddComponent<GameMenuButtonView>(); view.ConfigureForEditor(button,visual,bg,icon,label,border,effect); return view; }
         private static Button CreateSimpleButton(string name,Transform parent,string text,out TMP_Text label){var rect=CreateRect(name,parent); rect.sizeDelta=new Vector2(200,64); return AddButtonVisual(rect,text,out label);}
         private static Button AddButtonVisual(RectTransform rect,string value,out TMP_Text label){var image=rect.gameObject.AddComponent<Image>(); image.color=new Color(.18f,.24f,.34f,1); var labelRect=CreateRect("Label",rect); Stretch(labelRect,10,6,10,6); label=AddText(labelRect,value,18); var button=rect.gameObject.AddComponent<Button>(); button.targetGraphic=image; return button;}
         private static TMP_Text AddText(RectTransform rect,string value,float size){var text=rect.gameObject.AddComponent<TextMeshProUGUI>(); text.text=value; text.fontSize=size; text.alignment=TextAlignmentOptions.Center; text.raycastTarget=false; return text;}

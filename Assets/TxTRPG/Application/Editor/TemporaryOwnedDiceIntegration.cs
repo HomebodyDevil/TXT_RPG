@@ -233,7 +233,17 @@ namespace TxTRPG.Application.Editor
             var controller = canvas.GetComponentInChildren<TemporaryDiceRollMenuController>(true);
             var assigned = new SerializedObject(controller).FindProperty("ownedDiceBinder").objectReferenceValue;
             if (assigned != binder) throw new InvalidOperationException("The combat command is not bound to owned dice.");
-            Debug.Log("OWNED_DICE_VALIDATE: Tree, owned panel, result page, and command references are present.");
+            var action = controller.ActionButtonForEditor;
+            if (action == null || action.CommandId != TemporaryDiceRollMenuController.RollAllCommandId || action.Button == null ||
+                action.Placement == null || action.Placement.FirstPanel == null || action.Placement.SecondPanel == null ||
+                action.Placement.Target != action.Button.transform || !action.TryGetComponent<LayoutElement>(out var actionLayout) || !actionLayout.ignoreLayout ||
+                action.GetComponent<FlexibleLayoutItem>() != null || action.transform.parent != action.Placement.SecondPanel.parent)
+                throw new InvalidOperationException("The boundary combat action button is missing or its references are incomplete.");
+            var menu = canvas.GetComponentInChildren<GameMenuPanel>(true);
+            if (menu.Buttons.Any(item => item.ActionKind == GameMenuButtonActionKind.Command && item.CommandId == TemporaryDiceRollMenuController.RollAllCommandId) ||
+                menu.Content.Find(TemporaryDiceMenuBuilder.ButtonName) != null)
+                throw new InvalidOperationException("The legacy game-menu action button or binding is still present.");
+            Debug.Log("OWNED_DICE_VALIDATE: Tree, owned panel, result page, command references, and the boundary action button are present.");
         }
 
         [MenuItem("Tools/TxT RPG/UI/Dice/Temporary/Validate Play Flow")]
@@ -274,10 +284,16 @@ namespace TxTRPG.Application.Editor
                 method.Invoke(runController, new object[] { run.CurrentChoiceSetId, choice.Id });
                 if (!combatController.IsReady || combatController.Combat == null)
                     throw new InvalidOperationException("Selecting the combat card did not start combat.");
+                var actionButton = combatController.ActionButtonForEditor ?? throw new InvalidOperationException("The boundary action button is not connected.");
+                await Task.Yield();
+                if (!actionButton.IsShown || !actionButton.IsInteractable)
+                    throw new InvalidOperationException($"The boundary action button is not shown and enabled during combat: {actionButton.UnavailableReason}");
                 var storyBefore = story.MessageCount;
                 var actionCount = host.TemporaryDiceHistory.CurrentTurns.Count;
                 if (!combatController.TryExecute(TemporaryDiceRollMenuController.RollAllCommandId))
                     throw new InvalidOperationException("The dice action was not accepted.");
+                if (!actionButton.IsShown || actionButton.IsInteractable)
+                    throw new InvalidOperationException("The boundary action button must stay visible but disabled during the roll.");
                 if (combatController.TryExecute(TemporaryDiceRollMenuController.RollAllCommandId))
                     throw new InvalidOperationException("A second action was accepted during the roll.");
                 // Poll every frame: the turn and Story must appear only after the dice stopped and the result hold ended.
@@ -311,6 +327,7 @@ namespace TxTRPG.Application.Editor
                 if (!windows.IsOpen) throw new InvalidOperationException("The automatic result modal did not open.");
                 if (combatController.CanExecute(TemporaryDiceRollMenuController.RollAllCommandId, out _))
                     throw new InvalidOperationException("The modal did not block direct action execution.");
+                if (actionButton.IsInteractable) throw new InvalidOperationException("The boundary action button stayed enabled while the result modal was open.");
                 windows.Close();
                 await Task.Delay(100);
                 binder.Panel.ResultsButton.onClick.Invoke();

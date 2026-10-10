@@ -53,7 +53,7 @@ Root(Completed)
 
 개발자는 `Child Alignment`에서 가로 좌측·중앙·우측과 세로 상단·중앙·하단의 9개 조합을 선택할 수 있습니다. 가로 정렬은 마지막 불완전 행에도 적용되며 데이터 순서는 바뀌지 않습니다. Content의 preferred height는 `max(내용 높이, Viewport 높이)`로 계산됩니다. 따라서 내용이 적을 때에는 세로 정렬 여유가 생기고, 내용이 넘치면 상단부터 배치되어 모든 행에 스크롤로 접근할 수 있습니다. `Padding`은 목록 경계에 한 번만 적용되고 두 Spacing 값은 카드와 행 사이에만 적용됩니다.
 
-카드 외형은 호환용 `Image` 모드와 `Procedural Shape` 모드로 구분됩니다. 절차적 모드에서는 `ShapeVisual`의 `ExplorationCardShapeGraphic`이 사각형, 둥근 사각형, 원, 타원 또는 위쪽을 향한 삼각형 Mesh를 만들고 같은 경계로 Artwork를 마스킹합니다. `ShapeBorder`는 내부 테두리만 그리며 CardRoot의 점유 크기를 늘리지 않습니다. 제목·설명·상태는 ShapeVisual 밖의 형제이므로 도형에 잘리지 않고, CardRoot의 Button 입력 영역은 계속 사각형입니다. 각 Graphic은 공유 Material을 변경하거나 별도 Mesh를 소유하지 않으며 Unity의 VertexHelper 재생성 수명에만 의존합니다.
+카드 외형은 호환용 `Image` 모드와 `Procedural Shape` 모드로 구분됩니다. 절차적 모드에서는 `ShapeVisual`의 `ExplorationCardShapeGraphic`이 사각형, 둥근 사각형, 원, 타원 또는 위쪽을 향한 삼각형 Mesh를 만들고 같은 경계로 Artwork를 마스킹합니다. `ShapeBorder`는 내부 테두리만 그리며 CardRoot의 점유 크기를 늘리지 않습니다. 제목·설명·상태는 ShapeVisual 밖의 형제이므로 도형에 잘리지 않고, CardRoot의 Button 입력 영역은 계속 사각형입니다. 각 Graphic은 공유 Material을 변경하거나 별도 Mesh를 소유하지 않으며 Unity의 VertexHelper 재생성 수명에만 의존합니다. 도형 경계와 Mesh 생성은 공용 `TxTRPG.UI.Shapes.UiShapeGeometry`(`Assets/TxTRPG/UI/Runtime/Shapes/`)에 있으며, 카드 Graphic은 직렬화 호환을 위해 기존 `ExplorationCardShape`·`ExplorationCardShapeDrawMode` 열거형과 필드를 그대로 두고 같은 정수 값의 `UiShape`·`UiShapeDrawMode`로 변환해 호출합니다. 경계선 명령 버튼도 같은 기하를 사용합니다([경계선 명령 버튼](boundary-command-button.md)). 새 도형은 `UiShape`와 `UiShapeGeometry.BuildBoundary`에 추가하며, 카드에서도 고르게 하려면 같은 값으로 `ExplorationCardShape`에 항목을 추가합니다(`UiShapeGeometryTests`가 두 열거형의 이름·값 일치를 검사합니다).
 
 ```text
 CardRoot

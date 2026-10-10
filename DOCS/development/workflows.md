@@ -6,14 +6,14 @@
 
 현재 기본 Sprite는 `Assets/TxTRPG/UI/Icons/TemporaryMenu/{system,inventory,status,action}.png`입니다. 각 파일은 Sprite (Single), Alpha Is Transparency, Bilinear, Clamp, mipmap 없음, 압축 없음으로 임포트합니다. PNG 생성은 최초 임시 적용에서만 수행하며 생성기는 이미 저장된 Sprite를 읽습니다.
 
-Play Mode를 종료하고 새 이미지를 Sprite로 임포트합니다. 공유 메뉴는 `Assets/TxTRPG/UI/Prefabs/GameMenuPanel.prefab`의 `Viewport/Content/{System,Inventory,Status}/VisualRoot/Icon`에서 Image의 Source Image를 교체합니다. 행동은 `TMP_MainScene` 메뉴의 `TemporaryDiceRoll/VisualRoot/Icon`을 교체합니다. 버튼의 GameMenuButtonView에서 Display Mode=ImageOnly, Icon Color=흰색(다색 원본 보존), Icon Padding, Icon Visible을 조절합니다. Label 참조와 문자열을 삭제하지 않습니다. Prefab 저장 또는 의도한 Scene override만 저장하며 전체 재생성은 필요하지 않습니다. 런타임에서는 `SetIcon(sprite, visible)` 및 `ConfigureDisplay(mode, padding, color)`를 사용합니다.
+Play Mode를 종료하고 새 이미지를 Sprite로 임포트합니다. 공유 메뉴는 `Assets/TxTRPG/UI/Prefabs/GameMenuPanel.prefab`의 `Viewport/Content/{System,Inventory,Status}/VisualRoot/Icon`에서 Image의 Source Image를 교체합니다. 행동은 메뉴에서 빠져 `TMP_MainScene`의 `Text_FlexibleLayoutPanel/ContentLayer/CombatActionBoundary/ActionButton/VisualRoot/Icon`을 교체합니다(경계선 행동 버튼, 아래 "전투 행동 버튼(패널 경계선)" 참고). 버튼의 GameMenuButtonView에서 Display Mode=ImageOnly, Icon Color=흰색(다색 원본 보존), Icon Padding, Icon Visible을 조절합니다. Label 참조와 문자열을 삭제하지 않습니다. Prefab 저장 또는 의도한 Scene override만 저장하며 전체 재생성은 필요하지 않습니다. 런타임에서는 `SetIcon(sprite, visible)` 및 `ConfigureDisplay(mode, padding, color)`를 사용합니다.
 
 이번 변경은 운영 Prefab과 TMP_MainScene에 적용하여 저장했습니다. 기존 체크아웃 자산을 선택적으로 이전할 때만 다음 절차를 사용합니다. 이미 적용된 자산과 사용자 Sprite는 재실행해도 보존하지만 빈 Sprite/옛 기본 가방 아이콘은 새 기본값으로 대체합니다. 변경 전 버전 관리 또는 백업을 확보합니다.
 
 ```text
 1. 컴파일 완료를 기다리고 Play Mode를 종료합니다. TMP_MainScene 및 Prefab Stage의 사용자 변경을 저장하고 Prefab Stage를 닫습니다.
 2. Tools > TxT RPG > Application > Temporary > Apply Menu Icons Only를 실행합니다. 선택 오브젝트는 필요하지 않습니다.
-   공용 메뉴와 중첩 메뉴, TMP_MainScene의 비어 있거나 옛 기본값인 아이콘만 갱신하며 대상 자산을 자동 저장합니다.
+   공용 메뉴와 중첩 메뉴, TMP_MainScene의 메뉴 페이지 버튼과 경계선 행동 버튼 중 비어 있거나 옛 기본값인 아이콘만 갱신하며 대상 자산을 자동 저장합니다.
    Console의 MENU_ICONS 완료 로그를 확인합니다. 오류가 발생하면 이후 단계를 중단하고 원인을 해결합니다.
 3. Assets/Scenes/AppScene.unity에서 Play합니다. 네 도형과 기존 창 열기/닫기, 전투 노드에서 행동 실행을 확인합니다.
 ```
@@ -560,12 +560,12 @@ Scene 연결을 복구할 때에는 기존 메뉴의 Transform, 형제 순서, �
 
 - 설정 자산: `Assets/TxTRPG/Application/Configuration/TemporaryDiceConfiguration.asset`
 - 적용 메뉴: `Tools > TxT RPG > Application > Temporary > Apply Player Dice Roll Menu`
-- 실행 경로: `Assets/Scenes/AppScene.unity`에서 시작하여 `TMP_MainScene`이 로드된 후 GameMenuPanel의 `주사위 굴리기 (임시)`를 사용합니다.
+- 실행 경로: `Assets/Scenes/AppScene.unity`에서 시작하여 `TMP_MainScene`이 로드된 후 전투 노드를 고르고, 적 패널과 Story 패널 경계선의 "행동" 버튼을 사용합니다. 게임 메뉴에는 행동 버튼이 없습니다.
 - 면 설정: 각 Dice 항목의 `Faces`에서 `Effect Kind`와 `Amount`를 편집합니다. 현재 런타임은 Attack과 Heal만 허용합니다.
 - 기능 해제: 설정 자산의 `Enabled For Session`을 끄면 세션 지급과 버튼 실행이 비활성화됩니다.
-- 제거 지점: 정식 주사위 소유 시스템으로 전환할 때 `TemporaryDiceRollMenuController`, 임시 버튼 바인딩과 AppRoot의 임시 설정 참조를 제거합니다. 저장 스키마에는 이전할 데이터가 없습니다.
+- 제거 지점: 정식 주사위 소유 시스템으로 전환할 때 `TemporaryDiceRollMenuController`, 경계선 행동 버튼(`CombatActionBoundary`)과 AppRoot의 임시 설정 참조를 제거합니다. 저장 스키마에는 이전할 데이터가 없습니다.
 
-적용 메뉴는 기존 메뉴·Story 인스턴스를 찾아 필요한 버튼과 참조만 추가합니다. 알려진 숫자형 D4/D6/D8 기본 자산은 공격·회복 교대 면으로 한 번 업그레이드하며, 효과를 판단할 수 없는 사용자 정의 숫자형 자산은 변경하지 않고 오류로 중단합니다. 효과형 자산의 개발자 설정은 재실행해도 덮어쓰지 않습니다. 실행 전 TMP_MainScene의 미저장 변경이 있으면 중단하고, 성공하면 AppRoot.prefab과 TMP_MainScene을 저장합니다.
+적용 메뉴는 기존 메뉴·Story 인스턴스를 찾아 필요한 참조만 연결하고, 경계선 행동 버튼을 만들거나 찾으며, 남아 있는 옛 메뉴 행동 버튼(`GameMenuPanel/Content/TemporaryDiceRoll`)과 `temporary-dice.roll-all` 바인딩을 제거합니다. 이미 옮긴 Scene에서 다시 실행해도 결과가 같고, 행동 버튼의 모양·Sprite·효과·탐색 설정을 덮어쓰지 않습니다. `ExplorationNodePanel`은 Canvas 아래 어디에 있든 찾아 그 배치를 유지합니다(이전에는 Canvas 직계 자식만 찾아 재실행 시 중복 패널을 만들 수 있었습니다). 알려진 숫자형 D4/D6/D8 기본 자산은 공격·회복 교대 면으로 한 번 업그레이드하며, 효과를 판단할 수 없는 사용자 정의 숫자형 자산은 변경하지 않고 오류로 중단합니다. 효과형 자산의 개발자 설정은 재실행해도 덮어쓰지 않습니다. 실행 전 TMP_MainScene의 미저장 변경이 있으면 중단하고, 성공하면 AppRoot.prefab과 TMP_MainScene을 저장합니다.
 
 
 ## StoryTextPanel 레이아웃 수명 주기 검증
@@ -582,10 +582,22 @@ Scene 연결을 복구할 때에는 기존 메뉴의 Transform, 형제 순서, �
 ## TMP_MainScene 임시 적 전투
 
 - 설정 자산: `Assets/TxTRPG/Application/Configuration/TemporaryCombatConfiguration.asset`에서 활성 여부, 적 이름·외형 ID·최대 체력·공격량·회복량을 설정합니다.
-- 적용 메뉴: `Tools > TxT RPG > Application > Temporary > Apply Player Dice Roll Menu`는 기존 TMP_MainScene 배치를 보존하면서 임시 전투 참조, 적 체력 바, 행동 예고와 `행동` 버튼 제목을 선별 적용합니다. 설정 자산이 이미 있으면 값을 덮어쓰지 않으며 안전하게 다시 실행할 수 있습니다. Scene은 자동 저장되므로 적용 전에 관련 미저장 변경을 먼저 저장하거나 별도로 보존해야 합니다.
-- 실행 경로: `Assets/Scenes/AppScene.unity`에서 Play Mode를 시작하고 TMP_MainScene이 로드되면 적 체력 40/40, `다음 적 행동: 공격 5`와 `행동` 버튼을 확인합니다. 버튼을 누르면 주사위별 기록, 실제 적용 결과와 적 행동이 Story에 순서대로 추가됩니다.
+- 적용 메뉴: `Tools > TxT RPG > Application > Temporary > Apply Player Dice Roll Menu`는 기존 TMP_MainScene 배치를 보존하면서 임시 전투 참조, 적 체력 바, 행동 예고와 경계선 `행동` 버튼을 선별 적용합니다. 설정 자산이 이미 있으면 값을 덮어쓰지 않으며 안전하게 다시 실행할 수 있습니다. Scene은 자동 저장되므로 적용 전에 관련 미저장 변경을 먼저 저장하거나 별도로 보존해야 합니다.
+- 실행 경로: `Assets/Scenes/AppScene.unity`에서 Play Mode를 시작하고 TMP_MainScene에서 전투 노드를 고르면 적 체력 40/40, `다음 적 행동: 공격 5`와 경계선의 `행동` 버튼을 확인합니다. 버튼을 누르면 주사위별 기록, 실제 적용 결과와 적 행동이 Story에 순서대로 추가됩니다.
 - 격리 검증: 행동 전후 `PlayerSessionHost.Instance.Session.CurrentPlayer.ActiveCharacter.Health` 값은 같아야 합니다. Scene을 다시 진입하면 임시 전투만 초기화됩니다.
-- 비활성화: 설정 자산의 `Enabled For Scene`을 끄면 전투가 생성되지 않고 명령이 비활성화됩니다. 정식 전투로 이전할 때에는 Scene의 임시 컨트롤러·추가 체력 바·예고 표시와 임시 명령 바인딩을 제거합니다. 저장 마이그레이션은 필요하지 않습니다.
+- 비활성화: 설정 자산의 `Enabled For Scene`을 끄면 전투가 생성되지 않고 행동 버튼이 표시되지 않습니다. 정식 전투로 이전할 때에는 Scene의 임시 컨트롤러·추가 체력 바·예고 표시와 경계선 행동 버튼을 제거합니다. 저장 마이그레이션은 필요하지 않습니다.
+
+### 전투 행동 버튼(패널 경계선)
+
+구조와 동작은 [경계선 명령 버튼](../architecture/boundary-command-button.md)과 [임시 적 전투](../architecture/temporary-combat.md#행동-버튼)를 봅니다.
+
+- 모양: `CombatActionBoundary/ActionButton`의 `ShapedButtonView > Shape Appearance`에서 `Visual Mode`(Procedural Shape/Image), `Shape`, `Corner Radius`, `Border Thickness`, 색, 이미지 모드 Sprite, `Shape Hit Test`, `Image Alpha Hit Threshold`를 바꿉니다. 크기는 `ActionButton`의 Width·Height(기본 72×72)입니다. 위치는 `PanelBoundaryPlacement`가 구동하므로 직접 옮기지 않습니다.
+- 아이콘: `ActionButton/VisualRoot/Icon`의 Source Image와 `GameMenuButtonView`의 Display Mode·Icon Padding·Icon Color·Icon Visible을 바꿉니다. Sprite가 없거나 Icon Visible을 끄면 Label "행동"이 표시됩니다.
+- 효과: `ShapedButtonView > Effects`의 Background·Border·Icon·Effect Overlay Material 슬롯에 셰이더 Material을 지정합니다. 전경 효과 Graphic은 `VisualRoot/EffectOverlay` 아래에 추가합니다. 흔들림·확대 같은 Transform 연출은 `VisualRoot`에만 적용합니다. 실행 중 속성을 바꾸는 효과 코드는 `GetOrCreateEffectInstance`가 돌려준 인스턴스만 수정하고 끝나면 `ResetEffects`를 호출합니다. `Effects Are Animated`가 켜져 있으면 System 페이지의 `카드 효과 사용`을 끄거나 `움직임 줄이기`를 켤 때 효과가 꺼집니다.
+- 임시 적용 메뉴: `Tools > TxT RPG > Application > Temporary > Apply Combat Action Boundary Button`은 다른 Apply 단계 없이 이 이전만 TMP_MainScene에 적용합니다(옛 메뉴 버튼·바인딩 제거, 경계선 버튼 생성 또는 참조 갱신, 컨트롤러 연결). Play Mode와 Prefab Stage를 종료하고 TMP_MainScene의 미저장 변경을 저장한 뒤 실행하며, 성공하면 `COMBAT_ACTION_BOUNDARY_APPLY` 로그를 남기고 Scene을 자동 저장합니다. 안전하게 재실행할 수 있고 사용자 외형 설정을 덮어쓰지 않습니다. 운영 Scene에는 2026-10-10에 적용·저장했으므로 이 작업 사본에서는 다시 실행할 필요가 없습니다. 모든 작업 사본의 이전이 끝나면 삭제할 수 있습니다.
+- Scene 검증: Edit Mode에서 TMP_MainScene을 열고 `Tools > TxT RPG > UI > Dice > Temporary > Validate Owned Dice Scene`을 실행합니다. 경계선 버튼 참조, `ignoreLayout`, 옛 메뉴 버튼·바인딩 부재까지 확인합니다.
+- Play 검증: AppScene에서 Play를 시작해 새 탐험이 노드 선택을 기다릴 때 `Tools > TxT RPG > UI > Combat > Validate Combat Action Button (Play Mode)`를 실행합니다. 노드 선택 중 숨김, 전투 중 표시·활성, 넓은 화면·휴대폰 세로·가로·태블릿·좁은 데스크톱·울트라와이드 가상 Viewport에서 경계선 중심 일치와 Text 패널 안쪽 유지, 버튼 유무에 따른 패널 Rect 불변, 좁은 화면 `Reveal`, 원·둥근 사각형·사각형·이미지 모드 입력 영역, 효과 인스턴스·공유 Material 불변·리셋·움직임 줄이기, 명시적 탐색과 숨김 시 포커스 해제, 연속 Submit의 1회 실행과 굴림 중 비활성, 결과 창·가방 창 열림 중 비활성과 결과 창 닫힘 후 포커스 복귀, 승리 후 숨김과 다음 전투 재표시, 패배 후 숨김을 차례로 검사하고 `COMBAT_ACTION_VALIDATE ... PASS`를 기록합니다. Play 상태만 바꾸며 마지막에 탐험이 패배로 끝납니다.
+- 관련 Edit Mode 테스트: `TxTRPG.UI.Tests.PanelBoundaryCalculatorTests`(Spacing 0·양수, 세로·가로 경계, 비활성·겹침, 보정), `TxTRPG.UI.Tests.UiShapeGeometryTests`(도형 판정, 카드 열거형 일치, 카드·공용 Graphic Mesh 동일), `TxTRPG.UI.Tests.BoundaryCommandButtonTests`(계층 분리, 경계 배치와 패널 불변, 표시·실행 상태, 포커스 해제·복귀, 모양 모드, 효과 Material), `TxTRPG.Application.Tests.TemporaryMenuIconTests`. 이 테스트들은 저장된 `BoundaryCommandButton.prefab`을 읽기만 하므로 `AssetWriting` 분류가 아닙니다. Prefab이 없으면 `EnsurePrefab`이 새로 만들므로 먼저 적용 메뉴로 Prefab을 만들어 둡니다. `MainSceneMenuInputPlayModeTests`는 경계선 버튼 기준으로 갱신했지만, Editor Play 시작 Scene 정책(AppScene) 때문에 Test Runner의 Play Mode 실행이 신뢰할 수 없으므로 위 Play 검증 메뉴로 대신 확인합니다.
 ## 점진 생성 탐험 검증
 
 - 설정 자산: `Assets/TxTRPG/Application/Configuration/ExplorationRunConfiguration.asset`에서 `Choice Count`, `Combat Weight`, `Recovery Upgrade Weight`를 설정합니다. 가중치 합계는 양수여야 합니다.
