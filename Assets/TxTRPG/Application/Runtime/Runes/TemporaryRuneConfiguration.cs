@@ -1,0 +1,150 @@
+using System;
+using System.Collections.Generic;
+using TxTRPG.Gameplay.Runes;
+using UnityEngine;
+
+namespace TxTRPG.Application.Runes
+{
+    [Serializable]
+    public sealed class TemporaryRuneDefinitionEntry
+    {
+        [SerializeField] private string id = string.Empty;
+        [SerializeField] private string displayName = string.Empty;
+        [SerializeField] private RuneEffectKind effectKind = RuneEffectKind.Attack;
+
+        public TemporaryRuneDefinitionEntry() { }
+        public TemporaryRuneDefinitionEntry(string definitionId, string name, RuneEffectKind kind)
+        { id = definitionId; displayName = name; effectKind = kind; }
+
+        public string Id => id?.Trim() ?? string.Empty;
+        public string DisplayName => displayName ?? string.Empty;
+        public RuneEffectKind EffectKind => effectKind;
+    }
+
+    [Serializable]
+    public sealed class TemporaryOwnedRuneEntry
+    {
+        [SerializeField] private string instanceId = string.Empty;
+        [SerializeField] private string definitionId = string.Empty;
+
+        public TemporaryOwnedRuneEntry() { }
+        public TemporaryOwnedRuneEntry(string instance, string definition) { instanceId = instance; definitionId = definition; }
+
+        public string InstanceId => instanceId?.Trim() ?? string.Empty;
+        public string DefinitionId => definitionId?.Trim() ?? string.Empty;
+    }
+
+    [Serializable]
+    public sealed class TemporaryRuneLineEntry
+    {
+        [SerializeField] private string lineId = string.Empty;
+        [SerializeField, Tooltip("Owned rune instance IDs stacked on this line. All must be the same rune kind.")]
+        private string[] runeInstanceIds = Array.Empty<string>();
+
+        public TemporaryRuneLineEntry() { }
+        public TemporaryRuneLineEntry(string line, params string[] instances) { lineId = line; runeInstanceIds = instances ?? Array.Empty<string>(); }
+
+        public string LineId => lineId?.Trim() ?? string.Empty;
+        public IReadOnlyList<string> RuneInstanceIds => runeInstanceIds ?? Array.Empty<string>();
+    }
+
+    // Authoring source of the session runes: definitions, starting runes and starting lines. The defaults (one attack
+    // and one heal rune on separate lines) are temporary values close to the old alternating dice faces.
+    [CreateAssetMenu(menuName = "TxT RPG/Temporary Rune Configuration", fileName = "TemporaryRuneConfiguration")]
+    public sealed class TemporaryRuneConfiguration : ScriptableObject
+    {
+        public const string AttackRuneId = "rune.attack";
+        public const string HealRuneId = "rune.heal";
+
+        [SerializeField] private List<TemporaryRuneDefinitionEntry> definitions = new()
+        {
+            new TemporaryRuneDefinitionEntry(AttackRuneId, "공격 룬", RuneEffectKind.Attack),
+            new TemporaryRuneDefinitionEntry(HealRuneId, "회복 룬", RuneEffectKind.Heal)
+        };
+        [SerializeField] private List<TemporaryOwnedRuneEntry> startingRunes = new()
+        {
+            new TemporaryOwnedRuneEntry("rune.attack.1", AttackRuneId),
+            new TemporaryOwnedRuneEntry("rune.heal.1", HealRuneId)
+        };
+        [SerializeField] private List<TemporaryRuneLineEntry> startingLines = new()
+        {
+            new TemporaryRuneLineEntry("line.1", "rune.attack.1"),
+            new TemporaryRuneLineEntry("line.2", "rune.heal.1")
+        };
+
+        public IReadOnlyList<TemporaryRuneDefinitionEntry> Definitions => definitions;
+        public IReadOnlyList<TemporaryOwnedRuneEntry> StartingRunes => startingRunes;
+        public IReadOnlyList<TemporaryRuneLineEntry> StartingLines => startingLines;
+
+#if UNITY_EDITOR
+        public void ConfigureForEditor(IEnumerable<TemporaryRuneDefinitionEntry> runeDefinitions,
+            IEnumerable<TemporaryOwnedRuneEntry> runes, IEnumerable<TemporaryRuneLineEntry> lines)
+        {
+            definitions = new List<TemporaryRuneDefinitionEntry>(runeDefinitions ?? Array.Empty<TemporaryRuneDefinitionEntry>());
+            startingRunes = new List<TemporaryOwnedRuneEntry>(runes ?? Array.Empty<TemporaryOwnedRuneEntry>());
+            startingLines = new List<TemporaryRuneLineEntry>(lines ?? Array.Empty<TemporaryRuneLineEntry>());
+        }
+#endif
+    }
+
+    // Session-lifetime runes (not saved). Inventory and Loadout expose the validated change APIs (TryAdd, TryRemove,
+    // TryAddLine, TryAddRuneToLine, ...); Changed is raised for either.
+    public sealed class TemporaryRuneState
+    {
+        private TemporaryRuneState(RuneDefinitionCatalog catalog, RuneInventory inventory, RuneLoadout loadout)
+        {
+            Catalog = catalog;
+            Inventory = inventory;
+            Loadout = loadout;
+            Inventory.Changed += () => Changed?.Invoke();
+            Loadout.Changed += () => Changed?.Invoke();
+        }
+
+        public RuneDefinitionCatalog Catalog { get; }
+        public RuneInventory Inventory { get; }
+        public RuneLoadout Loadout { get; }
+        public event Action Changed;
+        public bool CanAllocate => Loadout.LineCount > 0 && Loadout.TotalWeight > 0;
+
+        public RuneAllocation Allocate(int total, IRuneAllocationPolicy policy = null) =>
+            (policy ?? WeightedRuneAllocationPolicy.Instance).Allocate(total, Loadout, Catalog);
+
+        public static bool TryCreate(TemporaryRuneConfiguration configuration, out TemporaryRuneState state, out string reason)
+        {
+            state = null;
+            if (configuration == null) { reason = "No rune configuration is assigned."; return false; }
+            try
+            {
+                var definitions = new List<RuneDefinition>();
+                foreach (var entry in configuration.Definitions)
+                {
+                    if (entry == null) throw new ArgumentException("A rune definition entry is empty.");
+                    definitions.Add(new RuneDefinition(entry.Id, entry.DisplayName, entry.EffectKind));
+                }
+                var catalog = new RuneDefinitionCatalog(definitions);
+                var inventory = new RuneInventory(catalog);
+                foreach (var entry in configuration.StartingRunes)
+                {
+                    if (entry == null) throw new ArgumentException("A starting rune entry is empty.");
+                    if (!inventory.TryAdd(new OwnedRune(entry.InstanceId, entry.DefinitionId), out reason))
+                        throw new ArgumentException(reason);
+                }
+                var lines = new List<RuneLoadoutLine>();
+                foreach (var entry in configuration.StartingLines)
+                {
+                    if (entry == null) throw new ArgumentException("A starting rune line entry is empty.");
+                    lines.Add(new RuneLoadoutLine(entry.LineId, entry.RuneInstanceIds));
+                }
+                var loadout = new RuneLoadout(inventory, lines);
+                state = new TemporaryRuneState(catalog, inventory, loadout);
+                reason = string.Empty;
+                return true;
+            }
+            catch (ArgumentException exception)
+            {
+                reason = exception.Message;
+                return false;
+            }
+        }
+    }
+}

@@ -37,6 +37,7 @@ namespace TxTRPG.Application.Editor
         [MenuItem("Tools/TxT RPG/Application/Temporary/Apply Player Dice Roll Menu")]
         public static void Apply()
         {
+            TemporarySlotMachineIntegration.ThrowIfAppliedToMainScene("Apply Player Dice Roll Menu");
             var diceConfiguration = CreateOrUpdateConfiguration();
             var combatConfiguration = CreateOrUpdateCombatConfiguration();
             var explorationConfiguration = CreateOrUpdateExplorationConfiguration();

@@ -54,7 +54,10 @@ namespace TxTRPG.Application.Editor
         // Same rule as the menu: only an empty Sprite is filled; custom Sprites, tint, and padding are preserved.
         public static bool ApplyToBoundaryButton(BoundaryCommandButton button)
         {
-            if (button == null || button.CommandId != TemporaryDiceRollMenuController.RollAllCommandId || button.Button == null) return false;
+            // The action icon belongs to the combat action, whichever system handles it (slot machine now, reserved dice).
+            if (button == null || button.Button == null ||
+                button.CommandId != TemporaryDiceRollMenuController.RollAllCommandId &&
+                button.CommandId != TxTRPG.Application.SlotMachine.TemporarySlotCombatController.SpinCommandId) return false;
             var view = button.Button.GetComponent<GameMenuButtonView>();
             return view != null && ApplyDefault(view, "action");
         }

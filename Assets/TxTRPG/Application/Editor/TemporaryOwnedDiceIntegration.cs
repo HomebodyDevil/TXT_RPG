@@ -87,6 +87,7 @@ namespace TxTRPG.Application.Editor
         public static void ApplyScene()
         {
             CheckEditor();
+            TemporarySlotMachineIntegration.ThrowIfAppliedToMainScene("Apply Owned Dice To TMP Main Scene");
             var scene = SceneManager.GetActiveScene();
             if (scene.path != ScenePath || scene.isDirty)
                 throw new InvalidOperationException("Open the saved TMP_MainScene in Edit Mode without unsaved changes.");

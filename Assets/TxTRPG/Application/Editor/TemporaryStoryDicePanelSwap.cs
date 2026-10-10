@@ -41,6 +41,7 @@ namespace TxTRPG.Application.Editor
         public static void Apply()
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Exit Play Mode first.");
+            TemporarySlotMachineIntegration.ThrowIfAppliedToMainScene(ApplyMenuPath);
             var scene = SceneManager.GetActiveScene();
             if (scene.path != TemporaryDiceMenuBuilder.ScenePath || scene.isDirty)
                 throw new InvalidOperationException("Open the saved TMP_MainScene in Edit Mode without unsaved changes.");

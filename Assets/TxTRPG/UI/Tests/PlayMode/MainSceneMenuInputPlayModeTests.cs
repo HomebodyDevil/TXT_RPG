@@ -3,7 +3,7 @@ using System.Linq;
 using NUnit.Framework;
 using TxTRPG.Application.Items;
 using TxTRPG.Application.Players;
-using TxTRPG.Application.Dice;
+using TxTRPG.Application.SlotMachine;
 using TxTRPG.Application.Exploration;
 using TxTRPG.Gameplay.Exploration;
 using TxTRPG.UI;
@@ -114,9 +114,9 @@ namespace TxTRPG.UI.Tests
             var menu = components.OfType<GameMenuPanel>().Single();
             var story = components.OfType<StoryTextPanel>().Single();
             Assert.That(menu.Buttons.Any(item => item.ActionKind == GameMenuButtonActionKind.Command), Is.False, "The menu no longer hosts the action.");
-            var action = components.OfType<BoundaryCommandButton>().Single(item => item.CommandId == TemporaryDiceRollMenuController.RollAllCommandId);
+            var action = components.OfType<BoundaryCommandButton>().Single(item => item.CommandId == TemporarySlotCombatController.SpinCommandId);
             var actionButton = action.Button;
-            var controller = components.OfType<TemporaryDiceRollMenuController>().Single();
+            var controller = components.OfType<TemporarySlotCombatController>().Single();
             var exploration = components.OfType<ExplorationRunController>().Single();
             var explorationPanel = components.First(item => item.gameObject.name == "ExplorationNodePanel").gameObject;
             var cardList = components.OfType<ExplorationNodeChoiceCardList>().Single();
@@ -145,18 +145,25 @@ namespace TxTRPG.UI.Tests
             var session = PlayerSessionHost.Instance.Session;
             var healthBefore = session.CurrentPlayer.ActiveCharacter.Health.Current;
             var before = story.MessageCount;
+            var host = PlayerSessionHost.Instance;
+            // Each action spins once, presents the reels, then applies the turn: [슬롯], two rune lines with their
+            // results (a line that received 0 has no result line) and the enemy action.
             ExecuteEvents.Execute(actionButton.gameObject, new BaseEventData(EventSystem.current), ExecuteEvents.submitHandler);
-            yield return null;
-            Assert.That(story.MessageCount, Is.EqualTo(before + 7));
+            Assert.That(host.IsTemporaryCombatActionPending, Is.True, "the spin was accepted");
+            for (var frame = 0; frame < 900 && host.IsTemporaryCombatActionPending; frame++) yield return null;
+            Assert.That(host.IsTemporaryCombatActionPending, Is.False, "the spin finished");
+            Assert.That(story.MessageCount, Is.EqualTo(before + SlotCombatStoryFormatter.Turn(host.LastTemporarySlotTurn, "테스트 적").Count));
             Assert.That(controller.Combat.NextEnemyAction, Is.EqualTo(TxTRPG.Gameplay.Combat.EnemyActionKind.Heal));
+            var afterFirst = story.MessageCount;
+            for (var frame = 0; frame < 300 && !actionButton.interactable; frame++) yield return null;
             ExecuteEvents.Execute(actionButton.gameObject, new BaseEventData(EventSystem.current), ExecuteEvents.submitHandler);
-            yield return null;
-            Assert.That(story.MessageCount, Is.EqualTo(before + 14));
-            Assert.That(controller.Combat.NextEnemyAction, Is.EqualTo(TxTRPG.Gameplay.Combat.EnemyActionKind.Attack));
+            for (var frame = 0; frame < 900 && host.IsTemporaryCombatActionPending; frame++) yield return null;
+            Assert.That(story.MessageCount, Is.GreaterThan(afterFirst));
+            Assert.That(controller.Combat.IsComplete || controller.Combat.NextEnemyAction == TxTRPG.Gameplay.Combat.EnemyActionKind.Attack, Is.True);
             Assert.That(session.CurrentPlayer.ActiveCharacter.Health.Current, Is.EqualTo(healthBefore));
             var texts = story.GetComponentsInChildren<TMPro.TMP_Text>(true).Select(text => text.text).Where(text => !string.IsNullOrWhiteSpace(text)).ToArray();
-            Assert.That(texts.Count(text => text.Contains("D4") || text.Contains("D6") || text.Contains("D8")), Is.GreaterThanOrEqualTo(6));
-            Assert.That(texts.Count(text => text.Contains("공격 ") || text.Contains("회복 ")), Is.GreaterThanOrEqualTo(6));
+            Assert.That(texts.Count(text => text.Contains("[슬롯]")), Is.GreaterThanOrEqualTo(2));
+            Assert.That(texts.Count(text => text.Contains("[룬]")), Is.GreaterThanOrEqualTo(4));
             Assert.That(texts.Any(text => text.Contains("[적 행동]")), Is.True);
         }
         private static IEnumerator WaitForScene(string path, int frameLimit)

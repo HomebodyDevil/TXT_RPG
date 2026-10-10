@@ -1,5 +1,7 @@
 # 보유 주사위 3D 표시와 결과 기록
 
+> **보류 상태**: 이 문서는 보류된 주사위 표시를 설명합니다. 현재 `TMP_MainScene`에서는 `OwnedDicePanel` GameObject가 비활성이고, `OwnedDiceSessionBinder`와 `TemporaryDiceRollMenuController` 컴포넌트가 꺼져 있습니다. 두 컴포넌트는 꺼져 있으면 `InitializeAsync`에서 바로 반환합니다. 같은 자리(같은 `FlexibleLayoutItem` 값)에는 `SlotMachinePanel`이 표시됩니다([슬롯머신과 룬 기반 전투 행동](slot-machine-and-runes.md)). 코드, Prefab, 형태 자산, 직렬화 설정과 테스트는 삭제하지 않았습니다. 주사위로 되돌릴 때 바꿔야 할 참조(버튼 처리기, `ExplorationRunController`, 경계선 패널, 입력 차단 대상)는 [개발 및 검증 절차](../development/workflows.md#슬롯머신-전투-적용)에 정리했습니다. 아래 설명은 보류 전 연결 상태 기준입니다.
+
 `OwnedDicePanel`은 `TMP_MainScene`의 가운데 열 `MiddlePanel/ContentLayer`에서 `EnemyDisplayPanelDemo`(Weight 2) 아래에 있습니다(`FlexibleLayoutItem` Weight 0.7, 최소 200). 사용자가 `StoryTextPanel`과 위치를 바꾸기 전에는 첫째 열(이전 이름 `ExplorationAndDicePanel`, 현재 `LeftPanel`)에서 `NodeTreePanel` 아래에 2:1로 있었습니다. 좁은 화면에서는 `ResponsiveMainScreen`이 `MiddlePanel`에 높이 520을 주며, 이때 주사위 패널은 약 332×274(390×844 기준)입니다. 넓어진 표시 영역은 `DiceArenaLayout`이 현재 비율로 다시 계산하고 RenderTexture는 `maximumTextureDimension`(1024) 상한을 따릅니다.
 
 노드 선택 중에는 `ExplorationNodePanel`이 `MiddlePanel` 전체를 덮으므로 주사위 패널도 가려집니다. `ExplorationNodePanel`의 `CoveredPanelInteractionBlocker`가 이 동안 `OwnedDicePanel`과 `EnemyDisplayPanelDemo`의 `CanvasGroup.interactable`을 꺼서 컨트롤러·키보드 탐색이 `ResultsButton`에 닿지 않게 하고, 노드 선택이 끝나면 원래 값으로 되돌립니다. 전투 "행동" 버튼은 적 패널과 주사위 패널의 경계선 위에 놓여 주사위 화면 위쪽 가운데와 `Title` 일부를 덮을 수 있습니다(사용자 허용). 주사위가 버튼 아래에 멈추면 결과 면 일부가 가려질 수 있으며, 결과는 Story와 결과 창에서도 확인할 수 있습니다.

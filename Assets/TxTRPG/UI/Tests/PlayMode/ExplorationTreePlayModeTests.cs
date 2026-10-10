@@ -116,7 +116,7 @@ namespace TxTRPG.UI.Tests
             var tree=Object.FindObjectsByType<ExplorationNodeTreePanel>(FindObjectsSortMode.None).Single();
             var flags=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic;
             var field=typeof(ExplorationRunController).GetField("run",flags);var original=controller.Run;
-            var combat=(TxTRPG.Application.Dice.TemporaryDiceRollMenuController)new UnityEditor.SerializedObject(controller).FindProperty("combatController").objectReferenceValue;
+            var combat=(TxTRPG.Application.Combat.ITemporaryCombatController)new UnityEditor.SerializedObject(controller).FindProperty("combatControllerBehaviour").objectReferenceValue;
             try
             {
                 var run=Run("controller-boundaries");field.SetValue(controller,run);

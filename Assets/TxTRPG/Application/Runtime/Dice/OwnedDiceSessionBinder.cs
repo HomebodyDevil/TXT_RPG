@@ -30,9 +30,17 @@ namespace TxTRPG.Application.Dice
         public OwnedDicePanel Panel => panel;
         public event Action BlockingChanged;
 
-        public async Task InitializeAsync(SceneInitializationContext context, CancellationToken cancellationToken)
+        public Task InitializeAsync(SceneInitializationContext context, CancellationToken cancellationToken)
         {
             Unbind();
+            // Reserved dice system: a disabled binder (or one on the inactive OwnedDicePanel) is still initialized by the
+            // scene transition, and then deliberately takes no part. This is not an error.
+            if (!isActiveAndEnabled) return Task.CompletedTask;
+            return BindAsync(cancellationToken);
+        }
+
+        private async Task BindAsync(CancellationToken cancellationToken)
+        {
             session = PlayerSessionHost.Instance ?? throw new InvalidOperationException("Owned dice requires PlayerSessionHost.");
             await session.EnsureInitializedAsync(cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();

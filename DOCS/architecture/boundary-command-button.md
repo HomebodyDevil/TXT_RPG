@@ -1,6 +1,6 @@
 # 경계선 명령 버튼
 
-두 패널의 경계선 위에 겹쳐 놓이는 명령 버튼입니다. 현재 TMP_MainScene의 전투 "행동" 버튼(`MiddlePanel/ContentLayer/CombatActionBoundary`)이 유일한 사용처이며, `EnemyDisplayPanelDemo`(위)와 `OwnedDicePanel`(아래)의 경계선 가운데에 놓입니다. 전투 표시 조건과 포커스 규칙은 [임시 적 전투](temporary-combat.md#행동-버튼), 배치 계산은 [FlexibleLayoutPanel 설계](flexible-layout-panel.md#레이아웃에-참여하지-않는-경계선-오버레이)를 봅니다.
+두 패널의 경계선 위에 겹쳐 놓이는 명령 버튼입니다. 현재 TMP_MainScene의 전투 "행동" 버튼(`MiddlePanel/ContentLayer/CombatActionBoundary`)이 유일한 사용처이며, `EnemyDisplayPanelDemo`(위)와 `SlotMachinePanel`(아래)의 경계선 가운데에 놓입니다. 주사위 보류 전에는 아래 패널이 `OwnedDicePanel`이었습니다([슬롯머신과 룬](slot-machine-and-runes.md)). 전투 표시 조건과 포커스 규칙은 [임시 적 전투](temporary-combat.md#행동-버튼), 배치 계산은 [FlexibleLayoutPanel 설계](flexible-layout-panel.md#레이아웃에-참여하지-않는-경계선-오버레이)를 봅니다.
 
 ## 구성 요소
 
@@ -14,7 +14,7 @@
 | `UiShapeGraphic` | 같은 폴더 | 텍스처 없는 도형 Graphic입니다(채우기 또는 내부 테두리). |
 | `UiShapeHitArea` | 같은 폴더 | 그리지 않는 Raycast 대상입니다. 도형 경계 판정, 또는 선택적인 이미지 알파 판정을 합니다. |
 | `GameMenuButtonView` | `TxTRPG.UI.Windows` (재사용) | 아이콘 표시와 Sprite 누락·아이콘 숨김 시 라벨 대체 표시를 메뉴 버튼과 같은 규칙으로 처리합니다. |
-| `TemporaryDiceRollMenuController` | `TxTRPG.Application` | `actionButton` 직렬화 참조로 버튼을 받고 가용 여부를 전달합니다. UI 어셈블리는 Application을 참조하지 않습니다. |
+| `TemporarySlotCombatController` | `TxTRPG.Application` | 현재 명령 처리기입니다. `actionButton` 직렬화 참조로 버튼을 받고 가용 여부를 전달합니다. 보류된 `TemporaryDiceRollMenuController`도 같은 방식을 씁니다. UI 어셈블리는 Application을 참조하지 않습니다. |
 
 ## 계층
 
@@ -32,7 +32,7 @@ CombatActionBoundary            Stretch, LayoutElement.ignoreLayout, PanelBounda
         └── EffectOverlay       전경 효과용 Graphic을 넣는 자리
 ```
 
-`CombatActionBoundary`는 `Assets/TxTRPG/UI/Prefabs/BoundaryCommandButton.prefab`의 인스턴스입니다. Scene 인스턴스는 두 패널 참조(`firstPanel` = `EnemyDisplayPanelDemo`, `secondPanel` = `OwnedDicePanel`), 명령 핸들러(컨트롤러), 명령 ID `temporary-dice.roll-all`, 라벨 "행동", action 아이콘, 탐색 대상만 Override로 가집니다. 재사용을 고려해 Prefab으로 두었고, Prefab은 없을 때만 `BoundaryCommandButtonPrefabUtility.EnsurePrefab`이 만들며 이후에는 개발자 소유 자산입니다(일괄 Rebuild 대상 아님, `ProjectPrefabRebuildExclusionProvider`에 `ui.boundary-command-button`으로 제외 사유 기록).
+`CombatActionBoundary`는 `Assets/TxTRPG/UI/Prefabs/BoundaryCommandButton.prefab`의 인스턴스입니다. Scene 인스턴스는 두 패널 참조(`firstPanel` = `EnemyDisplayPanelDemo`, `secondPanel` = `SlotMachinePanel`), 명령 핸들러(`TemporarySlotCombatController`), 명령 ID `temporary-slot.spin`, 라벨 "행동", action 아이콘, 탐색 대상만 Override로 가집니다. `Apply Slot Machine Combat`이 `secondPanel`·핸들러·명령 ID를 주사위에서 슬롯머신으로 바꿨습니다. `TemporaryMenuIconUtility.ApplyToBoundaryButton`은 두 명령 ID 모두에 action 아이콘을 적용합니다. 재사용을 고려해 Prefab으로 두었고, Prefab은 없을 때만 `BoundaryCommandButtonPrefabUtility.EnsurePrefab`이 만들며 이후에는 개발자 소유 자산입니다(일괄 Rebuild 대상 아님, `ProjectPrefabRebuildExclusionProvider`에 `ui.boundary-command-button`으로 제외 사유 기록).
 
 ## 기본값과 선택 이유
 
@@ -71,7 +71,7 @@ CombatActionBoundary            Stretch, LayoutElement.ignoreLayout, PanelBounda
 | 출발 | 방향 | 도착 | 비고 |
 | --- | --- | --- | --- |
 | 행동 버튼 | 오른쪽 | `GameMenuPanel`의 System 버튼 | 이전과 같습니다. |
-| 행동 버튼 | 아래 | `OwnedDicePanel/ResultsButton` | 버튼 바로 아래 패널입니다. 이전에는 System이었습니다. |
+| 행동 버튼 | 아래 | `OwnedDicePanel/ResultsButton` | 주사위 보류로 대상이 비활성이므로 현재는 이동하지 않습니다. `SlotMachinePanel`에는 선택 가능한 요소가 없으며, 이번 작업에서 탐색 규칙은 바꾸지 않았습니다. |
 | 행동 버튼 | 위·왼쪽 | 없음 | 위쪽 적 패널에는 선택 가능한 요소가 없습니다. |
 | `ResultsButton` | 위 | 행동 버튼 | Automatic 탐색은 왼쪽 열의 더 가까운 버튼을 골라 Explicit으로 바꿨습니다. `ResultsButton`은 전투 중에만 도달할 수 있고(노드 선택 중에는 [탐색 차단](exploration-history-tree.md)), 전투 중에는 행동 버튼이 표시됩니다. |
 | `ResultsButton` | 오른쪽 | System 버튼 | 행동 버튼과 같은 메뉴 왕복 경로입니다. |

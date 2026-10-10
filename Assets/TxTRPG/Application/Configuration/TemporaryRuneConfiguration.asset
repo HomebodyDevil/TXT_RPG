@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b27b8295dfbf3114dad583daf924c650, type: 3}
+  m_Name: TemporaryRuneConfiguration
+  m_EditorClassIdentifier: TxTRPG.Application::TxTRPG.Application.Runes.TemporaryRuneConfiguration
+  definitions:
+  - id: rune.attack
+    displayName: "\uACF5\uACA9 \uB8EC"
+    effectKind: 1
+  - id: rune.heal
+    displayName: "\uD68C\uBCF5 \uB8EC"
+    effectKind: 2
+  startingRunes:
+  - instanceId: rune.attack.1
+    definitionId: rune.attack
+  - instanceId: rune.heal.1
+    definitionId: rune.heal
+  startingLines:
+  - lineId: line.1
+    runeInstanceIds:
+    - rune.attack.1
+  - lineId: line.2
+    runeInstanceIds:
+    - rune.heal.1

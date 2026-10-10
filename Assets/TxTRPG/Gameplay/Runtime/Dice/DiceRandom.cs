@@ -2,9 +2,9 @@ using System;
 
 namespace TxTRPG.Gameplay.Dice
 {
-    public interface IRandomIndexSource
+    // Kept for the dice API; the contract itself is the shared IRandomIndexProvider.
+    public interface IRandomIndexSource : IRandomIndexProvider
     {
-        int NextIndex(int exclusiveUpperBound);
     }
 
     public sealed class SystemRandomIndexSource : IRandomIndexSource

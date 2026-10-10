@@ -94,7 +94,7 @@ TxT-RPG/
 
 ### `Assets/TxTRPG/Gameplay`
 
-`TxTRPG.Gameplay`은 UI와 Scene 수명에서 독립된 게임 규칙 어셈블리입니다. `Runtime/Characters`에는 안정적인 Stat ID, 기본 스탯 Definition, 캐릭터 인스턴스 상태, 체력, 피해 계산 계약과 버전 저장 DTO가 있습니다. `Runtime/Dice`에는 효과와 수치로 구성된 독립적인 면, 런타임 변경, 주입 가능한 난수 인덱스, 외부 면 판정과 불변 굴림 결과가 있습니다. `Runtime/Players`에는 플레이어가 소유한 캐릭터 목록, 활성 캐릭터 선택, 복수 캐릭터 저장 DTO와 기존 단일 캐릭터 저장 변환 기능이 있습니다. `Tests/Editor`는 기본값 검증, 피해·회복 경계, 플레이어 불변 조건, 저장 Round Trip과 마이그레이션을 검증합니다. UI의 `CharacterPresentation`은 이 어셈블리로 이동하지 않으며 계속 외형 표현만 담당합니다.
+`TxTRPG.Gameplay`은 UI와 Scene 수명에서 독립된 게임 규칙 어셈블리입니다. `Runtime/Characters`에는 안정적인 Stat ID, 기본 스탯 Definition, 캐릭터 인스턴스 상태, 체력, 피해 계산 계약과 버전 저장 DTO가 있습니다. `Runtime/Common`에는 주사위와 슬롯머신이 함께 쓰는 난수 인덱스 계약 `IRandomIndexProvider`와 `SystemRandomIndexProvider`가 있습니다. `Runtime/Dice`에는 효과와 수치로 구성된 독립적인 면, 런타임 변경, 주입 가능한 난수 인덱스(`IRandomIndexSource`는 공용 계약을 상속), 외부 면 판정과 불변 굴림 결과가 있습니다. `Runtime/SlotMachine`에는 개수와 칸을 바꿀 수 있는 Reel, 슬롯머신, 회전 결과 스냅샷이 있습니다. `Runtime/Runes`에는 룬 정의·보유·줄 구성과 최대 나머지 방식의 가중치 분배(`IRuneAllocationPolicy`)가 있습니다. 주사위와 슬롯머신·룬 네임스페이스는 서로 참조하지 않습니다([슬롯머신과 룬](slot-machine-and-runes.md)). `Runtime/Players`에는 플레이어가 소유한 캐릭터 목록, 활성 캐릭터 선택, 복수 캐릭터 저장 DTO와 기존 단일 캐릭터 저장 변환 기능이 있습니다. `Tests/Editor`는 기본값 검증, 피해·회복 경계, 플레이어 불변 조건, 저장 Round Trip과 마이그레이션을 검증합니다. UI의 `CharacterPresentation`은 이 어셈블리로 이동하지 않으며 계속 외형 표현만 담당합니다.
 
 ### `Assets/TxTRPG/Content`
 
@@ -316,14 +316,14 @@ flowchart TD
 
 ### 임시 주사위 메뉴
 
-`Assets/TxTRPG/Application/Runtime/Dice/`는 PlayerSession 수명의 임시 주사위 보유 상태와 TMP_MainScene 표시 어댑터와 로컬라이제이션 가능한 효과 표시명 경계를 포함합니다. 영구 Gameplay Dice 규칙은 계속 `Assets/TxTRPG/Gameplay/Runtime/Dice/`에 있으며 저장 모델과 분리됩니다.
+`Assets/TxTRPG/Application/Runtime/Dice/`는 (보류 상태인) PlayerSession 수명의 임시 주사위 보유 상태와 TMP_MainScene 표시 어댑터와 로컬라이제이션 가능한 효과 표시명 경계를 포함합니다. 영구 Gameplay Dice 규칙은 계속 `Assets/TxTRPG/Gameplay/Runtime/Dice/`에 있으며 저장 모델과 분리됩니다.
 
 `Application/Runtime/Dice`의 `TemporaryDiceRollHistory`와 `OwnedDiceSessionBinder`는 전투별 결과 수명 및 UI 바인딩을 담당합니다. `UI/Runtime/Dice`에는 Application 역참조 없이 3D 모델·Stage 표시, 형태 카탈로그, 결과 창과 던지기 연출(`DiceThrowSimulator`의 격리 물리 Scene, `DiceTrajectory` 재생, 순수 계산 `DieFaceGeometry`·`DiceArenaLayout`, Prefab 내부 참조 `DiceStageRig`)이 있습니다. UI 런타임은 Unity 내장 Physics 모듈만 사용합니다. `UI/Prefabs/Dice`와 `UI/Styles/Dice`는 기본 D6·D8 모델, 바닥이 있는 Stage, 메시·형태 정의와 재질을 저장합니다. 적용 메뉴 `Application/Editor/TemporaryOwnedDiceIntegration.cs`와 Play Mode 검증 메뉴 `Application/Editor/OwnedDiceThrowValidation.cs`는 Scene 작업이 섞이므로 생산 Prefab 배치에서 제외하며 일회성 자산 생성·Scene 통합·검증에만 사용합니다. 자세한 내용은 [보유 주사위 3D 표시](owned-dice-presentation.md)를 참고합니다.
 
 
 ### 임시 적 전투
 
-`Assets/TxTRPG/Gameplay/Runtime/Combat/`은 UI와 저장에 독립적인 임시 전투 상태를 포함합니다. `Assets/TxTRPG/Application/Runtime/Combat/`은 Scene별 시험 적 설정을, Dice 컨트롤러는 TMP_MainScene 표시 연결을 담당합니다. 상세 계약은 [임시 적 전투](temporary-combat.md)를 참조합니다.
+`Assets/TxTRPG/Gameplay/Runtime/Combat/`은 UI와 저장에 독립적인 임시 전투 상태와 전투 입력 `PlayerCombatAction`을 포함합니다. `Assets/TxTRPG/Application/Runtime/Combat/`은 Scene별 시험 적 설정, 탐험이 쓰는 `ITemporaryCombatController`, 공용 Story 문구와 연출 제한 시간 계산을 담당합니다. `Application/Runtime/SlotMachine/`(`TemporarySlotMachineConfiguration`·`TemporarySlotMachineState`, `TemporarySlotCombatController`, 수락·턴 기록, `SlotCombatStoryFormatter`)과 `Application/Runtime/Runes/`(`TemporaryRuneConfiguration`·`TemporaryRuneState`)가 TMP_MainScene의 현재 전투 행동을 담당합니다. 설정 자산은 `Application/Configuration/TemporarySlotMachineConfiguration.asset`·`TemporaryRuneConfiguration.asset`이며 AppRoot의 `PlayerSessionHost`가 참조합니다. Dice 컨트롤러는 보류 상태로 Scene에서 꺼져 있습니다. UI 표시는 `UI/Runtime/SlotMachine/`(`SlotMachinePanel`, `SlotReelViewBase`·`SlotReelView`, 표시 구조)과 `UI/Prefabs/SlotMachine/`(`SlotMachinePanel.prefab`, `SlotReel.prefab`)에 있습니다. 적용·검증 임시 메뉴는 `Application/Editor/TemporarySlotMachineIntegration.cs`와 `TemporarySlotMachinePlayValidation.cs`입니다(Prefab 배치 제외). 상세 계약은 [슬롯머신과 룬](slot-machine-and-runes.md)과 [임시 적 전투](temporary-combat.md)를 참조합니다.
 
 
 ### 점진 생성 탐험

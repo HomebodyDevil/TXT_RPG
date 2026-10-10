@@ -7,6 +7,7 @@
     "TxTRPG.Gameplay",
     "TxTRPG.UI",
     "TxTRPG.UI.Editor",
+    "TxTRPG.SceneTransition",
     "Unity.TextMeshPro",
     "Unity.ugui"
   ],

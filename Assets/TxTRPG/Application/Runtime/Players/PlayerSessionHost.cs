@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using TxTRPG.Application.Configuration;
 using TxTRPG.Application.Persistence;
 using TxTRPG.Application.Dice;
+using TxTRPG.Application.Runes;
+using TxTRPG.Application.SlotMachine;
 using TxTRPG.Gameplay.Combat;
 using TxTRPG.Gameplay.Exploration;
 using UnityEngine;
@@ -21,6 +23,8 @@ namespace TxTRPG.Application.Players
         [SerializeField] private string saveFileName = "player-save.json";
         [SerializeField] private bool initializeOnAwake = true;
         [SerializeField] private TemporaryDiceConfiguration temporaryDiceConfiguration;
+        [SerializeField] private TemporarySlotMachineConfiguration temporarySlotMachineConfiguration;
+        [SerializeField] private TemporaryRuneConfiguration temporaryRuneConfiguration;
 
         private CancellationTokenSource lifetimeCancellation;
         private PlayerSession session;
@@ -34,6 +38,16 @@ namespace TxTRPG.Application.Players
         private long pendingTemporaryDiceAction;
         private TemporaryDiceTurnRecord pendingDiceResult;
         private TemporaryDiceTurnRecord pendingDiceStory;
+        private bool temporarySlotCombatCreated;
+        private TemporarySlotMachineState temporarySlotMachine;
+        private TemporaryRuneState temporaryRunes;
+        private string temporarySlotCombatError = string.Empty;
+        private TemporarySlotAcceptedAction pendingSlotAction;
+        private TemporarySlotTurnRecord pendingSlotStory;
+        private TemporarySlotTurnRecord lastSlotTurn;
+        public event Action<TemporarySlotTurnRecord> TemporarySlotStoryReady;
+        // Raised when the shared combat action lock is released, so a controller created by a Scene reload can refresh.
+        public event Action TemporaryCombatActionEnded;
         public event Action<TemporaryCombatState, bool> TemporaryCombatCompleted;
         public event Action<TemporaryDiceTurnRecord> TemporaryDiceResultReady;
         public event Action<TemporaryDiceTurnRecord> TemporaryDiceStoryReady;
@@ -47,7 +61,16 @@ namespace TxTRPG.Application.Players
         public TemporaryDiceResultPreferences TemporaryDicePreferences => temporaryDicePreferences;
         public ExplorationRunState TemporaryExploration => temporaryExploration;
         public TemporaryCombatState TemporaryExplorationCombat => temporaryExplorationCombat;
-        public bool IsTemporaryDiceActionPending => pendingTemporaryDiceAction != 0;
+        public bool IsTemporaryDiceActionPending => IsTemporaryCombatActionPending;
+        // One lock for every temporary combat action, so the dice and slot machine paths never run at the same time.
+        public bool IsTemporaryCombatActionPending => pendingTemporaryDiceAction != 0;
+        public TemporarySlotMachineState TemporarySlotMachine => temporarySlotMachine;
+        public TemporaryRuneState TemporaryRunes => temporaryRunes;
+        // Why the slot machine or runes could not be created (empty when both exist). The game still starts.
+        public string TemporarySlotCombatError => temporarySlotCombatError;
+        public TemporarySlotAcceptedAction PendingSlotAction => pendingSlotAction;
+        public TemporarySlotTurnRecord PendingSlotStory => pendingSlotStory;
+        public TemporarySlotTurnRecord LastTemporarySlotTurn => lastSlotTurn;
         public TemporaryDiceTurnRecord PendingDiceResult => pendingDiceResult;
         public TemporaryDiceTurnRecord PendingDiceStory => pendingDiceStory;
 
@@ -78,7 +101,12 @@ namespace TxTRPG.Application.Players
             if (ReferenceEquals(pendingDiceResult, record)) pendingDiceResult = null;
         }
 
-        public bool TryBeginTemporaryDiceAction(TemporaryCombatState expectedCombat, out long actionId)
+        public bool TryBeginTemporaryDiceAction(TemporaryCombatState expectedCombat, out long actionId) =>
+            TryBeginTemporaryCombatAction(expectedCombat, out actionId);
+
+        public void EndTemporaryDiceAction(long actionId) => EndTemporaryCombatAction(actionId);
+
+        public bool TryBeginTemporaryCombatAction(TemporaryCombatState expectedCombat, out long actionId)
         {
             actionId = 0;
             if (pendingTemporaryDiceAction != 0 || expectedCombat == null ||
@@ -89,10 +117,36 @@ namespace TxTRPG.Application.Players
             return true;
         }
 
-        public void EndTemporaryDiceAction(long actionId)
+        public void EndTemporaryCombatAction(long actionId)
         {
-            if (actionId != 0 && pendingTemporaryDiceAction == actionId)
-                pendingTemporaryDiceAction = 0;
+            if (actionId == 0 || pendingTemporaryDiceAction != actionId) return;
+            pendingTemporaryDiceAction = 0;
+            TemporaryCombatActionEnded?.Invoke();
+        }
+
+        // Keeps an accepted spin until it is applied. Only the action holding the combat lock can store one.
+        public void AcceptTemporarySlotAction(TemporarySlotAcceptedAction action)
+        {
+            if (action == null) throw new ArgumentNullException(nameof(action));
+            if (action.ActionId == 0 || action.ActionId != pendingTemporaryDiceAction)
+                throw new InvalidOperationException("A slot action can only be accepted while it holds the combat action lock.");
+            pendingSlotAction = action;
+        }
+
+        public void ClearPendingSlotAction(TemporarySlotAcceptedAction action)
+        {
+            if (ReferenceEquals(pendingSlotAction, action)) pendingSlotAction = null;
+        }
+
+        public void PublishTemporarySlotStory(TemporarySlotTurnRecord record)
+        {
+            pendingSlotStory = lastSlotTurn = record ?? throw new ArgumentNullException(nameof(record));
+            TemporarySlotStoryReady?.Invoke(record);
+        }
+
+        public void ClearPendingSlotStory(TemporarySlotTurnRecord record)
+        {
+            if (ReferenceEquals(pendingSlotStory, record)) pendingSlotStory = null;
         }
 
         private void Awake()
@@ -114,6 +168,7 @@ namespace TxTRPG.Application.Players
             lifetimeCancellation = new CancellationTokenSource();
             CreateSession();
             CreateTemporaryDice();
+            CreateTemporarySlotCombat();
             if (initializeOnAwake)
             {
                 StartInitialization(lifetimeCancellation.Token);
@@ -124,6 +179,7 @@ namespace TxTRPG.Application.Players
         {
             CreateSession();
             CreateTemporaryDice();
+            CreateTemporarySlotCombat();
             if (initializationTask == null ||
                 initializationTask.IsCanceled ||
                 initializationTask.IsFaulted)
@@ -181,6 +237,33 @@ namespace TxTRPG.Application.Players
             temporaryDice = new TemporaryPlayerDiceState(temporaryDiceConfiguration);
         }
 
+        // Copies the configuration assets into session state once. An invalid configuration never blocks the game: the
+        // state is not created, the reason is kept and the combat action stays unavailable.
+        private void CreateTemporarySlotCombat()
+        {
+            if (temporarySlotCombatCreated) return;
+            temporarySlotCombatCreated = true;
+            if (temporarySlotMachineConfiguration == null && temporaryRuneConfiguration == null)
+            {
+                temporarySlotCombatError = "슬롯머신과 룬 설정이 지정되지 않았습니다.";
+                return;
+            }
+            var reasons = string.Empty;
+            if (!TemporarySlotMachineState.TryCreate(temporarySlotMachineConfiguration, out var machine, out var machineReason))
+                reasons = $"Slot machine: {machineReason}";
+            if (!TemporaryRuneState.TryCreate(temporaryRuneConfiguration, out var runes, out var runeReason))
+                reasons += (reasons.Length > 0 ? " " : string.Empty) + $"Runes: {runeReason}";
+            if (reasons.Length > 0)
+            {
+                temporarySlotCombatError = "슬롯머신 또는 룬 설정이 올바르지 않습니다.";
+                Debug.LogError($"Temporary slot combat is unavailable. {reasons}", this);
+                return;
+            }
+            temporarySlotMachine = machine;
+            temporaryRunes = runes;
+            temporarySlotCombatError = string.Empty;
+        }
+
         private void StartInitialization(CancellationToken cancellationToken)
         {
             initializationTask = session.InitializeAsync(cancellationToken);
@@ -233,6 +316,21 @@ namespace TxTRPG.Application.Players
             if (temporaryDice != null) throw new InvalidOperationException("Temporary dice are already initialized.");
             temporaryDiceConfiguration = configuration;
         }
+
+        public void ConfigureTemporarySlotCombat(TemporarySlotMachineConfiguration slotMachine, TemporaryRuneConfiguration runes)
+        {
+            if (temporarySlotCombatCreated) throw new InvalidOperationException("Temporary slot combat is already initialized.");
+            temporarySlotMachineConfiguration = slotMachine;
+            temporaryRuneConfiguration = runes;
+        }
+
+#if UNITY_EDITOR
+        // Edit Mode tests only: Instance is otherwise set in Awake, which runs in Play Mode.
+        public static void SetInstanceForEditorTests(PlayerSessionHost host) => instance = host;
+        public void UseSessionForEditorTests(PlayerSession testSession) => session = testSession ?? throw new ArgumentNullException(nameof(testSession));
+        public TemporarySlotMachineConfiguration TemporarySlotMachineConfigurationForEditor => temporarySlotMachineConfiguration;
+        public TemporaryRuneConfiguration TemporaryRuneConfigurationForEditor => temporaryRuneConfiguration;
+#endif
 
         private static string NormalizeSaveFileName(string value)
         {

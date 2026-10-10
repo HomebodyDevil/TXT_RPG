@@ -22,22 +22,57 @@ namespace TxTRPG.Gameplay.Combat
         Defeat = 7
     }
 
+    public enum PlayerCombatActionKind
+    {
+        Attack = 1,
+        Heal = 2
+    }
+
+    // Player input to one combat turn: what to do, how much, and where it came from (for example a rune line ID).
+    // Dice rolls and rune allocations both become this, so the combat rules do not depend on either system.
+    public readonly struct PlayerCombatAction
+    {
+        public PlayerCombatAction(PlayerCombatActionKind kind, int amount, string sourceId = "")
+        {
+            if (kind != PlayerCombatActionKind.Attack && kind != PlayerCombatActionKind.Heal)
+                throw new ArgumentOutOfRangeException(nameof(kind), $"Unsupported player combat action '{kind}'.");
+            if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount));
+            Kind = kind;
+            Amount = amount;
+            SourceId = sourceId ?? string.Empty;
+        }
+
+        public PlayerCombatActionKind Kind { get; }
+        public int Amount { get; }
+        public string SourceId { get; }
+    }
+
     public readonly struct TemporaryCombatEvent
     {
         public TemporaryCombatEvent(TemporaryCombatEventKind kind, int requestedAmount, int appliedAmount, int currentHealth = 0, int maximumHealth = 0)
+            : this(kind, requestedAmount, appliedAmount, currentHealth, maximumHealth, string.Empty)
+        {
+        }
+
+        public TemporaryCombatEvent(TemporaryCombatEventKind kind, int requestedAmount, int appliedAmount, int currentHealth, int maximumHealth, string sourceId)
         {
             Kind = kind;
             RequestedAmount = requestedAmount;
             AppliedAmount = appliedAmount;
             CurrentHealth = currentHealth;
             MaximumHealth = maximumHealth;
+            sourceIdValue = sourceId ?? string.Empty;
         }
+
+        private readonly string sourceIdValue;
 
         public TemporaryCombatEventKind Kind { get; }
         public int RequestedAmount { get; }
         public int AppliedAmount { get; }
         public int CurrentHealth { get; }
         public int MaximumHealth { get; }
+        // The PlayerCombatAction source of a player event (empty for enemy and outcome events, and for dice rolls).
+        public string SourceId => sourceIdValue ?? string.Empty;
     }
 
     public sealed class TemporaryCombatTurnResult
@@ -90,33 +125,54 @@ namespace TxTRPG.Gameplay.Combat
         public EnemyActionKind NextEnemyAction { get; private set; }
         public bool IsComplete => PlayerHealth.IsDefeated || EnemyHealth.IsDefeated;
 
+        // Dice input, kept for the reserved dice system. Rolls are converted up front, so an unsupported effect is
+        // rejected before any change is applied.
         public TemporaryCombatTurnResult ExecuteTurn(IReadOnlyList<DiceRollResult> rolls)
         {
             if (rolls == null) throw new ArgumentNullException(nameof(rolls));
-            if (IsComplete) throw new InvalidOperationException("The temporary combat is already complete.");
-
-            var events = new List<TemporaryCombatEvent>();
+            var actions = new PlayerCombatAction[rolls.Count];
             for (var i = 0; i < rolls.Count; i++)
             {
                 var roll = rolls[i];
-                switch (roll.EffectKind)
+                actions[i] = roll.EffectKind switch
                 {
-                    case DiceEffectKind.Attack:
+                    DiceEffectKind.Attack => new PlayerCombatAction(PlayerCombatActionKind.Attack, roll.Amount),
+                    DiceEffectKind.Heal => new PlayerCombatAction(PlayerCombatActionKind.Heal, roll.Amount),
+                    _ => throw new InvalidOperationException($"Unsupported dice effect '{roll.EffectKind}'.")
+                };
+            }
+            return ExecuteTurn(actions);
+        }
+
+        // Applies the player actions in order (an attack on a defeated enemy is recorded as skipped), then the advertised
+        // enemy action when the enemy is still standing, then the victory or defeat event.
+        public TemporaryCombatTurnResult ExecuteTurn(IReadOnlyList<PlayerCombatAction> actions)
+        {
+            if (actions == null) throw new ArgumentNullException(nameof(actions));
+            if (IsComplete) throw new InvalidOperationException("The temporary combat is already complete.");
+
+            var events = new List<TemporaryCombatEvent>();
+            for (var i = 0; i < actions.Count; i++)
+            {
+                var action = actions[i];
+                switch (action.Kind)
+                {
+                    case PlayerCombatActionKind.Attack:
                         if (EnemyHealth.IsDefeated)
                         {
-                            events.Add(new TemporaryCombatEvent(TemporaryCombatEventKind.PlayerAttackSkipped, roll.Amount, 0, EnemyHealth.Current, EnemyHealth.Maximum));
+                            events.Add(new TemporaryCombatEvent(TemporaryCombatEventKind.PlayerAttackSkipped, action.Amount, 0, EnemyHealth.Current, EnemyHealth.Maximum, action.SourceId));
                             break;
                         }
-                        var damage = damageResolver.Resolve(new DamageRequest("temporary.player", "temporary.enemy", roll.Amount));
+                        var damage = damageResolver.Resolve(new DamageRequest("temporary.player", "temporary.enemy", action.Amount));
                         var enemyDamage = EnemyHealth.ApplyDamage(damage.FinalDamage);
-                        events.Add(new TemporaryCombatEvent(TemporaryCombatEventKind.PlayerAttack, roll.Amount, enemyDamage.AppliedAmount, EnemyHealth.Current, EnemyHealth.Maximum));
+                        events.Add(new TemporaryCombatEvent(TemporaryCombatEventKind.PlayerAttack, action.Amount, enemyDamage.AppliedAmount, EnemyHealth.Current, EnemyHealth.Maximum, action.SourceId));
                         break;
-                    case DiceEffectKind.Heal:
-                        var healing = PlayerHealth.Heal(roll.Amount);
-                        events.Add(new TemporaryCombatEvent(TemporaryCombatEventKind.PlayerHeal, roll.Amount, healing.AppliedAmount, PlayerHealth.Current, PlayerHealth.Maximum));
+                    case PlayerCombatActionKind.Heal:
+                        var healing = PlayerHealth.Heal(action.Amount);
+                        events.Add(new TemporaryCombatEvent(TemporaryCombatEventKind.PlayerHeal, action.Amount, healing.AppliedAmount, PlayerHealth.Current, PlayerHealth.Maximum, action.SourceId));
                         break;
                     default:
-                        throw new InvalidOperationException($"Unsupported dice effect '{roll.EffectKind}'.");
+                        throw new InvalidOperationException($"Unsupported player combat action '{action.Kind}'.");
                 }
             }
 

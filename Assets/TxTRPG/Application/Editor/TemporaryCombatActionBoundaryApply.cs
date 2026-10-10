@@ -23,6 +23,7 @@ namespace TxTRPG.Application.Editor
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Exit Play Mode before applying the combat action button.");
             if (PrefabStageUtility.GetCurrentPrefabStage() != null) throw new InvalidOperationException("Save and close Prefab Stage before applying the combat action button.");
+            TemporarySlotMachineIntegration.ThrowIfAppliedToMainScene(MenuPath);
             var scene = SceneManager.GetSceneByPath(TemporaryDiceMenuBuilder.ScenePath);
             var opened = !scene.IsValid() || !scene.isLoaded;
             if (!opened && scene.isDirty) throw new InvalidOperationException("Save or revert unsaved TMP_MainScene changes before applying the combat action button.");

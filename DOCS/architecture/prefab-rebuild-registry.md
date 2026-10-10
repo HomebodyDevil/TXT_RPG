@@ -21,7 +21,7 @@
 | `ui.enemy-display` | `EnemyDisplayPanel.prefab` |
 | `ui.flexible-layout` | `FlexibleLayoutPlaceholder.prefab`, `FlexibleLayoutPanel.prefab` |
 
-StoryTextPanel은 기존 Style을 기본값으로 다시 쓰기 때문에 제외합니다. Demo/Sample, Game Menu의 현재 복합 생성, 기본 콘텐츠, AppScene, Scene Transition, Addressables, 수작업 Prefab과 Variant도 Scene·콘텐츠·설정 변경 또는 출력 경계 혼합 때문에 제외합니다.
+StoryTextPanel은 기존 Style을 기본값으로 다시 쓰기 때문에 제외합니다. `SlotMachinePanel.prefab`·`SlotReel.prefab`(`Assets/TxTRPG/UI/Prefabs/SlotMachine/`)은 임시 메뉴 `Apply Slot Machine Combat`(`TemporarySlotMachineIntegration`)이 없을 때만 만들고 이후 개발자 소유 자산으로 취급하며, 같은 메뉴가 AppRoot와 TMP_MainScene도 바꾸므로 Prefab 전용 생성 핵심이 분리되기 전까지 배치에 넣지 않습니다(Provider 등록 없음). Demo/Sample, Game Menu의 현재 복합 생성, 기본 콘텐츠, AppScene, Scene Transition, Addressables, 수작업 Prefab과 Variant도 Scene·콘텐츠·설정 변경 또는 출력 경계 혼합 때문에 제외합니다.
 
 ## 안전 계약
 

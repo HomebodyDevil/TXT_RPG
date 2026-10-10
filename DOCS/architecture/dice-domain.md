@@ -1,5 +1,7 @@
 # 주사위 Gameplay 도메인
 
+> **보류 상태**: `TMP_MainScene`의 플레이어 행동은 현재 [슬롯머신과 룬](slot-machine-and-runes.md)이 정합니다. 이 도메인의 코드와 테스트는 그대로 유지되며, 주사위 컨트롤러와 패널은 Scene에서 꺼져 있습니다. 되돌릴 때 바꿀 참조는 [개발 및 검증 절차](../development/workflows.md#슬롯머신-전투-적용)에 있습니다.
+
 ## 책임과 경계
 
 `TxTRPG.Gameplay.Dice`는 Unity UI, GameObject와 Scene 수명에 의존하지 않는 동기식 순수 C# 도메인입니다. 주사위의 각 면은 효과 종류와 수치를 함께 보유하며, 실제 체력 변경과 시각 연출은 이 도메인의 책임이 아닙니다.
@@ -9,7 +11,7 @@
 | `DiceEffectKind` | 저장과 콘텐츠에서 안정적으로 사용할 명시적 효과 식별자입니다. `Unknown=0`, `Attack=1`, `Heal=2`를 유지합니다. |
 | `DiceFace` | 한 면의 `EffectKind`와 `Amount`를 보존하는 불변 값입니다. |
 | `Dice` | 순서가 있는 면 구성과 수치 범위를 검증하고 원자적으로 변경하며 굴림을 수행합니다. |
-| `IRandomIndexSource` | `[0, FaceCount)` 범위의 인덱스를 제공하는 주입 경계입니다. |
+| `IRandomIndexSource` | `[0, FaceCount)` 범위의 인덱스를 제공하는 주입 경계입니다. 계약 자체는 Gameplay 공용 `TxTRPG.Gameplay.IRandomIndexProvider`이며, 이 인터페이스는 이름과 위치를 유지한 채 그것을 상속합니다. |
 | `DiceRollResult` | 굴린 시점의 면 인덱스, 효과 종류와 수치를 보존하는 불변 스냅샷입니다. |
 
 현재 실행 가능한 효과는 `Attack`과 `Heal`입니다. `Unknown` 또는 지원하지 않는 enum 값이 면 구성에 포함되면 도메인은 이를 공격이나 회복으로 추정하지 않고 거부합니다.

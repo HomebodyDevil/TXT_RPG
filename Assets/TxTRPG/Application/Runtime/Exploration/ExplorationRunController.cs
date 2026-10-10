@@ -2,7 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using TMPro;
-using TxTRPG.Application.Dice;
+using TxTRPG.Application.Combat;
 using TxTRPG.Application.Players;
 using TxTRPG.Gameplay.Characters;
 using TxTRPG.Gameplay.Combat;
@@ -13,6 +13,7 @@ using TxTRPG.UI.Exploration;
 using UnityEngine.Events;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace TxTRPG.Application.Exploration
@@ -21,7 +22,9 @@ namespace TxTRPG.Application.Exploration
     public sealed class ExplorationRunController : MonoBehaviour, ISceneInitializer
     {
         [SerializeField] private ExplorationRunConfiguration configuration;
-        [SerializeField] private TemporaryDiceRollMenuController combatController;
+        [FormerlySerializedAs("combatController")]
+        [SerializeField, Tooltip("A component implementing ITemporaryCombatController (TemporarySlotCombatController in TMP_MainScene).")]
+        private MonoBehaviour combatControllerBehaviour;
         [SerializeField] private StoryTextPanel storyPanel;
         [SerializeField] private GameObject panel;
         [SerializeField] private TMP_Text statusText;
@@ -31,6 +34,7 @@ namespace TxTRPG.Application.Exploration
         [SerializeField] private TMP_Text[] choiceLabels = Array.Empty<TMP_Text>();
         [SerializeField] private Button continueButton;
 
+        private ITemporaryCombatController combatController;
         private ExplorationRunState run;
         private bool initialized;
         private bool processing;
@@ -45,7 +49,8 @@ namespace TxTRPG.Application.Exploration
             initialized = false; Unbind();
             var host = PlayerSessionHost.Instance ?? throw new InvalidOperationException("Exploration requires PlayerSessionHost.");
             await host.EnsureInitializedAsync(cancellationToken); cancellationToken.ThrowIfCancellationRequested();
-            if (configuration == null || combatController == null || storyPanel == null) throw new InvalidOperationException("Exploration references are incomplete.");
+            if (configuration == null || combatControllerBehaviour == null || storyPanel == null) throw new InvalidOperationException("Exploration references are incomplete.");
+            combatController = ResolveCombatController(combatControllerBehaviour);
             if (choiceCardList == null) EnsureChoiceCapacity(configuration.ChoiceCount);
             var created = false;
             run = host.GetOrCreateTemporaryExploration(() =>
@@ -248,11 +253,18 @@ namespace TxTRPG.Application.Exploration
         private void OnDestroy() => Unbind();
 
 #if UNITY_EDITOR
-        public void ConfigureForEditor(ExplorationRunConfiguration targetConfiguration, TemporaryDiceRollMenuController targetCombat, StoryTextPanel targetStory, GameObject targetPanel, TMP_Text targetStatus, Button[] buttons, TMP_Text[] labels, Button targetContinue)
-        { configuration = targetConfiguration; combatController = targetCombat; storyPanel = targetStory; panel = targetPanel; statusText = targetStatus; choiceButtons = buttons ?? Array.Empty<Button>(); choiceLabels = labels ?? Array.Empty<TMP_Text>(); continueButton = targetContinue; }
+        public void ConfigureForEditor(ExplorationRunConfiguration targetConfiguration, MonoBehaviour targetCombat, StoryTextPanel targetStory, GameObject targetPanel, TMP_Text targetStatus, Button[] buttons, TMP_Text[] labels, Button targetContinue)
+        { if (targetCombat != null) ResolveCombatController(targetCombat); configuration = targetConfiguration; combatControllerBehaviour = targetCombat; storyPanel = targetStory; panel = targetPanel; statusText = targetStatus; choiceButtons = buttons ?? Array.Empty<Button>(); choiceLabels = labels ?? Array.Empty<TMP_Text>(); continueButton = targetContinue; }
+        public void ConfigureCombatForEditor(MonoBehaviour targetCombat) { ResolveCombatController(targetCombat); combatControllerBehaviour = targetCombat; }
+        public MonoBehaviour CombatControllerForEditor => combatControllerBehaviour;
         public void ConfigureTreeForEditor(ExplorationNodeTreePanel targetTree) => treePanel = targetTree;
         public void ConfigureCardsForEditor(ExplorationNodeChoiceCardList targetCardList) => choiceCardList = targetCardList;
 #endif
+
+        // Unity cannot serialize interface fields, so the reference is a MonoBehaviour validated here.
+        private static ITemporaryCombatController ResolveCombatController(MonoBehaviour behaviour) =>
+            behaviour as ITemporaryCombatController ?? throw new InvalidOperationException(
+                $"Exploration combat controller '{(behaviour != null ? behaviour.GetType().Name : "null")}' does not implement {nameof(ITemporaryCombatController)}.");
 
         private sealed class SystemExplorationRandomSource : IExplorationRandomSource
         {

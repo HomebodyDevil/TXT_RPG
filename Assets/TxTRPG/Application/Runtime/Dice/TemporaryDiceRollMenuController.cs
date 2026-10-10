@@ -17,7 +17,7 @@ using UnityEngine;
 namespace TxTRPG.Application.Dice
 {
     [DisallowMultipleComponent]
-    public sealed class TemporaryDiceRollMenuController : MonoBehaviour, IGameMenuCommandHandler, ISceneInitializer
+    public sealed class TemporaryDiceRollMenuController : MonoBehaviour, IGameMenuCommandHandler, ISceneInitializer, ITemporaryCombatController
     {
         public const string RollAllCommandId = "temporary-dice.roll-all";
 
@@ -38,7 +38,7 @@ namespace TxTRPG.Application.Dice
         [SerializeField, Range(0f, 5f), Tooltip("Added to the panel's longest presentation to form the actual timeout.")]
         private float rollTimeoutMarginSeconds = 1f;
 
-        public const float MaximumRollTimeoutSeconds = 15f;
+        public const float MaximumRollTimeoutSeconds = TemporaryCombatPresentationTimeout.MaximumSeconds;
 
         private PlayerSessionHost sessionHost;
         private TemporaryCombatState combat;
@@ -53,7 +53,7 @@ namespace TxTRPG.Application.Dice
 
         // The timeout never cuts a normal presentation short: max(minimum, longest presentation + margin), within [1, 15]s.
         public static float ResolveRollTimeout(float minimumSeconds, float presentationSeconds, float marginSeconds) =>
-            Mathf.Clamp(Mathf.Max(minimumSeconds, presentationSeconds + Mathf.Max(0f, marginSeconds)), 1f, MaximumRollTimeoutSeconds);
+            TemporaryCombatPresentationTimeout.Resolve(minimumSeconds, presentationSeconds, marginSeconds);
 
         public async Task InitializeAsync(SceneInitializationContext context, CancellationToken cancellationToken)
         {
@@ -62,6 +62,10 @@ namespace TxTRPG.Application.Dice
             if (menu != null) menu.ExecutionStateRefreshed -= RefreshActionButton;
             ReleaseCombat();
             initialized = false;
+            // The dice system is reserved: a disabled controller (TMP_MainScene uses the slot machine) still receives
+            // InitializeAsync, because scene participants include inactive components. It then takes no part at all:
+            // no subscriptions, Story output, result windows or action button updates.
+            if (!isActiveAndEnabled) { sessionHost = null; return; }
             RefreshActionButton();
             sessionHost = PlayerSessionHost.Instance;
             if (sessionHost == null) throw new InvalidOperationException("Temporary combat requires PlayerSessionHost.");
@@ -198,7 +202,7 @@ namespace TxTRPG.Application.Dice
             {
                 Debug.LogError($"Temporary combat action failed after any already-applied changes: {exception}");
                 if (storyPanel != null)
-                    storyPanel.AddMessage("[전투] 행동 처리 중 오류가 발생했습니다. 이미 적용된 결과는 다시 실행하지 않습니다.");
+                    storyPanel.AddMessage(TemporaryCombatStoryText.ActionFailed);
             }
             finally
             {
@@ -283,38 +287,14 @@ namespace TxTRPG.Application.Dice
                 var roll = rolls[i];
                 var combatEvent = events[eventIndex];
                 storyPanel.AddMessage(DiceRollStoryFormatter.Format(roll));
-                switch (combatEvent.Kind)
-                {
-                    case TemporaryCombatEventKind.PlayerAttack:
-                        storyPanel.AddMessage($"[전투] {combatConfiguration.EnemyName}에게 피해 {combatEvent.AppliedAmount}. 체력 {combatEvent.CurrentHealth}/{combatEvent.MaximumHealth}.");
-                        break;
-                    case TemporaryCombatEventKind.PlayerHeal:
-                        storyPanel.AddMessage($"[전투] 플레이어 회복 요청 {combatEvent.RequestedAmount}, 실제 회복 {combatEvent.AppliedAmount}. 체력 {combatEvent.CurrentHealth}/{combatEvent.MaximumHealth}.");
-                        break;
-                    case TemporaryCombatEventKind.PlayerAttackSkipped:
-                        storyPanel.AddMessage($"[전투] {combatConfiguration.EnemyName}이 이미 쓰러져 공격 {combatEvent.RequestedAmount}을 건너뛰었습니다.");
-                        break;
-                }
+                var playerText = TemporaryCombatStoryText.PlayerEvent(combatEvent, combatConfiguration.EnemyName);
+                if (playerText != null) storyPanel.AddMessage(playerText);
             }
 
             for (; eventIndex < events.Count; eventIndex++)
             {
-                var combatEvent = events[eventIndex];
-                switch (combatEvent.Kind)
-                {
-                    case TemporaryCombatEventKind.EnemyAttack:
-                        storyPanel.AddMessage($"[적 행동] 공격 {combatEvent.RequestedAmount}. 플레이어가 받은 피해 {combatEvent.AppliedAmount}. 체력 {combatEvent.CurrentHealth}/{combatEvent.MaximumHealth}.");
-                        break;
-                    case TemporaryCombatEventKind.EnemyHeal:
-                        storyPanel.AddMessage($"[적 행동] 회복 요청 {combatEvent.RequestedAmount}, 실제 회복 {combatEvent.AppliedAmount}. 체력 {combatEvent.CurrentHealth}/{combatEvent.MaximumHealth}.");
-                        break;
-                    case TemporaryCombatEventKind.Victory:
-                        storyPanel.AddMessage($"[전투] {combatConfiguration.EnemyName}을 쓰러뜨렸습니다. 임시 전투가 종료되었습니다.");
-                        break;
-                    case TemporaryCombatEventKind.Defeat:
-                        storyPanel.AddMessage("[전투] 플레이어가 전투 불능이 되었습니다. 임시 전투가 종료되었습니다.");
-                        break;
-                }
+                var outcomeText = TemporaryCombatStoryText.OutcomeEvent(events[eventIndex], combatConfiguration.EnemyName);
+                if (outcomeText != null) storyPanel.AddMessage(outcomeText);
             }
         }
 

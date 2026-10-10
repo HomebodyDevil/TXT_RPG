@@ -581,6 +581,8 @@ Scene 연결을 복구할 때에는 기존 메뉴의 Transform, 형제 순서, �
 
 ## 임시 플레이어 주사위 메뉴
 
+> 주사위 시스템은 보류 상태입니다. `TMP_MainScene`에 슬롯머신이 적용된 뒤에는 이 절의 Apply 메뉴가 경고와 함께 중단됩니다([슬롯머신 전투 적용](#슬롯머신-전투-적용)).
+
 - 설정 자산: `Assets/TxTRPG/Application/Configuration/TemporaryDiceConfiguration.asset`
 - 적용 메뉴: `Tools > TxT RPG > Application > Temporary > Apply Player Dice Roll Menu`
 - 실행 경로: `Assets/Scenes/AppScene.unity`에서 시작하여 `TMP_MainScene`이 로드된 후 전투 노드를 고르고, 적 패널과 주사위 패널(`OwnedDicePanel`) 경계선의 "행동" 버튼을 사용합니다. 게임 메뉴에는 행동 버튼이 없습니다.
@@ -603,6 +605,8 @@ Scene 연결을 복구할 때에는 기존 메뉴의 Transform, 형제 순서, �
 운영 Prefab과 Scene 참조가 정상이라면 별도 적용 메뉴를 실행하지 않습니다. 누락이 확인되었을 때에도 자동 Scene 검색으로 숨기지 말고 Prefab 또는 해당 Scene Override의 직렬화 참조를 복구합니다.
 
 ## TMP_MainScene 임시 적 전투
+
+> 현재 플레이어 행동은 슬롯머신과 룬이 정합니다. 적용·검증 절차는 [슬롯머신 전투 적용](#슬롯머신-전투-적용)을 봅니다. 이 절의 주사위 Apply·검증 메뉴는 보류된 주사위 연결 기준입니다.
 
 - 설정 자산: `Assets/TxTRPG/Application/Configuration/TemporaryCombatConfiguration.asset`에서 활성 여부, 적 이름·외형 ID·최대 체력·공격량·회복량을 설정합니다.
 - 적용 메뉴: `Tools > TxT RPG > Application > Temporary > Apply Player Dice Roll Menu`는 기존 TMP_MainScene 배치를 보존하면서 임시 전투 참조, 적 체력 바, 행동 예고와 경계선 `행동` 버튼을 선별 적용합니다. 설정 자산이 이미 있으면 값을 덮어쓰지 않으며 안전하게 다시 실행할 수 있습니다. Scene은 자동 저장되므로 적용 전에 관련 미저장 변경을 먼저 저장하거나 별도로 보존해야 합니다.
@@ -922,6 +926,8 @@ UnitySkills는 `Window > UnitySkills`에서 포트와 서버 상태를 확인하
 
 ## 보유 주사위 3D 패널과 결과 기록
 
+> 보류 상태입니다. `Apply Owned Dice To TMP Main Scene`은 슬롯머신이 적용된 Scene에서 중단됩니다. `Validate Owned Dice Scene`·`Validate Play Flow`·`Validate Throw Presentation`·`Validate Combat Action Button (Play Mode)`는 주사위 연결이 활성이어야 통과하므로 현재 Scene에서는 실패합니다.
+
 운영 자산은 `Assets/Scenes/TMP_MainScene.unity`, `Assets/TxTRPG/UI/Prefabs/Dice/`, `Assets/TxTRPG/UI/Styles/Dice/`에 저장합니다. 구조와 연출 순서는 [보유 주사위 3D 표시](../architecture/owned-dice-presentation.md)를 참고합니다.
 
 `Tools > TxT RPG > UI > Dice > Temporary > Create Base Dice Assets`는 Edit Mode에서 컴파일이 끝난 뒤 실행하며, 자산을 자동 저장하고 재실행할 수 있습니다. 생성기가 소유하는 부분만 생성·동기화합니다.
@@ -953,6 +959,8 @@ UnitySkills는 `Window > UnitySkills`에서 포트와 서버 상태를 확인하
 
 ## Story·주사위 패널 위치 교체 후속 정리
 
+> 이 절의 Apply 메뉴는 슬롯머신이 적용된 Scene에서 중단됩니다. 측정·검증 메뉴는 `OwnedDicePanel`이 활성이어야 합니다.
+
 사용자가 `TMP_MainScene`에서 `StoryTextPanel`(→ `LeftPanel`, `NodeTreePanel` 아래)과 `OwnedDicePanel`(→ `MiddlePanel`, `EnemyDisplayPanelDemo` 아래)의 위치를 바꾸고 상위 패널 이름을 `LeftPanel`·`MiddlePanel`·`RightPanel`로 바꾼 뒤의 후속 정리입니다. 지침은 [main-scene-story-dice-panel-swap.md](../instructions/main-scene-story-dice-panel-swap.md)입니다. 운영 Scene에는 이미 적용·저장되어 있으므로 이 작업 사본에서 다시 실행할 필요는 없습니다.
 
 | 메뉴 | 내용 | 저장 | 재실행 |
@@ -969,3 +977,67 @@ Apply 메뉴는 Play Mode를 종료하고 저장된 `TMP_MainScene`을 미저장
 - 휴대폰 가로(844×390)는 너비가 좁은 화면 기준 720 이상이라 넓은 배치를 쓰며, `LeftPanel` 높이 366에서 `NodeTreePanel` 최소 360 때문에 Story 높이가 0이 됩니다. 사용자가 정한 Weight·최소 크기와 좁은 화면 기준을 바꾸는 결정이 필요해 이번 작업에서는 고치지 않았습니다.
 - 태블릿 세로(768×1024)와 좁은 데스크톱(1024×640)에서는 Story 본문 너비가 약 145와 202라 최소 글자 크기 18에서도 줄바꿈이 많습니다. 태블릿에서는 행동 버튼이 `ResultsButton`과 겹칩니다.
 - `TemporaryExplorationTreeIntegration`의 `Apply Tree Panel`이 쓰는 `ContentLayer/NodeTreePanel` 경로는 위치 교체 이전부터 현재 구조와 맞지 않으며 이번 범위에서 고치지 않았습니다.
+
+## 슬롯머신 전투 적용
+
+구조는 [슬롯머신과 룬 기반 전투 행동](../architecture/slot-machine-and-runes.md), 지침은 [slot-machine-and-rune-combat.md](../instructions/slot-machine-and-rune-combat.md)입니다. 2026-10-10에 이 작업 사본의 `TMP_MainScene`, `AppRoot.prefab`, 설정 자산과 Prefab에 적용·저장하고 검증했으므로, 이 작업 사본에서는 다시 실행할 필요가 없습니다.
+
+| 메뉴 | 내용 | 저장 | 재실행 |
+| --- | --- | --- | --- |
+| `Tools > TxT RPG > Application > Temporary > Apply Slot Machine Combat` | 없을 때만 `TemporarySlotMachineConfiguration.asset`·`TemporaryRuneConfiguration.asset`(기본값)과 `UI/Prefabs/SlotMachine/SlotReel.prefab`·`SlotMachinePanel.prefab`을 만듭니다. 두 Prefab의 TMP 색 캐시와 기본 스타일 해시를 맞추고, AppRoot `PlayerSessionHost`의 빈 설정 참조를 채웁니다. TMP_MainScene에는 `OwnedDicePanel` 다음에 `SlotMachinePanel`을 추가하고 `FlexibleLayoutItem` 값을 복사합니다. 이어서 `OwnedDicePanel` 비활성, 주사위 컨트롤러·Binder 컴포넌트 끄기, `TemporarySlotCombatController` 추가·빈 참조 채우기를 합니다. 마지막으로 행동 버튼의 명령·처리기·두 번째 패널, 입력 차단 대상, `ExplorationRunController` 참조를 슬롯머신으로 바꾸고 검증합니다. | TMP_MainScene, AppRoot, 새 자산 자동 저장 | 안전. 기존 Prefab·자산·패널과 사용자 값은 그대로 두고, 비었거나 주사위를 가리키는 참조만 바꿉니다. 두 번째 실행은 `kept ...`만 기록하고 Scene 파일을 바꾸지 않습니다. |
+| `Tools > TxT RPG > Application > Temporary > Validate Slot Machine Combat` | 자산, AppRoot 참조, Scene 연결을 검사합니다. | 변경 없음 | 안전 |
+| `Tools > TxT RPG > Application > Temporary > Validate Slot Machine Combat (Play Mode)` | 새 탐험이 노드 선택을 기다리는 Play Mode에서 실행합니다. 다음을 차례로 검사하고 `SLOT_MACHINE_PLAY_VALIDATE ... PASS`를 기록합니다. | Play 상태만 변경 | 새 Play 세션에서 실행 |
+
+Play Mode 검증 메뉴가 검사하는 항목은 다음과 같습니다.
+
+- 주사위 표시가 숨겨져 있고, Reel 3개·`합계 —`·가중치가 표시되며, 노드 선택 중 패널 입력이 차단됩니다.
+- 1920×1080, 21:9, 1024×768, 390×844 가상 Viewport에서 버튼이 Reel과 합계를 가리지 않고 Payline 숫자가 칸 안에 들어갑니다.
+- 연속 `Submit` 두 번과 회전 중 가방 창 열기·닫기에도 결과가 1회만 적용됩니다.
+- 포인터 클릭과 Reduce Motion으로도 실행됩니다.
+- 실행 중 Reel을 4·5개로 늘리고 칸 값을 바꾸면 다음 회전부터 반영됩니다.
+- 회전 중 `MainScene_VisualProposal`을 거쳐 TMP_MainScene에 다시 들어와도 결과가 1회만 적용되고 새 패널에 표시됩니다.
+- 전투가 끝나면 버튼이 숨겨지고 노드 선택이 다시 패널을 덮습니다.
+
+Apply 메뉴는 Play Mode와 Prefab Stage를 종료하고 컴파일이 끝난 뒤 실행합니다. TMP_MainScene에 저장되지 않은 변경이 있으면 실행하지 않고 중단합니다. Scene을 열어 두었다면 저장한 다음 실행합니다. 결과 요약은 Console의 `SLOT_MACHINE_APPLY:`로 확인합니다. 저장 직후 Editor가 Scene을 변경됨으로 표시하는 경우가 있지만 파일 내용은 같습니다.
+
+실행 중 구성 변경은 다음 API로 합니다.
+
+- Reel: `PlayerSessionHost.Instance.TemporarySlotMachine.Machine`의 `TryAddReel`·`TryRemoveReel`·`TryReplaceReel`·`TrySetSymbol`·`TryAddSymbol`·`TryReplaceStrip`
+- 룬: `TemporaryRunes.Inventory.TryAdd`·`TryRemove`, `TemporaryRunes.Loadout.TryAddLine`·`TryAddRuneToLine`·`TryRemoveRuneFromLine`·`TryReplaceAll`
+
+모두 원자적으로 검증하며, 실패하면 사유를 돌려줍니다. 시작 구성은 두 설정 자산의 Inspector에서 바꿉니다. 같은 값을 여러 칸에 두면 그 값이 더 자주 나옵니다.
+
+관련 Edit Mode 테스트(클래스 단위로 실행하고 `AssetWriting`은 제외합니다):
+
+- `TxTRPG.Gameplay.Tests.SlotMachineTests`
+- `TxTRPG.Gameplay.Tests.RuneTests`(분배 사례, 전투 입력, 주사위 오버로드 동등성 포함)
+- `TxTRPG.Gameplay.Tests.TemporaryCombatStateTests`, `TxTRPG.Gameplay.Tests.DiceTests`
+- `TxTRPG.Application.Tests.SlotMachineCombatTests`(설정 복사·잘못된 설정, 1회 회전·1회 적용, 중복 거부, 룬 줄 없음, 전투 변경 후 미적용, Scene 재초기화 1회 적용, 제한 시간, 비활성 주사위 참여자, `FormerlySerializedAs`, 저장된 Scene 연결)
+- `TxTRPG.Application.Tests.OwnedDiceIntegrationTests`, `TemporaryPlayerDiceStateTests`, `TemporaryMenuIconTests`, `PlayerSessionTests`
+- `TxTRPG.Application.Tests.MainSceneDefaultPresentationTests.ConfiguredScene_HasNoEnemyDemoWriterAndKeepsCorePanels`(이름으로 실행)
+- `TxTRPG.UI.Tests.SlotMachinePanelTests`, `TxTRPG.UI.Tests.BoundaryCommandButtonTests`
+
+`SlotMachineCombatTests`와 `SlotMachinePanelTests`는 저장된 `SlotMachinePanel.prefab`을 읽기만 합니다. Prefab이 없으면 먼저 Apply 메뉴를 실행합니다. `MainSceneMenuInputPlayModeTests`, `ExplorationTreePlayModeTests`는 슬롯머신 연결에 맞게 고쳤습니다. 다만 AppScene Play 시작 정책 때문에 Test Runner로는 실행하지 않았고, 위 Play Mode 검증 메뉴로 대신 확인합니다.
+
+### 보류된 주사위 도구
+
+다음 메뉴는 TMP_MainScene에 `TemporarySlotCombatController`가 있으면 아무것도 바꾸지 않고 예외로 중단합니다. Scene이 열려 있지 않으면 저장된 Scene 파일로 판단합니다.
+
+- `Apply Player Dice Roll Menu`
+- `Apply Combat Action Boundary Button`
+- `Apply Story Dice Panel Swap Settings`
+- `Apply Owned Dice To TMP Main Scene`
+
+이 메뉴들을 그대로 실행하면 행동 버튼과 탐험이 다시 주사위로 연결되기 때문입니다. 주사위 검증 메뉴는 주사위 연결이 활성이어야 하므로 슬롯머신 적용 후에는 실행하지 않습니다.
+
+주사위로 되돌리는 작업은 별도 범위입니다. 되돌릴 때는 TMP_MainScene에서 다음을 바꿉니다.
+
+1. `CombatActionBoundary`의 `BoundaryCommandButton.commandId`를 `temporary-dice.roll-all`로, `commandHandlerBehaviour`를 `GameMenuPanel`의 `TemporaryDiceRollMenuController`로 바꿉니다.
+2. `PanelBoundaryPlacement.secondPanel`을 `OwnedDicePanel`로 바꿉니다.
+3. `ExplorationRunController.combatControllerBehaviour`를 `TemporaryDiceRollMenuController`로 바꿉니다.
+4. `ExplorationNodePanel`의 `CoveredPanelInteractionBlocker.coveredPanels`에서 `SlotMachinePanel`의 `CanvasGroup`을 `OwnedDicePanel`의 `CanvasGroup`으로 바꿉니다.
+5. `OwnedDicePanel` GameObject를 활성화하고, `TemporaryDiceRollMenuController`·`OwnedDiceSessionBinder` 컴포넌트를 켭니다.
+6. `TemporarySlotCombatController` 컴포넌트를 끄거나 제거하고, `SlotMachinePanel`을 비활성화합니다.
+
+그다음 주사위 Apply 메뉴의 보호 조건(`TemporarySlotMachineIntegration.ThrowIfAppliedToMainScene`)을 확인합니다.
+

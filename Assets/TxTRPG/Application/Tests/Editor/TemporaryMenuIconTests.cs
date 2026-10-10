@@ -63,7 +63,7 @@ namespace TxTRPG.Application.Tests
                 AssertMenu(menu, false);
                 Assert.That(menu.Buttons.Any(b => b.ActionKind == GameMenuButtonActionKind.Command), Is.False, "The action moved to the boundary button.");
                 var boundary = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<BoundaryCommandButton>(true))
-                    .Single(b => b.CommandId == TemporaryDiceRollMenuController.RollAllCommandId);
+                    .Single(b => b.CommandId == TxTRPG.Application.SlotMachine.TemporarySlotCombatController.SpinCommandId);
                 AssertView(boundary.Button.GetComponent<GameMenuButtonView>(), "action");
             }
             finally { EditorSceneManager.CloseScene(scene, true); }
