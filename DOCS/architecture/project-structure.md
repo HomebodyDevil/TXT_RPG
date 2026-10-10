@@ -116,7 +116,7 @@ TxT-RPG/
 
 플레이어 빌드에 포함되는 UI 모델과 MonoBehaviour가 있습니다. Editor API를 직접 사용하지 않습니다.
 
-`Exploration` 하위에는 노드 후보 표시 데이터와 선택 요청, 재사용 가능한 카드 View, 카드 목록 및 실제 Viewport 너비에 따라 중앙 정렬·줄바꿈하는 LayoutGroup이 있습니다. 탐험 규칙은 Gameplay에 남고 UI 어셈블리는 노드 생성이나 완료를 직접 수행하지 않습니다.
+`Exploration` 하위에는 노드 후보 표시 데이터와 선택 요청, 재사용 가능한 카드 View, 카드 목록 및 실제 Viewport 너비에 따라 중앙 정렬·줄바꿈하는 LayoutGroup이 있습니다. `CoveredPanelInteractionBlocker`는 노드 선택 창처럼 다른 패널을 덮는 오버레이가 표시되는 동안 덮인 패널의 `CanvasGroup.interactable`을 꺼서 컨트롤러·키보드 탐색을 막습니다. 탐험 규칙은 Gameplay에 남고 UI 어셈블리는 노드 생성이나 완료를 직접 수행하지 않습니다.
 
 `Shapes` 하위(`TxTRPG.UI.Shapes`)에는 공용 절차적 도형 기하 `UiShapeGeometry`, 도형 Graphic `UiShapeGraphic`, 그리지 않는 입력 영역 `UiShapeHitArea`와 모양·효과 Material 슬롯을 가진 `ShapedButtonView`가 있습니다. 탐험 카드 도형도 이 기하를 사용합니다. `PanelBoundaryPlacement.cs`는 두 패널 경계선에 대상을 놓는 배치 컴포넌트와 순수 계산 `PanelBoundaryCalculator`, `Windows/BoundaryCommandButton.cs`는 경계선 명령 버튼입니다. 자세한 내용은 [경계선 명령 버튼](boundary-command-button.md)을 참고합니다.
 
@@ -338,3 +338,5 @@ flowchart TD
 탐험 기록 트리는 `UI/Runtime/Exploration`의 `ExplorationNodeTreePanel`, `ExplorationTreeSnapshot`, `ExplorationTreeLayout`, 노드·선 View와 `ExplorationTreeStyle`로 구성합니다. `Application/Runtime/Exploration/ExplorationTreeProjection.cs`가 도메인 전체 기록을 표시 스냅샷으로 변환하며 `ExplorationRunController`가 갱신 경계를 소유합니다. UI에서 Application으로의 역참조는 추가하지 않습니다. 상세 구조는 [탐험 기록 트리](exploration-history-tree.md)를 참고합니다.
 
 `UI/Runtime/ResponsiveMainScreen.cs`와 `NestedScrollRectBridge.cs`는 좁은 화면에서 기존 메인 패널을 세로 페이지로 전환하고 중첩 스크롤을 연결합니다. `Canvas/MainScreenViewport`가 기존 Main_FlexibleLayoutPanel을 감싸며 공유 게임 규칙과 저장 데이터에는 관여하지 않습니다.
+
+`Application/Editor/TemporaryStoryDicePanelSwap.cs`는 사용자가 TMP_MainScene의 `StoryTextPanel`과 `OwnedDicePanel` 위치를 바꾼 뒤의 후속 설정(Story 너비 기반 글자 크기, 노드 선택 중 탐색 차단, 좁은 화면 높이)을 적용·측정·검증하는 임시 메뉴입니다. 상세 절차는 [개발 절차](../development/workflows.md#story주사위-패널-위치-교체-후속-정리)를 참고합니다.

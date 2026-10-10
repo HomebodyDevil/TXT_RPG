@@ -813,7 +813,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 176867245601385350, guid: 6fc79b8f9fd5236499cfca7ab6827177, type: 3}
       propertyPath: m_Name
-      value: Text_FlexibleLayoutPanel
+      value: MiddlePanel
       objectReference: {fileID: 0}
     - target: {fileID: 246679003649685477, guid: 6fc79b8f9fd5236499cfca7ab6827177, type: 3}
       propertyPath: m_Color.a
@@ -931,7 +931,7 @@ PrefabInstance:
       addedObject: {fileID: 467269624}
     - targetCorrespondingSourceObject: {fileID: 9134192191214517861, guid: 6fc79b8f9fd5236499cfca7ab6827177, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1163415103}
+      addedObject: {fileID: 1577756136}
     - targetCorrespondingSourceObject: {fileID: 9134192191214517861, guid: 6fc79b8f9fd5236499cfca7ab6827177, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1863145659}
@@ -1358,12 +1358,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
   m_Navigation:
-    m_Mode: 3
+    m_Mode: 4
     m_WrapAround: 0
-    m_SelectOnUp: {fileID: 0}
+    m_SelectOnUp: {fileID: 1241410286}
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
-    m_SelectOnRight: {fileID: 0}
+    m_SelectOnRight: {fileID: 376508831}
   m_Transition: 1
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
@@ -2349,6 +2349,11 @@ MonoBehaviour:
   fixedSize: 100
   minimumSize: 0
   maximumSize: 0
+--- !u!225 &467269633 stripped
+CanvasGroup:
+  m_CorrespondingSourceObject: {fileID: 3890309490411666356, guid: aa47128e213076947a45b0fcd492838f, type: 3}
+  m_PrefabInstance: {fileID: 207940131}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &546428124
 GameObject:
   m_ObjectHideFlags: 0
@@ -3721,7 +3726,7 @@ PrefabInstance:
     - target: {fileID: 705746376965405573, guid: 1306a525f7409364d8e1f41669280909, type: 3}
       propertyPath: m_Navigation.m_SelectOnDown
       value: 
-      objectReference: {fileID: 376508831}
+      objectReference: {fileID: 278597206}
     - target: {fileID: 705746376965405573, guid: 1306a525f7409364d8e1f41669280909, type: 3}
       propertyPath: m_Navigation.m_SelectOnRight
       value: 
@@ -3841,7 +3846,7 @@ PrefabInstance:
     - target: {fileID: 8342112341182853388, guid: 1306a525f7409364d8e1f41669280909, type: 3}
       propertyPath: secondPanel
       value: 
-      objectReference: {fileID: 1163415103}
+      objectReference: {fileID: 1577756136}
     - target: {fileID: 9152276490277031842, guid: 1306a525f7409364d8e1f41669280909, type: 3}
       propertyPath: commandId
       value: temporary-dice.roll-all
@@ -4892,7 +4897,7 @@ PrefabInstance:
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 793687024}
+    m_TransformParent: {fileID: 1347924910}
     m_Modifications:
     - target: {fileID: 1385659186790814783, guid: d8f967a3d71718d499dace08047e2f3b, type: 3}
       propertyPath: m_Pivot.x
@@ -4944,15 +4949,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1385659186790814783, guid: d8f967a3d71718d499dace08047e2f3b, type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: 1385659186790814783, guid: d8f967a3d71718d499dace08047e2f3b, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: 1385659186790814783, guid: d8f967a3d71718d499dace08047e2f3b, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: 1385659186790814783, guid: d8f967a3d71718d499dace08047e2f3b, type: 3}
       propertyPath: m_AnchoredPosition.x
@@ -5007,6 +5012,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1305175951}
     - target: {fileID: 6301959932255109434, guid: d8f967a3d71718d499dace08047e2f3b, type: 3}
+      propertyPath: scaleTextWithWidth
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6301959932255109434, guid: d8f967a3d71718d499dace08047e2f3b, type: 3}
       propertyPath: scrollbarBackground
       value: 
       objectReference: {fileID: 249324255}
@@ -5014,9 +5023,17 @@ PrefabInstance:
       propertyPath: showMessageSeparators
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6301959932255109434, guid: d8f967a3d71718d499dace08047e2f3b, type: 3}
+      propertyPath: textScaleReferenceWidth
+      value: 942
+      objectReference: {fileID: 0}
     - target: {fileID: 6878335824071812044, guid: d8f967a3d71718d499dace08047e2f3b, type: 3}
       propertyPath: m_Name
       value: StoryTextPanel
+      objectReference: {fileID: 0}
+    - target: {fileID: 7407070709272882355, guid: d8f967a3d71718d499dace08047e2f3b, type: 3}
+      propertyPath: m_Spacing
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 9161769290021579823, guid: d8f967a3d71718d499dace08047e2f3b, type: 3}
       propertyPath: m_SizeDelta.x
@@ -5056,7 +5073,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TxTRPG.UI::TxTRPG.UI.FlexibleLayoutItem
   sizeMode: 0
-  weight: 1
+  weight: 3
   fixedSize: 100
   minimumSize: 0
   maximumSize: 0
@@ -5233,6 +5250,17 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1229709874}
   m_CullTransparentMesh: 1
+--- !u!114 &1241410286 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 705746376965405573, guid: 1306a525f7409364d8e1f41669280909, type: 3}
+  m_PrefabInstance: {fileID: 712864020}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!114 &1305175951 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1062163342586841229, guid: d8f967a3d71718d499dace08047e2f3b, type: 3}
@@ -5841,7 +5869,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 176867245601385350, guid: 6fc79b8f9fd5236499cfca7ab6827177, type: 3}
       propertyPath: m_Name
-      value: ExplorationAndDicePanel
+      value: LeftPanel
+      objectReference: {fileID: 0}
+    - target: {fileID: 176867245601385350, guid: 6fc79b8f9fd5236499cfca7ab6827177, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4542519813139884612, guid: 6fc79b8f9fd5236499cfca7ab6827177, type: 3}
       propertyPath: m_Pivot.x
@@ -6011,7 +6043,7 @@ PrefabInstance:
       addedObject: {fileID: 1847634244}
     - targetCorrespondingSourceObject: {fileID: 9134192191214517861, guid: 6fc79b8f9fd5236499cfca7ab6827177, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1577756136}
+      addedObject: {fileID: 1163415103}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 176867245601385350, guid: 6fc79b8f9fd5236499cfca7ab6827177, type: 3}
       insertIndex: -1
@@ -6059,7 +6091,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 176867245601385350, guid: 6fc79b8f9fd5236499cfca7ab6827177, type: 3}
       propertyPath: m_Name
-      value: Character_FlexibleLayoutPanel
+      value: RightPanel
       objectReference: {fileID: 0}
     - target: {fileID: 246679003649685477, guid: 6fc79b8f9fd5236499cfca7ab6827177, type: 3}
       propertyPath: m_Color.a
@@ -6326,7 +6358,7 @@ MonoBehaviour:
   - {fileID: 211571733}
   - {fileID: 1381345533}
   narrowHeights:
-  - 620
+  - 760
   - 520
   - 640
   breakpoint: 720
@@ -6410,6 +6442,7 @@ GameObject:
   - component: {fileID: 1577756139}
   - component: {fileID: 1577756138}
   - component: {fileID: 1577756137}
+  - component: {fileID: 1577756142}
   m_Layer: 0
   m_Name: OwnedDicePanel
   m_TagString: Untagged
@@ -6424,7 +6457,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1577756135}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -6433,7 +6466,7 @@ RectTransform:
   - {fileID: 278597205}
   - {fileID: 437071388}
   - {fileID: 1938408809}
-  m_Father: {fileID: 1347924910}
+  m_Father: {fileID: 793687024}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
@@ -6564,10 +6597,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TxTRPG.UI::TxTRPG.UI.FlexibleLayoutItem
   sizeMode: 0
-  weight: 1
+  weight: 0.7
   fixedSize: 200
   minimumSize: 200
   maximumSize: 0
+--- !u!225 &1577756142
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1577756135}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &1587191354
 GameObject:
   m_ObjectHideFlags: 0
@@ -7384,6 +7429,7 @@ GameObject:
   - component: {fileID: 1863145661}
   - component: {fileID: 1863145660}
   - component: {fileID: 1863145662}
+  - component: {fileID: 1863145663}
   m_Layer: 0
   m_Name: ExplorationNodePanel
   m_TagString: Untagged
@@ -7472,6 +7518,21 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!114 &1863145663
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1863145658}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f66f141401e6c854983bb48a416313cf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TxTRPG.UI::TxTRPG.UI.Exploration.CoveredPanelInteractionBlocker
+  coveredPanels:
+  - {fileID: 467269633}
+  - {fileID: 1577756142}
 --- !u!1 &1889550120
 GameObject:
   m_ObjectHideFlags: 0

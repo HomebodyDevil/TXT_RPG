@@ -95,8 +95,9 @@ namespace TxTRPG.Application.Editor
             var main = canvas.Find("MainScreenViewport/Main_FlexibleLayoutPanel")?.GetComponent<FlexibleLayoutPanel>()
                 ?? throw new InvalidOperationException("The existing responsive main panel is missing.");
             var tree = main.ContentRoot.Find("NodeTreePanel") as RectTransform;
-            var existing = main.ContentRoot.Find("ExplorationAndDicePanel");
-            if (existing != null)
+            // Any existing OwnedDicePanel means the dice UI was already applied, wherever its layout panels have since
+            // been moved or renamed. Only validate; never create a second panel because a panel name was not found.
+            if (canvas.GetComponentsInChildren<OwnedDicePanel>(true).Length > 0)
             {
                 ValidateScene();
                 Debug.Log("OWNED_DICE_APPLY: Already present; saved authoring values were preserved.");
@@ -219,15 +220,21 @@ namespace TxTRPG.Application.Editor
             var scene = SceneManager.GetActiveScene();
             if (scene.path != ScenePath) throw new InvalidOperationException("Open TMP_MainScene.");
             var canvas = scene.GetRootGameObjects().Single(root => root.name == "Canvas").transform;
-            var main = canvas.Find("MainScreenViewport/Main_FlexibleLayoutPanel")?.GetComponent<FlexibleLayoutPanel>();
-            var parent = main?.ContentRoot.Find("ExplorationAndDicePanel");
-            var nested = parent?.GetComponent<FlexibleLayoutPanel>();
-            var tree = nested?.ContentRoot.Find("NodeTreePanel");
-            var dice = nested?.ContentRoot.Find("OwnedDicePanel")?.GetComponent<OwnedDicePanel>();
+            // The structure is identified by components, not panel names, so renamed or moved layout panels still validate.
+            var dicePanels = canvas.GetComponentsInChildren<OwnedDicePanel>(true);
+            if (dicePanels.Length != 1)
+                throw new InvalidOperationException($"Expected exactly one OwnedDicePanel, found {dicePanels.Length}.");
+            var dice = dicePanels[0];
+            var contentLayer = dice.transform.parent;
+            var nested = contentLayer != null ? contentLayer.GetComponentInParent<FlexibleLayoutPanel>(true) : null;
+            if (nested == null || nested.ContentRoot != contentLayer || nested.CurrentAxis != FlexibleLayoutAxis.Vertical)
+                throw new InvalidOperationException("OwnedDicePanel must be a direct child of a vertical FlexibleLayoutPanel ContentLayer.");
+            var enemy = canvas.GetComponentInChildren<EnemyDisplayPanel>(true);
+            if (enemy == null || DirectChildOf(contentLayer, enemy.transform) == null)
+                throw new InvalidOperationException("EnemyDisplayPanel must share the OwnedDicePanel ContentLayer.");
             var service = canvas.GetComponentInChildren<GameWindowService>(true);
-            var binder = dice?.GetComponent<OwnedDiceSessionBinder>();
-            if (tree == null || dice == null || binder == null || nested.CurrentAxis != FlexibleLayoutAxis.Vertical ||
-                service == null || !service.HasPage(OwnedDiceSessionBinder.ResultsPageId) ||
+            var binder = dice.GetComponent<OwnedDiceSessionBinder>();
+            if (binder == null || service == null || !service.HasPage(OwnedDiceSessionBinder.ResultsPageId) ||
                 dice.CurrentTexture != null)
                 throw new InvalidOperationException("Owned dice Scene hierarchy or references are incomplete.");
             var controller = canvas.GetComponentInChildren<TemporaryDiceRollMenuController>(true);
@@ -243,7 +250,16 @@ namespace TxTRPG.Application.Editor
             if (menu.Buttons.Any(item => item.ActionKind == GameMenuButtonActionKind.Command && item.CommandId == TemporaryDiceRollMenuController.RollAllCommandId) ||
                 menu.Content.Find(TemporaryDiceMenuBuilder.ButtonName) != null)
                 throw new InvalidOperationException("The legacy game-menu action button or binding is still present.");
-            Debug.Log("OWNED_DICE_VALIDATE: Tree, owned panel, result page, command references, and the boundary action button are present.");
+            if (action.Placement.SecondPanel != (RectTransform)dice.transform)
+                throw new InvalidOperationException("The boundary combat action button must use OwnedDicePanel as its second panel.");
+            Debug.Log($"OWNED_DICE_VALIDATE: Owned panel in {nested.name}, result page, command references, and the boundary action button are present.");
+        }
+
+        private static Transform DirectChildOf(Transform parent, Transform descendant)
+        {
+            for (var current = descendant; current != null; current = current.parent)
+                if (current.parent == parent) return current;
+            return null;
         }
 
         [MenuItem("Tools/TxT RPG/UI/Dice/Temporary/Validate Play Flow")]

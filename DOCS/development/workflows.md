@@ -347,6 +347,29 @@ Editor fallback Sprite는 미리보기 용도로만 사용합니다. 새 런타�
 오류 검증에는 `MissingConfiguration`, `ReadyEmpty`, `PartialAssetFailure`, `DelayedRecovery`, `InitializationFailure` Profile을 각각 사용합니다. `ReadyEmpty`에서는 안내 Story나 샘플 적이 나타나면 안 됩니다. `DelayedRecovery`에서는 Loading 중 가짜 상호작용을 허용하지 않고 지연 후 최신 요청만 반영되는지 확인합니다.
 
 기존 자산을 이전하려면 Scene을 저장한 뒤 위 메뉴를 실행합니다. 생성기는 Panel Prefab을 재생성하거나 Unpack하지 않습니다. 적용 후 `Main_FlexibleLayoutPanel`의 Prefab Override와 자식 순서를 비교하고, `EnemyDisplayPanelContainer`에 Demo Loader가 남아 있지 않은지 확인합니다.
+## 프로젝트 서브에이전트
+
+`.claude/agents/`에 Claude Code 서브에이전트 정의가 있습니다. `.claude/`는 `.gitignore`에 포함된 로컬 설정이라 저장소에는 올라가지 않으므로, 다른 작업 사본에서 쓰려면 정의 파일을 따로 복사합니다. 둘 다 읽기 전용이며 파일 수정, Git 상태 변경, Unity Editor 조작, 테스트 실행, CodeGraph 인덱싱은 하지 않습니다. 이런 작업은 메인 대화에서 순서대로 수행합니다. 결과는 한국어로 보고합니다. 정의 파일은 세션을 시작할 때 읽히므로, 추가하거나 고친 뒤에는 새 세션에서 사용할 수 있습니다.
+
+에이전트는 사용자가 이름을 말하지 않아도 `AGENTS.md`의 `Project Subagents` 규칙에 따라 호출됩니다. 정의 파일이 없는 작업 사본에서는 같은 확인을 메인 대화에서 직접 수행합니다.
+
+모델은 정의 파일의 `model:`로 고정합니다. `unity-impact-scout`는 정해진 절차에 따라 조회하는 작업이고 메인 대화가 수정 전에 결과를 다시 확인하므로 `sonnet`을 씁니다. 공유 Prefab이나 저장 데이터처럼 위험한 변경을 조사할 때는 호출하면서 `opus`를 지정합니다. `serialization-diff-reviewer`는 분류 결과가 되돌리기 판단에 바로 쓰이므로 메인 세션 모델과 상관없이 `opus`를 씁니다.
+
+| 에이전트 | 용도 | 사용 시점 |
+| --- | --- | --- |
+| `unity-impact-scout` | CodeGraph로 호출자·영향 범위·관련 테스트를 찾고, Scene·Prefab·asset의 스크립트 GUID·필드 Override, 문자열 기반 조회, 생성기·적용 메뉴, 관련 문서까지 확인해 목록으로 보고합니다. | 여러 파일·어셈블리에 걸친 변경 전. 심볼 하나라면 `codegraph_explore`를 직접 씁니다. |
+| `serialization-diff-reviewer` | `.unity`·`.prefab`·`.asset`·`.meta`·`.asmdef` diff를 의도한 변경, 레이아웃 재계산 값, 폰트 아틀라스 등 생성 부수 효과, 생성기·테스트 재작성, 의심스러운 변경으로 분류하고 되돌려도 되는 파일 후보를 보고합니다. 직접 되돌리지는 않습니다. | Editor 적용이나 테스트 실행 뒤. 작업 전에 이미 수정되어 있던 파일 목록을 함께 전달합니다. |
+
+예시 요청:
+
+```text
+unity-impact-scout로 GameMenuPanel.RefreshExecutionState 변경의 영향 범위를 조사해줘.
+```
+
+```text
+serialization-diff-reviewer로 방금 적용한 TMP_MainScene 변경을 검토해줘. 의도한 변경은 ...이고, 작업 전부터 수정되어 있던 파일은 AGENTS.md야.
+```
+
 ## 테스트
 
 Edit Mode 테스트는 `Assets/TxTRPG/UI/Tests/Editor`, `Assets/TxTRPG/Application/Tests/Editor`, `Assets/TxTRPG/SceneTransition/Tests/Editor`와 `Assets/TxTRPG/Editor/Tests/Editor`에 있습니다. `EditorMenuTests`는 Content, Editor Common, UI, Scene Transition Editor 어셈블리에 등록된 `Tools/TxT RPG/` 메뉴의 전체 경로, 우선순위와 중복 여부를 검증합니다. 이 어셈블리에 메뉴를 추가하면 경로를 `TxTRPGEditorMenuPaths` 상수로, 우선순위를 `TxTRPGEditorMenuPriorities`로 지정하고 기대 목록에 넣습니다. 남겨 둔 Temporary 메뉴도 예외 없이 상수 경로와 기대 목록을 사용합니다.
@@ -404,7 +427,7 @@ Sprite Sheet의 여러 상태 Sprite를 선택했다면 모든 행에 같은 Tex
 
 | 테스트 클래스 | 검증 범위 |
 | --- | --- |
-| `StoryTextPanelTests` | 투명도 경계값, 운영용 프리팹 필수 참조, 기본 배경 Reset과 Effect Material 인스턴스를 검증합니다. |
+| `StoryTextPanelTests` | 투명도 경계값, 너비 기반 글자 크기·구분선 너비 계산, 운영용 프리팹 필수 참조, 기본 배경 Reset과 Effect Material 인스턴스를 검증합니다. |
 | `StoryTextPanelDemoTests` | 데모 데이터의 양, 발화자 조합, 로더·패널·기본 배경 연결을 검증합니다. |
 | `StoryTextPanelEditModePreviewTests` | 데모 데이터 개수와 직렬화된 미리보기 항목 개수가 일치하는지 검증합니다. |
 | `CharacterDisplayPanelTests` | 표시 요청, 2D 패널 계층, 조합형 상태 UI, 비상호작용 Health Slider, 선택적 참조와 데모 연결을 검증합니다. |
@@ -560,7 +583,7 @@ Scene 연결을 복구할 때에는 기존 메뉴의 Transform, 형제 순서, �
 
 - 설정 자산: `Assets/TxTRPG/Application/Configuration/TemporaryDiceConfiguration.asset`
 - 적용 메뉴: `Tools > TxT RPG > Application > Temporary > Apply Player Dice Roll Menu`
-- 실행 경로: `Assets/Scenes/AppScene.unity`에서 시작하여 `TMP_MainScene`이 로드된 후 전투 노드를 고르고, 적 패널과 Story 패널 경계선의 "행동" 버튼을 사용합니다. 게임 메뉴에는 행동 버튼이 없습니다.
+- 실행 경로: `Assets/Scenes/AppScene.unity`에서 시작하여 `TMP_MainScene`이 로드된 후 전투 노드를 고르고, 적 패널과 주사위 패널(`OwnedDicePanel`) 경계선의 "행동" 버튼을 사용합니다. 게임 메뉴에는 행동 버튼이 없습니다.
 - 면 설정: 각 Dice 항목의 `Faces`에서 `Effect Kind`와 `Amount`를 편집합니다. 현재 런타임은 Attack과 Heal만 허용합니다.
 - 기능 해제: 설정 자산의 `Enabled For Session`을 끄면 세션 지급과 버튼 실행이 비활성화됩니다.
 - 제거 지점: 정식 주사위 소유 시스템으로 전환할 때 `TemporaryDiceRollMenuController`, 경계선 행동 버튼(`CombatActionBoundary`)과 AppRoot의 임시 설정 참조를 제거합니다. 저장 스키마에는 이전할 데이터가 없습니다.
@@ -595,8 +618,9 @@ Scene 연결을 복구할 때에는 기존 메뉴의 Transform, 형제 순서, �
 - 아이콘: `ActionButton/VisualRoot/Icon`의 Source Image와 `GameMenuButtonView`의 Display Mode·Icon Padding·Icon Color·Icon Visible을 바꿉니다. Sprite가 없거나 Icon Visible을 끄면 Label "행동"이 표시됩니다.
 - 효과: `ShapedButtonView > Effects`의 Background·Border·Icon·Effect Overlay Material 슬롯에 셰이더 Material을 지정합니다. 전경 효과 Graphic은 `VisualRoot/EffectOverlay` 아래에 추가합니다. 흔들림·확대 같은 Transform 연출은 `VisualRoot`에만 적용합니다. 실행 중 속성을 바꾸는 효과 코드는 `GetOrCreateEffectInstance`가 돌려준 인스턴스만 수정하고 끝나면 `ResetEffects`를 호출합니다. `Effects Are Animated`가 켜져 있으면 System 페이지의 `카드 효과 사용`을 끄거나 `움직임 줄이기`를 켤 때 효과가 꺼집니다.
 - 임시 적용 메뉴: `Tools > TxT RPG > Application > Temporary > Apply Combat Action Boundary Button`은 다른 Apply 단계 없이 이 이전만 TMP_MainScene에 적용합니다(옛 메뉴 버튼·바인딩 제거, 경계선 버튼 생성 또는 참조 갱신, 컨트롤러 연결). Play Mode와 Prefab Stage를 종료하고 TMP_MainScene의 미저장 변경을 저장한 뒤 실행하며, 성공하면 `COMBAT_ACTION_BOUNDARY_APPLY` 로그를 남기고 Scene을 자동 저장합니다. 안전하게 재실행할 수 있고 사용자 외형 설정을 덮어쓰지 않습니다. 운영 Scene에는 2026-10-10에 적용·저장했으므로 이 작업 사본에서는 다시 실행할 필요가 없습니다. 모든 작업 사본의 이전이 끝나면 삭제할 수 있습니다.
-- Scene 검증: Edit Mode에서 TMP_MainScene을 열고 `Tools > TxT RPG > UI > Dice > Temporary > Validate Owned Dice Scene`을 실행합니다. 경계선 버튼 참조, `ignoreLayout`, 옛 메뉴 버튼·바인딩 부재까지 확인합니다.
-- Play 검증: AppScene에서 Play를 시작해 새 탐험이 노드 선택을 기다릴 때 `Tools > TxT RPG > UI > Combat > Validate Combat Action Button (Play Mode)`를 실행합니다. 노드 선택 중 숨김, 전투 중 표시·활성, 넓은 화면·휴대폰 세로·가로·태블릿·좁은 데스크톱·울트라와이드 가상 Viewport에서 경계선 중심 일치와 Text 패널 안쪽 유지, 버튼 유무에 따른 패널 Rect 불변, 좁은 화면 `Reveal`, 원·둥근 사각형·사각형·이미지 모드 입력 영역, 효과 인스턴스·공유 Material 불변·리셋·움직임 줄이기, 명시적 탐색과 숨김 시 포커스 해제, 연속 Submit의 1회 실행과 굴림 중 비활성, 결과 창·가방 창 열림 중 비활성과 결과 창 닫힘 후 포커스 복귀, 승리 후 숨김과 다음 전투 재표시, 패배 후 숨김을 차례로 검사하고 `COMBAT_ACTION_VALIDATE ... PASS`를 기록합니다. Play 상태만 바꾸며 마지막에 탐험이 패배로 끝납니다.
+- Scene 검증: Edit Mode에서 TMP_MainScene을 열고 `Tools > TxT RPG > UI > Dice > Temporary > Validate Owned Dice Scene`을 실행합니다. 경계선 버튼 참조(두 번째 패널이 `OwnedDicePanel`인지 포함), `ignoreLayout`, 옛 메뉴 버튼·바인딩 부재까지 확인합니다.
+- 두 번째 패널: `Apply Player Dice Roll Menu`와 `Apply Combat Action Boundary Button`은 `OwnedDicePanel` 컴포넌트를 찾아 두 번째 패널로 연결합니다. 적 패널과 같은 `ContentLayer`의 직계 자식이어야 하며, 다른 패널(예: 이전의 `StoryTextPanel`)을 가리키던 Scene도 다시 실행하면 참조만 고칩니다. `OwnedDicePanel`이 없는 Scene에서 `Apply Player Dice Roll Menu`는 경고만 남기고 경계선 버튼을 건너뜁니다.
+- Play 검증: AppScene에서 Play를 시작해 새 탐험이 노드 선택을 기다릴 때 `Tools > TxT RPG > UI > Combat > Validate Combat Action Button (Play Mode)`를 실행합니다. 노드 선택 중 숨김, 전투 중 표시·활성, 넓은 화면·휴대폰 세로·가로·태블릿·좁은 데스크톱·울트라와이드 가상 Viewport에서 경계선 중심 일치와 소속 레이아웃 패널(`MiddlePanel`, 이름이 아니라 부모 `FlexibleLayoutPanel`로 찾음) 안쪽 유지, 두 경계 패널이 `EnemyDisplayPanel`·`OwnedDicePanel`인지, `ResultsButton`과의 겹침 여부(실패 조건이 아니라 `resultsButtonOverlap`으로 기록), 버튼 유무에 따른 패널 Rect 불변, 좁은 화면 `Reveal`, 원·둥근 사각형·사각형·이미지 모드 입력 영역, 효과 인스턴스·공유 Material 불변·리셋·움직임 줄이기, 명시적 탐색(행동 버튼 오른쪽 → System, 아래 → `ResultsButton`, `ResultsButton` 위 → 행동 버튼·오른쪽 → System)과 숨김 시 포커스 해제, 연속 Submit의 1회 실행과 굴림 중 비활성, 결과 창·가방 창 열림 중 비활성과 결과 창 닫힘 후 포커스 복귀, 승리 후 숨김과 다음 전투 재표시, 패배 후 숨김을 차례로 검사하고 `COMBAT_ACTION_VALIDATE ... PASS`를 기록합니다. Play 상태만 바꾸며 마지막에 탐험이 패배로 끝납니다.
 - 관련 Edit Mode 테스트: `TxTRPG.UI.Tests.PanelBoundaryCalculatorTests`(Spacing 0·양수, 세로·가로 경계, 비활성·겹침, 보정), `TxTRPG.UI.Tests.UiShapeGeometryTests`(도형 판정, 카드 열거형 일치, 카드·공용 Graphic Mesh 동일), `TxTRPG.UI.Tests.BoundaryCommandButtonTests`(계층 분리, 경계 배치와 패널 불변, 표시·실행 상태, 포커스 해제·복귀, 모양 모드, 효과 Material), `TxTRPG.Application.Tests.TemporaryMenuIconTests`. 이 테스트들은 저장된 `BoundaryCommandButton.prefab`을 읽기만 하므로 `AssetWriting` 분류가 아닙니다. Prefab이 없으면 `EnsurePrefab`이 새로 만들므로 먼저 적용 메뉴로 Prefab을 만들어 둡니다. `MainSceneMenuInputPlayModeTests`는 경계선 버튼 기준으로 갱신했지만, Editor Play 시작 Scene 정책(AppScene) 때문에 Test Runner의 Play Mode 실행이 신뢰할 수 없으므로 위 Play 검증 메뉴로 대신 확인합니다.
 ## 점진 생성 탐험 검증
 
@@ -814,7 +838,7 @@ Test Runner의 Domain Reload 작업 복구가 실패할 경우 AppScene 실행 �
 
 ## 탐험 기록 트리
 
-대상은 `Assets/Scenes/TMP_MainScene.unity`의 `Canvas/MainScreenViewport/Main_FlexibleLayoutPanel/ContentLayer/ExplorationAndDicePanel/ContentLayer/NodeTreePanel`입니다. 기록 트리 적용 당시의 사용자 패널을 보존했으며, 이후 보유 주사위 표시를 위해 새 부모 아래로 옮겼습니다. 기존 트리 내부의 TreeBody와 Controller의 Tree Panel 참조는 유지합니다.
+대상은 `Assets/Scenes/TMP_MainScene.unity`의 `Canvas/MainScreenViewport/Main_FlexibleLayoutPanel/ContentLayer/LeftPanel/ContentLayer/NodeTreePanel`입니다(이전 이름 `ExplorationAndDicePanel`). 기록 트리 적용 당시의 사용자 패널을 보존했으며, 이후 보유 주사위 표시를 위해 새 부모 아래로 옮겼습니다. 기존 트리 내부의 TreeBody와 Controller의 Tree Panel 참조는 유지합니다.
 
 ### 이미지와 외형 교체
 
@@ -842,7 +866,9 @@ Test Runner의 Domain Reload 작업 복구가 실패할 경우 AppScene 실행 �
    없는 Prefab·설정만 생성합니다. 자산은 저장되지만 씬은 검토를 위해 미저장 상태로 남습니다.
    이미 통합되어 있으면 검증만 수행합니다. 오류가 있으면 다음 단계로 진행하지 않습니다.
 4. Tools > TxT RPG > UI > Exploration > Temporary > Constrain Choices To Center를 실행합니다.
-   선택 창을 중앙 Text_FlexibleLayoutPanel/ContentLayer 안으로 옮기고 Stretch 및 ignoreLayout을 적용합니다.
+   선택 창을 적 패널이 있는 중앙 열(현재 MiddlePanel, 이름이 아니라 구조로 찾음)의 ContentLayer 안으로 옮기고
+   Stretch 및 ignoreLayout을 적용합니다. 이미 레이아웃 패널 ContentLayer 안에서 ignoreLayout이 켜져 있으면
+   아무것도 바꾸지 않고 TREE_CHOICES: Already constrained ... 로그만 남깁니다.
    선택은 필요 없으며 씬은 자동 저장하지 않습니다. 반복 실행이 가능하지만 선택 창의 수동 배치를 덮어씁니다.
    사용자와 확정한 중앙 패널 제한을 적용하는 작업이므로 다른 작업 사본에서는 해당 방향을 먼저 확인합니다.
    변경 범위를 검토합니다. 대상 내부·Controller 참조·선택 창 영역 외의 사용자 배치를 보존해야 합니다.
@@ -910,7 +936,7 @@ UnitySkills는 `Window > UnitySkills`에서 포트와 서버 상태를 확인하
 
 새 다면체를 추가하려면 `DieModelView`가 붙은 모델 Prefab과 면 인덱스 순서의 법선·라벨 위쪽 방향·정지 자세·볼록 충돌 메시·`restHeight`·`boundingRadius`를 가진 `DieShapeDefinition`을 만들고 `DieShapeCatalog`에 등록합니다. 모든 면에 평행한 반대 면이 있어야 하며(정육면체, 정팔면체, 정십이면체, 정이십면체), 정사면체처럼 조건을 만족하지 않는 형태는 카탈로그가 반환하지 않습니다. 같은 모델을 다른 정의 ID로 쓰려면 형태를 복제하지 말고 `additionalDefinitionIds`에 추가합니다.
 
-`Tools > TxT RPG > UI > Dice > Temporary > Apply Owned Dice To TMP Main Scene`은 저장된 `TMP_MainScene`이 Edit Mode에서 열려 있고 미저장 변경이 없을 때 한 번 실행합니다. 기존 `NodeTreePanel`을 새 `ExplorationAndDicePanel` 안으로 옮기고 `OwnedDicePanel`, 격리된 `DiceStage`, 공통 결과 페이지, 명시적 Binder 참조와 좁은 화면 높이를 연결합니다. 기존 패널을 다시 생성하지 않습니다. Scene은 자동 저장하지 않으므로 `Tools > TxT RPG > UI > Dice > Temporary > Validate Owned Dice Scene`의 성공 로그를 확인하고 변경 범위를 검토한 뒤 저장합니다. 같은 부모가 이미 있으면 적용 메뉴는 연결 상태만 검증하고 기존 값을 보존합니다. 운영 Scene에는 이미 적용·저장되어 있으므로 현재 작업 사본에서 다시 실행할 필요는 없습니다. Scene 작업이 섞여 있으므로 production Prefab rebuild batch에는 등록하지 않습니다. 물리 던지기 연출은 Scene 연결을 바꾸지 않았습니다. `OwnedDicePanel`의 새 `arenaSettings`, `throwSettings`, `fallbackDuration`, `debugThrowSeed`는 Scene에 아직 직렬화되지 않았으므로 코드 기본값을 사용하며, Inspector에서 값을 바꾸고 Scene을 저장하면 그 값이 기록됩니다. 이전 `rollDuration` 값은 Scene 파일에 남아 있어도 사용하지 않습니다.
+`Tools > TxT RPG > UI > Dice > Temporary > Apply Owned Dice To TMP Main Scene`은 저장된 `TMP_MainScene`이 Edit Mode에서 열려 있고 미저장 변경이 없을 때 한 번 실행합니다. Scene 어디에든 `OwnedDicePanel`이 이미 있으면 위치·이름과 관계없이 새 패널을 만들지 않고 `Validate Owned Dice Scene`만 실행합니다. 검증은 패널 이름 대신 컴포넌트로 구조를 확인합니다. `OwnedDicePanel`이 하나이고, 부모가 세로 축 `FlexibleLayoutPanel`의 `ContentLayer`이며, 같은 `ContentLayer`에 `EnemyDisplayPanel`이 있고, 결과 페이지와 Binder가 연결되어 있어야 합니다. 아래 설명은 최초 적용 당시의 생성 경로입니다. 기존 `NodeTreePanel`을 새 `ExplorationAndDicePanel` 안으로 옮기고 `OwnedDicePanel`, 격리된 `DiceStage`, 공통 결과 페이지, 명시적 Binder 참조와 좁은 화면 높이를 연결합니다. 기존 패널을 다시 생성하지 않습니다. Scene은 자동 저장하지 않으므로 `Tools > TxT RPG > UI > Dice > Temporary > Validate Owned Dice Scene`의 성공 로그를 확인하고 변경 범위를 검토한 뒤 저장합니다. 같은 부모가 이미 있으면 적용 메뉴는 연결 상태만 검증하고 기존 값을 보존합니다. 운영 Scene에는 이미 적용·저장되어 있으므로 현재 작업 사본에서 다시 실행할 필요는 없습니다. Scene 작업이 섞여 있으므로 production Prefab rebuild batch에는 등록하지 않습니다. 물리 던지기 연출은 Scene 연결을 바꾸지 않았습니다. `OwnedDicePanel`의 새 `arenaSettings`, `throwSettings`, `fallbackDuration`, `debugThrowSeed`는 Scene에 아직 직렬화되지 않았으므로 코드 기본값을 사용하며, Inspector에서 값을 바꾸고 Scene을 저장하면 그 값이 기록됩니다. 이전 `rollDuration` 값은 Scene 파일에 남아 있어도 사용하지 않습니다.
 
 초기 보유 주사위는 `TemporaryDiceConfiguration`의 Dice와 각 Faces에서 조정합니다. 기본은 `D6 (보조)`, `D6`, `D8`입니다. `Tools > TxT RPG > Application > Temporary > Apply Player Dice Roll Menu`의 구성 생성 경로는 바뀌지 않은 이전 기본 D4 항목만 같은 위치의 `D6 (보조)`로 교체합니다. 실행 중 변경은 `PlayerSessionHost.TemporaryDice.TryAdd(instanceId, definitionId, displayName, faces, minimumValue, maximumValue, out reason)`와 `TryRemove(instanceId)`를 사용합니다. 같은 형태를 여러 개 보유하려면 서로 다른 인스턴스 ID와 같은 정의 ID를 전달합니다.
 
@@ -924,3 +950,22 @@ UnitySkills는 `Window > UnitySkills`에서 포트와 서버 상태를 확인하
 4. Edit Mode의 `TxTRPG.Application.Tests.OwnedDiceIntegrationTests`(형태 데이터, 모든 (L, D) 보정, 정사면체 거부, 구도, 화면 밖 출발·공통 아래쪽 회수 위치, 가장 가까운 가장자리 선택과 동률 순서, 방향별 회수 목표(화면 비율·주사위 수·카메라 기울기별), 회수 경로 겹침 재배정과 대체, 정지 겹침 기준, `throwDelay`를 포함한 시간 제한 계산, 재생, 구성 교체)와 `TemporaryPlayerDiceStateTests`를 실행합니다. `Assets/TxTRPG/UI/Tests/PlayMode/DiceThrowSimulationPlayModeTests.cs`는 실제 격리 물리 경로를 검사하는 Play Mode 테스트입니다. 현재 Editor Play 시작 정책(`Project/TxT RPG/Play Mode Start`)이 AppScene을 Play 시작 Scene으로 지정하면 Test Runner의 Play Mode 실행이 시작 Scene 교체로 멈출 수 있으므로, 이 경우 위 메뉴 검증 결과를 사용합니다.
 
 실제 휴대폰·태블릿의 Safe Area와 터치, 컨트롤러, 대상 Player 빌드, 모바일 시뮬레이션 계산 시간과 지속 성능은 별도 장치 검증이 필요합니다.
+
+## Story·주사위 패널 위치 교체 후속 정리
+
+사용자가 `TMP_MainScene`에서 `StoryTextPanel`(→ `LeftPanel`, `NodeTreePanel` 아래)과 `OwnedDicePanel`(→ `MiddlePanel`, `EnemyDisplayPanelDemo` 아래)의 위치를 바꾸고 상위 패널 이름을 `LeftPanel`·`MiddlePanel`·`RightPanel`로 바꾼 뒤의 후속 정리입니다. 지침은 [main-scene-story-dice-panel-swap.md](../instructions/main-scene-story-dice-panel-swap.md)입니다. 운영 Scene에는 이미 적용·저장되어 있으므로 이 작업 사본에서 다시 실행할 필요는 없습니다.
+
+| 메뉴 | 내용 | 저장 | 재실행 |
+| --- | --- | --- | --- |
+| `Tools > TxT RPG > Application > Temporary > Apply Combat Action Boundary Button` | 행동 버튼의 두 번째 패널을 `OwnedDicePanel`로 바꾸고, 행동 버튼(아래 → `ResultsButton`)과 `ResultsButton`(위 → 행동 버튼, 오른쪽 → System) 탐색을 설정합니다. | 자동 저장 | 안전(변경 없음) |
+| `Tools > TxT RPG > Application > Temporary > Apply Story Dice Panel Swap Settings` | `StoryTextPanel` 인스턴스의 너비 기반 글자 크기(켜짐, 기준 942, 최소 18/14), `ExplorationNodePanel`의 `CoveredPanelInteractionBlocker`와 두 패널의 `CanvasGroup`, `ResponsiveMainScreen.narrowHeights` [760, 520, 640]을 설정합니다. | 자동 저장 | 안전(같은 값) |
+| `Tools > TxT RPG > Application > Temporary > Measure Story Dice Panel Swap Layout (Play Mode)` | 1920×1080, 울트라와이드, 좁은 데스크톱, 태블릿, 휴대폰 세로·가로 가상 Viewport에서 Story 본문 너비·높이·적용 글자 크기·표시 줄 수 추정, 트리·적·주사위 패널 크기를 `STORY_DICE_SWAP_MEASURE`로 기록합니다. | Play 상태만 변경 | 안전 |
+| `Tools > TxT RPG > Application > Temporary > Validate Story Dice Panel Swap (Play Mode)` | 새 탐험의 노드 선택 중 가려진 적·주사위 패널에 탐색이 닿지 않는지, 선택 후 복원되는지, Story 글자 크기 범위(18~24)·기존 메시지 적용·최신 메시지 따라가기·위로 스크롤한 위치 유지를 검사하고 `STORY_DICE_SWAP_VALIDATE ... PASS`를 기록합니다. | Play 상태만 변경 | 새 Play 세션에서 실행 |
+
+Apply 메뉴는 Play Mode를 종료하고 저장된 `TMP_MainScene`을 미저장 변경 없이 연 상태에서 실행합니다. Story 글자 크기는 `StoryTextPanel` Inspector의 `Width-Based Text Size`에서 바꿉니다([StoryTextPanel 설계](../architecture/story-text-panel.md#너비-기반-글자-크기)). 검증 순서는 `Validate Owned Dice Scene` → `Validate Tree Panel`(Edit Mode) → AppScene에서 Play → `Validate Story Dice Panel Swap (Play Mode)` → 새 Play 세션에서 `Validate Combat Action Button (Play Mode)` → 새 Play 세션에서 `Validate Play Flow` → `Validate Throw Presentation`입니다. 임시 메뉴 파일 `Assets/TxTRPG/Application/Editor/TemporaryStoryDicePanelSwap.cs`는 모든 작업 사본에 적용한 뒤 삭제할 수 있습니다.
+
+알려진 제약(2026-10-10 측정):
+
+- 휴대폰 가로(844×390)는 너비가 좁은 화면 기준 720 이상이라 넓은 배치를 쓰며, `LeftPanel` 높이 366에서 `NodeTreePanel` 최소 360 때문에 Story 높이가 0이 됩니다. 사용자가 정한 Weight·최소 크기와 좁은 화면 기준을 바꾸는 결정이 필요해 이번 작업에서는 고치지 않았습니다.
+- 태블릿 세로(768×1024)와 좁은 데스크톱(1024×640)에서는 Story 본문 너비가 약 145와 202라 최소 글자 크기 18에서도 줄바꿈이 많습니다. 태블릿에서는 행동 버튼이 `ResultsButton`과 겹칩니다.
+- `TemporaryExplorationTreeIntegration`의 `Apply Tree Panel`이 쓰는 `ContentLayer/NodeTreePanel` 경로는 위치 교체 이전부터 현재 구조와 맞지 않으며 이번 범위에서 고치지 않았습니다.

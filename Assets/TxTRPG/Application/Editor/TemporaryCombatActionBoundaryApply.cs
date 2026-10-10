@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using TxTRPG.Application.Dice;
 using TxTRPG.UI;
+using TxTRPG.UI.Dice;
 using TxTRPG.UI.Windows;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -30,14 +31,15 @@ namespace TxTRPG.Application.Editor
             {
                 var components = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<Component>(true)).ToArray();
                 var menu = components.OfType<GameMenuPanel>().Single();
-                var story = components.OfType<StoryTextPanel>().Single();
+                var dicePanel = components.OfType<OwnedDicePanel>().SingleOrDefault()
+                    ?? throw new InvalidOperationException("TMP_MainScene has no OwnedDicePanel; apply owned dice first.");
                 var enemyPanel = components.OfType<EnemyDisplayPanel>().Single();
                 var combat = components.OfType<TemporaryDiceRollMenuController>().Single();
                 TemporaryDiceMenuBuilder.RemoveLegacyMenuActionButton(menu);
-                var boundary = TemporaryDiceMenuBuilder.EnsureBoundaryActionButton(menu, story, enemyPanel, combat);
+                var boundary = TemporaryDiceMenuBuilder.EnsureBoundaryActionButton(menu, dicePanel, enemyPanel, combat);
                 EditorSceneManager.MarkSceneDirty(scene);
                 if (!EditorSceneManager.SaveScene(scene)) throw new InvalidOperationException("Could not save TMP_MainScene.");
-                Debug.Log($"COMBAT_ACTION_BOUNDARY_APPLY: {boundary.name} is on the EnemyDisplayPanel/StoryTextPanel boundary; the menu action button and binding are removed. Scene saved. Safe to rerun.");
+                Debug.Log($"COMBAT_ACTION_BOUNDARY_APPLY: {boundary.name} is on the EnemyDisplayPanel/OwnedDicePanel boundary in {boundary.transform.parent.parent.name}; the menu action button and binding are removed. Scene saved. Safe to rerun.");
             }
             finally { if (opened) EditorSceneManager.CloseScene(scene, true); }
         }

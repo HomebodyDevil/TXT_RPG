@@ -182,7 +182,10 @@ flowchart LR
 | `Separator Width`, `Separator Height` | 구분선 Visual의 크기를 Canvas 기준 단위로 설정합니다. |
 | `Speaker Font Size` | 발화자 이름의 글자 크기를 Canvas 기준 단위로 설정합니다. |
 | `Speaker Color` | 발화자 이름의 색상과 투명도를 설정합니다. |
-| `Body Font Size` | 메시지 본문의 글자 크기를 Canvas 기준 단위로 설정합니다. |
+| `Body Font Size` | 메시지 본문의 글자 크기를 Canvas 기준 단위로 설정합니다. 너비 기반 글자 크기를 켜면 최대값으로 사용합니다. |
+| `Scale Text With Width` | 본문 영역이 기준 너비보다 좁을 때 본문·발화자 글자 크기를 비율로 줄입니다. 기본값은 꺼짐이며 TMP_MainScene 인스턴스에서만 켭니다. |
+| `Text Scale Reference Width` | 설정한 글자 크기를 그대로 쓰는 본문 영역 너비입니다. 기본값 942입니다. |
+| `Minimum Speaker Font Size`, `Minimum Body Font Size` | 너비가 좁아져도 내려가지 않는 최소 글자 크기입니다. 기본값은 14와 18입니다. |
 | `Speaker Body Spacing` | 발화자 이름과 본문 사이의 세로 간격을 설정합니다. 발화자가 없는 메시지에는 적용하지 않습니다. |
 | `Message Spacing` | 하나의 발화자·본문 메시지 묶음과 다음 메시지 묶음 사이의 기본 간격을 설정합니다. |
 | `Separator Spacing Above`, `Separator Spacing Below` | 구분선 이미지의 위쪽과 아래쪽 여백을 각각 설정합니다. |
@@ -191,6 +194,23 @@ flowchart LR
 | `Background Renderer` | 기본 Style, 배경 교차 페이드, Addressables 수명과 배경 전용 Effect를 담당하는 공통 컴포넌트 참조입니다. |
 
 배경 노이즈·모자이크·글리치는 `BackgroundEffectOverlay`, 텍스트보다 앞에 표시할 효과는 `ForegroundEffectLayer`, 패널 전체 등장·퇴장은 `TransitionOverlay`에 적용합니다. 글자별 효과는 이 계층이 아니라 `StoryMessageItem` 또는 별도 TMP 효과 시스템에서 처리합니다.
+
+## 너비 기반 글자 크기
+
+`StoryTextPanel`이 좁은 영역에 놓일 때 글자와 고정 너비 요소가 넘치지 않도록, 실제 본문 영역 너비로 크기를 정합니다. 본문 영역 너비는 `Content` 너비(스크롤바 폭과 간격을 이미 뺀 `Viewport`를 따라 늘어남)에서 `Content` LayoutGroup의 좌우 여백을 뺀 값입니다.
+
+| 조건 | 결과 |
+| --- | --- |
+| `Scale Text With Width` 꺼짐 | 기존처럼 `Speaker Font Size`, `Body Font Size`를 그대로 사용합니다. 기존 Scene·Prefab의 직렬화 값은 의미가 바뀌지 않습니다. |
+| 본문 영역 너비 ≥ 기준 너비 | 설정한 크기를 그대로 사용합니다. 넓은 화면에서 글자를 키우지 않습니다. |
+| 본문 영역 너비 < 기준 너비 | `설정 크기 × 너비 / 기준 너비`로 줄이되 최소 크기 아래로 내려가지 않습니다(`CalculateWidthScaledFontSize`). |
+| 구분선 | 옵션과 무관하게 `Separator Width`와 본문 영역 너비 중 작은 값으로 그립니다(`CalculateSeparatorWidth`). |
+
+계산 결과는 `EffectiveSpeakerFontSize`, `EffectiveBodyFontSize`, `EffectiveSeparatorWidth`로 확인할 수 있습니다. 크기 변경 콜백은 지금처럼 갱신 요청만 기록하고, `LateUpdate`의 지연 갱신에서 크기를 다시 계산합니다. 크기가 실제로 바뀐 경우에만 이미 표시된 메시지에 적용하고 레이아웃을 다시 계산하며, 변경 전 스크롤 정규화 위치(최신 메시지 따라가기의 아래쪽 위치 포함)를 복원합니다. 매 프레임 할당은 만들지 않습니다.
+
+접근성 글자 배율은 `TextSizeMultiplier`(기본 1, 최소 0.1)에 연결합니다. 이 배율은 너비 계산 뒤에 곱하므로 1보다 크면 설정 크기보다 커질 수 있습니다. 배율 설정 UI는 아직 없습니다. 글자 크기 조절은 레이아웃 크기만 바꾸며 `BackgroundEffectOverlay`, `ForegroundEffectLayer`, `TransitionOverlay`와 메시지별 TMP 효과 구조는 바꾸지 않습니다.
+
+TMP_MainScene 인스턴스는 옵션을 켜고 기준 너비 942, 최소 18/14를 사용합니다. 기준 너비는 위치 교체 전 Story가 있던 가운데 열(`MiddlePanel`)의 1920×1080 본문 너비입니다. 같은 열의 `OwnedDicePanel` 너비 968.2에서 스크롤바 18과 간격 8을 뺀 값입니다. 교체 후 Story 본문 영역은 1920×1080에서 약 401, 울트라와이드(2560×1080)에서 약 543, 휴대폰 세로(390×844)에서 330, 태블릿(768×1024)에서 약 145입니다. 따라서 측정한 모든 화면에서 최소 크기(본문 18, 발화자 14)가 적용됩니다. 18은 약 401 너비에서 한 줄에 한글 약 20자를 유지하는 가독성 하한으로 정했습니다. 태블릿 세로와 좁은 데스크톱(1024×640, 본문 약 202)에서는 한 줄 글자 수가 적어 줄바꿈이 많습니다. Prefab 기본값은 꺼짐이므로 `MainScene_VisualProposal.unity`와 `StoryTextPanelDemo.prefab`의 표시에는 영향이 없습니다. 구분선 너비 맞춤은 모든 인스턴스에 적용되지만 본문 영역이 360보다 넓으면 결과가 같습니다.
 
 ## 데모와 Edit Mode 미리보기
 

@@ -9,6 +9,7 @@ using TxTRPG.Application.Exploration;
 using TxTRPG.Application.Players;
 using TxTRPG.Gameplay.Exploration;
 using TxTRPG.UI;
+using TxTRPG.UI.Dice;
 using TxTRPG.UI.Shapes;
 using TxTRPG.UI.Windows;
 using UnityEditor;
@@ -48,7 +49,10 @@ namespace TxTRPG.Application.Editor
                 var menu = UnityEngine.Object.FindAnyObjectByType<GameMenuPanel>();
                 var screen = UnityEngine.Object.FindAnyObjectByType<ResponsiveMainScreen>();
                 var placement = action.Placement;
-                var textPanel = (RectTransform)action.transform.parent.parent;
+                // The layout panel that owns the button (MiddlePanel in TMP_MainScene), found by component rather than by name.
+                var layoutPanel = (RectTransform)(action.transform.parent.GetComponentInParent<FlexibleLayoutPanel>(true)?.transform ?? throw new InvalidOperationException("The action button is not inside a FlexibleLayoutPanel."));
+                Require(placement.FirstPanel != null && placement.SecondPanel != null && placement.FirstPanel.parent == action.transform.parent && placement.SecondPanel.parent == action.transform.parent, "both boundary panels share the button ContentLayer");
+                Require(placement.FirstPanel.GetComponentInChildren<EnemyDisplayPanel>(true) != null && placement.SecondPanel.GetComponent<OwnedDicePanel>() != null, "boundary panels are EnemyDisplayPanel (first) and OwnedDicePanel (second)");
                 if (run.Run == null || run.Run.Phase != ExplorationPhase.AwaitingChoice) throw new InvalidOperationException("Validation requires a fresh awaiting-choice exploration run.");
 
                 Require(!action.IsShown, "hidden while choosing a node");
@@ -58,7 +62,7 @@ namespace TxTRPG.Application.Editor
                 StartCombat(run);
                 await Frames(2);
                 Require(action.IsShown && action.IsInteractable, $"shown and enabled in combat ({action.UnavailableReason})");
-                CheckCentered(action, placement, textPanel, "wide", log);
+                CheckCentered(action, placement, layoutPanel, "wide", log);
                 await CheckLayoutInvariance(action, placement, log);
 
                 var viewport = screen.PageScroll.viewport;
@@ -70,7 +74,7 @@ namespace TxTRPG.Application.Editor
                         viewport.anchorMin = viewport.anchorMax = new Vector2(.5f, .5f);
                         viewport.sizeDelta = size; viewport.anchoredPosition = Vector2.zero;
                         await Task.Delay(150);
-                        CheckCentered(action, placement, textPanel, name, log);
+                        CheckCentered(action, placement, layoutPanel, name, log);
                         if (name == "phone portrait") await CheckNarrowReveal(action, screen, log);
                     }
                 }
@@ -80,7 +84,7 @@ namespace TxTRPG.Application.Editor
                     viewport.sizeDelta = saved.sizeDelta; viewport.anchoredPosition = saved.anchoredPosition;
                     await Task.Delay(150);
                 }
-                CheckCentered(action, placement, textPanel, "wide restored", log);
+                CheckCentered(action, placement, layoutPanel, "wide restored", log);
 
                 CheckShapesAndHitArea(action, log);
                 await CheckEffects(action, log);
@@ -189,7 +193,7 @@ namespace TxTRPG.Application.Editor
             select.Invoke(controller, new object[] { run.CurrentChoiceSetId, choice.Id });
         }
 
-        private static void CheckCentered(BoundaryCommandButton action, PanelBoundaryPlacement placement, RectTransform textPanel, string label, StringBuilder log)
+        private static void CheckCentered(BoundaryCommandButton action, PanelBoundaryPlacement placement, RectTransform layoutPanel, string label, StringBuilder log)
         {
             Canvas.ForceUpdateCanvases();
             placement.UpdatePlacement();
@@ -199,18 +203,21 @@ namespace TxTRPG.Application.Editor
             var second = LocalRect(container, placement.SecondPanel);
             Require(PanelBoundaryCalculator.TryCalculate(first, second, out var expected, out var orientation), $"{label}: boundary calculation");
             var button = LocalRect(container, (RectTransform)action.Button.transform);
-            var bounds = LocalRect(container, textPanel);
+            var bounds = LocalRect(container, layoutPanel);
             var clamped = PanelBoundaryCalculator.ClampInside(expected, button.size, container.rect);
             Require(Vector2.Distance(button.center, clamped) < .6f, $"{label}: button center {button.center} vs boundary {expected} (clamped {clamped})");
             Require(bounds.xMin - .5f <= button.xMin && button.xMax <= bounds.xMax + .5f && bounds.yMin - .5f <= button.yMin && button.yMax <= bounds.yMax + .5f,
-                $"{label}: button {button} stays inside Text_FlexibleLayoutPanel {bounds}");
-            log.AppendLine($" {label}: orientation={orientation} boundary={expected} button={button.center} size={button.size} text={bounds.size} clampedShift={(clamped - expected).magnitude:0.##}");
+                $"{label}: button {button} stays inside {layoutPanel.name} {bounds}");
+            // Covering the dice view top and Title is accepted; overlap with ResultsButton is only reported.
+            var results = placement.SecondPanel.GetComponent<OwnedDicePanel>()?.ResultsButton;
+            var resultsOverlap = results != null && results.gameObject.activeInHierarchy && LocalRect(container, (RectTransform)results.transform).Overlaps(button);
+            log.AppendLine($" {label}: orientation={orientation} boundary={expected} button={button.center} size={button.size} panel={bounds.size} clampedShift={(clamped - expected).magnitude:0.##} resultsButtonOverlap={resultsOverlap}");
         }
 
         private static async Task CheckLayoutInvariance(BoundaryCommandButton action, PanelBoundaryPlacement placement, StringBuilder log)
         {
-            var text = (RectTransform)action.transform.parent.parent;
-            string Snapshot() => string.Join("|", new[] { placement.FirstPanel, placement.SecondPanel, text }.Select(rect => $"{rect.rect}@{rect.position}"));
+            var layoutPanel = (RectTransform)action.transform.parent.GetComponentInParent<FlexibleLayoutPanel>(true).transform;
+            string Snapshot() => string.Join("|", new[] { placement.FirstPanel, placement.SecondPanel, layoutPanel }.Select(rect => $"{rect.rect}@{rect.position}"));
             var with = Snapshot();
             action.gameObject.SetActive(false);
             await Frames(2);
@@ -219,7 +226,7 @@ namespace TxTRPG.Application.Editor
             await Frames(2);
             Require(with == without, $"panel rects do not depend on the button ({with} vs {without})");
             Require(action.IsShown, "shown again after re-enabling");
-            log.AppendLine(" layout invariance: Enemy/Story/Text rects identical with and without the button.");
+            log.AppendLine(" layout invariance: Enemy/Dice/layout panel rects identical with and without the button.");
         }
 
         private static async Task CheckNarrowReveal(BoundaryCommandButton action, ResponsiveMainScreen screen, StringBuilder log)
@@ -305,8 +312,13 @@ namespace TxTRPG.Application.Editor
         private static async Task CheckFocusRelease(BoundaryCommandButton action, GameMenuPanel menu, StringBuilder log)
         {
             var system = menu.Buttons.Single(item => item.PageId == GamePageIds.System).Button;
-            Require(action.Button.navigation.mode == Navigation.Mode.Explicit && action.Button.navigation.selectOnRight == system &&
-                action.Button.navigation.selectOnDown == system, "explicit navigation Right/Down -> System");
+            var results = action.Placement.SecondPanel.GetComponent<OwnedDicePanel>()?.ResultsButton;
+            var navigation = action.Button.navigation;
+            Require(navigation.mode == Navigation.Mode.Explicit && navigation.selectOnRight == system &&
+                navigation.selectOnDown == results && results != null && navigation.selectOnUp == null && navigation.selectOnLeft == null,
+                "explicit navigation Right -> System, Down -> ResultsButton, Up/Left none");
+            Require(results.navigation.mode == Navigation.Mode.Explicit && results.FindSelectableOnUp() == action.Button && results.FindSelectableOnRight() == system,
+                $"ResultsButton Up -> action button, Right -> System (found {results.FindSelectableOnUp()?.name ?? "none"}/{results.FindSelectableOnRight()?.name ?? "none"})");
             EventSystem.current.SetSelectedGameObject(action.Button.gameObject);
             action.SetAvailable(false);
             await Frames(1);
@@ -315,7 +327,7 @@ namespace TxTRPG.Application.Editor
             await Frames(1);
             Require(action.IsShown && action.IsInteractable, "restored after the focus check");
             EventSystem.current.SetSelectedGameObject(null);
-            log.AppendLine(" focus: explicit Right/Down -> System; hidden-while-focused clears the selection.");
+            log.AppendLine(" focus: explicit Right -> System, Down -> ResultsButton, ResultsButton Up -> action / Right -> System; hidden-while-focused clears the selection.");
         }
 
         private static Rect LocalRect(RectTransform space, RectTransform rect)

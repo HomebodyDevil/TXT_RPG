@@ -6,6 +6,7 @@ using TxTRPG.Application.Dice;
 using TxTRPG.Application.Exploration;
 using TxTRPG.Application.Players;
 using TxTRPG.UI;
+using TxTRPG.UI.Dice;
 using TxTRPG.UI.Editor;
 using TxTRPG.UI.Exploration;
 using TxTRPG.UI.Windows;
@@ -98,7 +99,11 @@ namespace TxTRPG.Application.Editor
                 var combat = menu.GetComponent<TemporaryDiceRollMenuController>() ?? menu.gameObject.AddComponent<TemporaryDiceRollMenuController>();
                 combat.ConfigureForEditor(menu, story, combatConfiguration, enemyPanel, playerHealth, enemyHealth, nextAction);
                 RemoveLegacyMenuActionButton(menu);
-                EnsureBoundaryActionButton(menu, story, enemyPanel, combat);
+                // The boundary button sits between the enemy panel and the owned dice panel. A Scene without the dice
+                // panel yet gets the button on the next run, after Apply Owned Dice To TMP Main Scene.
+                var dicePanel = components.OfType<OwnedDicePanel>().SingleOrDefault();
+                if (dicePanel != null) EnsureBoundaryActionButton(menu, dicePanel, enemyPanel, combat);
+                else Debug.LogWarning("TMP_MainScene has no OwnedDicePanel yet; the boundary action button was not configured. Rerun after applying owned dice.");
                 var ui = EnsureExplorationUi(menu.GetComponentInParent<Canvas>().transform);
                 var exploration = menu.GetComponent<ExplorationRunController>() ?? menu.gameObject.AddComponent<ExplorationRunController>();
                 exploration.ConfigureForEditor(explorationConfiguration, combat, story, ui.Root, ui.Status, ui.Buttons, ui.Labels, ui.Continue);
@@ -128,12 +133,13 @@ namespace TxTRPG.Application.Editor
             return changed;
         }
 
-        // Finds or creates the boundary action button over EnemyDisplayPanel/StoryTextPanel. Structural references are
-        // refreshed on every run; shape, Sprite, effect, and navigation edits on an existing button are preserved.
-        public static BoundaryCommandButton EnsureBoundaryActionButton(GameMenuPanel menu, StoryTextPanel story, EnemyDisplayPanel enemyPanel, TemporaryDiceRollMenuController combat)
+        // Finds or creates the boundary action button over EnemyDisplayPanel/OwnedDicePanel. Structural references are
+        // refreshed on every run (including a second panel that still points at an older panel such as StoryTextPanel);
+        // shape, Sprite, effect, and custom navigation edits on an existing button are preserved.
+        public static BoundaryCommandButton EnsureBoundaryActionButton(GameMenuPanel menu, OwnedDicePanel dicePanel, EnemyDisplayPanel enemyPanel, TemporaryDiceRollMenuController combat)
         {
-            var content = story.transform.parent ?? throw new InvalidOperationException("StoryTextPanel has no parent ContentLayer.");
-            var first = DirectChildOf(content, enemyPanel.transform) ?? throw new InvalidOperationException("EnemyDisplayPanel and StoryTextPanel do not share the Text panel ContentLayer.");
+            var content = dicePanel.transform.parent ?? throw new InvalidOperationException("OwnedDicePanel has no parent ContentLayer.");
+            var first = DirectChildOf(content, enemyPanel.transform) ?? throw new InvalidOperationException("EnemyDisplayPanel and OwnedDicePanel must be in the same layout panel ContentLayer.");
             var existing = content.Find(BoundaryButtonName);
             var created = existing == null;
             if (created)
@@ -152,21 +158,34 @@ namespace TxTRPG.Application.Editor
             layoutElement.ignoreLayout = true;
             if (existing.GetComponent<FlexibleLayoutItem>() != null) throw new InvalidOperationException($"{BoundaryButtonName} must not have a FlexibleLayoutItem.");
             var system = menu.Buttons.FirstOrDefault(binding => binding != null && binding.PageId == "system")?.Button;
-            placement.ConfigureForEditor((RectTransform)first, (RectTransform)story.transform, (RectTransform)buttonRoot.transform);
+            placement.ConfigureForEditor((RectTransform)first, (RectTransform)dicePanel.transform, (RectTransform)buttonRoot.transform);
             // No focus fallback: when the button hides while focused, focus is cleared so the exploration screen keeps its
             // "no initial selection" rule (the first Navigate input enters the node cards).
             boundary.ConfigureForEditor(placement, buttonRoot, boundary.Button, boundary.ShapedView, combat, TemporaryDiceRollMenuController.RollAllCommandId, null);
             if (menuView.Label != null && (string.IsNullOrWhiteSpace(menuView.Label.text) || menuView.Label.text == "Action")) menuView.SetLabel("행동");
             TemporaryMenuIconUtility.ApplyDefault(menuView, "action");
-            // Explicit navigation: Right/Down -> System. The menu buttons keep Automatic navigation.
+            // Explicit navigation: Right -> System, Down -> the dice panel's ResultsButton directly below the boundary.
+            // Up/Left stay empty (the enemy panel above has no selectables). ResultsButton gets the matching return path
+            // (Up -> this button, Right -> System) because Automatic navigation picks a closer control in the left column.
+            // The menu buttons keep Automatic navigation. The previous default (Down -> System) and an Automatic
+            // ResultsButton are upgraded; any other custom explicit navigation is preserved.
             var navigation = boundary.Button.navigation;
-            if (navigation.mode != Navigation.Mode.Explicit || navigation.selectOnRight == null && navigation.selectOnDown == null)
+            var resultsButton = dicePanel.ResultsButton;
+            var isUnset = navigation.mode != Navigation.Mode.Explicit || navigation.selectOnRight == null && navigation.selectOnDown == null;
+            var isPreviousDefault = navigation.mode == Navigation.Mode.Explicit && navigation.selectOnDown == system && navigation.selectOnUp == null && navigation.selectOnLeft == null;
+            if (isUnset || isPreviousDefault && resultsButton != null)
             {
-                navigation.mode = Navigation.Mode.Explicit; navigation.selectOnRight = system; navigation.selectOnDown = system;
+                navigation.mode = Navigation.Mode.Explicit; navigation.selectOnRight = system; navigation.selectOnDown = resultsButton != null ? resultsButton : system;
+                navigation.selectOnUp = null; navigation.selectOnLeft = null;
                 boundary.Button.navigation = navigation;
             }
+            if (resultsButton != null && resultsButton.navigation.mode == Navigation.Mode.Automatic)
+            {
+                // Up returns to the action button, which is shown whenever ResultsButton is reachable (combat).
+                resultsButton.navigation = new Navigation { mode = Navigation.Mode.Explicit, selectOnUp = boundary.Button, selectOnRight = system };
+            }
             combat.ConfigureActionButtonForEditor(boundary);
-            foreach (var target in new UnityEngine.Object[] { boundary, placement, layoutElement, boundary.Button, menuView, menuView.Label, existing, combat })
+            foreach (var target in new UnityEngine.Object[] { boundary, placement, layoutElement, boundary.Button, resultsButton, menuView, menuView.Label, existing, combat })
             { if (target == null) continue; EditorUtility.SetDirty(target); RecordInstance(target); }
             return boundary;
         }
@@ -187,7 +206,7 @@ namespace TxTRPG.Application.Editor
 
         private static ExplorationUi EnsureExplorationUi(Transform parent)
         {
-            // The panel may have been moved into a layout panel (Text_FlexibleLayoutPanel/ContentLayer); keep that placement.
+            // The panel may have been moved into a layout panel (MiddlePanel/ContentLayer); keep that placement.
             var existing = parent.Find(ExplorationPanelName) ?? parent.GetComponentsInChildren<Transform>(true).FirstOrDefault(item => item.name == ExplorationPanelName);
             if (existing != null)
             {

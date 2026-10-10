@@ -129,14 +129,14 @@ FlexibleLayoutPanelDemo
 
 ## 레이아웃에 참여하지 않는 경계선 오버레이
 
-두 형제 패널의 경계선 위에 겹쳐 놓는 요소는 `ContentLayer`의 Area가 아니라 오버레이로 둡니다. `FlexibleContentLayoutGroup`은 직계 자식 중 `LayoutElement.ignoreLayout`이 꺼진 항목만 배분하므로, 오버레이는 다음 규칙을 따릅니다. TMP_MainScene의 `Text_FlexibleLayoutPanel/ContentLayer/CombatActionBoundary`(전투 "행동" 버튼)가 현재 적용 예이며, 같은 방식의 선례는 `ExplorationNodePanel`입니다.
+두 형제 패널의 경계선 위에 겹쳐 놓는 요소는 `ContentLayer`의 Area가 아니라 오버레이로 둡니다. `FlexibleContentLayoutGroup`은 직계 자식 중 `LayoutElement.ignoreLayout`이 꺼진 항목만 배분하므로, 오버레이는 다음 규칙을 따릅니다. TMP_MainScene의 `MiddlePanel/ContentLayer/CombatActionBoundary`(전투 "행동" 버튼, `EnemyDisplayPanelDemo`와 `OwnedDicePanel`의 경계)가 현재 적용 예이며, 같은 방식의 선례는 `ExplorationNodePanel`입니다.
 
 - `ContentLayer`의 마지막 형제로 두어 두 패널보다 뒤에(위에) 그립니다. Stretch 앵커와 `LayoutElement.ignoreLayout = true`를 사용하고 `FlexibleLayoutItem`은 붙이지 않습니다. 따라서 패널의 크기·위치·Weight는 오버레이 유무와 무관합니다.
 - 위치는 `PanelBoundaryPlacement`가 계산합니다. 두 패널의 `RectTransform`을 직렬화 참조로 받아 실제 Rect를 오버레이 컨테이너 좌표로 바꾸고, `PanelBoundaryCalculator.TryCalculate`로 경계 중간선의 가운데를 구합니다. Spacing이 0이면 맞닿은 선, 양수이면 간격의 가운데이며, 가로 위치는 두 패널이 겹치는 범위의 가운데입니다. 패널이 좌우로 배치되면 세로 경계선을 같은 규칙으로 계산합니다. 한쪽이 비활성이거나 크기가 0이거나 두 패널이 겹치면 경계가 없다고 판단합니다.
-- 대상은 컨테이너(Text 패널 영역) 안에 들어오도록 `ClampInside`로 보정합니다. 대상의 앵커·`anchoredPosition`은 `DrivenRectTransformTracker`로 구동하므로 Scene·Prefab 변경으로 저장되지 않습니다.
+- 대상은 컨테이너(버튼이 속한 레이아웃 패널 영역) 안에 들어오도록 `ClampInside`로 보정합니다. 대상의 앵커·`anchoredPosition`은 `DrivenRectTransformTracker`로 구동하므로 Scene·Prefab 변경으로 저장되지 않습니다.
 - 계산은 `Canvas.willRenderCanvases`에서 실행합니다. 레이아웃 재배치 직후, 같은 프레임 렌더링 전에 적용되므로 한 프레임 늦게 따라가지 않습니다. 매 프레임 두 패널의 모서리만 비교하고 할당은 만들지 않으며, 입력값(패널 Rect·활성 상태, 컨테이너 Rect, 대상 크기)이 바뀐 경우에만 위치를 다시 씁니다. 화면 크기·안전 영역 변경, `ResponsiveMainScreen`의 넓은·좁은 화면 전환, Weight·Spacing 변경, 패널 활성 상태 변경이 모두 이 비교로 감지됩니다.
 - 경계 유무가 바뀌면 `BoundaryChanged`를 발생시켜 소유자(예: `BoundaryCommandButton`)가 표시 여부를 정하게 합니다.
-- 현재 `Text_FlexibleLayoutPanel`의 `Clip Content`는 꺼져 있습니다. 오버레이는 `ContentLayer` 안에 있으므로 나중에 클리핑을 켜도 컨테이너 안으로 보정된 대상은 잘리지 않습니다.
+- 현재 `MiddlePanel`의 `Clip Content`는 꺼져 있습니다. 오버레이는 `ContentLayer` 안에 있으므로 나중에 클리핑을 켜도 컨테이너 안으로 보정된 대상은 잘리지 않습니다.
 
 ## 수명 주기와 제약
 

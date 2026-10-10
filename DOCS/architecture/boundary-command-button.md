@@ -1,6 +1,6 @@
 # 경계선 명령 버튼
 
-두 패널의 경계선 위에 겹쳐 놓이는 명령 버튼입니다. 현재 TMP_MainScene의 전투 "행동" 버튼(`Text_FlexibleLayoutPanel/ContentLayer/CombatActionBoundary`)이 유일한 사용처입니다. 전투 표시 조건과 포커스 규칙은 [임시 적 전투](temporary-combat.md#행동-버튼), 배치 계산은 [FlexibleLayoutPanel 설계](flexible-layout-panel.md#레이아웃에-참여하지-않는-경계선-오버레이)를 봅니다.
+두 패널의 경계선 위에 겹쳐 놓이는 명령 버튼입니다. 현재 TMP_MainScene의 전투 "행동" 버튼(`MiddlePanel/ContentLayer/CombatActionBoundary`)이 유일한 사용처이며, `EnemyDisplayPanelDemo`(위)와 `OwnedDicePanel`(아래)의 경계선 가운데에 놓입니다. 전투 표시 조건과 포커스 규칙은 [임시 적 전투](temporary-combat.md#행동-버튼), 배치 계산은 [FlexibleLayoutPanel 설계](flexible-layout-panel.md#레이아웃에-참여하지-않는-경계선-오버레이)를 봅니다.
 
 ## 구성 요소
 
@@ -32,7 +32,7 @@ CombatActionBoundary            Stretch, LayoutElement.ignoreLayout, PanelBounda
         └── EffectOverlay       전경 효과용 Graphic을 넣는 자리
 ```
 
-`CombatActionBoundary`는 `Assets/TxTRPG/UI/Prefabs/BoundaryCommandButton.prefab`의 인스턴스입니다. Scene 인스턴스는 두 패널 참조, 명령 핸들러(컨트롤러), 명령 ID `temporary-dice.roll-all`, 라벨 "행동", action 아이콘, 탐색 대상(System)만 Override로 가집니다. 재사용을 고려해 Prefab으로 두었고, Prefab은 없을 때만 `BoundaryCommandButtonPrefabUtility.EnsurePrefab`이 만들며 이후에는 개발자 소유 자산입니다(일괄 Rebuild 대상 아님, `ProjectPrefabRebuildExclusionProvider`에 `ui.boundary-command-button`으로 제외 사유 기록).
+`CombatActionBoundary`는 `Assets/TxTRPG/UI/Prefabs/BoundaryCommandButton.prefab`의 인스턴스입니다. Scene 인스턴스는 두 패널 참조(`firstPanel` = `EnemyDisplayPanelDemo`, `secondPanel` = `OwnedDicePanel`), 명령 핸들러(컨트롤러), 명령 ID `temporary-dice.roll-all`, 라벨 "행동", action 아이콘, 탐색 대상만 Override로 가집니다. 재사용을 고려해 Prefab으로 두었고, Prefab은 없을 때만 `BoundaryCommandButtonPrefabUtility.EnsurePrefab`이 만들며 이후에는 개발자 소유 자산입니다(일괄 Rebuild 대상 아님, `ProjectPrefabRebuildExclusionProvider`에 `ui.boundary-command-button`으로 제외 사유 기록).
 
 ## 기본값과 선택 이유
 
@@ -43,7 +43,7 @@ CombatActionBoundary            Stretch, LayoutElement.ignoreLayout, PanelBounda
 | 입력 영역 | 절차적 모드는 보이는 도형을 따름, 이미지 모드는 사각형 | 원 바깥 모서리를 눌러 실행되지 않게 했습니다. 이미지 모드는 알파 판정이 Read/Write 텍스처를 요구하므로 사각형을 기본으로 하고 `imageAlphaHitThreshold`로 선택합니다. 입력 영역은 `HitArea`가 맡으므로 효과가 `VisualRoot`를 움직여도 바뀌지 않습니다. |
 | 비활성 표시 | Button Color Tint + `VisualRoot` 불투명도 0.45 | 색만으로 상태를 전달하지 않도록 투명도를 함께 낮춥니다. |
 | 위치 계층 | `ContentLayer`의 마지막 형제 | `ExplorationNodePanel`과 같은 오버레이 방식이며 두 패널 위에 그려집니다. `ForegroundLayer`는 테두리 전용이라 사용하지 않았습니다. |
-| 가리는 정보 | 조정 없음 | 1920×1080과 휴대폰 세로(390×844) 실행 화면에서 버튼은 적 패널 아래쪽 빈 영역과 Story 패널 위쪽 빈 영역만 덮었습니다. HP 바와 다음 적 행동은 적 패널 위쪽, 적 그림은 가운데, Story 최신 문단은 아래쪽에 있어 가려지지 않았습니다. 휴대폰 가로, 태블릿, 좁은 데스크톱, 울트라와이드는 버튼 위치와 잘림 여부만 수치로 검증했습니다. Story 기록이 패널 위쪽까지 차면 위쪽에 보이는 오래된 줄의 가운데 일부가 가려질 것으로 예상하지만(실행 화면에서는 미확인) 최신 문단은 아래쪽이라 영향이 없습니다. |
+| 가리는 정보 | 조정 없음(겹침 허용) | 사용자 확정에 따라 버튼이 주사위 화면(`DiceViewport`) 위쪽 가운데와 `OwnedDicePanel/Title` 일부를 덮는 것을 허용합니다. 주사위 영역에 여백을 추가하지 않습니다. `Validate Combat Action Button (Play Mode)`의 측정에서 `ResultsButton`(오른쪽 위 120×44)과의 겹침은 1920×1080, 울트라와이드, 좁은 데스크톱, 휴대폰 세로·가로에서 없었고 태블릿(768×1024, 주사위 패널 너비 약 328)에서는 있었습니다. 알려진 제약: 주사위가 버튼 아래에 멈추면 결과 면 일부가 가려질 수 있습니다. 결과는 Story와 결과 창에서도 확인할 수 있으므로 주사위 연출과 구도는 바꾸지 않았습니다. 아래 문장은 Story 패널과 경계를 공유하던 이전 배치의 기록입니다. 1920×1080과 휴대폰 세로(390×844) 실행 화면에서 버튼은 적 패널 아래쪽 빈 영역과 Story 패널 위쪽 빈 영역만 덮었습니다. HP 바와 다음 적 행동은 적 패널 위쪽, 적 그림은 가운데, Story 최신 문단은 아래쪽에 있어 가려지지 않았습니다. 휴대폰 가로, 태블릿, 좁은 데스크톱, 울트라와이드는 버튼 위치와 잘림 여부만 수치로 검증했습니다. Story 기록이 패널 위쪽까지 차면 위쪽에 보이는 오래된 줄의 가운데 일부가 가려질 것으로 예상하지만(실행 화면에서는 미확인) 최신 문단은 아래쪽이라 영향이 없습니다. |
 
 ## 외형 설정
 
@@ -64,7 +64,19 @@ CombatActionBoundary            Stretch, LayoutElement.ignoreLayout, PanelBounda
 - Material 슬롯: `ShapedButtonView`의 `Background Material`, `Border Material`, `Icon Material`, `Effect Overlay Material`(EffectOverlay 아래 모든 Graphic)에 셰이더 Material을 지정합니다. 비워 두면 기본 UI Material입니다. 라벨은 TMP 글꼴 Material을 사용하므로 슬롯이 없습니다.
 - 런타임 속성 변경: `GetOrCreateEffectInstance(target)`가 뷰가 소유하는 인스턴스 Material을 만들어 적용합니다. 공유 Material 자산은 바꾸지 않습니다. `ResetEffects()`는 인스턴스를 파괴하고 슬롯 Material로 되돌리며, 버튼이 숨겨질 때와 `OnDisable`·`OnDestroy`에서도 호출되므로 다시 표시될 때 이전 효과 상태가 남지 않습니다. URP의 `MaterialPropertyBlock` 대신 uGUI Graphic의 Material 인스턴스 교체를 선택했습니다. 화면에 버튼이 하나뿐이라 SRP Batcher 영향이 작고 uGUI가 PropertyBlock을 지원하지 않기 때문입니다.
 - 움직이는 효과 끄기: `SetEffectsAllowed(false)`이면 `Effects Are Animated`가 켜진 동안 효과 Material을 기본 Material로 바꾸고 EffectOverlay의 Graphic을 숨깁니다(뷰가 숨긴 것만 다시 켭니다). `BoundaryCommandButton`은 System 페이지의 `카드 효과 사용`·`움직임 줄이기` 설정(`ExplorationCardPlayerPreferences.AllowsMotion`, `Changed` 이벤트)에 연결되어 있습니다. 품질 단계에서도 같은 메서드를 호출하면 되며, 효과가 꺼져도 버튼 사용과 상태 표시는 그대로입니다.
-- 테두리·외곽선·글로우가 차지할 여백: 기본 테두리는 내부 테두리라 크기를 늘리지 않습니다. 바깥으로 그리는 효과는 버튼이 Text 패널 영역 안으로 보정되므로 패널 테두리에서 잘리지 않지만, 두께만큼 `Root` 크기에 여유를 두는 것을 권장합니다.
+- 테두리·외곽선·글로우가 차지할 여백: 기본 테두리는 내부 테두리라 크기를 늘리지 않습니다. 바깥으로 그리는 효과는 버튼이 소속 레이아웃 패널(`MiddlePanel`) 영역 안으로 보정되므로 패널 테두리에서 잘리지 않지만, 두께만큼 `Root` 크기에 여유를 두는 것을 권장합니다.
+
+## 탐색 경로
+
+| 출발 | 방향 | 도착 | 비고 |
+| --- | --- | --- | --- |
+| 행동 버튼 | 오른쪽 | `GameMenuPanel`의 System 버튼 | 이전과 같습니다. |
+| 행동 버튼 | 아래 | `OwnedDicePanel/ResultsButton` | 버튼 바로 아래 패널입니다. 이전에는 System이었습니다. |
+| 행동 버튼 | 위·왼쪽 | 없음 | 위쪽 적 패널에는 선택 가능한 요소가 없습니다. |
+| `ResultsButton` | 위 | 행동 버튼 | Automatic 탐색은 왼쪽 열의 더 가까운 버튼을 골라 Explicit으로 바꿨습니다. `ResultsButton`은 전투 중에만 도달할 수 있고(노드 선택 중에는 [탐색 차단](exploration-history-tree.md)), 전투 중에는 행동 버튼이 표시됩니다. |
+| `ResultsButton` | 오른쪽 | System 버튼 | 행동 버튼과 같은 메뉴 왕복 경로입니다. |
+
+System 등 메뉴 버튼은 Automatic 탐색을 유지합니다. `TemporaryDiceMenuBuilder.EnsureBoundaryActionButton`은 탐색이 비어 있거나 이전 기본값(아래 → System)일 때, `ResultsButton`은 Automatic일 때만 위 경로를 설정하고 그 밖의 사용자 Explicit 설정은 보존합니다.
 
 ## 실패와 비가용 처리
 

@@ -114,7 +114,16 @@ namespace TxTRPG.Application.Editor
             if(scene.path!="Assets/Scenes/TMP_MainScene.unity")throw new InvalidOperationException("Open TMP_MainScene.");
             var controller=scene.GetRootGameObjects().SelectMany(r=>r.GetComponentsInChildren<ExplorationRunController>(true)).Single();
             var overlay=(GameObject)new SerializedObject(controller).FindProperty("panel").objectReferenceValue;
-            var center=FindMain(scene).Find("ContentLayer/Text_FlexibleLayoutPanel").GetComponent<FlexibleLayoutPanel>();
+            // Already applied (the overlay ignores layout inside a layout panel ContentLayer): keep the user's placement.
+            var currentPanel=overlay.transform.parent!=null?overlay.transform.parent.GetComponentInParent<FlexibleLayoutPanel>(true):null;
+            if(currentPanel!=null&&currentPanel.ContentRoot==overlay.transform.parent&&overlay.TryGetComponent<LayoutElement>(out var appliedLayout)&&appliedLayout.ignoreLayout)
+            {Debug.Log($"TREE_CHOICES: Already constrained to {currentPanel.name}; nothing changed.");return;}
+            // The center column is found by structure (the main column that holds the enemy panel), not by its name.
+            var main=FindMain(scene).GetComponent<FlexibleLayoutPanel>();
+            var enemy=scene.GetRootGameObjects().SelectMany(r=>r.GetComponentsInChildren<EnemyDisplayPanel>(true)).Single();
+            Transform column=null;for(var current=enemy.transform;current!=null;current=current.parent)if(current.parent==main.ContentRoot){column=current;break;}
+            var center=column!=null?column.GetComponent<FlexibleLayoutPanel>():null;
+            if(center==null)throw new InvalidOperationException("The main column that holds EnemyDisplayPanel is not a FlexibleLayoutPanel.");
             Undo.SetTransformParent(overlay.transform,center.ContentRoot,"Constrain choices to center");
             var ignored=overlay.GetComponent<LayoutElement>()??Undo.AddComponent<LayoutElement>(overlay);Undo.RecordObject(ignored,"Exclude overlay from allocation");ignored.ignoreLayout=true;
             var rect=(RectTransform)overlay.transform;Undo.RecordObject(rect,"Fit choices to center");Stretch(rect);rect.localScale=Vector3.one;rect.SetAsLastSibling();
@@ -141,7 +150,8 @@ namespace TxTRPG.Application.Editor
             var viewport=Rect("MainScreenViewport",parent);Undo.RegisterCreatedObjectUndo(viewport.gameObject,"Add responsive page viewport");Stretch(viewport);viewport.SetSiblingIndex(sibling);viewport.gameObject.AddComponent<RectMask2D>();viewport.gameObject.AddComponent<Image>().color=Color.clear;
             var scroll=viewport.gameObject.AddComponent<ScrollRect>();scroll.viewport=viewport;scroll.content=rect;scroll.horizontal=scroll.vertical=false;scroll.movementType=ScrollRect.MovementType.Clamped;scroll.scrollSensitivity=40;
             Undo.SetTransformParent(rect,viewport,"Wrap existing main panel");rect.anchorMin=oldMin;rect.anchorMax=oldMax;rect.pivot=oldPivot;rect.anchoredPosition=oldPosition;rect.sizeDelta=oldSize;
-            var items=new[]{"NodeTreePanel","Text_FlexibleLayoutPanel","Character_FlexibleLayoutPanel"}.Select(name=>main.ContentRoot.Find(name).GetComponent<FlexibleLayoutItem>()).ToArray();
+            // The narrow page stacks the main columns in their current order; columns are found by component, not name.
+            var items=main.ContentRoot.Cast<Transform>().Where(child=>child.GetComponent<FlexibleLayoutPanel>()!=null).Select(child=>child.GetComponent<FlexibleLayoutItem>()).Where(item=>item!=null).ToArray();
             var cards=main.GetComponentInChildren<ExplorationNodeChoiceCardList>(true);var cardScroll=(ScrollRect)new SerializedObject(cards).FindProperty("scrollRect").objectReferenceValue;
             var targetMenu=main.GetComponentInChildren<GameMenuPanel>(true);
             viewport.gameObject.AddComponent<ResponsiveMainScreen>().Configure(scroll,main,items,cards,cardScroll,targetMenu,targetMenu.GetComponent<FlexibleLayoutItem>());

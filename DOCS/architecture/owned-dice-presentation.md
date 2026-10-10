@@ -1,6 +1,8 @@
 # 보유 주사위 3D 표시와 결과 기록
 
-`TMP_MainScene`의 `ExplorationAndDicePanel`은 기존 `NodeTreePanel`과 `OwnedDicePanel`을 세로로 배치합니다. 넓은 화면에서는 내부 항목의 가중치가 2:1이며, 좁은 화면에서는 부모의 최소 높이와 `ResponsiveMainScreen`의 전체 페이지 스크롤을 사용합니다. 탐험 트리 오브젝트와 `ExplorationRunController.treePanel` 참조는 유지됩니다.
+`OwnedDicePanel`은 `TMP_MainScene`의 가운데 열 `MiddlePanel/ContentLayer`에서 `EnemyDisplayPanelDemo`(Weight 2) 아래에 있습니다(`FlexibleLayoutItem` Weight 0.7, 최소 200). 사용자가 `StoryTextPanel`과 위치를 바꾸기 전에는 첫째 열(이전 이름 `ExplorationAndDicePanel`, 현재 `LeftPanel`)에서 `NodeTreePanel` 아래에 2:1로 있었습니다. 좁은 화면에서는 `ResponsiveMainScreen`이 `MiddlePanel`에 높이 520을 주며, 이때 주사위 패널은 약 332×274(390×844 기준)입니다. 넓어진 표시 영역은 `DiceArenaLayout`이 현재 비율로 다시 계산하고 RenderTexture는 `maximumTextureDimension`(1024) 상한을 따릅니다.
+
+노드 선택 중에는 `ExplorationNodePanel`이 `MiddlePanel` 전체를 덮으므로 주사위 패널도 가려집니다. `ExplorationNodePanel`의 `CoveredPanelInteractionBlocker`가 이 동안 `OwnedDicePanel`과 `EnemyDisplayPanelDemo`의 `CanvasGroup.interactable`을 꺼서 컨트롤러·키보드 탐색이 `ResultsButton`에 닿지 않게 하고, 노드 선택이 끝나면 원래 값으로 되돌립니다. 전투 "행동" 버튼은 적 패널과 주사위 패널의 경계선 위에 놓여 주사위 화면 위쪽 가운데와 `Title` 일부를 덮을 수 있습니다(사용자 허용). 주사위가 버튼 아래에 멈추면 결과 면 일부가 가려질 수 있으며, 결과는 Story와 결과 창에서도 확인할 수 있습니다.
 
 | 책임 | 구현 |
 | --- | --- |

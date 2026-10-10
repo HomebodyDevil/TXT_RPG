@@ -83,9 +83,12 @@ namespace TxTRPG.Application.Editor
         {
             var roots = scene.GetRootGameObjects();
             var main = FindNamed<FlexibleLayoutPanel>(roots, "Main_FlexibleLayoutPanel");
-            var text = FindNamed<FlexibleLayoutPanel>(roots, "Text_FlexibleLayoutPanel");
-            var character = FindNamed<FlexibleLayoutPanel>(roots, "Character_FlexibleLayoutPanel");
-            var placeholder = FindNamed<FlexibleLayoutPanel>(roots, "TMP_FlexibleLayoutPanel");
+            // Columns are found by the panel they hold, not by their names (TMP_MainScene renames them freely):
+            // the enemy column is the "text" column of the proposal, the character display column the "character" one.
+            var text = MainColumnOf(main, FindNamed<EnemyDisplayPanel>(roots, "EnemyDisplayPanel"));
+            var character = MainColumnOf(main, FindNamed<CharacterDisplayPanel>(roots, "CharacterDisplayPanel"));
+            var placeholder = roots.SelectMany(root => root.GetComponentsInChildren<FlexibleLayoutPanel>(true))
+                .FirstOrDefault(panel => panel.name == "TMP_FlexibleLayoutPanel");
 
             ConfigureLayout(main, FlexibleLayoutAxis.Horizontal,
                 FlexibleLayoutAxisPolicy.VerticalWhenNarrow, 920f, 24f,
@@ -98,7 +101,7 @@ namespace TxTRPG.Application.Editor
                 FlexibleLayoutAxisPolicy.Fixed, 720f, 14f,
                 new RectOffset(), TextAnchor.MiddleCenter);
 
-            placeholder.gameObject.SetActive(false);
+            if (placeholder != null) placeholder.gameObject.SetActive(false);
             ConfigureItem(text, 1.55f, 560f);
             ConfigureItem(character, 0.95f, 360f);
             ConfigureItem(FindNamed<StoryTextPanel>(roots, "StoryTextPanel"), 1.5f, 340f);
@@ -256,6 +259,20 @@ namespace TxTRPG.Application.Editor
             border.color = color;
             border.raycastTarget = false;
             EditorUtility.SetDirty(border);
+        }
+
+        private static FlexibleLayoutPanel MainColumnOf(FlexibleLayoutPanel main, Component content)
+        {
+            for (var current = content.transform; current != null; current = current.parent)
+            {
+                if (current.parent == main.ContentRoot)
+                {
+                    return current.GetComponent<FlexibleLayoutPanel>()
+                        ?? throw new InvalidOperationException($"The main column holding {content.name} is not a FlexibleLayoutPanel.");
+                }
+            }
+
+            throw new InvalidOperationException($"{content.name} is not inside {main.name}.");
         }
 
         private static T FindNamed<T>(GameObject[] roots, string name) where T : Component

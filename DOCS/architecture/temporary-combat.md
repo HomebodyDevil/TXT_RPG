@@ -20,7 +20,7 @@
 
 ## "행동" 버튼
 
-"행동" 버튼은 게임 메뉴가 아니라 `Text_FlexibleLayoutPanel/ContentLayer/CombatActionBoundary`(Prefab `Assets/TxTRPG/UI/Prefabs/BoundaryCommandButton.prefab`의 인스턴스)에 있으며, `EnemyDisplayPanelDemo`와 `StoryTextPanel` 사이 경계선 가운데에 겹쳐 놓입니다. 배치 방식은 [FlexibleLayoutPanel 설계](flexible-layout-panel.md#레이아웃에-참여하지-않는-경계선-오버레이), 외형과 효과 확장 지점은 [경계선 명령 버튼](boundary-command-button.md)에 정리했습니다. 게임 메뉴에는 System·Bag·Status만 남고 `temporary-dice.roll-all` 명령 바인딩은 없습니다.
+"행동" 버튼은 게임 메뉴가 아니라 `MiddlePanel/ContentLayer/CombatActionBoundary`(Prefab `Assets/TxTRPG/UI/Prefabs/BoundaryCommandButton.prefab`의 인스턴스)에 있으며, `EnemyDisplayPanelDemo`와 `OwnedDicePanel` 사이 경계선 가운데에 겹쳐 놓입니다. `StoryTextPanel`은 사용자가 왼쪽 열(`LeftPanel`, `NodeTreePanel` 아래)로 옮겼으므로 노드 선택 중에도 전투·탐험 기록이 보입니다. 배치 방식은 [FlexibleLayoutPanel 설계](flexible-layout-panel.md#레이아웃에-참여하지-않는-경계선-오버레이), 외형과 효과 확장 지점은 [경계선 명령 버튼](boundary-command-button.md)에 정리했습니다. 게임 메뉴에는 System·Bag·Status만 남고 `temporary-dice.roll-all` 명령 바인딩은 없습니다.
 
 | 상태 | 버튼 |
 | --- | --- |

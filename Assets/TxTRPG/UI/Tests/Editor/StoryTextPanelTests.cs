@@ -38,6 +38,50 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        public void CalculateWidthScaledFontSize_KeepsConfiguredSizeAtOrAboveReferenceWidth()
+        {
+            Assert.That(StoryTextPanel.CalculateWidthScaledFontSize(24f, 18f, 900f, 900f),
+                Is.EqualTo(24f).Within(0.0001f));
+            Assert.That(StoryTextPanel.CalculateWidthScaledFontSize(24f, 18f, 2400f, 900f),
+                Is.EqualTo(24f).Within(0.0001f));
+        }
+
+        [Test]
+        public void CalculateWidthScaledFontSize_ShrinksProportionallyAndStopsAtMinimum()
+        {
+            Assert.That(StoryTextPanel.CalculateWidthScaledFontSize(24f, 18f, 825f, 900f),
+                Is.EqualTo(22f).Within(0.0001f));
+            Assert.That(StoryTextPanel.CalculateWidthScaledFontSize(24f, 18f, 200f, 900f),
+                Is.EqualTo(18f).Within(0.0001f));
+        }
+
+        [Test]
+        public void CalculateWidthScaledFontSize_UsesConfiguredSizeWhenWidthIsUnknownOrMinimumIsLarger()
+        {
+            Assert.That(StoryTextPanel.CalculateWidthScaledFontSize(24f, 18f, -1f, 900f),
+                Is.EqualTo(24f).Within(0.0001f));
+            Assert.That(StoryTextPanel.CalculateWidthScaledFontSize(17f, 30f, 100f, 900f),
+                Is.EqualTo(17f).Within(0.0001f));
+        }
+
+        [Test]
+        public void CalculateWidthScaledFontSize_MultiplierCanExceedConfiguredSize()
+        {
+            Assert.That(StoryTextPanel.CalculateWidthScaledFontSize(24f, 18f, 900f, 900f, 1.5f),
+                Is.EqualTo(36f).Within(0.0001f));
+            Assert.That(StoryTextPanel.CalculateWidthScaledFontSize(24f, 18f, 200f, 900f, 1.5f),
+                Is.EqualTo(27f).Within(0.0001f));
+        }
+
+        [Test]
+        public void CalculateSeparatorWidth_FitsMessageArea()
+        {
+            Assert.That(StoryTextPanel.CalculateSeparatorWidth(360f, 280f), Is.EqualTo(280f).Within(0.0001f));
+            Assert.That(StoryTextPanel.CalculateSeparatorWidth(360f, 900f), Is.EqualTo(360f).Within(0.0001f));
+            Assert.That(StoryTextPanel.CalculateSeparatorWidth(360f, 0f), Is.EqualTo(360f).Within(0.0001f));
+        }
+
+        [Test]
         [Category("AssetWriting")]
         public void GeneratedPanelPrefab_HasRequiredReferences()
         {

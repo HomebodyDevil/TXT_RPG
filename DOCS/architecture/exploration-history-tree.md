@@ -1,6 +1,6 @@
 # 탐험 기록 트리
 
-탐험 기록은 `Canvas/MainScreenViewport/Main_FlexibleLayoutPanel/ContentLayer/ExplorationAndDicePanel/ContentLayer/NodeTreePanel` 안에 표시합니다. 기존 `NodeTreePanel` 오브젝트와 내부 참조는 유지한 채 새 부모로 옮겼으며, 아래에는 `OwnedDicePanel`이 있습니다. 실제 노드 선택은 기존 후보 카드에서만 수행합니다. 노드와 선에는 Button과 Raycast가 없습니다.
+탐험 기록은 `Canvas/MainScreenViewport/Main_FlexibleLayoutPanel/ContentLayer/LeftPanel/ContentLayer/NodeTreePanel` 안에 표시합니다. 기존 `NodeTreePanel` 오브젝트와 내부 참조는 유지한 채 새 부모로 옮겼으며, 아래에는 `StoryTextPanel`이 있습니다(사용자가 `OwnedDicePanel`과 위치를 바꾸고 상위 패널 이름을 `ExplorationAndDicePanel`에서 `LeftPanel`로 바꿨습니다). 실제 노드 선택은 기존 후보 카드에서만 수행합니다. 노드와 선에는 Button과 Raycast가 없습니다.
 
 ## 책임과 데이터 흐름
 
@@ -59,14 +59,16 @@ View의 Generation은 재바인딩·비활성화에 따라 변경됩니다. 향�
 
 ## 후보 선택 창과의 영역 경계
 
-사용자 확정에 따라 `ExplorationNodePanel`을 `Text_FlexibleLayoutPanel/ContentLayer` 안으로 옮기고 Stretch 및 `LayoutElement.ignoreLayout`을 적용했습니다. 중앙 패널의 영역만 사용하며 형제 패널의 공간 배분에는 참여하지 않습니다. 기존 카드 레이아웃·스크롤과 초기 자동 선택 없음 정책은 유지합니다.
+사용자 확정에 따라 `ExplorationNodePanel`을 가운데 열 `MiddlePanel/ContentLayer`(이전 이름 `Text_FlexibleLayoutPanel`) 안으로 옮기고 Stretch 및 `LayoutElement.ignoreLayout`을 적용했습니다. 중앙 패널의 영역만 사용하며 형제 패널의 공간 배분에는 참여하지 않습니다. 기존 카드 레이아웃·스크롤과 초기 자동 선택 없음 정책은 유지합니다.
+
+노드 선택 중에는 같은 열의 `EnemyDisplayPanelDemo`와 `OwnedDicePanel`이 모두 가려지고, 왼쪽 열로 옮겨진 Story 기록은 계속 보입니다. 가려진 패널은 Raycast뿐 아니라 컨트롤러·키보드 탐색에서도 제외합니다. `ExplorationNodePanel`의 `CoveredPanelInteractionBlocker`(`TxTRPG.UI.Exploration`)가 활성화되면 직렬화된 두 패널의 `CanvasGroup.interactable`을 끄고, 비활성화되면 이전 값으로 되돌립니다. 적 패널의 `CanvasGroup`은 `PanelStartupController`도 입력 허용에 사용하므로, 차단 중 다른 컴포넌트가 `interactable`을 켜면 그 값을 복원할 값으로 기록하고 같은 프레임의 `LateUpdate`에서 다시 끕니다. 이 경우 최대 한 프레임 동안 탐색이 허용될 수 있습니다. UI 어셈블리는 Application을 참조하지 않으며, 표시 제어는 계속 `ExplorationRunController.panel`의 활성 상태만으로 이뤄집니다.
 
 [검증 결과](../development/verification/exploration-tree-validation.md)에는 실제 실행한 테스트와 화면별 제약을 구분하여 기록합니다.
 
 ## 좁은 화면의 페이지 스크롤
 
-사용자는 실제 휴대폰 캡처에서 기존 가로 3열의 트리 폭이 사라지는 문제를 확인한 뒤, 좁은 화면의 세로 배치와 전체 화면 스크롤을 확정했습니다. `Canvas/MainScreenViewport` 안의 기존 Main_FlexibleLayoutPanel은 유지합니다. 주사위 표시를 위해 그 첫 영역에 `ExplorationAndDicePanel`을 추가했지만 NodeTreePanel 자체와 내부 기록은 보존합니다.
+사용자는 실제 휴대폰 캡처에서 기존 가로 3열의 트리 폭이 사라지는 문제를 확인한 뒤, 좁은 화면의 세로 배치와 전체 화면 스크롤을 확정했습니다. `Canvas/MainScreenViewport` 안의 기존 Main_FlexibleLayoutPanel은 유지합니다. 주사위 표시를 위해 그 첫 영역에 `ExplorationAndDicePanel`(현재 이름 `LeftPanel`)을 추가했지만 NodeTreePanel 자체와 내부 기록은 보존합니다.
 
-`ResponsiveMainScreen`은 720 UI 단위 미만에서 트리와 주사위를 합친 첫 영역, 중앙, 캐릭터 패널의 높이를 각각 620/520/640으로 배분합니다. 부모의 여백과 간격을 포함한 Content 높이를 계산하여 전체 화면을 세로 스크롤합니다. 넓은 화면으로 돌아오면 시작 시 보관한 축·가중치·최소/최대 크기·RectTransform을 복원합니다. 좁은 화면에서 메뉴 영역 높이는 실제 메뉴의 RequiredHeight만큼 확보하고 넓어지면 원래 배분으로 복원합니다. Scene의 개발자 설정을 런타임에 저장하지 않습니다. 카드의 폭은 좁은 Viewport에서 120~210 범위로 조정하고 넓어지면 원래 폭을 복원합니다.
+`ResponsiveMainScreen`은 720 UI 단위 미만에서 트리와 Story를 합친 첫 영역(`LeftPanel`), 적과 주사위를 합친 중앙(`MiddlePanel`), 캐릭터 패널(`RightPanel`)의 높이를 각각 760/520/640으로 배분합니다. 첫 영역은 원래 트리와 주사위용 620이었습니다. Story로 바뀐 뒤 `NodeTreePanel`(최소 360, Weight 2)이 먼저 최소 높이를 받고 남은 높이를 Story(Weight 3)와 나누므로, 620에서는 Story 표시 영역이 약 103(본문 최소 18 기준 약 5줄)에 그쳤습니다. 760에서는 약 187(약 9줄)입니다. 중앙 520에서는 적 패널 약 210과 주사위 패널 약 274(최소 200 충족)가 함께 들어가므로 바꾸지 않았습니다(390×844 측정). 부모의 여백과 간격을 포함한 Content 높이를 계산하여 전체 화면을 세로 스크롤합니다. 넓은 화면으로 돌아오면 시작 시 보관한 축·가중치·최소/최대 크기·RectTransform을 복원합니다. 좁은 화면에서 메뉴 영역 높이는 실제 메뉴의 RequiredHeight만큼 확보하고 넓어지면 원래 배분으로 복원합니다. Scene의 개발자 설정을 런타임에 저장하지 않습니다. 카드의 폭은 좁은 Viewport에서 120~210 범위로 조정하고 넓어지면 원래 폭을 복원합니다.
 
 Viewport는 Screen.safeArea를 Canvas의 비율 앵커로 적용합니다. 키보드·게임패드 포커스가 이동하면 해당 UI를 전체 페이지에서도 표시합니다. `NestedScrollRectBridge`는 내부 ScrollRect가 끝에 도달했거나 스크롤할 내용이 없을 때 세로 드래그·휠을 부모 페이지에 전달합니다. 가로 트리 탐색은 내부 ScrollRect가 계속 소유합니다. 참조는 Scene에 명시적으로 저장하며 런타임 객체 이름 검색을 사용하지 않습니다.

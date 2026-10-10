@@ -58,6 +58,14 @@ namespace TxTRPG.UI
         [SerializeField] private Color speakerColor = new(0.8549f, 0.6039f, 0.3647f, 1f);
         [SerializeField, Min(1f)] private float bodyFontSize = 24f;
 
+        [Header("Width-Based Text Size")]
+        [Tooltip("Shrinks the speaker and body font sizes when the message area is narrower than the reference width. Font sizes never exceed the Typography values unless a text size multiplier above 1 is applied.")]
+        [SerializeField] private bool scaleTextWithWidth;
+        [Tooltip("Message area width, excluding the scrollbar and content padding, at which the Typography font sizes are used unchanged.")]
+        [SerializeField, Min(1f)] private float textScaleReferenceWidth = 942f;
+        [SerializeField, Min(1f)] private float minimumSpeakerFontSize = 14f;
+        [SerializeField, Min(1f)] private float minimumBodyFontSize = 18f;
+
         [Header("Message Spacing")]
         [SerializeField, Min(0f)] private float speakerBodySpacing = 3f;
         [SerializeField, Min(0f)] private float messageSpacing = 12f;
@@ -86,6 +94,11 @@ namespace TxTRPG.UI
         private bool layoutRefreshInProgress;
         private ScrollRect subscribedScrollRect;
         private Scrollbar subscribedScrollbar;
+        private float textSizeMultiplier = 1f;
+        private float effectiveSpeakerFontSize;
+        private float effectiveBodyFontSize;
+        private float effectiveSeparatorWidth;
+        private bool effectiveSizesInitialized;
 
         public bool AllowUserScrolling
         {
@@ -108,6 +121,45 @@ namespace TxTRPG.UI
         }
 
         public int MessageCount => items.Count;
+
+        public bool ScaleTextWithWidth
+        {
+            get => scaleTextWithWidth;
+            set
+            {
+                if (scaleTextWithWidth == value)
+                {
+                    return;
+                }
+
+                scaleTextWithWidth = value;
+                RequestTextSizeRefresh();
+            }
+        }
+
+        /// <summary>
+        /// Multiplier applied after width-based sizing. Reserved for a future accessibility text size setting;
+        /// values above 1 may exceed the Typography font sizes.
+        /// </summary>
+        public float TextSizeMultiplier
+        {
+            get => textSizeMultiplier;
+            set
+            {
+                var clamped = Mathf.Max(0.1f, value);
+                if (Mathf.Approximately(textSizeMultiplier, clamped))
+                {
+                    return;
+                }
+
+                textSizeMultiplier = clamped;
+                RequestTextSizeRefresh();
+            }
+        }
+
+        public float EffectiveSpeakerFontSize => EnsureEffectiveSizes().speaker;
+        public float EffectiveBodyFontSize => EnsureEffectiveSizes().body;
+        public float EffectiveSeparatorWidth => EnsureEffectiveSizes().separator;
         public PanelBackgroundRenderer BackgroundRenderer => backgroundRenderer;
         public Task WhenBackgroundReady => backgroundRenderer?.WhenAssetsReady ?? Task.CompletedTask;
 
@@ -192,7 +244,8 @@ namespace TxTRPG.UI
             var item = Instantiate(messagePrefab, content);
             item.gameObject.SetActive(true);
             item.Bind(message);
-            item.ConfigureTextSize(speakerFontSize, bodyFontSize);
+            var sizes = EnsureEffectiveSizes();
+            item.ConfigureTextSize(sizes.speaker, sizes.body);
             item.ConfigureSpeakerColor(speakerColor);
             item.ConfigureSpeakerBodySpacing(speakerBodySpacing);
             items.Add(item);
@@ -262,6 +315,34 @@ namespace TxTRPG.UI
             var progress = Mathf.Clamp01((normalizedHeightFromBottom - fadeStart) / fadeRange);
             var shapedProgress = Mathf.Pow(progress, Mathf.Max(0.1f, exponent));
             return Mathf.Lerp(1f, Mathf.Clamp01(minimumOpacity), shapedProgress);
+        }
+
+        /// <summary>
+        /// Returns the configured size at or above the reference width, otherwise a proportionally smaller size
+        /// that never drops below the minimum. The multiplier is applied last.
+        /// </summary>
+        public static float CalculateWidthScaledFontSize(
+            float configuredSize,
+            float minimumSize,
+            float availableWidth,
+            float referenceWidth,
+            float multiplier = 1f)
+        {
+            var maximum = Mathf.Max(1f, configuredSize);
+            var size = maximum;
+            if (referenceWidth > 0f && availableWidth > 0f && availableWidth < referenceWidth)
+            {
+                var minimum = Mathf.Clamp(minimumSize, 1f, maximum);
+                size = Mathf.Max(minimum, maximum * availableWidth / referenceWidth);
+            }
+
+            return Mathf.Max(1f, size * Mathf.Max(0.1f, multiplier));
+        }
+
+        public static float CalculateSeparatorWidth(float configuredWidth, float availableWidth)
+        {
+            var width = Mathf.Max(1f, configuredWidth);
+            return availableWidth > 0f ? Mathf.Max(1f, Mathf.Min(width, availableWidth)) : width;
         }
 
         public static float CalculateInitialRevealProgress(float elapsed, float duration)
@@ -398,7 +479,14 @@ namespace TxTRPG.UI
             if (layoutRefreshPending && !layoutRefreshInProgress)
             {
                 layoutRefreshPending = false;
-                RebuildAndRefreshNow();
+                var previousPosition = scrollRect.verticalNormalizedPosition;
+                var textSizeChanged = UpdateEffectiveSizes();
+                if (textSizeChanged)
+                {
+                    RefreshMessageSeparators();
+                }
+
+                RebuildAndRefreshNow(textSizeChanged ? previousPosition : (float?)null);
             }
 
             RefreshMessageOpacity();
@@ -427,10 +515,14 @@ namespace TxTRPG.UI
             separatorSpacingAbove = Mathf.Max(0f, separatorSpacingAbove);
             separatorSpacingBelow = Mathf.Max(0f, separatorSpacingBelow);
             initialRevealDuration = Mathf.Max(0f, initialRevealDuration);
+            textScaleReferenceWidth = Mathf.Max(1f, textScaleReferenceWidth);
+            minimumSpeakerFontSize = Mathf.Max(1f, minimumSpeakerFontSize);
+            minimumBodyFontSize = Mathf.Max(1f, minimumBodyFontSize);
 
             if (isActiveAndEnabled && scrollRect != null && scrollbar != null)
             {
                 ApplyOptions();
+                UpdateEffectiveSizes();
                 RefreshMessageSeparators();
             }
         }
@@ -565,8 +657,68 @@ namespace TxTRPG.UI
             }
         }
 
+        private void RequestTextSizeRefresh()
+        {
+            effectiveSizesInitialized = false;
+            if (isActiveAndEnabled && !layoutRefreshInProgress)
+            {
+                layoutRefreshPending = true;
+            }
+        }
+
+        private (float speaker, float body, float separator) EnsureEffectiveSizes()
+        {
+            if (!effectiveSizesInitialized)
+            {
+                UpdateEffectiveSizes();
+            }
+
+            return (effectiveSpeakerFontSize, effectiveBodyFontSize, effectiveSeparatorWidth);
+        }
+
+        // The message area is the Content width (it stretches with the Viewport, which already excludes the
+        // scrollbar and gap) minus the Content layout padding.
+        private float MeasureMessageAreaWidth()
+        {
+            if (content == null)
+            {
+                return -1f;
+            }
+
+            var width = content.rect.width;
+            var contentLayout = content.GetComponent<VerticalLayoutGroup>();
+            if (contentLayout != null)
+            {
+                width -= contentLayout.padding.horizontal;
+            }
+
+            return width;
+        }
+
+        // Returns true only when an applied size changed, so unchanged widths skip item updates.
+        private bool UpdateEffectiveSizes()
+        {
+            var width = MeasureMessageAreaWidth();
+            var scaleWidth = scaleTextWithWidth ? width : -1f;
+            var speaker = CalculateWidthScaledFontSize(
+                speakerFontSize, minimumSpeakerFontSize, scaleWidth, textScaleReferenceWidth, textSizeMultiplier);
+            var body = CalculateWidthScaledFontSize(
+                bodyFontSize, minimumBodyFontSize, scaleWidth, textScaleReferenceWidth, textSizeMultiplier);
+            var separator = CalculateSeparatorWidth(separatorWidth, width);
+            var changed = !effectiveSizesInitialized ||
+                Mathf.Abs(speaker - effectiveSpeakerFontSize) > 0.01f ||
+                Mathf.Abs(body - effectiveBodyFontSize) > 0.01f ||
+                Mathf.Abs(separator - effectiveSeparatorWidth) > 0.01f;
+            effectiveSpeakerFontSize = speaker;
+            effectiveBodyFontSize = body;
+            effectiveSeparatorWidth = separator;
+            effectiveSizesInitialized = true;
+            return changed;
+        }
+
         private void RefreshMessageSeparators()
         {
+            var sizes = EnsureEffectiveSizes();
             for (var i = 0; i < items.Count; i++)
             {
                 var item = items[i];
@@ -575,7 +727,7 @@ namespace TxTRPG.UI
                     continue;
                 }
 
-                item.ConfigureTextSize(speakerFontSize, bodyFontSize);
+                item.ConfigureTextSize(sizes.speaker, sizes.body);
                 item.ConfigureSpeakerColor(speakerColor);
                 item.ConfigureSpeakerBodySpacing(speakerBodySpacing);
                 item.ConfigureSeparator(
@@ -583,7 +735,7 @@ namespace TxTRPG.UI
                     separatorSprite,
                     separatorColor,
                     separatorImageType,
-                    separatorWidth,
+                    sizes.separator,
                     separatorHeight,
                     separatorSpacingAbove,
                     separatorSpacingBelow);
@@ -613,6 +765,11 @@ namespace TxTRPG.UI
                 scrollToBottomRoutine = null;
                 layoutRefreshPending = true;
                 yield break;
+            }
+
+            if (UpdateEffectiveSizes())
+            {
+                RefreshMessageSeparators();
             }
 
             if (RebuildLayout())
@@ -671,12 +828,18 @@ namespace TxTRPG.UI
             layoutRefreshPending = true;
         }
 
-        private void RebuildAndRefreshNow()
+        private void RebuildAndRefreshNow(float? restoreNormalizedPosition = null)
         {
             if (!TryPrepareRequiredReferences() || !RebuildLayout() || !HasRequiredReferences)
             {
                 layoutRefreshPending = true;
                 return;
+            }
+
+            if (restoreNormalizedPosition.HasValue)
+            {
+                // Keep the reading position, including the latest-message bottom, after a text size change.
+                scrollRect.verticalNormalizedPosition = Mathf.Clamp01(restoreNormalizedPosition.Value);
             }
 
             SynchronizeFromScrollRect(scrollRect.normalizedPosition);
