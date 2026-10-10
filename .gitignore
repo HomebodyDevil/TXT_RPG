@@ -62,6 +62,9 @@ crashlytics-build.properties
 # Local CodeGraph index
 /.codegraph/
 
+# Local Claude Code settings and subagents
+/.claude/
+
 # Operating system files
 .DS_Store
 .DS_Store?

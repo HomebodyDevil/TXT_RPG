@@ -136,6 +136,14 @@ Read `DOCS/development/visual-effect-readiness.md` when creating or restructurin
 - Record the Git status before a test run. If a test run modifies files outside the current change, restore only the files that were unmodified before the run, and never discard pre-existing user changes.
 - If a test run does not finish within a reasonable time, or the Editor reports that it is busy in the Test Runner, do not keep waiting or start another run. Report the last test recorded in `Editor.log`, the observed state, and the files the run modified, then ask the user how to proceed.
 
+### Project Subagents
+
+Read-only subagent definitions live in `.claude/agents/`, which is local and not version-controlled (see `DOCS/development/workflows.md`). Invoke them under the conditions below without waiting for the user to name them. If an agent is not available in the current session, perform the same check in the main conversation and say that the agent was unavailable.
+
+- `unity-impact-scout`: Invoke before editing when a planned change renames or changes the signature of a public or serialized member, changes a MonoBehaviour or ScriptableObject type, restructures a Scene or Prefab, or spans more than one assembly or roughly three or more source files. Skip it when the change touches a single symbol with no serialized usage; call `codegraph_explore` directly instead. When the change affects shared Prefabs, save data, or persistence formats, invoke it with the `opus` model. Verify findings against the source before relying on them.
+- `serialization-diff-reviewer`: Invoke after an Editor application, a Tools menu or builder run, or a test run that modified `.unity`, `.prefab`, `.asset`, `.meta`, `.asmdef`, or `ProjectSettings` files, and before restoring any file or reporting the work as complete. Pass the intended change and the Git status recorded before the work. Skip it when only code or documentation changed.
+- Do not delegate edits, file restores, Git state changes, Editor automation, or test runs to these agents, and do not run them while the Editor is applying changes or running tests.
+
 Before changing a cross-platform feature:
 
 1. Identify the shared behavior, platform-specific behavior, supported input schemes, affected screens, and persistence implications.
