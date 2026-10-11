@@ -174,7 +174,7 @@ namespace TxTRPG.Application.Tests
             Assert.That(random.Calls, Is.EqualTo(3));
             Assert.That(combat.EnemyHealth.Current, Is.EqualTo(40 - host.LastTemporarySlotTurn.Allocation.Lines[0].Amount));
             Assert.That(panel.IsSpinning, Is.False);
-            Assert.That(panel.TotalText, Is.EqualTo(SlotCombatStoryFormatter.Total(host.LastTemporarySlotTurn.Spin.PaylineTotal)), "the timeout shows the accepted result");
+            Assert.That(panel.TotalValueText, Is.EqualTo(SlotCombatStoryFormatter.TotalValue(host.LastTemporarySlotTurn.Spin.PaylineTotal)), "the timeout shows the accepted result");
         }
 
         [UnityTest]
@@ -235,7 +235,7 @@ namespace TxTRPG.Application.Tests
             yield return Wait(second.InitializeAsync(default, CancellationToken.None));
             Assert.That(second.Combat, Is.SameAs(combat), "the new controller attaches to the session combat");
             Assert.That(second.CanExecute(TemporarySlotCombatController.SpinCommandId, out _), Is.False, "the accepted action still holds the lock");
-            Assert.That(secondPanel.TotalText, Is.EqualTo(SlotCombatStoryFormatter.Total(accepted.Spin.PaylineTotal)), "the accepted spin is shown at rest");
+            Assert.That(secondPanel.TotalValueText, Is.EqualTo(SlotCombatStoryFormatter.TotalValue(accepted.Spin.PaylineTotal)), "the accepted spin is shown at rest");
             var before = story.MessageCount;
             yield return WaitWhile(() => host.IsTemporaryCombatActionPending);
 
@@ -253,14 +253,42 @@ namespace TxTRPG.Application.Tests
             var controller = CreateController(panel);
             yield return Wait(controller.InitializeAsync(default, CancellationToken.None));
             controller.BeginCombat(new HealthState(30, 30));
-            Assert.That(panel.TotalText, Is.EqualTo(SlotCombatStoryFormatter.IdleTotal));
-            Assert.That(panel.AllocationText, Is.EqualTo("공격 ×1 · 회복 ×1"));
+            Assert.That(panel.TotalLabelText, Is.EqualTo("합계"));
+            Assert.That(panel.TotalValueText, Is.EqualTo(SlotCombatStoryFormatter.IdleTotalValue));
+            Assert.That(panel.RuneColumnTitleText, Is.EqualTo("룬"));
+            Assert.That(panel.ValueColumnTitleText, Is.EqualTo("쌓임 → 분배"));
+            Assert.That(panel.RuneLineTexts, Is.EqualTo(new[] { ("공격", "×1"), ("회복", "×1") }));
             random.Values.Enqueue(5); random.Values.Enqueue(0); random.Values.Enqueue(3);
             Assert.That(controller.TryExecute(TemporarySlotCombatController.SpinCommandId), Is.True);
             yield return WaitWhile(() => host.IsTemporaryCombatActionPending);
             Assert.That(panel.ReelViews.Select(v => v.PaylineValue), Is.EqualTo(new[] { 6, 1, 4 }));
-            Assert.That(panel.TotalText, Is.EqualTo("합계 11"));
-            Assert.That(panel.AllocationText, Is.EqualTo("공격 ×1 → 6 · 회복 ×1 → 5"));
+            Assert.That(panel.TotalValueText, Is.EqualTo("11"));
+            Assert.That(panel.RuneLineTexts, Is.EqualTo(new[] { ("공격", "×1 → 6"), ("회복", "×1 → 5") }));
+        }
+
+        [Test]
+        public void DefaultSpinProfile_TimeoutCoversTheLongestPresentation()
+        {
+            var canvas = Track(new GameObject("SlotCanvas", typeof(Canvas)));
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(TemporarySlotMachineIntegration.PanelPrefabPath);
+            var panel = ((GameObject)PrefabUtility.InstantiatePrefab(prefab, canvas.transform)).GetComponent<SlotMachinePanel>();
+            Assert.That(panel.SpinProfileForEditor, Is.Not.Null, "the Prefab references DefaultSlotReelSpinProfile");
+            var longest = panel.GetMaximumPresentationSeconds(3);
+            Assert.That(longest, Is.EqualTo(SlotReelSpinPlanner.GetMaximumPresentationSeconds(SlotReelSpinSettings.Default, 3)).Within(.001f));
+            Assert.That(longest, Is.InRange(2.4f, 2.8f), "about 2.6 s for three reels with the default profile");
+            var timeout = TemporaryCombatPresentationTimeout.Resolve(3f, longest, 1f);
+            Assert.That(timeout, Is.GreaterThanOrEqualTo(longest + 1f).And.LessThanOrEqualTo(TemporaryCombatPresentationTimeout.MaximumSeconds));
+        }
+
+        [Test]
+        public void SummaryTexts_ComeFromTheFormatter()
+        {
+            Assert.That(SlotCombatStoryFormatter.LineWeight(2), Is.EqualTo("×2"));
+            Assert.That(SlotCombatStoryFormatter.LineAllocation(1, 0), Is.EqualTo("×1 → 0"), "a line that received nothing is still a row");
+            var summary = TemporarySlotCombatController.CreateSummary("13", new[] { new SlotRuneLineDisplay("공격", "×2 → 6") });
+            Assert.That(summary.TotalLabel, Is.EqualTo("합계"));
+            Assert.That(summary.EmptyText, Is.EqualTo("장착된 룬이 없습니다"));
+            Assert.That(string.Format(summary.OverflowFormat, 3), Is.EqualTo("외 3줄"));
         }
 
         // ---------- Reserved dice participants ----------
@@ -392,8 +420,8 @@ namespace TxTRPG.Application.Tests
             return controller;
         }
 
-        // A panel whose presentation lasts `seconds` per reel. Time does not advance in Edit Mode, so a positive value
-        // only ends through the controller timeout; zero finishes without waiting.
+        // A panel whose presentation lasts `seconds` (a constant-speed phase only, no jitter or effects). Time does not
+        // advance in Edit Mode, so a positive value only ends through the controller timeout; zero finishes without waiting.
         private SlotMachinePanel CreatePanel(float seconds)
         {
             var canvas = Track(new GameObject("SlotCanvas", typeof(Canvas)));
@@ -401,7 +429,8 @@ namespace TxTRPG.Application.Tests
             Assert.That(prefab, Is.Not.Null, "Run Apply Slot Machine Combat first.");
             var panel = ((GameObject)PrefabUtility.InstantiatePrefab(prefab, canvas.transform)).GetComponent<SlotMachinePanel>();
             ((RectTransform)panel.transform).sizeDelta = new Vector2(360f, 280f);
-            panel.SetTimingForEditor(seconds, 0f, 0f, 0f);
+            panel.SetSpinSettingsForEditor(seconds <= 0f ? SlotReelSpinSettings.Instant : new SlotReelSpinSettings(SlotEasingKind.Linear,
+                0f, 0f, 0f, 0f, seconds, 0f, 0f, 0f, 0f, 0f, 18f, 8f, false, 0f, 0f, 0, 0f, 0f, 1f, 1f, 0f));
             return panel;
         }
 

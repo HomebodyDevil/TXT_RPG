@@ -44,8 +44,6 @@ namespace TxTRPG.Application.Editor
         public const string PanelName = "SlotMachinePanel";
         private const float ContentTopInset = 44f;
         private static readonly Color PanelColor = new(.05f, .09f, .14f, .96f);
-        private static readonly Color FrameColor = new(.11f, .16f, .23f, 1f);
-        private static readonly Color PaylineColor = new(.98f, .78f, .3f, .95f);
 
         [MenuItem(ApplyMenuPath)]
         public static void Apply()
@@ -172,17 +170,23 @@ namespace TxTRPG.Application.Editor
             }
             else summary.AppendLine($" kept {ReelPrefabPath}");
             var panel = AssetDatabase.LoadAssetAtPath<GameObject>(PanelPrefabPath);
+            var created = false;
+            var reelCreated = reel.transform.Find("Window") == null;
             if (panel == null)
             {
-                panel = CreatePanelPrefab(reel.GetComponent<SlotReelView>());
+                panel = CreatePanelPrefab();
                 summary.AppendLine($" created {PanelPrefabPath}");
+                created = true;
             }
             else summary.AppendLine($" kept {PanelPrefabPath}");
+            // New skeletons get the reel machine and summary hierarchy from the panel visual apply (same core as its menu).
+            if (created || reelCreated) TemporarySlotMachinePanelVisualApply.ApplyAssetsAndPrefabs(summary);
             foreach (var path in new[] { ReelPrefabPath, PanelPrefabPath })
                 if (SyncPrefabTextState(path)) summary.AppendLine($" synchronized the TMP color cache and text style of {path}");
-            return panel;
+            return AssetDatabase.LoadAssetAtPath<GameObject>(PanelPrefabPath);
         }
 
+        // Skeletons only: TemporarySlotMachinePanelVisualApply adds the frame, window, cells and summary hierarchy.
         private static GameObject CreateReelPrefab()
         {
             var preview = EditorSceneManager.NewPreviewScene();
@@ -190,43 +194,17 @@ namespace TxTRPG.Application.Editor
             {
                 var root = new GameObject("SlotReel", typeof(RectTransform));
                 SceneManager.MoveGameObjectToScene(root, preview);
-                var rect = (RectTransform)root.transform;
-                rect.sizeDelta = new Vector2(96f, 180f);
+                ((RectTransform)root.transform).sizeDelta = new Vector2(96f, 180f);
                 var element = root.AddComponent<LayoutElement>();
                 element.minWidth = 40f; element.flexibleWidth = 1f; element.flexibleHeight = 1f;
-                var frame = Child("Frame", rect); Stretch(frame);
-                Graphic(frame, FrameColor);
-                var window = Child("Window", rect); Stretch(window, 6f, 6f, 6f, 6f);
-                window.gameObject.AddComponent<RectMask2D>();
-                var strip = Child("Strip", window); Stretch(strip);
-                var cells = new RectTransform[5];
-                var texts = new TMP_Text[5];
-                var icons = new Image[5];
-                for (var i = 0; i < cells.Length; i++)
-                {
-                    cells[i] = Child($"SymbolCell_{i}", strip);
-                    cells[i].anchorMin = new Vector2(0f, .5f); cells[i].anchorMax = new Vector2(1f, .5f);
-                    cells[i].sizeDelta = new Vector2(0f, 56f); cells[i].anchoredPosition = new Vector2(0f, -(i - 2) * 56f);
-                    var visual = Child("VisualRoot", cells[i]); Stretch(visual);
-                    var icon = Child("Icon", visual); Stretch(icon, 4f, 4f, 4f, 4f);
-                    icons[i] = icon.gameObject.AddComponent<Image>();
-                    icons[i].preserveAspect = true; icons[i].raycastTarget = false; icons[i].enabled = false;
-                    var value = Child("Value", visual); Stretch(value);
-                    texts[i] = Text(value, (i == 0 ? 1 : i).ToString(), 32f, TextAlignmentOptions.Center);
-                    texts[i].textWrappingMode = TextWrappingModes.NoWrap;
-                    texts[i].overflowMode = TextOverflowModes.Overflow;
-                }
-                var effect = Child("EffectRoot", rect); Stretch(effect);
-                var view = root.AddComponent<SlotReelView>();
-                view.ConfigureForEditor(window, strip, cells, texts, icons);
-                foreach (var text in root.GetComponentsInChildren<TMP_Text>(true)) SyncTextState(text);
+                root.AddComponent<SlotReelView>();
                 var prefab = PrefabUtility.SaveAsPrefabAsset(root, ReelPrefabPath);
                 return prefab ?? throw new InvalidOperationException("Could not save SlotReel.prefab.");
             }
             finally { EditorSceneManager.ClosePreviewScene(preview); }
         }
 
-        private static GameObject CreatePanelPrefab(SlotReelView reelPrefab)
+        private static GameObject CreatePanelPrefab()
         {
             var preview = EditorSceneManager.NewPreviewScene();
             try
@@ -239,80 +217,16 @@ namespace TxTRPG.Application.Editor
                 root.AddComponent<FlexibleLayoutItem>().Configure(FlexibleLayoutSizeMode.Weighted, .7f, 200f, 200f, 0f);
                 var background = Child("Background", rect); Stretch(background);
                 Graphic(background, PanelColor);
-
                 var content = Child("Content", rect); Stretch(content);
-                var vertical = content.gameObject.AddComponent<VerticalLayoutGroup>();
-                // The top inset leaves room for the boundary action button, which may cover the panel's top center.
-                vertical.padding = new RectOffset(12, 12, (int)ContentTopInset, 8);
-                vertical.spacing = 6f;
-                vertical.childControlWidth = vertical.childControlHeight = true;
-                vertical.childForceExpandWidth = true; vertical.childForceExpandHeight = false;
-                var reelArea = Child("ReelArea", content);
-                var areaElement = reelArea.gameObject.AddComponent<LayoutElement>();
-                areaElement.minHeight = 72f; areaElement.flexibleHeight = 1f;
-                var horizontal = reelArea.gameObject.AddComponent<HorizontalLayoutGroup>();
-                horizontal.spacing = 8f;
-                horizontal.childControlWidth = horizontal.childControlHeight = true;
-                horizontal.childForceExpandWidth = horizontal.childForceExpandHeight = true;
-                var views = new List<SlotReelViewBase>();
-                for (var i = 0; i < 3; i++)
-                {
-                    var instance = (GameObject)PrefabUtility.InstantiatePrefab(reelPrefab.gameObject, preview);
-                    instance.transform.SetParent(reelArea, false);
-                    instance.name = $"SlotReel_{i + 1}";
-                    views.Add(instance.GetComponent<SlotReelView>());
-                }
-                CreatePayline(reelArea);
-
-                var summary = Child("Summary", content);
-                var summaryLayout = summary.gameObject.AddComponent<VerticalLayoutGroup>();
-                summaryLayout.spacing = 2f;
-                summaryLayout.childControlWidth = summaryLayout.childControlHeight = true;
-                summaryLayout.childForceExpandWidth = true; summaryLayout.childForceExpandHeight = false;
-                var total = Child("TotalText", summary);
-                total.gameObject.AddComponent<LayoutElement>().minHeight = 32f;
-                var totalText = Text(total, SlotCombatStoryFormatter.IdleTotal, 26f, TextAlignmentOptions.Center);
-                totalText.fontStyle = FontStyles.Bold;
-                var allocation = Child("AllocationText", summary);
-                allocation.gameObject.AddComponent<LayoutElement>().minHeight = 22f;
-                var allocationText = Text(allocation, "공격 ×1 · 회복 ×1", 16f, TextAlignmentOptions.Center);
-
                 var status = Child("StatusText", rect); Stretch(status, 16f, 16f, 16f, 16f);
-                var statusText = Text(status, string.Empty, 16f, TextAlignmentOptions.Center);
+                Text(status, string.Empty, 16f, TextAlignmentOptions.Center);
                 status.gameObject.SetActive(false);
                 var effect = Child("EffectRoot", rect); Stretch(effect);
-
-                var panel = root.AddComponent<SlotMachinePanel>();
-                panel.ConfigureForEditor(reelArea, reelPrefab, views, content.gameObject, totalText, allocationText, statusText);
-                foreach (var text in root.GetComponentsInChildren<TMP_Text>(true)) SyncTextState(text);
+                root.AddComponent<SlotMachinePanel>();
                 var prefab = PrefabUtility.SaveAsPrefabAsset(root, PanelPrefabPath);
                 return prefab ?? throw new InvalidOperationException("Could not save SlotMachinePanel.prefab.");
             }
             finally { EditorSceneManager.ClosePreviewScene(preview); }
-        }
-
-        // Payline: two lines framing the middle cell plus diamond markers on both sides, so it is not told by color alone.
-        // It covers the middle third of the reel windows (the 6px window inset becomes a 2px offset) and takes no input.
-        private static void CreatePayline(RectTransform reelArea)
-        {
-            var overlay = Child("PaylineOverlay", reelArea);
-            overlay.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
-            overlay.anchorMin = new Vector2(0f, 1f / 3f); overlay.anchorMax = new Vector2(1f, 2f / 3f);
-            overlay.offsetMin = new Vector2(-4f, 2f); overlay.offsetMax = new Vector2(4f, -2f);
-            var top = Child("TopLine", overlay);
-            top.anchorMin = new Vector2(0f, 1f); top.anchorMax = Vector2.one; top.pivot = new Vector2(.5f, 1f); top.sizeDelta = new Vector2(0f, 2f);
-            Graphic(top, PaylineColor);
-            var bottom = Child("BottomLine", overlay);
-            bottom.anchorMin = Vector2.zero; bottom.anchorMax = new Vector2(1f, 0f); bottom.pivot = new Vector2(.5f, 0f); bottom.sizeDelta = new Vector2(0f, 2f);
-            Graphic(bottom, PaylineColor);
-            foreach (var (name, x) in new[] { ("LeftMarker", 0f), ("RightMarker", 1f) })
-            {
-                var marker = Child(name, overlay);
-                marker.anchorMin = marker.anchorMax = new Vector2(x, .5f);
-                marker.sizeDelta = new Vector2(10f, 10f);
-                marker.localRotation = Quaternion.Euler(0f, 0f, 45f);
-                Graphic(marker, PaylineColor);
-            }
         }
 
         // TMP keeps a Color32 copy of the font color and the default style hash; text created in a preview scene saves
@@ -332,7 +246,7 @@ namespace TxTRPG.Application.Editor
             finally { PrefabUtility.UnloadPrefabContents(root); }
         }
 
-        private static bool SyncTextState(TMP_Text text)
+        internal static bool SyncTextState(TMP_Text text)
         {
             var serialized = new SerializedObject(text);
             var color = serialized.FindProperty("m_fontColor");

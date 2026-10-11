@@ -6,6 +6,8 @@
 
 | 문서 | 설명 |
 | --- | --- |
+| [SlotMachinePanel 스킨과 Payline 이미지](slot-machine-panel-skin.md) | 패널 이미지 묶음을 `SlotMachinePanelSkin` 자산과 카탈로그로 분리해 개발자가 고르고 실행 중 교체하며, Payline 이미지가 없으면 코드로 그립니다. 플레이어 선택은 설계만 둡니다. |
+| [SlotMachinePanel 외형 개편과 Reel 회전 연출](slot-machine-panel-visual-and-spin-motion.md) | 목표 이미지처럼 Reel 기계·합계·룬 줄 표로 패널을 바꾸고, 설정 자산으로 easing(기본 InOutElastic)·Reel별 시차와 편차·고속 잔상 연출을 조정하게 합니다. |
 | [슬롯머신과 룬 기반 전투 행동](slot-machine-and-rune-combat.md) | 주사위를 보류하고 3개 Reel 슬롯머신의 Payline 총합을 룬 줄 가중치로 자동 분배해 행동하며, `OwnedDicePanel` 자리에 2D `SlotMachinePanel`과 회전 연출을 배치합니다. |
 | [Edit Mode 테스트 실패 5건 정리](editmode-test-failure-cleanup.md) | 멈춤 수정 후 드러난 SceneTransition·Main Scene·StoryTextPanel·메뉴 테스트 실패의 원인을 확정하고 테스트·메뉴·자산을 정리합니다. |
 | [TMP_MainScene의 Story·주사위 패널 위치 교체 후속 정리](main-scene-story-dice-panel-swap.md) | 사용자가 바꾼 계층을 유지한 채 행동 버튼을 적·주사위 패널 경계로 옮기고, 작아진 Story의 너비 기반 글자 크기와 이름 기반 도구·좁은 화면·탐색 부수 효과를 정리합니다. |

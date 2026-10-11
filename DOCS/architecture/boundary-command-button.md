@@ -1,6 +1,6 @@
 # 경계선 명령 버튼
 
-두 패널의 경계선 위에 겹쳐 놓이는 명령 버튼입니다. 현재 TMP_MainScene의 전투 "행동" 버튼(`MiddlePanel/ContentLayer/CombatActionBoundary`)이 유일한 사용처이며, `EnemyDisplayPanelDemo`(위)와 `SlotMachinePanel`(아래)의 경계선 가운데에 놓입니다. 주사위 보류 전에는 아래 패널이 `OwnedDicePanel`이었습니다([슬롯머신과 룬](slot-machine-and-runes.md)). 전투 표시 조건과 포커스 규칙은 [임시 적 전투](temporary-combat.md#행동-버튼), 배치 계산은 [FlexibleLayoutPanel 설계](flexible-layout-panel.md#레이아웃에-참여하지-않는-경계선-오버레이)를 봅니다.
+두 패널의 경계선 위에 겹쳐 놓이는 명령 버튼입니다. 현재 TMP_MainScene의 전투 "행동" 버튼(`MiddlePanel/ContentLayer/CombatActionBoundary`)이 유일한 사용처이며, `EnemyDisplayPanelDemo`(위)와 `SlotMachinePanel`(아래)의 경계선 가운데에 놓입니다. 주사위 보류 전에는 아래 패널이 `OwnedDicePanel`이었습니다([슬롯머신과 룬](slot-machine-and-runes.md)). 버튼이 덮는 `SlotMachinePanel` 위쪽 가운데는 `Content`의 위쪽 여백 44px이며, 좌우·상하 배치 모두에서 Reel 창, 합계 값, 룬 표 행을 가리지 않음을 1920×1080, 21:9, 1024×768, 390×844에서 Play Mode 검증 메뉴로 확인했습니다. 전투 표시 조건과 포커스 규칙은 [임시 적 전투](temporary-combat.md#행동-버튼), 배치 계산은 [FlexibleLayoutPanel 설계](flexible-layout-panel.md#레이아웃에-참여하지-않는-경계선-오버레이)를 봅니다.
 
 ## 구성 요소
 

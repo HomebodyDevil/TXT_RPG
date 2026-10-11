@@ -980,22 +980,26 @@ Apply 메뉴는 Play Mode를 종료하고 저장된 `TMP_MainScene`을 미저장
 
 ## 슬롯머신 전투 적용
 
-구조는 [슬롯머신과 룬 기반 전투 행동](../architecture/slot-machine-and-runes.md), 지침은 [slot-machine-and-rune-combat.md](../instructions/slot-machine-and-rune-combat.md)입니다. 2026-10-10에 이 작업 사본의 `TMP_MainScene`, `AppRoot.prefab`, 설정 자산과 Prefab에 적용·저장하고 검증했으므로, 이 작업 사본에서는 다시 실행할 필요가 없습니다.
+구조는 [슬롯머신과 룬 기반 전투 행동](../architecture/slot-machine-and-runes.md), 지침은 [slot-machine-and-rune-combat.md](../instructions/slot-machine-and-rune-combat.md)입니다. 2026-10-10에 이 작업 사본의 `TMP_MainScene`, `AppRoot.prefab`, 설정 자산과 Prefab에 적용·저장하고 검증했으므로, 이 작업 사본에서는 다시 실행할 필요가 없습니다. 패널 외형과 회전 연출 개편은 [slot-machine-panel-visual-and-spin-motion.md](../instructions/slot-machine-panel-visual-and-spin-motion.md)를 따랐고, 아래 `Apply Slot Machine Panel Visual`로 적용했습니다.
 
 | 메뉴 | 내용 | 저장 | 재실행 |
 | --- | --- | --- | --- |
 | `Tools > TxT RPG > Application > Temporary > Apply Slot Machine Combat` | 없을 때만 `TemporarySlotMachineConfiguration.asset`·`TemporaryRuneConfiguration.asset`(기본값)과 `UI/Prefabs/SlotMachine/SlotReel.prefab`·`SlotMachinePanel.prefab`을 만듭니다. 두 Prefab의 TMP 색 캐시와 기본 스타일 해시를 맞추고, AppRoot `PlayerSessionHost`의 빈 설정 참조를 채웁니다. TMP_MainScene에는 `OwnedDicePanel` 다음에 `SlotMachinePanel`을 추가하고 `FlexibleLayoutItem` 값을 복사합니다. 이어서 `OwnedDicePanel` 비활성, 주사위 컨트롤러·Binder 컴포넌트 끄기, `TemporarySlotCombatController` 추가·빈 참조 채우기를 합니다. 마지막으로 행동 버튼의 명령·처리기·두 번째 패널, 입력 차단 대상, `ExplorationRunController` 참조를 슬롯머신으로 바꾸고 검증합니다. | TMP_MainScene, AppRoot, 새 자산 자동 저장 | 안전. 기존 Prefab·자산·패널과 사용자 값은 그대로 두고, 비었거나 주사위를 가리키는 참조만 바꿉니다. 두 번째 실행은 `kept ...`만 기록하고 Scene 파일을 바꾸지 않습니다. |
 | `Tools > TxT RPG > Application > Temporary > Validate Slot Machine Combat` | 자산, AppRoot 참조, Scene 연결을 검사합니다. | 변경 없음 | 안전 |
+| `Tools > TxT RPG > Application > Temporary > Apply Slot Machine Panel Visual` | [SlotMachinePanel 외형 개편](../instructions/slot-machine-panel-visual-and-spin-motion.md)을 적용합니다. 없을 때만 `UI/Styles/SlotMachine/`의 `DefaultSlotReelSpinProfile.asset`(기본값)과 그라데이션 Sprite 두 장을 만듭니다. `SlotReel.prefab`은 원통 음영 Frame, 5칸 Window(7개 `SymbolCell`, 칸마다 잔상 TMP 3개), `ShadeOverlay`로 부분 수정합니다. `SlotMachinePanel.prefab`은 `ReelMachine`(틀, 구분대, `PaylineFrame`)과 `SummaryArea`(합계 상자, 룬 표)로 부분 수정하고 `spinProfile`을 연결합니다. 생성 당시 그대로인 `PaylineOverlay`·`Summary`는 제거하고, 사용자가 자식이나 컴포넌트를 추가했으면 비활성화만 하고 Console에 경고합니다. 마지막으로 TMP_MainScene의 `SlotMachinePanel` 인스턴스에서 제거된 객체의 재정의와 예전 `ReelArea` 위치 재정의만 정리하고 저장한 뒤 검증합니다. | 두 Prefab, 새 자산, TMP_MainScene 자동 저장(바뀐 경우만) | 안전. 원하는 상태면 `already matches; not saved`만 기록하고 아무 파일도 바꾸지 않습니다. 열린 Scene에 저장되지 않은 변경이 있으면 중단합니다. |
+| `Tools > TxT RPG > Application > Temporary > Apply Slot Machine Panel Skin` | [SlotMachinePanel 스킨](../instructions/slot-machine-panel-skin.md)을 적용합니다. 없을 때만 `UI/Styles/SlotMachine/Skins/`에 예시 Payline Sprite(`SlotPaylineFrameSample.png`, 9-slice 12·Full Rect), `DefaultSlotMachinePanelSkin.asset`, `SampleImagePaylineSkin.asset`, `SlotMachinePanelSkinCatalog.asset`(선택 `slot-skin.default`)을 만듭니다. `SlotMachinePanel.prefab`의 `PaylineFrame`을 배치 전용 루트로 바꾸고, 기존 `SlotPaylineFrameGraphic`을 값(색·두께)과 함께 자식 `ProceduralBorder`로 옮기고, 꺼진 `SkinImage`를 추가합니다. 두 Prefab의 스킨 대상 기본값을 기록하고(이미 기록된 값은 유지) 카탈로그를 연결합니다. TMP_MainScene은 옮긴 테두리 Graphic의 재정의가 있을 때만 그것을 지우고 저장합니다. | 두 Prefab, 새 자산 자동 저장(바뀐 경우만). TMP_MainScene은 충돌 재정의가 있을 때만 | 안전. 원하는 상태면 `already matches; not saved`만 기록합니다. 기존 스킨·카탈로그 내용과 기록된 기본값은 덮어쓰지 않습니다. 열린 Scene에 저장되지 않은 변경이 있으면 중단합니다. |
+| `Tools > TxT RPG > Application > Temporary > Cycle Slot Machine Panel Skin (Play Mode)` | Play Mode에서 패널을 카탈로그의 다음 스킨으로 바꾸고 `SLOT_MACHINE_SKIN_CYCLE: <id>`를 기록합니다. 화면 캡처와 수동 확인용입니다. | Play 상태만 변경 | 안전 |
 | `Tools > TxT RPG > Application > Temporary > Validate Slot Machine Combat (Play Mode)` | 새 탐험이 노드 선택을 기다리는 Play Mode에서 실행합니다. 다음을 차례로 검사하고 `SLOT_MACHINE_PLAY_VALIDATE ... PASS`를 기록합니다. | Play 상태만 변경 | 새 Play 세션에서 실행 |
 
 Play Mode 검증 메뉴가 검사하는 항목은 다음과 같습니다.
 
-- 주사위 표시가 숨겨져 있고, Reel 3개·`합계 —`·가중치가 표시되며, 노드 선택 중 패널 입력이 차단됩니다.
-- 1920×1080, 21:9, 1024×768, 390×844 가상 Viewport에서 버튼이 Reel과 합계를 가리지 않고 Payline 숫자가 칸 안에 들어갑니다.
-- 연속 `Submit` 두 번과 회전 중 가방 창 열기·닫기에도 결과가 1회만 적용됩니다.
+- 주사위 표시가 숨겨져 있고, Reel 3개·합계 `—`·룬 표 `공격 ×1`·`회복 ×1`과 열 제목이 표시되며, 노드 선택 중 패널 입력이 차단됩니다. 카탈로그의 선택 스킨이 적용되어 있고 Payline 표시가 하나만 켜져 있습니다.
+- 1920×1080, 21:9, 1024×768에서 좌우 배치, 390×844에서 상하 배치가 됩니다(전환 경계 ±0.06 안은 어느 쪽이든 통과). 버튼이 Reel 창·합계 값·룬 표 행을 가리지 않고, Payline 숫자가 칸 안에 들어가며, 구분대 수가 Reel 수 - 1이고, `PaylineFrame`이 첫 Reel부터 마지막 Reel까지 Payline 칸을 감쌉니다. 보이는 Payline(코드 테두리 또는 스킨 이미지)이 칸 범위를 둘러쌉니다. 네 화면을 선택 스킨과 `slot-skin.sample-image-payline`으로 한 번씩 검사합니다.
+- 회전 중 선택 스킨과 예시 스킨을 번갈아 바꿔도 회전이 계속되고 결과가 맞습니다. Reel 4·5개 단계는 이미지 Payline으로 검사하고, 끝나면 선택 스킨으로 돌아갑니다.
+- 연속 `Submit` 두 번과 회전 중 가방 창 열기·닫기에도 결과가 1회만 적용됩니다. 회전 중 잔상과 세로 늘림이 한 번 이상 보이고, 정지 후에는 잔상이 꺼지고 `VisualRoot` 배율이 1입니다. 정지 후 합계 값과 룬 표 행(`×N → 분배`)이 수락된 결과와 같습니다. Scene에 활성 `GameWindowService`가 없으면 창 단계는 건너뛰고 `game window NOT verified`를 기록합니다.
 - 포인터 클릭과 Reduce Motion으로도 실행됩니다.
 - 실행 중 Reel을 4·5개로 늘리고 칸 값을 바꾸면 다음 회전부터 반영됩니다.
-- 회전 중 `MainScene_VisualProposal`을 거쳐 TMP_MainScene에 다시 들어와도 결과가 1회만 적용되고 새 패널에 표시됩니다.
+- 회전 중 `MainScene_VisualProposal`을 거쳐 TMP_MainScene에 다시 들어와도 결과가 1회만 적용되고 새 패널에 표시되며, 새 패널에 잔상이 남지 않습니다.
 - 전투가 끝나면 버튼이 숨겨지고 노드 선택이 다시 패널을 덮습니다.
 
 Apply 메뉴는 Play Mode와 Prefab Stage를 종료하고 컴파일이 끝난 뒤 실행합니다. TMP_MainScene에 저장되지 않은 변경이 있으면 실행하지 않고 중단합니다. Scene을 열어 두었다면 저장한 다음 실행합니다. 결과 요약은 Console의 `SLOT_MACHINE_APPLY:`로 확인합니다. 저장 직후 Editor가 Scene을 변경됨으로 표시하는 경우가 있지만 파일 내용은 같습니다.
@@ -1015,9 +1019,39 @@ Apply 메뉴는 Play Mode와 Prefab Stage를 종료하고 컴파일이 끝난 �
 - `TxTRPG.Application.Tests.SlotMachineCombatTests`(설정 복사·잘못된 설정, 1회 회전·1회 적용, 중복 거부, 룬 줄 없음, 전투 변경 후 미적용, Scene 재초기화 1회 적용, 제한 시간, 비활성 주사위 참여자, `FormerlySerializedAs`, 저장된 Scene 연결)
 - `TxTRPG.Application.Tests.OwnedDiceIntegrationTests`, `TemporaryPlayerDiceStateTests`, `TemporaryMenuIconTests`, `PlayerSessionTests`
 - `TxTRPG.Application.Tests.MainSceneDefaultPresentationTests.ConfiguredScene_HasNoEnemyDemoWriterAndKeepsCorePanels`(이름으로 실행)
-- `TxTRPG.UI.Tests.SlotMachinePanelTests`, `TxTRPG.UI.Tests.BoundaryCommandButtonTests`
+- `TxTRPG.UI.Tests.SlotMachinePanelSkinTests`(스킨 없음·빈 스킨의 기본값, 이미지 Payline과 `paylineOutset`, 색만 지정한 Payline, A → B → `null` 전환의 빈 항목, 추가된 Reel·구분대·행의 스킨, 회전 효과 중 교체와 글자 알파 곱, 카탈로그 검증·`TrySetSkin`·저장된 카탈로그, 카탈로그 없음 경고 1회, `SkinChanged`)
+- `TxTRPG.UI.Tests.SlotMachinePanelTests`(계층·입력 없음, Reel·구분대 수, Payline 칸 범위와 테두리 확장, 결과 ±2칸, Reduce Motion·`StopAtResult`, 효과 정리, 요약 상태·`외 N줄`, 좌우·상하 전환 이력), `TxTRPG.UI.Tests.SlotReelSpinPlannerTests`(easing 경계값·기울기, 편차 범위, 1000개 이상 시드의 정지 순서·최대 시간, 위치 곡선 연속성·착지, 효과 강도), `TxTRPG.UI.Tests.BoundaryCommandButtonTests`
 
-`SlotMachineCombatTests`와 `SlotMachinePanelTests`는 저장된 `SlotMachinePanel.prefab`을 읽기만 합니다. Prefab이 없으면 먼저 Apply 메뉴를 실행합니다. `MainSceneMenuInputPlayModeTests`, `ExplorationTreePlayModeTests`는 슬롯머신 연결에 맞게 고쳤습니다. 다만 AppScene Play 시작 정책 때문에 Test Runner로는 실행하지 않았고, 위 Play Mode 검증 메뉴로 대신 확인합니다.
+`SlotMachineCombatTests`, `SlotMachinePanelTests`, `SlotMachinePanelSkinTests`는 저장된 `SlotMachinePanel.prefab`을 읽기만 합니다. 스킨 테스트의 스킨·카탈로그·Sprite는 메모리에서 만들고 끝나면 파괴합니다. Prefab이 없으면 먼저 Apply 메뉴를 실행합니다. Edit Mode에서는 시간이 흐르지 않으므로 테스트는 `SetSpinSettingsForEditor(SlotReelSpinSettings.Instant)` 또는 고속 구간만 있는 설정을 주입하고, 편차는 `SetSpinRandomSeedForEditor`로 고정합니다.
+
+### 회전 연출 조정
+
+회전 속도·시간·easing·잔상은 `Assets/TxTRPG/UI/Styles/SlotMachine/DefaultSlotReelSpinProfile.asset`의 Inspector에서 바꿉니다. 필드와 기본값은 [회전 연출](../architecture/slot-machine-and-runes.md#회전-연출)에 있습니다. 자주 바꾸는 값은 다음과 같습니다.
+
+- 전체 길이: `accelerationSeconds`(시작), `cruiseSeconds`(고속), `decelerationSeconds`(정지)
+- Reel 시차: `startIntervalSeconds`, `stopIntervalSeconds`, `minimumStopGapSeconds`
+- 속도: `cruiseCellsPerSecond`(목표), `minimumCruiseCellsPerSecond`(하한). 결과 칸에 정확히 멈추도록 실제 속도는 조정됩니다.
+- easing: `easing`(기본 `InOutElastic`). `InOutBounce`·`InOutCirc`는 구간 경계에서 속도가 약간 끊길 수 있습니다.
+- 고속 효과: `motionEffectsEnabled`, `afterimageCount`, `afterimageSpacing`, `afterimageAlpha`, `maximumVerticalStretch`
+
+제한 시간은 이 자산에서 계산한 최대 연출 길이에 1초를 더해 자동으로 늘어나며 15초를 넘지 않습니다. 값을 바꾼 뒤 Play Mode 검증 메뉴로 결과 칸 정지와 제한 시간을 확인합니다. 패널마다 다른 자산을 쓰려면 `Assets > Create > TxT RPG > Slot Machine > Reel Spin Profile`로 만든 자산을 `SlotMachinePanel.spinProfile`에 연결합니다.
+
+`Apply Slot Machine Panel Visual`은 2026-10-11에 이 작업 사본의 두 Prefab과 TMP_MainScene에 적용했습니다. 다른 작업 사본은 Prefab과 Scene 변경을 함께 받으면 실행할 필요가 없습니다. 모든 작업 사본이 이 Prefab 구조를 받은 뒤 메뉴를 은퇴시킬 수 있습니다. `Apply Slot Machine Combat`은 Prefab이 없을 때 이 메뉴의 Prefab 적용 핵심(`ApplyAssetsAndPrefabs`)을 호출하므로, 은퇴할 때 그 호출부도 함께 정리합니다. `MainSceneMenuInputPlayModeTests`, `ExplorationTreePlayModeTests`는 슬롯머신 연결에 맞게 고쳤습니다. 다만 AppScene Play 시작 정책 때문에 Test Runner로는 실행하지 않았고, 위 Play Mode 검증 메뉴로 대신 확인합니다.
+
+### SlotMachinePanel 스킨 만들기
+
+구조와 적용 규칙은 [스킨](../architecture/slot-machine-and-runes.md#스킨)에 있습니다.
+
+1. 이미지를 `Assets/TxTRPG/UI/Styles/SlotMachine/Skins/`(또는 그 아래 폴더)에 넣습니다. Texture Type `Sprite (2D and UI)`, Mesh Type `Full Rect`, Mip Map 끔, Wrap `Clamp`로 설정합니다. 외곽선·발광이 들어갈 이미지는 투명 여백을 두고, Sprite Atlas에 넣을 때는 Padding을 4 이상으로 둡니다. 이미지에 의미 있는 글자를 넣지 않습니다.
+2. 늘어나는 이미지(배경, 틀, Payline)는 Sprite Editor에서 9-slice 테두리(Border)를 지정합니다. 테두리 없이 `Sliced`로 쓰면 전체가 늘어나고 Console에 경고가 한 번 남습니다.
+3. Payline 이미지는 Payline 칸을 둘러싸는 테두리 모양이어야 합니다. 색만으로 Payline을 구분하지 않습니다. 이미지의 실제 테두리 선이 칸 경계에 오도록 `paylineOutset`(캔버스 단위)을 맞춥니다. 예시는 선 안쪽 가장자리가 이미지 가장자리에서 10px이므로 `paylineOutset`이 각 10입니다.
+4. `Assets > Create > TxT RPG > Slot Machine > Panel Skin`으로 스킨을 만들고 `skinId`를 정합니다. ID는 `slot-skin.<이름>` 형식의 소문자로 쓰며, 배포한 뒤에는 바꾸지 않습니다. 바꿀 항목에만 Sprite나 색 재정의를 넣고 나머지는 비워 둡니다. 배경을 바꾸면 `darkSurfaceTextColor`·`lightSurfaceTextColor`·`reelTextColor`로 글자 대비를 유지합니다.
+5. `SlotMachinePanelSkinCatalog.asset`의 `Skins`에 추가하고, Inspector의 `Selected Skin`에서 고릅니다. 검증 실패(빈 항목, 빈 ID, 중복 ID, 등록되지 않은 선택)는 Inspector에 경고로 표시됩니다.
+6. AppScene에서 Play를 시작해 패널을 확인합니다. `Cycle Slot Machine Panel Skin (Play Mode)`로 등록된 스킨을 차례로 볼 수 있습니다. 이어서 `Validate Slot Machine Combat (Play Mode)`를 실행합니다.
+
+Prefab의 기본 외형(색, Sprite)을 바꾼 뒤에는 `SlotMachinePanel.prefab` 루트의 `SlotMachinePanel` 컴포넌트와 `SlotReel.prefab`의 `SlotReelView` 컴포넌트에서 Inspector 메뉴(⋮) `기본 외형 다시 기록`을 실행하고 Prefab을 저장합니다. 기록하지 않으면 스킨을 적용할 때 예전 기본값으로 되돌아갑니다.
+
+`Apply Slot Machine Panel Skin`은 2026-10-11에 이 작업 사본의 두 Prefab과 스킨 자산에 적용했습니다. TMP_MainScene에는 충돌 재정의가 없어 저장하지 않았습니다. 다른 작업 사본은 Prefab·자산 변경을 함께 받으면 실행할 필요가 없습니다. `Apply Slot Machine Combat`으로 Prefab을 새로 만든 작업 사본은 `Apply Slot Machine Panel Visual` 다음에 이 메뉴를 실행합니다. 모든 작업 사본이 이 구조를 받은 뒤 메뉴를 은퇴시킬 수 있습니다. `Apply Slot Machine Panel Visual`은 재실행해도 `PaylineFrame/ProceduralBorder`를 그대로 사용합니다.
 
 ### 보류된 주사위 도구
 

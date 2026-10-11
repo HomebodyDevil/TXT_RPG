@@ -21,7 +21,7 @@
 | `ui.enemy-display` | `EnemyDisplayPanel.prefab` |
 | `ui.flexible-layout` | `FlexibleLayoutPlaceholder.prefab`, `FlexibleLayoutPanel.prefab` |
 
-StoryTextPanel은 기존 Style을 기본값으로 다시 쓰기 때문에 제외합니다. `SlotMachinePanel.prefab`·`SlotReel.prefab`(`Assets/TxTRPG/UI/Prefabs/SlotMachine/`)은 임시 메뉴 `Apply Slot Machine Combat`(`TemporarySlotMachineIntegration`)이 없을 때만 만들고 이후 개발자 소유 자산으로 취급하며, 같은 메뉴가 AppRoot와 TMP_MainScene도 바꾸므로 Prefab 전용 생성 핵심이 분리되기 전까지 배치에 넣지 않습니다(Provider 등록 없음). Demo/Sample, Game Menu의 현재 복합 생성, 기본 콘텐츠, AppScene, Scene Transition, Addressables, 수작업 Prefab과 Variant도 Scene·콘텐츠·설정 변경 또는 출력 경계 혼합 때문에 제외합니다.
+StoryTextPanel은 기존 Style을 기본값으로 다시 쓰기 때문에 제외합니다. `SlotMachinePanel.prefab`·`SlotReel.prefab`(`Assets/TxTRPG/UI/Prefabs/SlotMachine/`)은 임시 메뉴 `Apply Slot Machine Combat`(`TemporarySlotMachineIntegration`)이 없을 때만 만들고 이후 개발자 소유 자산으로 취급하며, 같은 메뉴가 AppRoot와 TMP_MainScene도 바꾸므로 Prefab 전용 생성 핵심이 분리되기 전까지 배치에 넣지 않습니다(Provider 등록 없음). 두 Prefab을 Reel 기계·요약 영역 구조로 부분 수정하는 임시 메뉴 `Apply Slot Machine Panel Visual`(`TemporarySlotMachinePanelVisualApply`)도 같은 이유로 제외합니다. 이 메뉴는 Prefab을 다시 만들지 않고 필요한 객체와 지침이 정한 속성만 바꾸며, TMP_MainScene의 충돌 재정의도 정리합니다. 스킨 자산을 만들고 `PaylineFrame` 계층을 바꾸고 스킨 대상 기본값을 기록하는 임시 메뉴 `Apply Slot Machine Panel Skin`(`TemporarySlotMachinePanelSkinApply`)도 같은 이유로 제외합니다. 이 메뉴는 자산을 만들고 TMP_MainScene의 충돌 재정의를 정리할 수 있으며, 기록된 기본값과 사용자 스킨·카탈로그를 덮어쓰지 않습니다. Demo/Sample, Game Menu의 현재 복합 생성, 기본 콘텐츠, AppScene, Scene Transition, Addressables, 수작업 Prefab과 Variant도 Scene·콘텐츠·설정 변경 또는 출력 경계 혼합 때문에 제외합니다.
 
 ## 안전 계약
 

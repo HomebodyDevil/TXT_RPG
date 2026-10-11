@@ -84,11 +84,20 @@ namespace TxTRPG.Application.SlotMachine
     // like DiceRollStoryFormatter.
     public static class SlotCombatStoryFormatter
     {
-        public const string IdleTotal = "합계 —";
-        public const string SpinningTotal = "회전 중…";
+        // Slot machine panel summary texts.
+        public const string TotalLabel = "합계";
+        public const string IdleTotalValue = "—";
+        public const string SpinningTotalValue = "…";
+        public const string RuneColumnTitle = "룬";
+        public const string ValueColumnTitle = "쌓임 → 분배";
         public const string NoRuneLines = "장착된 룬이 없습니다";
+        public const string OverflowFormat = "외 {0}줄";
 
-        public static string Total(int total) => $"합계 {total}";
+        public static string TotalValue(int total) => total.ToString();
+
+        // Rune line row value before a spin ("×2") and after it ("×2 → 6").
+        public static string LineWeight(int weight) => $"×{weight}";
+        public static string LineAllocation(int weight, int amount) => $"×{weight} → {amount}";
 
         public static string EffectName(RuneEffectKind effect) => effect switch
         {
@@ -112,28 +121,6 @@ namespace TxTRPG.Application.SlotMachine
         // "[룬] 1번 줄 공격 룬 ×1: 5", or "... : 0 (실행하지 않음)" for a line that received nothing.
         public static string Line(RuneAllocationLine line) =>
             $"[룬] {line.Order}번 줄 {line.DisplayName} ×{line.Weight}: {line.Amount}{(line.Amount == 0 ? " (실행하지 않음)" : string.Empty)}";
-
-        // Panel text before a spin: "공격 ×1 · 회복 ×1".
-        public static string Weights(IReadOnlyList<(RuneEffectKind Effect, int Weight)> lines)
-        {
-            if (lines == null || lines.Count == 0) return NoRuneLines;
-            var parts = new string[lines.Count];
-            for (var i = 0; i < parts.Length; i++) parts[i] = $"{EffectName(lines[i].Effect)} ×{lines[i].Weight}";
-            return string.Join(" · ", parts);
-        }
-
-        // Panel text after a spin: "공격 ×3 → 6 · 회복 ×2 → 4".
-        public static string Allocation(RuneAllocation allocation)
-        {
-            if (allocation == null || allocation.Lines.Count == 0) return NoRuneLines;
-            var parts = new string[allocation.Lines.Count];
-            for (var i = 0; i < parts.Length; i++)
-            {
-                var line = allocation.Lines[i];
-                parts[i] = $"{EffectName(line.EffectKind)} ×{line.Weight} → {line.Amount}";
-            }
-            return string.Join(" · ", parts);
-        }
 
         // Story lines of one turn: the spin, then each rune line followed by its own combat events (matched by SourceId,
         // not by event position), then the enemy action and the outcome.

@@ -24,7 +24,7 @@ flowchart LR
 | --- | --- |
 | `TxTRPG.Gameplay` | `IRandomIndexProvider`(공용 난수 계약), `SlotMachine` 네임스페이스(`SlotSymbol`, `SlotReel`, `SlotMachine`, `SlotReelStop`, `SlotSpinResult`), `Runes` 네임스페이스(정의·보유·줄·분배), 전투 입력 `PlayerCombatAction`. Unity에 의존하지 않습니다. |
 | `TxTRPG.Application` | 설정 자산, 세션 상태, `TemporarySlotCombatController`, 수락·턴 기록, `RuneCombatActions`, `SlotCombatStoryFormatter`, 공용 `ITemporaryCombatController`·`TemporaryCombatStoryText`·`TemporaryCombatPresentationTimeout`. |
-| `TxTRPG.UI` | `SlotMachinePanel`, `SlotReelViewBase`/`SlotReelView`, 표시용 구조(`SlotReelDisplay`, `SlotReelStopDisplay`, `SlotSpinDisplay`). Gameplay·Application 타입을 쓰지 않습니다. |
+| `TxTRPG.UI` | `SlotMachinePanel`, `SlotReelViewBase`/`SlotReelView`, 배치(`SlotMachineContentLayout`, `SlotReelAreaLayout`), `SlotPaylineFrameGraphic`, 스킨(`SlotMachinePanelSkin`, `SlotMachinePanelSkinCatalog`, `SlotSkinImage`, `SlotSkinColor`, `SlotSkinOffset`, `SlotSkinGraphicTarget`, `SlotSkinTextTarget`), 룬 표(`SlotRuneTableView`, `SlotRuneLineRow`), `SlotHeightScaledText`, 회전 연출(`SlotReelSpinProfile`, `SlotReelSpinSettings`, `SlotEasing`, `SlotReelSpinPlanner`, `SlotReelSpinPlan`, `SlotReelSpinCurve`), 표시용 구조(`SlotReelDisplay`, `SlotReelStopDisplay`, `SlotRuneLineDisplay`, `SlotSummaryDisplay`, `SlotSpinDisplay`). Gameplay·Application 타입을 쓰지 않습니다. |
 
 주사위 도메인(`TxTRPG.Gameplay.Dice`)과 슬롯머신·룬 도메인은 서로 참조하지 않습니다. 기존 `IRandomIndexSource`는 이름과 위치를 그대로 둔 채 `IRandomIndexProvider`를 상속하도록 바꿨으므로 주사위 호출부는 바뀌지 않았습니다. 두 시스템이 만나는 곳은 전투 입력 `PlayerCombatAction`뿐입니다.
 
@@ -112,7 +112,7 @@ Payline은 가운데 줄 하나입니다. 여러 Payline이나 기호 조합 판
 
 1. `PlayerSessionHost.TryBeginTemporaryCombatAction`으로 공용 행동 잠금을 얻습니다. 기존 `TryBeginTemporaryDiceAction`·`EndTemporaryDiceAction`은 같은 잠금에 위임하는 별칭입니다.
 2. 회전과 분배를 수락합니다. `Spin`을 한 번 호출하고 그 시점의 룬 줄로 분배합니다. run·node·전투와 함께 `TemporarySlotAcceptedAction`으로 묶어 `AcceptTemporarySlotAction`으로 세션에 보관합니다. 이후에는 다시 돌리지 않습니다.
-3. 패널 연출을 기다립니다. 제한 시간은 `TemporaryCombatPresentationTimeout.Resolve(최소, 패널 최대 연출 길이 + 여유)`(1~15초)입니다. 시간을 넘기거나 연출이 실패하면 `StopAtResult`로 결과를 바로 보여 줍니다. 패널이 없거나 비활성이면 연출 없이 진행합니다.
+3. 패널 연출을 기다립니다. 제한 시간은 `TemporaryCombatPresentationTimeout.Resolve(최소, panel.GetMaximumPresentationSeconds(Reel 수) + 여유)`(1~15초)입니다. 최대 연출 길이는 회전 연출 설정 자산에서 계산합니다([회전 연출](#회전-연출)). 시간을 넘기거나 연출이 실패하면 `StopAtResult`로 결과를 바로 보여 줍니다. 패널이 없거나 비활성이면 연출 없이 진행합니다.
 4. 수락 당시의 세션·전투·run·node가 그대로인지 확인합니다. 그대로이면 `RuneCombatActions.FromAllocation`으로 줄 순서의 행동 목록을 만들고 `ExecuteTurn`을 정확히 한 번 호출합니다. 수치 0인 줄은 목록에서 빠집니다. 일부가 실패해도 다시 실행하지 않습니다.
 5. `PublishTemporarySlotStory`로 Story 기록을 발행합니다. 적·체력·예고 표시를 갱신하고, 전투가 끝났으면 `NotifyTemporaryCombatCompleted`와 `CombatFinished`를 호출합니다.
 6. 수락 기록과 잠금을 해제합니다. 잠금 해제 시 `TemporaryCombatActionEnded`가 발생하고 실행 가능 상태가 갱신됩니다.
@@ -140,74 +140,211 @@ Payline은 가운데 줄 하나입니다. 여러 Payline이나 기호 조합 판
 
 ### 배치
 
-`MiddlePanel/ContentLayer`에서 `SlotMachinePanel`은 `OwnedDicePanel` 바로 다음 형제입니다. `FlexibleLayoutItem` 값은 `OwnedDicePanel`에서 복사했습니다(Weighted, Weight 0.7, 최소 200). `OwnedDicePanel`은 비활성이며, `ContentLayer`의 `FlexibleContentLayoutGroup`은 비활성 자식을 계산에서 뺍니다(`includeInactiveChildren` 꺼짐). 그래서 패널은 기존 주사위 패널과 같은 위치와 크기를 차지합니다. 적용 시 같은 Game view에서 두 패널의 크기·위치가 같음을 측정했습니다.
+`MiddlePanel/ContentLayer`에서 `SlotMachinePanel`은 `OwnedDicePanel` 바로 다음 형제입니다. `FlexibleLayoutItem` 값은 `OwnedDicePanel`에서 복사했습니다(Weighted, Weight 0.7, 최소 200). `OwnedDicePanel`은 비활성이며, `ContentLayer`의 `FlexibleContentLayoutGroup`은 비활성 자식을 계산에서 뺍니다(`includeInactiveChildren` 꺼짐). 그래서 패널은 기존 주사위 패널과 같은 위치와 크기를 차지합니다.
 
-Play Mode 검증에서 측정한 패널 크기는 다음과 같습니다.
+패널 안의 `Content`는 `SlotMachineContentLayout`이 배치합니다. `Content`의 너비/높이 비율이 `stackBelowAspectRatio`(1.3) 이상이면 Reel 기계와 요약 영역을 좌우로 둡니다(가중치 0.62 : 간격 0.04 : 0.31, 합으로 정규화). 1.3 미만이면 Reel 기계를 위에, 요약 영역을 아래에 쌓습니다(0.62 : 0.04 : 0.34). 경계 근처에서 반복 전환하지 않도록 이력값 0.05를 둡니다. 좌우 배치에서 벗어나려면 비율이 1.25 미만이어야 하고, 상하 배치에서 돌아오려면 1.35 이상이어야 합니다. 같은 컴포넌트가 배치 상태에 맞춰 요약 영역 안의 `TotalBox`와 `RuneTableArea` 앵커를 바꿉니다. 상하 배치에서는 합계 상자가 왼쪽 약 35%, 룬 표가 오른쪽에 놓입니다. 이 계산은 `LayoutGroup`의 표준 갱신(크기·자식 변경)에서만 실행됩니다. 비율, 간격, 전환값, 앵커 사각형은 모두 직렬화 설정입니다. `Arrangement`와 `ArrangementChanged`로 현재 배치를 알 수 있습니다.
 
-| 화면 | 패널 크기 |
-| --- | --- |
-| 1920×1080 | 968×413 |
-| 21:9 | 1302×413 |
-| 1024×768 | 470×332 |
-| 390×844 | 332×274 |
+Play Mode 검증에서 측정한 패널 크기와 배치는 다음과 같습니다(2026-10-11).
 
-`CombatActionBoundary`의 `PanelBoundaryPlacement.secondPanel`은 `SlotMachinePanel`입니다. 행동 버튼은 패널 위쪽 가운데를 일부 덮을 수 있습니다. `Content`의 위쪽 여백 44px 안에 Reel과 합계가 들어오지 않도록 했습니다. `ExplorationNodePanel`의 `CoveredPanelInteractionBlocker`는 노드 선택 중 `SlotMachinePanel`의 `CanvasGroup`을 막습니다.
+| 화면 | 패널 크기 | 비율 | 배치 | Reel 창 |
+| --- | --- | --- | --- | --- |
+| 1920×1080 | 968×413 | 2.35 | 좌우 | 173×279 |
+| 21:9 | 1302×413 | 3.15 | 좌우 | 234×279 |
+| 1024×768 | 470×332 | 1.42 | 좌우 | 83×216 |
+| 390×844 | 332×274 | 1.21 | 상하 | 89×106 |
+
+`CombatActionBoundary`의 `PanelBoundaryPlacement.secondPanel`은 `SlotMachinePanel`입니다. 행동 버튼은 패널 위쪽 가운데를 일부 덮을 수 있습니다. `Content`의 위쪽 여백 44px 때문에 버튼은 위 네 화면 모두에서 Reel 창, 합계 값, 룬 표 행을 가리지 않습니다. `ExplorationNodePanel`의 `CoveredPanelInteractionBlocker`는 노드 선택 중 `SlotMachinePanel`의 `CanvasGroup`을 막습니다.
 
 ### 계층
 
 Prefab은 `Assets/TxTRPG/UI/Prefabs/SlotMachine/SlotMachinePanel.prefab`과 `SlotReel.prefab`입니다. 패널 Prefab에는 `SlotReel` 중첩 인스턴스 3개가 들어 있습니다.
 
 ```text
-SlotMachinePanel          (RectTransform, CanvasGroup, FlexibleLayoutItem, SlotMachinePanel)
-├─ Background             (Image, 입력 없음)
-├─ Content                (VerticalLayoutGroup, 위쪽 여백 44)
-│  ├─ ReelArea            (HorizontalLayoutGroup, Reel 같은 너비 분할)
-│  │  ├─ SlotReel_{n}     (SlotReelView, LayoutElement: 레이아웃 전용)
-│  │  │  ├─ Frame         (Reel 배경·테두리 시각 루트)
-│  │  │  ├─ Window        (RectMask2D, 보이는 3칸)
-│  │  │  │  └─ Strip      (연출이 위치를 움직이는 루트)
-│  │  │  │     └─ SymbolCell_0..4 > VisualRoot > Icon(Image), Value(TMP_Text)
-│  │  │  └─ EffectRoot    (Reel 단위 효과, Window 밖)
-│  │  └─ PaylineOverlay   (ignoreLayout: 가운데 칸 위·아래 선과 양옆 마름모 표지)
-│  └─ Summary > TotalText ("합계 10"), AllocationText ("공격 ×1 → 5 · 회복 ×1 → 5")
-├─ StatusText             (구성 오류, 평소 비활성)
-└─ EffectRoot             (패널 단위 효과)
+SlotMachinePanel            (RectTransform, CanvasGroup, FlexibleLayoutItem, SlotMachinePanel)
+├─ Background               (Image #757575, 입력 없음)
+├─ Content                  (SlotMachineContentLayout, 여백 12·12·44·8)
+│  ├─ ReelMachine           (레이아웃 전용)
+│  │  ├─ Frame              (검은 틀 #0A0A0A, 시각 루트) > LeftEdge, RightEdge (밝은 세로 그라데이션 띠)
+│  │  ├─ ReelArea           (SlotReelAreaLayout: Reel과 구분대 교차, 간격 0)
+│  │  │  ├─ SlotReel_{n}    (SlotReelView, LayoutElement 최소 너비 40·유연 1)
+│  │  │  │  ├─ Frame        (원통 음영 Image, 그라데이션 Sprite × #808080)
+│  │  │  │  ├─ Window       (RectMask2D, 세로 8%~92%, 보이는 5칸)
+│  │  │  │  │  ├─ Strip     (연출이 위치를 움직이는 루트)
+│  │  │  │  │  │  └─ SymbolCell_0..6 > VisualRoot > Icon, Afterimage_3..1, Value
+│  │  │  │  │  └─ ShadeOverlay (위·아래 가장자리를 어둡게 덮는 Image)
+│  │  │  │  └─ EffectRoot   (Reel 단위 효과, Window 밖)
+│  │  │  └─ ReelDivider_{n} (그라데이션 Sprite × #DCDCDC, LayoutElement 최소 너비 4·유연 0.16)
+│  │  └─ PaylineFrame       (배치 전용 루트, LayoutElement ignoreLayout, Payline 칸 범위)
+│  │     ├─ ProceduralBorder (SlotPaylineFrameGraphic #A3F213, 루트를 두께만큼 바깥으로 넓힌 크기)
+│  │     └─ SkinImage       (Image, 기본 꺼짐, 루트에 스킨 paylineOutset을 더한 크기)
+│  └─ SummaryArea           (레이아웃 전용)
+│     ├─ Background         (#D9D9D9 시각 루트)
+│     ├─ TotalBox > Background(#757575), TotalLabel, TotalValue
+│     └─ RuneTableArea
+│        ├─ RuneTable > Background(#757575), Rows (SlotRuneTableView)
+│        │                 ├─ RuneLineRowTemplate (비활성) > Background(#D9D9D9), EffectText, ValueText, MessageText
+│        │                 └─ RuneLineRow_{n}      (실행 중 템플릿에서 생성)
+│        └─ RuneTableHeader > RuneColumnTitle, ValueColumnTitle
+├─ StatusText               (구성 오류, 평소 비활성)
+└─ EffectRoot               (패널 단위 효과)
 ```
 
-- 모든 Graphic의 `raycastTarget`이 꺼져 있습니다. 패널은 입력을 받지 않습니다.
-- `PaylineOverlay`는 지침의 `Content` 바로 아래가 아니라 `ReelArea` 안에 있습니다. `ignoreLayout`으로 Reel 창 높이의 가운데 1/3에 맞추기 위해서입니다.
-- Payline은 색만으로 구분하지 않습니다. 선과 마름모 모양으로 표시하고, 가운데 칸 글자를 굵게·크게, 위·아래 칸을 흐리게(알파 0.45, 크기 0.72배) 보여 줍니다.
-- `RectMask2D`가 `Window` 밖을 자르므로, 번지는 효과는 `EffectRoot`에 붙입니다.
+- 모든 저작 Graphic의 `raycastTarget`이 꺼져 있습니다. 패널은 입력을 받지 않습니다. TMP가 실행 중 대체 글꼴 글자를 위해 만드는 `TMP SubMeshUI` 자식은 Prefab에 저장되지 않으며 이 규칙의 검사 대상에서 제외합니다.
+- `ReelMachine`, `SummaryArea`, `TotalBox`, `RuneTable`, 각 행은 레이아웃 루트와 시각 루트(`Frame` 또는 `Background`)를 분리했습니다.
+- 원통 음영과 구분대·틀 가장자리 띠는 `Assets/TxTRPG/UI/Styles/SlotMachine/SlotReelCylinderGradient.png`(4×256, 가운데 흰색·위아래 검정)에 `Image.color`로 색을 입힙니다. `ShadeOverlay`는 `SlotReelEdgeShade.png`(위아래 불투명 검정, 가운데 투명)에 알파 0.75를 씁니다. 공유 Material은 바꾸지 않습니다.
+- `PaylineFrame`(배치 루트)은 첫 Reel 창 왼쪽부터 마지막 Reel 창 오른쪽까지 Payline 칸 높이로 놓입니다. 바깥 확장은 자식이 맡습니다. `ProceduralBorder`는 루트에 앵커를 늘려 붙고 테두리 두께(기준 4, 화면 픽셀 최소 2)만큼 음수 offset으로 넓어져 테두리 안쪽 가장자리가 칸 경계와 맞습니다. `SkinImage`는 스킨의 `paylineOutset`만큼 넓어집니다. 자식 offset은 확장 값이 바뀔 때(스킨 교체, 캔버스 배율 변경)만 다시 씁니다. `PaylineFrameRect`는 배치 루트(칸 범위), `PaylineVisibleRect`는 지금 보이는 표시(테두리 또는 이미지)를 돌려줍니다. 위치는 `SlotReelAreaLayout.LayoutApplied`(Reel 영역 레이아웃 갱신 직후)와 Reel 수 변경 때만 다시 계산합니다. 각 Reel은 `SlotReelViewBase.GetPaylineWorldCorners`로 Payline 칸 모서리를 알려 줍니다.
+- Payline은 색만으로 구분하지 않습니다. 테두리 모양과 가운데 칸의 가장 높은 밝기(알파 1)로 함께 구분합니다. 테두리는 전용 Graphic이므로 바깥 외곽선 Graphic을 나중에 덧붙일 수 있습니다.
+- 칸 위치별 글자 알파는 `distanceAlpha` = `[1, 0.8, 0.4]`(Payline, ±1칸, ±2칸), 크기 배율은 `distanceFontScale` = `[1, 1, 1]`입니다. 회전 중에는 실제 화면 위치로 보간하므로 칸이 넘어갈 때 밝기가 튀지 않습니다. `boldPayline`(기본 꺼짐)을 켜면 정지 상태의 Payline 칸을 굵게 표시합니다.
+- 숫자 크기는 TMP Auto Size 대신 칸 높이·너비 중 작은 값 × `paylineFontRatio`(0.62)를 `[16, 64]`로 제한해 정합니다. 요약 영역의 글자는 `SlotHeightScaledText`가 자기 높이 × 비율을 최소·최대값으로 제한합니다(합계 0.55·14~72, 열 제목 0.8·10~36, 행 0.6·10~48). 모두 크기가 바뀔 때만 다시 계산합니다.
+- 요약 영역 글자는 굵게(TMP Bold) 표시합니다. 한국어 대체 글꼴 `NotoSansKR-Fallback`이 가변 글꼴의 얇은 기본 굵기로 만들어져 회색 상자 위에서 흐리게 보이기 때문입니다.
+- `SlotReelView`의 `visibleCellCount`(홀수, 기본 5)에 따라 `cells`·`cellVisualRoots`·`cellTexts`·`cellIcons`·`cellAfterimages`는 `visibleCellCount + 2`개여야 합니다. 길이가 맞지 않으면 배치를 건너뛰고 한 번 경고합니다. Payline 칸은 `SymbolCell_{visibleCellCount / 2 + 1}`(기본 `SymbolCell_3`)입니다. 검증 API `ValueAt`·`TextAt`은 ±2칸까지 지원합니다.
 - `SymbolCell`은 `SlotReelView.symbolSprites`에 값에 맞는 Sprite가 있으면 Icon을, 없으면 숫자를 표시합니다. 현재 매핑은 비어 있습니다.
-- 글자 크기는 TMP Auto Size 대신 칸 높이·너비 × 0.62를 `[16, 64]` 범위로 제한해 정합니다. 칸 크기가 바뀔 때만 다시 계산합니다.
-- Reel 수가 바뀌면 `reelPrefab`으로 `SlotReel_{n}`을 추가하거나 끝에서부터 제거합니다. 가로 스크롤은 없습니다.
-- 두 Prefab은 처음 한 번 생성한 뒤 개발자 소유 자산이며, 등록 기반 Prefab Rebuild에서 제외됩니다([등록 기반 Prefab Rebuild](prefab-rebuild-registry.md)).
+- Reel 수가 바뀌면 `reelPrefab`으로 `SlotReel_{n}`을 추가하거나 끝에서부터 제거하고, 구분대도 Reel 사이에만 있도록 맞춥니다. 첫 구분대는 템플릿으로 남기고 Reel이 1개일 때는 비활성으로 둡니다. 가로 스크롤은 없습니다.
+- 두 Prefab은 개발자 소유 자산이며, 등록 기반 Prefab Rebuild에서 제외됩니다([등록 기반 Prefab Rebuild](prefab-rebuild-registry.md)).
+
+### 표시 데이터
+
+UI 어셈블리는 Gameplay·Application 타입을 모릅니다. 사용자에게 보이는 문구는 모두 Application의 `SlotCombatStoryFormatter`가 만들고 표시 데이터로 넘깁니다.
+
+| 타입 | 내용 |
+| --- | --- |
+| `SlotRuneLineDisplay` | `EffectText`(`공격`), `ValueText`(`×2` 또는 `×2 → 6`) |
+| `SlotSummaryDisplay` | `TotalLabel`(`합계`), `TotalValue`(`—`, `…`, `13`), `RuneColumnTitle`(`룬`), `ValueColumnTitle`(`쌓임 → 분배`), `Lines`, `EmptyText`(`장착된 룬이 없습니다`), `OverflowFormat`(`외 {0}줄`) |
+| `SlotSpinDisplay` | `Reels`, `PaylineTotal`, `SpinningSummary`, `ResultSummary` |
+
+`SlotMachinePanel.SetSummary(SlotSummaryDisplay)`가 합계 상자와 룬 표를 갱신합니다. 검증용 읽기 속성은 `TotalLabelText`, `TotalValueText`, `RuneColumnTitleText`, `ValueColumnTitleText`, `RuneLineTexts`(행별 효과·값)입니다. `TemporarySlotCombatController.CreateSummary`가 문구를 묶고, `CreateSpinDisplay`가 회전 중(`×N`)과 정지 후(`×N → 분배`) 요약을 만듭니다. 분배 0인 줄도 행으로 표시합니다(`×1 → 0`).
+
+`SlotRuneTableView`(`Rows`)는 줄마다 행 하나를 템플릿에서 만들고 재사용합니다. 행 높이는 표 높이의 22%를 넘지 않고, 줄이 많으면 최소 18까지 줄어듭니다. 그래도 모자라면 앞 줄들을 표시하고 마지막 행에 `외 N줄`을 표시합니다. 줄이 없으면 한 행 너비로 `장착된 룬이 없습니다`를 표시합니다. 쓰지 않는 칸은 GameObject를 끄지 않고 빈 문자열로 둡니다. 크기 변경은 레이아웃 재구성 중에 들어오므로 다음 `LateUpdate`에서 한 번 반영합니다. 크기 변경이 없는 프레임에는 아무것도 하지 않습니다.
 
 ### 표시 상태
 
-| 상태 | Reel | TotalText | AllocationText |
+| 상태 | Reel | 합계 값 | 룬 표 |
 | --- | --- | --- | --- |
-| 전투 없음·첫 회전 전 | 각 Strip 첫 칸이 Payline | `합계 —` | `공격 ×1 · 회복 ×1` (줄의 효과와 가중치) |
-| 회전 중 | 흐름 연출 | `회전 중…` | 가중치 유지 |
-| 정지 후 | 결과 칸이 Payline | `합계 N` | `공격 ×1 → 6 · 회복 ×1 → 5` |
-| 장착된 룬 줄 없음 | 이전 상태 | 이전 값 | `장착된 룬이 없습니다` |
+| 전투 없음·첫 회전 전 | 각 Strip 첫 칸이 Payline | `—` | 줄마다 효과 이름과 `×1` |
+| 회전 중 | 3구간 연출 | `…` | 쌓인 수 유지(`×1`) |
+| 정지 후 | 결과 칸이 Payline | Payline 합계 | `×1 → 6`처럼 쌓인 수와 분배 |
+| 장착된 룬 줄 없음 | 이전 상태 | 이전 값 | `장착된 룬이 없습니다` 한 행 |
 | 구성 오류 | `Content` 숨김 | — | `StatusText`에 사유 |
 
 구성이 바뀌면 ID와 Strip이 같은 Reel은 보이던 칸을 유지합니다. 새 Reel이나 값이 바뀐 Reel은 첫 칸을 보여 줍니다. 회전 중에 바뀐 구성은 연출이 끝난 뒤 반영합니다.
 
 ### 회전 연출
 
-`SlotMachinePanel.PlaySpinAsync(SlotSpinDisplay, reduceMotion, token) → Task<bool>`은 이미 정해진 결과를 보여 주기만 합니다. 각 Reel은 `SlotReelViewBase.PlaySpinAsync`로 독립적으로 돌아가므로, 패널은 Reel 구현의 내부 구조를 모릅니다.
+`SlotMachinePanel.PlaySpinAsync(SlotSpinDisplay, reduceMotion, token) → Task<bool>`은 이미 정해진 결과를 보여 주기만 합니다. 패널은 `SlotReelSpinPlanner.Create`로 Reel마다 `SlotReelSpinPlan`을 먼저 만들고, 모든 Reel의 `SlotReelViewBase.PlaySpinAsync(reel, stopIndex, plan, token)`을 동시에 시작합니다. 각 Reel은 자신의 시작 지연을 기다리는 동안 이전 정지 상태를 보여 주고, 중단 조건도 확인합니다. Reel 구현은 패널이나 설정 자산을 참조하지 않습니다.
 
-`SlotReelView`의 연출은 다음과 같습니다.
+#### 설정 자산 `SlotReelSpinProfile`
 
-- `Strip`을 칸 높이의 일부만큼 위로 움직입니다. 칸 하나만큼 움직이면 기준 인덱스를 1 올리고 `Strip`을 제자리로 되돌리므로, Payline에는 Strip 값이 순서대로 지나갑니다.
-- 텍스트는 기준 인덱스가 바뀔 때만 다시 지정하고, 숫자 문자열은 캐시합니다.
-- 이동 거리는 결과 칸에 정확히 멈추도록 `(결과 - 시작) mod n + n × 바퀴 수`로 정합니다. 속도는 일정하게 유지하다가 감속 구간에서 줄입니다.
+`SlotMachinePanel.spinProfile`은 `Assets/TxTRPG/UI/Styles/SlotMachine/DefaultSlotReelSpinProfile.asset`을 참조합니다. 만들기 메뉴는 `Assets > Create > TxT RPG > Slot Machine > Reel Spin Profile`입니다. 참조가 비면 코드의 같은 기본값(`SlotReelSpinSettings.Default`)으로 동작하고, 패널마다 한 번 경고합니다. 게임 진행은 막지 않습니다.
 
-기본값은 첫 Reel 회전 0.8초, Reel 간 정지 간격 0.25초, 감속 0.3초입니다. Reel은 왼쪽부터 차례로 멈추며, 값은 모두 직렬화 설정입니다. 시간은 `Time.unscaledTime`의 차이로 계산하므로 `Time.timeScale`과 프레임레이트에 영향을 받지 않습니다.
+| 그룹 | 필드 | 기본값 | 의미 |
+| --- | --- | --- | --- |
+| Easing | `easing` | `InOutElastic` | 앞 절반은 시작 구간, 뒤 절반은 정지 구간에 씁니다. |
+| 시차 | `startIntervalSeconds` | 0.08 | Reel i는 `i × 값` 뒤에 시작합니다. |
+|  | `stopIntervalSeconds` | 0.22 | Reel i의 고속 구간 기준 길이에 `i × 값`을 더합니다. |
+|  | `minimumStopGapSeconds` | 0.12 | 이웃 Reel 정지 시각의 최소 차이 |
+| 구간 기준 | `accelerationSeconds` (n) | 0.35 | 시작 구간 |
+|  | `cruiseSeconds` | 0.70 | 첫 Reel의 고속 구간 |
+|  | `decelerationSeconds` (m) | 0.70 | 정지 구간 |
+| 편차 | `startJitterSeconds`, `accelerationJitterSeconds`, `cruiseJitterSeconds`, `decelerationJitterSeconds` | 0.03, 0.05, 0.12, 0.08 | 각 기준값의 50% 이하로 제한됩니다. |
+| 속도 | `cruiseCellsPerSecond` | 18 | 고속 구간 목표 속도(칸/초) |
+|  | `minimumCruiseCellsPerSecond` | 8 | 조정된 속도의 하한 |
+| 고속 연출 | `motionEffectsEnabled` | 켜짐 | 잔상·세로 늘림 사용 |
+|  | `effectFadeInSeconds`, `effectFadeOutSeconds` | 0.12, 0.15 | 효과가 켜지고 꺼지는 시간 |
+|  | `afterimageCount` | 2 | 칸마다 켜는 잔상 수(0~3) |
+|  | `afterimageSpacing`, `afterimageAlpha` | 0.18, 0.35 | 잔상 간격(칸 높이 비율), 첫 잔상 최대 알파 |
+|  | `maximumVerticalStretch`, `cruiseTextAlpha` | 1.25, 0.85 | 효과 강도 1의 `VisualRoot` 세로 배율, 글자 알파 배율 |
+| Reduce Motion | `reducedMotionSecondsPerReel` | 0.15 | Reel i는 `(i + 1) × 값` 뒤에 결과를 보여 줍니다. |
 
-Reduce Motion(`PlayerSessionHost.TemporaryDicePreferences.ReduceMotion`)이 켜져 있으면 흐름 없이 Reel마다 0.15초 간격으로 결과를 보여 줍니다. `MaximumPresentationSeconds`와 `GetMaximumPresentationSeconds(reelCount)`는 컨트롤러가 제한 시간을 계산하는 데 씁니다. `StopAtResult`는 즉시 결과 상태로 바꿉니다. 비활성이 되거나 파괴되거나 취소되면 연출은 `false`를 돌려주고, 컨트롤러가 결과 상태를 표시합니다.
+`OnValidate`는 이 자산의 값만 보정합니다. 런타임도 `SlotReelSpinSettings` 생성자에서 같은 제한을 적용합니다.
+
+#### Easing
+
+`SlotEasing.Evaluate(SlotEasingKind, t)`는 easings.net 정의를 따르는 순수 함수입니다. 선택지는 `Linear`(0)와 `InOutSine`(1), `InOutQuad`(2), `InOutCubic`(3), `InOutQuart`(4), `InOutQuint`(5), `InOutExpo`(6), `InOutCirc`(7), `InOutBack`(8), `InOutElastic`(9), `InOutBounce`(10)입니다. 자산은 값을 숫자로 저장하므로 번호와 순서를 바꾸지 않습니다. 모든 선택지는 `E(0)=0`, `E(0.5)=0.5`, `E(1)=1`입니다.
+
+경계 기울기 `k = E'(0.5)`는 수치 미분으로 구하고 `[0.5, 10]`으로 제한합니다. `InOutBounce`(실제 기울기 약 0)와 `InOutCirc`(무한대)는 이 제한 때문에 구간 경계에서 속도가 약간 끊길 수 있습니다. Inspector Tooltip에도 적었습니다.
+
+#### Reel별 계획
+
+`SlotReelSpinPlanner.Create(settings, reelCount, reduceMotion, random)`는 Reel i의 시작 지연 `i × startInterval + J`, 시작 구간 `n + J`, 고속 구간 `cruise + i × stopInterval + J`, 정지 구간 `m + J`를 정합니다. `J(a)`는 `[-a, a]` 균등 난수입니다. 시작·정지 구간은 기준값이 0보다 크면 최소 0.05초입니다. 정지 시각이 앞 Reel보다 `minimumStopGapSeconds` 이상 늦지 않으면 그 차이만큼 고속 구간을 늘립니다. 그래서 편차와 관계없이 항상 왼쪽부터 멈춥니다.
+
+편차 난수는 패널이 가진 UI 전용 `System.Random`입니다. 결과 결정용 `IRandomIndexProvider`와 분리되어 있어 결과, 분배, 전투에 영향을 주지 않습니다. 같은 결과를 다시 재생해도 편차는 달라질 수 있습니다. `GetMaximumPresentationSeconds(reelCount)`는 모든 편차가 최대이고 정지 간격 보정까지 적용된 최악의 종료 시각을 돌려줍니다. 기본값에서 Reel 3개는 약 2.63초이고, 컨트롤러 제한 시간은 `max(3, 2.63 + 1)` = 약 3.63초입니다.
+
+#### 위치 곡선
+
+`SlotReelSpinCurve`는 시작 지연 이후 경과 시간 `t`의 이동 거리(칸)를 계산합니다. 고속 속도를 `v`라 하면 시작 구간 거리는 `v × n / k`, 정지 구간 거리는 `v × m / k`이므로 구간 경계에서 위치와 속도가 이어집니다. 총 거리 `D = (결과 - 시작) mod 칸 수 + 바퀴 수 × 칸 수`이며, 바퀴 수는 `v = D / (n / k + c + m / k)`가 `cruiseCellsPerSecond`에 가장 가깝고 `minimumCruiseCellsPerSecond` 이상이 되도록 고릅니다. 구간 길이는 바꾸지 않습니다. `InOutElastic`·`InOutBack`은 시작 직후 살짝 뒤로 갔다가 출발하고, 정지 직전에 결과 칸을 지나쳤다가 돌아옵니다. 음수와 초과 위치도 `FloorToInt`와 `Wrap`으로 올바른 기준 인덱스와 `Strip` 오프셋이 됩니다. 마지막에는 항상 `FinishAt(target)`으로 결과 칸에 정확히 맞춥니다.
+
+시간은 `Time.unscaledTime`의 차이로 계산하므로 `Time.timeScale`과 프레임레이트에 영향을 받지 않습니다. 한 프레임이 길어도 곡선의 해당 시점으로 바로 이동합니다. 텍스트는 기준 인덱스가 바뀔 때만 다시 지정하고, 숫자 문자열은 캐시합니다.
+
+#### 고속 회전 효과
+
+효과 강도 `s`는 시작 구간이 끝난 뒤 `effectFadeInSeconds` 동안 0→1로 오르고, 정지 구간 시작 `effectFadeOutSeconds` 전부터 1→0으로 내려가 정지 구간 시작 시점에 0이 됩니다(smoothstep). 고속 구간이 두 페이드 합보다 짧으면 두 곡선 중 작은 값을 쓰므로 1에 닿지 않을 수 있습니다.
+
+- 잔상: 각 `SymbolCell/VisualRoot`의 `Afterimage_1..3`(TMP) 중 `afterimageCount`개를 켭니다. Strip이 위로 움직이므로 잔상은 글자 아래쪽에 `j × afterimageSpacing × 칸 높이 × s` 간격으로 놓이고, 알파는 `afterimageAlpha × s × (1 - (j - 1) / (afterimageCount + 1))`입니다. 잔상은 본 글자 뒤에 그려집니다.
+- 세로 늘림: `VisualRoot.localScale.y = 1 + (maximumVerticalStretch - 1) × s`
+- 본 글자 알파: 칸 위치별 알파 × `lerp(1, cruiseTextAlpha, s)`
+- 잔상 문자열은 켜질 때와 기준 인덱스가 바뀔 때만 본 글자에서 복사합니다. Sprite 아이콘 칸은 잔상 없이 늘림만 적용합니다. 효과 강도가 바뀌어도 `UpdateCellLayout`은 다시 부르지 않습니다.
+- 연출 종료, 중단, `ShowStop`, `StopAtResult`, `OnDisable`에서 강도를 0으로 되돌려 잔상을 끄고 `VisualRoot` 배율을 1로 되돌립니다. `SymbolCell`의 위치는 `UpdateCellLayout`만 정합니다.
+- `motionEffectsEnabled`가 꺼져 있거나 Reduce Motion이면 효과를 쓰지 않습니다. 효과를 꺼도 숫자, Payline, 합계는 그대로 보입니다.
+
+Reduce Motion(`PlayerSessionHost.TemporaryDicePreferences.ReduceMotion`)이 켜져 있으면 계획 대신 Reel마다 `(i + 1) × reducedMotionSecondsPerReel` 뒤에 결과를 보여 줍니다. `StopAtResult`는 즉시 결과 상태로 바꿉니다. 비활성이 되거나 파괴되거나 취소되면 연출은 `false`를 돌려주고, 컨트롤러가 결과 상태를 표시합니다. 회전 중에 매 프레임 바뀌는 값은 Strip 위치, 칸 알파·잔상 위치·`VisualRoot` 배율뿐이며 문자열 할당은 기준 인덱스가 바뀔 때만 합니다. GC 할당은 Profiler로 측정하지 않았습니다.
+
+### 스킨
+
+패널의 이미지 묶음은 설정 자산 `SlotMachinePanelSkin`(`Assets/TxTRPG/UI/Runtime/SlotMachine/Skins/`)에 담습니다. 개발자는 스킨 자산을 여러 개 만들어 `SlotMachinePanelSkinCatalog`에 등록하고, 카탈로그의 `selectedSkinId`로 하나를 고릅니다. `SlotMachinePanel.skinCatalog`가 `Assets/TxTRPG/UI/Styles/SlotMachine/Skins/SlotMachinePanelSkinCatalog.asset`을 참조합니다. 스킨이 참조하는 Sprite는 빌드에 포함되므로 Steam과 모바일에서 똑같이 동작합니다. 카탈로그에 등록한 모든 스킨의 Sprite가 함께 메모리에 올라갑니다.
+
+| 자산 | 내용 |
+| --- | --- |
+| `SlotMachinePanelSkinCatalog.asset` | 기본·예시 스킨 등록, `selectedSkinId = slot-skin.default` |
+| `DefaultSlotMachinePanelSkin.asset` | `slot-skin.default`. 모든 항목이 비어 있어 Prefab 기본 외형과 같습니다. |
+| `SampleImagePaylineSkin.asset` | `slot-skin.sample-image-payline`. Payline에만 `SlotPaylineFrameSample.png`(32px, 9-slice 테두리 12, Full Rect, 투명 여백과 발광 안쪽에 5px 금색 띠)를 쓰고 `paylineOutset`은 각 10입니다. 검증과 작성 예시용입니다. |
+
+`SlotMachinePanelSkin`(만들기 메뉴 `Assets > Create > TxT RPG > Slot Machine > Panel Skin`)의 필드는 다음과 같습니다.
+
+| 필드 | 형식 | 적용 대상 |
+| --- | --- | --- |
+| `skinId`, `displayName`, `previewSprite` | string, string, Sprite | 안정적인 ID(앞뒤 공백 제거), 나중의 선택 UI용 이름과 미리보기. 이번에는 표시하지 않습니다. |
+| `paylineFrame`, `paylineOutset` | `SlotSkinImage`, `SlotSkinOffset`(왼쪽·오른쪽·위·아래, 기본 각 4) | Payline 표시 |
+| `panelBackground`, `reelMachineFrame`, `reelMachineEdge`, `reelBackground`, `reelShadeOverlay`, `reelDivider`, `summaryBackground`, `totalBoxBackground`, `runeTableBackground`, `runeRowBackground` | `SlotSkinImage` | `Background`, `ReelMachine/Frame`, `LeftEdge`·`RightEdge`, Reel `Frame`, `Window/ShadeOverlay`, `ReelDivider_{n}`, `SummaryArea/Background`, `TotalBox/Background`, `RuneTable/Background`, 행 `Background` |
+| `reelTextColor`, `darkSurfaceTextColor`, `lightSurfaceTextColor` | `SlotSkinColor` | Reel 숫자와 잔상, 합계 라벨·값, 열 제목과 룬 표 행 글자 |
+
+`SlotSkinImage`는 `sprite`, `overrideColor`·`color`, `drawMode`(`Simple`·`Sliced`·`Tiled`, 기본 `Sliced`), `pixelsPerUnitMultiplier`(기본 1)를 가집니다. 최종 외형은 다음 규칙으로 정합니다.
+
+| 스킨 항목 | Sprite·그리기 방식 | 색 |
+| --- | --- | --- |
+| 스킨 없음, 또는 Sprite 없고 색 재정의 없음 | 기록된 기본값 | 기록된 기본값 |
+| Sprite 있음 | 스킨 Sprite, `drawMode`, `pixelsPerUnitMultiplier` | 재정의 색, 없으면 흰색(이미지 원래 색) |
+| Sprite 없고 색 재정의 있음 | 기록된 기본값 | 재정의 색 |
+
+Payline은 스킨에 `paylineFrame.sprite`가 있으면 `SkinImage`를 켜고 `ProceduralBorder`를 끕니다. 없으면 코드 테두리를 보여 주고, `overrideColor`가 켜져 있으면 테두리 색만 바꿉니다. 숨긴 쪽은 `enabled = false`로 끄고 GameObject는 유지합니다. 두 표시 모두 `raycastTarget`이 꺼져 있습니다. `Sliced` Sprite에 9-slice 테두리가 없으면 항목마다 한 번 경고합니다.
+
+#### 기본 외형 기록
+
+각 스킨 대상은 직렬화된 `SlotSkinGraphicTarget`(대상 Graphic과 기본 Sprite·색·`Image.Type`·`pixelsPerUnitMultiplier`) 또는 `SlotSkinTextTarget`(대상 TMP 텍스트와 기본 색)입니다. 기본값은 적용 메뉴가 Prefab의 현재 값을 한 번 기록해 저장하며, 실행 중의 현재 값은 기본값으로 쓰지 않습니다. 그래서 스킨 A에서 B로 바꿀 때 B의 빈 항목은 A가 아니라 기본 외형으로 돌아갑니다. 적용할 때 값이 같으면 쓰지 않고, 공유 Material은 바꾸지 않습니다. 대상이 비어 있거나 기본값이 기록되지 않았으면 건너뛰고, 스킨이 그 항목을 바꾸려 할 때 한 번 경고합니다.
+
+Prefab의 기본 외형을 바꾼 뒤에는 Inspector 컴포넌트 메뉴 `기본 외형 다시 기록`으로 기본값을 다시 기록합니다. `SlotMachinePanel`의 메뉴는 패널, 룬 표 배경, 행 템플릿을 기록하고, `SlotReel.prefab`의 `SlotReelView` 메뉴는 Reel `Frame`·`ShadeOverlay`·숫자 색을 기록합니다. Play Mode에서는 기록하지 않습니다.
+
+| 소유 컴포넌트 | 적용 대상 |
+| --- | --- |
+| `SlotMachinePanel` | 패널 배경, Reel 기계 틀과 가장자리 띠, Payline, 구분대(첫 구분대의 기본값을 모든 구분대에 사용), 요약 영역·합계 상자 배경, 합계·열 제목 글자 |
+| `SlotReelView` (`SlotReelViewBase.ApplySkin`) | Reel `Frame`, `ShadeOverlay`, 숫자와 잔상의 기준 색 |
+| `SlotRuneTableView` → `SlotRuneLineRow` | 룬 표 배경, 템플릿과 생성된 행의 배경·글자 |
+
+`SlotReelViewBase.ApplySkin(SlotMachinePanelSkin)`은 기본 구현이 비어 있는 가상 메서드입니다. 스킨을 지원하지 않는 Reel 구현도 동작합니다. `SlotReelView`는 칸 위치별 알파, 잔상 알파, 고속 회전 알파를 지금처럼 매 갱신에서 계산하고, 그 값을 기준 색(스킨 `reelTextColor` 또는 기록된 기본 색의 불투명 RGB)의 알파에 곱합니다. 스킨 교체는 이 계산 경로에 할당을 추가하지 않습니다.
+
+#### 적용 시점과 실행 중 교체
+
+| API | 동작 |
+| --- | --- |
+| `SetSkin(SlotMachinePanelSkin)` | 스킨을 바꿉니다. `null`이면 기본 외형으로 돌아갑니다. 같은 스킨이면 아무것도 하지 않습니다. |
+| `TrySetSkin(string skinId, out string reason)` | 카탈로그에서 ID로 찾아 적용합니다. 없으면 현재 스킨을 유지하고 `false`를 돌려줍니다. |
+| `ActiveSkin`, `ActiveSkinId` | 현재 스킨과 ID. 스킨이 없으면 `null`과 빈 문자열 |
+| `SkinChanged` | 스킨이 실제로 바뀐 뒤 한 번 발생합니다. |
+
+- `Awake`는 Play Mode와 빌드에서만, 아직 스킨이 정해지지 않았을 때 카탈로그의 `SelectedSkin`을 적용합니다. 이후 `SetSkin`으로 바뀐 스킨은 비활성화·재활성화해도 유지됩니다. Edit Mode에서는 Prefab 기본 외형을 보여 주며 스킨을 Prefab·Scene에 저장하지 않습니다.
+- 카탈로그가 비어 있거나 검증(`Validate`: 빈 항목, 빈 ID, 중복 ID, 등록되지 않은 선택 ID)에 실패해도 게임은 시작합니다. 선택 스킨을 찾을 수 없으면 기본 외형으로 표시하고 패널마다 한 번 경고합니다. 카탈로그 Inspector(`SlotMachinePanelSkinCatalogEditor`)는 등록된 스킨 중에서 선택 ID를 고르게 하고 검증 결과를 보여 줍니다.
+- `EnsureReelCount`로 새로 만든 Reel과 구분대, `SlotRuneTableView`가 새로 만든 행에는 현재 스킨을 바로 적용합니다. 행은 템플릿의 직렬화된 기본값을 함께 복제하므로 이전 스킨을 물려받지 않습니다.
+- 회전 중에 바꿔도 결과, 연출 시간, 위치 계산은 바뀌지 않습니다. Payline 확장 값이 바뀌면 `UpdatePaylineFrame`을 한 번 호출합니다.
+- `TMP_MainScene`의 패널 인스턴스가 기본 외형 대상의 값을 Scene에서 재정의해도, 스킨을 적용하면(빈 기본 스킨 포함) Prefab에서 기록한 기본값이 쓰입니다. 현재 `ReelMachine/Frame` 색이 Scene에서 `#000000`으로 재정의되어 있어 Play Mode에서는 Prefab 기본값 `#0A0A0A`로 표시됩니다.
 
 ## 주사위 보류
 
@@ -224,10 +361,12 @@ Reduce Motion(`PlayerSessionHost.TemporaryDicePreferences.ReduceMotion`)이 켜�
 
 | 향후 기능 | 현재 구조 |
 | --- | --- |
-| 수동 분배 | `IRuneAllocationPolicy`의 다른 구현으로 추가합니다. 컨트롤러는 회전 수락(`AcceptSpin`)·연출·적용을 분리된 단계로 처리하므로, 수락과 적용 사이에 입력 대기를 넣을 수 있습니다. 패널의 `Summary` 아래에 입력 영역을 추가할 수 있습니다. |
+| 수동 분배 | `IRuneAllocationPolicy`의 다른 구현으로 추가합니다. 컨트롤러는 회전 수락(`AcceptSpin`)·연출·적용을 분리된 단계로 처리하므로, 수락과 적용 사이에 입력 대기를 넣을 수 있습니다. 패널의 `SummaryArea`에 입력 영역을 추가할 수 있습니다. |
 | 룬 장착·줄 편집 UI | `RuneLoadout`의 변경 API와 `TemporaryRuneState.Changed`를 씁니다. 패널은 이미 `Changed`로 갱신됩니다. |
 | 룬 조합 | 재료를 줄에서 빼고(`TryRemoveRuneFromLine`) 보유에서 제거한 뒤 새 정의의 인스턴스를 `TryAdd`합니다. 줄과 분배 코드에는 효과 종류가 하드코딩되어 있지 않습니다. 효과 → 전투 행동 매핑은 `RuneCombatActions` 한 곳에 있습니다. |
 | 룬 획득 | `RuneInventory.TryAdd`. 어느 줄에 둘지는 획득 기능이 정합니다. |
 | 저장 | ID는 안정적인 문자열입니다. 저장 형식은 아직 없습니다. |
 | 기호 이미지·특수 기호 | `SlotSymbol`에 필드를 추가하고, `SlotReelView.symbolSprites`에 값→Sprite를 매핑합니다. |
-| 입체 Reel | `SlotReelViewBase`를 구현하는 다른 Reel Prefab을 `reelPrefab`·`reelViews`에 연결합니다. |
+| 입체 Reel | `SlotReelViewBase`를 구현하는 다른 Reel Prefab을 `reelPrefab`·`reelViews`에 연결합니다. 스킨이 필요하면 `ApplySkin`을 재정의합니다. |
+| 플레이어 스킨 선택 | System 설정 모달에 `Slot 스킨` 항목을 추가하고 카탈로그 `Skins` 순서대로 `DisplayName`·`PreviewSprite`를 보여 줍니다. 고른 ID는 `ExplorationCardPlayerPreferences`처럼 PlayerPrefs에 저장하고(세이브 형식은 바꾸지 않음), Application의 연결 컴포넌트가 `TrySetSkin`을 호출합니다. 실패하면 개발자 선택으로 돌아가고 저장값을 지웁니다. 패널은 `Awake`에서 아직 스킨이 정해지지 않았을 때만 카탈로그 선택을 쓰므로, 플레이어 선택을 먼저 적용하면 그것이 우선합니다. `SkinChanged`로 미리보기를 갱신합니다. |
+| 스킨 Addressables 지연 로드 | 지금은 카탈로그가 스킨을, 스킨이 Sprite를 직접 참조해 등록된 모든 스킨의 Sprite가 함께 로드됩니다. 스킨이 늘어나면 카탈로그 항목을 Addressables 참조로 바꾸고 `TrySetSkin`을 비동기로 확장합니다. |

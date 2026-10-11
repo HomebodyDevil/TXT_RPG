@@ -37,6 +37,9 @@ namespace TxTRPG.Application.Editor
         // Registered content scene used to leave and re-enter TMP_MainScene during a spin.
         private const string OtherContentScene = "Assets/Scenes/MainScene_VisualProposal.unity";
 
+        // Skins swapped during the run (slot-machine-panel-skin); the catalog selection is restored at the end.
+        private const string SampleSkinId = "slot-skin.sample-image-payline";
+
         private static readonly (string Name, Vector2 Size)[] Viewports =
         {
             ("desktop 1920x1080", new Vector2(1920f, 1080f)),
@@ -67,18 +70,30 @@ namespace TxTRPG.Application.Editor
                 var diceController = Object.FindAnyObjectByType<TemporaryDiceRollMenuController>(FindObjectsInactive.Include);
                 Require(diceController == null || !diceController.enabled && !diceController.IsReady, "the reserved dice controller takes no part");
                 Require(refs.Panel.ReelCount == 3, $"three reels ({refs.Panel.ReelCount})");
-                Require(refs.Panel.TotalText == SlotCombatStoryFormatter.IdleTotal, $"idle total ({refs.Panel.TotalText})");
-                Require(refs.Panel.AllocationText == "공격 ×1 · 회복 ×1", $"weights shown ({refs.Panel.AllocationText})");
+                Require(refs.Panel.TotalLabelText == SlotCombatStoryFormatter.TotalLabel &&
+                    refs.Panel.TotalValueText == SlotCombatStoryFormatter.IdleTotalValue, $"idle total ({refs.Panel.TotalValueText})");
+                Require(Rows(refs.Panel) == "공격|×1;회복|×1", $"weights shown ({Rows(refs.Panel)})");
+                Require(refs.Panel.RuneColumnTitleText == SlotCombatStoryFormatter.RuneColumnTitle &&
+                    refs.Panel.ValueColumnTitleText == SlotCombatStoryFormatter.ValueColumnTitle, "rune table column titles");
                 Require(!refs.Action.IsShown, "the action button is hidden while choosing a node");
                 Require(!refs.Panel.GetComponent<CanvasGroup>().interactable, "node selection blocks the slot machine panel");
-                log.AppendLine(" before combat: dice hidden, 3 reels, '합계 —', weights shown, panel blocked by node selection.");
+                log.AppendLine(" before combat: dice hidden, 3 reels, '합계 —', rows '×1', panel blocked by node selection.");
+                var catalog = refs.Panel.SkinCatalog;
+                var selectedSkinId = catalog != null ? catalog.SelectedSkinId : string.Empty;
+                Require(catalog != null && refs.Panel.ActiveSkinId == selectedSkinId, $"the catalog selection is applied ('{refs.Panel.ActiveSkinId}' vs '{selectedSkinId}')");
+                Require(refs.Panel.PaylineBorderShown != refs.Panel.PaylineImageShown, "exactly one payline display is shown");
+                log.AppendLine($" skin: catalog selection '{selectedSkinId}' applied, payline {(refs.Panel.PaylineImageShown ? "image" : "code border")}.");
 
                 StartCombat(refs.Run);
                 await Frames(3);
                 Require(refs.Action.IsShown && refs.Action.IsInteractable, $"the action is available in combat ({refs.Action.UnavailableReason})");
                 Require(refs.Panel.GetComponent<CanvasGroup>().interactable, "the panel is not blocked during combat");
 
-                // 2. Layout at several viewports.
+                // 2. Layout at several viewports, with the selected skin and with the sample image-payline skin.
+                await CheckViewports(refs, log);
+                Require(refs.Panel.TrySetSkin(SampleSkinId, out var skinReason), skinReason);
+                Require(refs.Panel.PaylineImageShown && !refs.Panel.PaylineBorderShown, "the sample skin shows the payline image");
+                log.AppendLine($" skin '{SampleSkinId}':");
                 await CheckViewports(refs, log);
 
                 // 3. Submit (keyboard / controller), twice in one frame, with a game window opened and closed mid-spin.
@@ -92,18 +107,36 @@ namespace TxTRPG.Application.Editor
                 await Frames(2);
                 Require(refs.Panel.IsSpinning, "the reels spin");
                 Require(refs.Action.IsShown && !refs.Action.IsInteractable, "the button is visible but disabled while spinning");
-                Require(refs.Panel.TotalText == SlotCombatStoryFormatter.SpinningTotal, $"spinning text ({refs.Panel.TotalText})");
-                _ = refs.Windows.OpenAsync(GamePageIds.Inventory);
-                await Frames(3);
-                refs.Windows.Close();
-                await WaitWhile(() => host.IsTemporaryCombatActionPending, 10d);
+                Require(refs.Panel.TotalValueText == SlotCombatStoryFormatter.SpinningTotalValue, $"spinning text ({refs.Panel.TotalValueText})");
+                // Skins swapped back and forth mid-spin must not change the result, timing or positions.
+                Require(refs.Panel.TrySetSkin(selectedSkinId, out skinReason), skinReason);
+                await Frames(2);
+                Require(refs.Panel.TrySetSkin(SampleSkinId, out skinReason), skinReason);
+                await Frames(2);
+                Require(refs.Panel.TrySetSkin(selectedSkinId, out skinReason), skinReason);
+                Require(refs.Panel.IsSpinning, "the reels keep spinning across skin swaps");
+                // The window service is optional in the Scene; without it this step is reported as not verified.
+                var windowChecked = refs.Windows != null;
+                if (windowChecked)
+                {
+                    _ = refs.Windows.OpenAsync(GamePageIds.Inventory);
+                    await Frames(3);
+                    refs.Windows.Close();
+                }
+                var effectSeen = false;
+                await WaitWhile(() =>
+                {
+                    effectSeen |= refs.Panel.ReelViews.OfType<SlotReelView>().Any(v => v.AnyAfterimageVisible && v.MaximumVisualScaleY > 1.01f);
+                    return host.IsTemporaryCombatActionPending;
+                }, 10d);
                 watch.Stop();
+                Require(effectSeen, "afterimages and the vertical stretch appear during the high-speed phase");
                 Require(stories == 1, $"two Submits and a window during the spin applied exactly one turn ({stories})");
                 CheckResult(refs, host, accepted, log, "submit");
                 var attack = accepted.Allocation.Lines.Where(l => l.EffectKind == TxTRPG.Gameplay.Runes.RuneEffectKind.Attack).Sum(l => l.Amount);
                 // The first enemy action is an attack, so the enemy health changes only by the attack lines.
                 Require(refs.Controller.Combat.EnemyHealth.Current == Math.Max(0, enemyBefore - attack), "the attack lines hit the enemy once");
-                log.AppendLine($" submit: {SlotCombatStoryFormatter.Spin(accepted.Spin)}, {SlotCombatStoryFormatter.Allocation(accepted.Allocation)}, presentation {watch.Elapsed.TotalSeconds:F2}s, window open/close mid-spin, one turn.");
+                log.AppendLine($" submit: {SlotCombatStoryFormatter.Spin(accepted.Spin)}, {AllocationLog(accepted)}, presentation {watch.Elapsed.TotalSeconds:F2}s, {(windowChecked ? "window open/close mid-spin" : "game window NOT verified (no active GameWindowService)")}, afterimages seen, one turn.");
 
                 // 4. Pointer click (mouse; touch uses the same pointer events on the uGUI button).
                 await WaitWhile(() => !refs.Action.IsInteractable && !refs.Controller.Combat.IsComplete, 5d);
@@ -136,9 +169,10 @@ namespace TxTRPG.Application.Editor
                     finally { host.TemporaryDicePreferences.ReduceMotion = false; }
                 }
 
-                // 6. Runtime configuration: 4 and 5 reels and a changed cell, from the next spin on.
+                // 6. Runtime configuration: 4 and 5 reels and a changed cell, from the next spin on (with the image payline).
                 if (!refs.Controller.Combat.IsComplete)
                 {
+                    Require(refs.Panel.TrySetSkin(SampleSkinId, out skinReason), skinReason);
                     var machine = host.TemporarySlotMachine.Machine;
                     Require(machine.TryAddReel(SlotReel.FromValues("reel.4", new[] { 1, 2, 3, 4, 5, 6 }), out var reason), reason);
                     await Frames(2);
@@ -158,6 +192,8 @@ namespace TxTRPG.Application.Editor
                         machine.TrySetSymbol("reel.1", 0, 1, out reason), reason);
                     await Frames(2);
                     Require(refs.Panel.ReelCount == 3, "back to three reels");
+                    Require(refs.Panel.TrySetSkin(selectedSkinId, out skinReason), skinReason);
+                    log.AppendLine($" skins swapped mid-spin and the image payline followed 4 and 5 reels; back to '{selectedSkinId}'.");
                 }
 
                 // 7. Scene reload during a spin: the accepted result is applied once and shown by the new Scene.
@@ -186,8 +222,9 @@ namespace TxTRPG.Application.Editor
                         Require(stories == before + 1, $"the spin accepted before the reload was applied once ({stories - before})");
                         Require(host.LastTemporarySlotTurn.Spin == accepted.Spin, "the applied result is the accepted one");
                         Require(refs.Controller.Combat == combat, "the new Scene continues the same combat");
-                        Require(refs.Panel.TotalText == SlotCombatStoryFormatter.Total(accepted.Spin.PaylineTotal), $"the new panel shows the result ({refs.Panel.TotalText})");
-                        log.AppendLine($" scene re-entry mid-spin (via MainScene_VisualProposal): applied once (enemy {enemy} -> {combat.EnemyHealth.Current}), new panel shows '{refs.Panel.TotalText}'.");
+                        Require(refs.Panel.TotalValueText == SlotCombatStoryFormatter.TotalValue(accepted.Spin.PaylineTotal), $"the new panel shows the result ({refs.Panel.TotalValueText})");
+                        CheckEffectsCleared(refs, "scene re-entry");
+                        log.AppendLine($" scene re-entry mid-spin (via MainScene_VisualProposal): applied once (enemy {enemy} -> {combat.EnemyHealth.Current}), new panel shows '{refs.Panel.TotalValueText}', no afterimages left.");
                     }
                 }
 
@@ -212,8 +249,24 @@ namespace TxTRPG.Application.Editor
             }
             catch (Exception exception)
             {
-                Debug.LogError(log.Append(" FAIL: ").Append(exception.Message).ToString());
+                Debug.LogError(log.Append(" FAIL: ").Append(exception is InvalidOperationException ? exception.Message : exception.ToString()).ToString());
             }
+        }
+
+        public const string CycleSkinMenuPath = "Tools/TxT RPG/Application/Temporary/Cycle Slot Machine Panel Skin (Play Mode)";
+
+        // Play Mode only: switches the shown SlotMachinePanel to the next catalog skin (for screenshots and manual
+        // checks). Changes session state only; the catalog selection is used again on the next Play.
+        [MenuItem(CycleSkinMenuPath)]
+        public static void CycleSkin()
+        {
+            if (!EditorApplication.isPlaying) { Debug.LogWarning("SLOT_MACHINE_SKIN_CYCLE: enter Play Mode first."); return; }
+            var panel = Object.FindAnyObjectByType<SlotMachinePanel>();
+            var skins = panel != null && panel.SkinCatalog != null ? panel.SkinCatalog.Skins.Where(s => s != null).ToList() : null;
+            if (skins == null || skins.Count == 0) { Debug.LogWarning("SLOT_MACHINE_SKIN_CYCLE: no panel or no catalog skins."); return; }
+            var next = skins[(skins.IndexOf(panel.ActiveSkin) + 1) % skins.Count];
+            panel.SetSkin(next);
+            Debug.Log($"SLOT_MACHINE_SKIN_CYCLE: {next.SkinId} (payline {(panel.PaylineImageShown ? "image" : "code border")})");
         }
 
         private sealed class References
@@ -251,10 +304,13 @@ namespace TxTRPG.Application.Editor
                 Require(view.ValueAt(-1) == strip[(view.StopIndex - 1 + strip.Count) % strip.Count] &&
                     view.ValueAt(1) == strip[(view.StopIndex + 1) % strip.Count], $"{label}: neighbours are the previous and next strip values");
             }
-            Require(refs.Panel.TotalText == SlotCombatStoryFormatter.Total(accepted.Spin.PaylineTotal), $"{label}: total shown ({refs.Panel.TotalText})");
-            Require(refs.Panel.AllocationText == SlotCombatStoryFormatter.Allocation(accepted.Allocation), $"{label}: allocation shown ({refs.Panel.AllocationText})");
+            Require(refs.Panel.TotalValueText == SlotCombatStoryFormatter.TotalValue(accepted.Spin.PaylineTotal), $"{label}: total shown ({refs.Panel.TotalValueText})");
+            var expectedRows = string.Join(";", accepted.Allocation.Lines.Select(l =>
+                $"{SlotCombatStoryFormatter.EffectName(l.EffectKind)}|{SlotCombatStoryFormatter.LineAllocation(l.Weight, l.Amount)}"));
+            Require(Rows(refs.Panel) == expectedRows, $"{label}: rune rows shown ({Rows(refs.Panel)})");
+            CheckEffectsCleared(refs, label);
             Require(accepted.Allocation.Lines.Sum(l => l.Amount) == accepted.Spin.PaylineTotal, $"{label}: allocation adds up to the total");
-            if (label != "submit") log.AppendLine($" {label}: {SlotCombatStoryFormatter.Spin(accepted.Spin)}, {SlotCombatStoryFormatter.Allocation(accepted.Allocation)}.");
+            if (label != "submit") log.AppendLine($" {label}: {SlotCombatStoryFormatter.Spin(accepted.Spin)}, {AllocationLog(accepted)}.");
         }
 
         private static async Task CheckViewports(References refs, StringBuilder log)
@@ -273,7 +329,13 @@ namespace TxTRPG.Application.Editor
                     refs.Action.Placement.UpdatePlacement();
                     var panelSize = ((RectTransform)refs.Panel.transform).rect.size;
                     CheckReelLayout(refs, name);
-                    log.AppendLine($" {name}: panel {panelSize.x:F0}x{panelSize.y:F0}, reel window {WindowOf(refs.Panel.ReelViews[0]).rect.size.x:F0}x{WindowOf(refs.Panel.ReelViews[0]).rect.size.y:F0}, button clear of reels and total.");
+                    var layout = refs.Panel.GetComponentInChildren<SlotMachineContentLayout>(true);
+                    var ratio = panelSize.x / Mathf.Max(1f, panelSize.y);
+                    var expected = ratio < layout.StackBelowAspectRatio ? SlotMachineContentArrangement.Stacked : SlotMachineContentArrangement.SideBySide;
+                    // Within the hysteresis band either arrangement is valid.
+                    Require(layout.Arrangement == expected || Mathf.Abs(ratio - layout.StackBelowAspectRatio) < .06f,
+                        $"{name}: arrangement {layout.Arrangement} for ratio {ratio:F2}");
+                    log.AppendLine($" {name}: panel {panelSize.x:F0}x{panelSize.y:F0} (ratio {ratio:F2}, {layout.Arrangement}), reel window {WindowOf(refs.Panel.ReelViews[0]).rect.size.x:F0}x{WindowOf(refs.Panel.ReelViews[0]).rect.size.y:F0}, button clear of reels, total and rune rows.");
                 }
             }
             finally
@@ -289,8 +351,12 @@ namespace TxTRPG.Application.Editor
         {
             Canvas.ForceUpdateCanvases();
             var button = WorldRect((RectTransform)refs.Action.Button.transform);
-            var total = refs.Panel.GetComponentsInChildren<TMP_Text>(true).First(t => t.name == "TotalText");
+            var texts = refs.Panel.GetComponentsInChildren<TMP_Text>(true);
+            var total = texts.First(t => t.name == "TotalValue");
             Require(!button.Overlaps(WorldRect(total.rectTransform)), $"{label}: the action button does not cover the total");
+            foreach (var row in refs.Panel.GetComponentsInChildren<SlotRuneLineRow>(false))
+                Require(!button.Overlaps(WorldRect((RectTransform)row.transform)), $"{label}: the action button does not cover {row.name}");
+            Require(refs.Panel.ActiveDividerCount == refs.Panel.ReelCount - 1, $"{label}: one divider between neighbouring reels ({refs.Panel.ActiveDividerCount})");
             var windows = refs.Panel.ReelViews.Select(WindowOf).ToArray();
             for (var i = 0; i < windows.Length; i++)
             {
@@ -298,13 +364,36 @@ namespace TxTRPG.Application.Editor
                 Require(rect.width > 1f && rect.height > 1f, $"{label}: reel {i + 1} is visible");
                 Require(!button.Overlaps(rect), $"{label}: the action button does not cover reel {i + 1}");
                 if (i > 0) Require(!WorldRect(windows[i - 1]).Overlaps(rect), $"{label}: reels {i} and {i + 1} do not overlap");
-                var cell = windows[i].GetComponentsInChildren<TMP_Text>(true).First(t => t.transform.parent.parent.name == "SymbolCell_2");
+                var payline = $"SymbolCell_{((SlotReelView)refs.Panel.ReelViews[i]).VisibleCellCount / 2 + 1}";
+                var cell = windows[i].GetComponentsInChildren<TMP_Text>(true).First(t => t.name == "Value" && t.transform.parent.parent.name == payline);
                 var preferred = cell.GetPreferredValues(cell.text);
                 var cellRect = ((RectTransform)cell.transform.parent.parent).rect;
                 Require(preferred.x <= cellRect.width + .5f && preferred.y <= cellRect.height + .5f,
                     $"{label}: payline digit of reel {i + 1} fits ({preferred} in {cellRect.size})");
             }
+            // The payline frame spans the first to the last reel window around the payline cell.
+            var frame = WorldRect(refs.Panel.PaylineFrameRect);
+            var first = WorldRect(windows[0]);
+            var last = WorldRect(windows[windows.Length - 1]);
+            Require(frame.xMin <= first.xMin + 1f && frame.xMax >= last.xMax - 1f &&
+                Mathf.Abs(frame.center.y - first.center.y) < first.height * .05f, $"{label}: the payline frame spans the reels at the payline ({frame} vs {first}..{last})");
+            // The shown payline (code border or skin image) surrounds the payline cell range.
+            Require(refs.Panel.PaylineBorderShown != refs.Panel.PaylineImageShown, $"{label}: exactly one payline display is shown");
+            var visible = WorldRect(refs.Panel.PaylineVisibleRect);
+            Require(visible.xMin <= frame.xMin + .5f && visible.xMax >= frame.xMax - .5f && visible.yMin <= frame.yMin + .5f && visible.yMax >= frame.yMax - .5f,
+                $"{label}: the {(refs.Panel.PaylineImageShown ? "payline image" : "payline border")} surrounds the payline cells ({visible} vs {frame})");
         }
+
+        private static void CheckEffectsCleared(References refs, string label)
+        {
+            foreach (var view in refs.Panel.ReelViews.OfType<SlotReelView>())
+                Require(!view.AnyAfterimageVisible && Mathf.Approximately(view.MaximumVisualScaleY, 1f), $"{label}: no afterimage or stretch remains on {view.name}");
+        }
+
+        private static string Rows(SlotMachinePanel panel) => string.Join(";", panel.RuneLineTexts.Select(row => $"{row.Effect}|{row.Value}"));
+
+        private static string AllocationLog(TemporarySlotAcceptedAction accepted) => string.Join(" · ", accepted.Allocation.Lines.Select(l =>
+            $"{SlotCombatStoryFormatter.EffectName(l.EffectKind)} {SlotCombatStoryFormatter.LineAllocation(l.Weight, l.Amount)}"));
 
         private static RectTransform WindowOf(SlotReelViewBase view) => (RectTransform)view.transform.Find("Window");
 

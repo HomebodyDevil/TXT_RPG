@@ -278,9 +278,25 @@ namespace TxTRPG.Application.SlotMachine
                 for (var j = 0; j < values.Length; j++) values[j] = stop.Strip[j].Value;
                 reels[i] = new SlotReelStopDisplay(stop.ReelId, stop.StopIndex, values);
             }
-            return new SlotSpinDisplay(reels, spin.PaylineTotal, SlotCombatStoryFormatter.SpinningTotal,
-                SlotCombatStoryFormatter.Total(spin.PaylineTotal), SlotCombatStoryFormatter.Allocation(allocation));
+            var spinning = new SlotRuneLineDisplay[allocation.Lines.Count];
+            var result = new SlotRuneLineDisplay[allocation.Lines.Count];
+            for (var i = 0; i < result.Length; i++)
+            {
+                var line = allocation.Lines[i];
+                var effect = SlotCombatStoryFormatter.EffectName(line.EffectKind);
+                spinning[i] = new SlotRuneLineDisplay(effect, SlotCombatStoryFormatter.LineWeight(line.Weight));
+                // Lines that received 0 are shown too ("×1 → 0").
+                result[i] = new SlotRuneLineDisplay(effect, SlotCombatStoryFormatter.LineAllocation(line.Weight, line.Amount));
+            }
+            return new SlotSpinDisplay(reels, spin.PaylineTotal,
+                CreateSummary(SlotCombatStoryFormatter.SpinningTotalValue, spinning),
+                CreateSummary(SlotCombatStoryFormatter.TotalValue(spin.PaylineTotal), result));
         }
+
+        public static SlotSummaryDisplay CreateSummary(string totalValue, IReadOnlyList<SlotRuneLineDisplay> lines) =>
+            new(SlotCombatStoryFormatter.TotalLabel, totalValue, SlotCombatStoryFormatter.RuneColumnTitle,
+                SlotCombatStoryFormatter.ValueColumnTitle, lines, SlotCombatStoryFormatter.NoRuneLines,
+                SlotCombatStoryFormatter.OverflowFormat);
 
         // Shows the reel configuration and the rune weights. While this controller presents a spin, the panel defers the
         // reel change until the presentation ends.
@@ -309,8 +325,7 @@ namespace TxTRPG.Application.SlotMachine
             if (presenting != null || slotPanel.IsSpinning) return;
             if (shownRunId != null && IsCurrentNode(shownRunId, shownNodeId)) return;
             shownRunId = shownNodeId = null;
-            slotPanel.SetTotalText(SlotCombatStoryFormatter.IdleTotal);
-            slotPanel.SetAllocationText(WeightsText(runes));
+            slotPanel.SetSummary(CreateSummary(SlotCombatStoryFormatter.IdleTotalValue, WeightLines(runes)));
         }
 
         // A controller created by a Scene reload shows the accepted spin (still being applied) or the last applied turn of
@@ -344,16 +359,19 @@ namespace TxTRPG.Application.SlotMachine
             sessionHost.TemporaryExploration.RunId == runId &&
             sessionHost.TemporaryExploration.ActiveNodeId == nodeId;
 
-        private static string WeightsText(TemporaryRuneState runes)
+        // Rune line rows before a spin: effect name and stacked weight ("×1").
+        private static SlotRuneLineDisplay[] WeightLines(TemporaryRuneState runes)
         {
-            var lines = new List<(RuneEffectKind, int)>(runes.Loadout.LineCount);
+            var lines = new SlotRuneLineDisplay[runes.Loadout.LineCount];
+            var index = 0;
             foreach (var line in runes.Loadout.Lines)
             {
                 var effect = runes.Catalog.TryGet(runes.Loadout.DefinitionIdOf(line), out var definition)
                     ? definition.EffectKind : RuneEffectKind.Unknown;
-                lines.Add((effect, line.Weight));
+                lines[index++] = new SlotRuneLineDisplay(SlotCombatStoryFormatter.EffectName(effect),
+                    SlotCombatStoryFormatter.LineWeight(line.Weight));
             }
-            return SlotCombatStoryFormatter.Weights(lines);
+            return lines;
         }
 
         // A spin applied by a controller of the previous Scene finished: refresh this Scene's presentation and button.
