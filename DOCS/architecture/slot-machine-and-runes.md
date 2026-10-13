@@ -282,16 +282,16 @@ Fortune Critical(행운 치명)은 회전 결과에 일정 확률로 정수 배�
 
 패널 안의 `Content`는 `SlotMachineContentLayout`이 배치합니다. `Content`의 너비/높이 비율이 `stackBelowAspectRatio`(1.3) 이상이면 Reel 기계와 요약 영역을 좌우로 둡니다(가중치 0.62 : 간격 0.04 : 0.31, 합으로 정규화). 1.3 미만이면 Reel 기계를 위에, 요약 영역을 아래에 쌓습니다(0.62 : 0.04 : 0.34). 경계 근처에서 반복 전환하지 않도록 이력값 0.05를 둡니다. 좌우 배치에서 벗어나려면 비율이 1.25 미만이어야 하고, 상하 배치에서 돌아오려면 1.35 이상이어야 합니다. 같은 컴포넌트가 배치 상태에 맞춰 요약 영역 안의 `TotalBox`와 `RuneTableArea` 앵커를 바꿉니다. 상하 배치에서는 합계 상자가 왼쪽 약 35%, 룬 표가 오른쪽에 놓입니다. 이 계산은 `LayoutGroup`의 표준 갱신(크기·자식 변경)에서만 실행됩니다. 비율, 간격, 전환값, 앵커 사각형은 모두 직렬화 설정입니다. `Arrangement`와 `ArrangementChanged`로 현재 배치를 알 수 있습니다.
 
-Play Mode 검증에서 측정한 패널 크기와 배치는 다음과 같습니다(2026-10-11).
+Play Mode 검증에서 측정한 패널 크기와 배치는 다음과 같습니다(2026-10-13, TMP_MainScene 인스턴스 기준).
 
-| 화면 | 패널 크기 | 비율 | 배치 | Reel 창 |
-| --- | --- | --- | --- | --- |
-| 1920×1080 | 968×413 | 2.35 | 좌우 | 173×279 |
-| 21:9 | 1302×413 | 3.15 | 좌우 | 234×279 |
-| 1024×768 | 470×332 | 1.42 | 좌우 | 83×216 |
-| 390×844 | 332×274 | 1.21 | 상하 | 89×106 |
+| 화면 | 패널 크기 | 비율 | 배치 | Reel 창 | 합계 상자 | 합계 글자(라벨/값) |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1920×1080 | 968×413 | 2.35 | 좌우 | 173×306 | 261×75 | 41.2 / 41.2 |
+| 21:9 | 1302×413 | 3.15 | 좌우 | 234×306 | 353×75 | 41.2 / 41.2 |
+| 1024×768 | 470×332 | 1.42 | 좌우 | 83×244 | 123×60 | 28.5 / 32.8 |
+| 390×844 | 332×274 | 1.21 | 상하 | 89×123 | 95×70 | 22.0 / 35.5 |
 
-`CombatActionBoundary`의 `PanelBoundaryPlacement.secondPanel`은 `SlotMachinePanel`입니다. 행동 버튼은 패널 위쪽 가운데를 일부 덮을 수 있습니다. `Content`의 위쪽 여백 44px 때문에 버튼은 위 네 화면 모두에서 Reel 창, 합계 값, 룬 표 행을 가리지 않습니다. `ExplorationNodePanel`의 `CoveredPanelInteractionBlocker`는 노드 선택 중 `SlotMachinePanel`의 `CanvasGroup`을 막습니다.
+`CombatActionBoundary`의 `PanelBoundaryPlacement.secondPanel`은 `SlotMachinePanel`입니다. 행동 버튼(72×72)은 패널 위쪽 가운데를 일부 덮습니다. `SlotMachinePanel.prefab`의 `Content` 위쪽 여백은 44px이지만, TMP_MainScene 인스턴스는 `SlotMachineContentLayout`의 `m_Padding.m_Top`을 8로 재정의합니다. 이 재정의는 `Content`의 레이아웃 컴포넌트를 바꾼 커밋 `bd70aa3`에서 남은 것입니다. 그래서 실제 화면에서 버튼은 패널 위쪽 30px까지 내려옵니다. 좌우 배치에서는 Reel 창 위쪽 여유(1024×768에서 약 44px) 덕분에 겹치지 않지만, 390×844 상하 배치에서는 가운데 Reel 창의 위쪽 가장자리를 약 4px 덮습니다. 사용자 확정(2026-10-13)에 따라 배치는 바꾸지 않고 이 겹침을 허용합니다. 버튼은 어느 화면에서도 Payline 칸, 합계 값, 룬 표 행을 가리지 않아야 하며, Play Mode 검증이 이 기준을 확인합니다. 재정의를 지우면 모든 배치의 위쪽 여백이 44px이 되어 겹침이 사라지는 대신 Reel 창 높이가 약 36px 줄어듭니다. `ExplorationNodePanel`의 `CoveredPanelInteractionBlocker`는 노드 선택 중 `SlotMachinePanel`의 `CanvasGroup`을 막습니다.
 
 ### 계층
 
@@ -335,7 +335,7 @@ SlotMachinePanel            (RectTransform, CanvasGroup, FlexibleLayoutItem, Slo
 - `PaylineFrame`(배치 루트)은 첫 Reel 창 왼쪽부터 마지막 Reel 창 오른쪽까지 Payline 칸 높이로 놓입니다. 바깥 확장은 자식이 맡습니다. `ProceduralBorder`는 루트에 앵커를 늘려 붙고 테두리 두께(기준 4, 화면 픽셀 최소 2)만큼 음수 offset으로 넓어져 테두리 안쪽 가장자리가 칸 경계와 맞습니다. `SkinImage`는 스킨의 `paylineOutset`만큼 넓어집니다. 자식 offset은 확장 값이 바뀔 때(스킨 교체, 캔버스 배율 변경)만 다시 씁니다. `PaylineFrameRect`는 배치 루트(칸 범위), `PaylineVisibleRect`는 지금 보이는 표시(테두리 또는 이미지)를 돌려줍니다. 위치는 `SlotReelAreaLayout.LayoutApplied`(Reel 영역 레이아웃 갱신 직후)와 Reel 수 변경 때만 다시 계산합니다. 각 Reel은 `SlotReelViewBase.GetPaylineWorldCorners`로 Payline 칸 모서리를 알려 줍니다.
 - Payline은 색만으로 구분하지 않습니다. 테두리 모양과 가운데 칸의 가장 높은 밝기(알파 1)로 함께 구분합니다. 테두리는 전용 Graphic이므로 바깥 외곽선 Graphic을 나중에 덧붙일 수 있습니다.
 - 칸 위치별 글자 알파는 `distanceAlpha` = `[1, 0.8, 0.4]`(Payline, ±1칸, ±2칸), 크기 배율은 `distanceFontScale` = `[1, 1, 1]`입니다. 회전 중에는 실제 화면 위치로 보간하므로 칸이 넘어갈 때 밝기가 튀지 않습니다. `boldPayline`(기본 꺼짐)을 켜면 정지 상태의 Payline 칸을 굵게 표시합니다.
-- 숫자 크기는 TMP Auto Size 대신 칸 높이·너비 중 작은 값 × `paylineFontRatio`(0.62)를 `[16, 64]`로 제한해 정합니다. 요약 영역의 글자는 `SlotHeightScaledText`가 자기 높이 × 비율을 최소·최대값으로 제한합니다(합계 0.55·14~72, 열 제목 0.8·10~36, 행 0.6·10~48). 모두 크기가 바뀔 때만 다시 계산합니다.
+- 숫자 크기는 TMP Auto Size 대신 칸 높이·너비 중 작은 값 × `paylineFontRatio`(0.62)를 `[16, 64]`로 제한해 정합니다. 요약 영역의 글자는 `SlotHeightScaledText`가 자기 높이 × 비율을 최소·최대값으로 제한합니다(합계 0.55·14~72, 열 제목 0.8·10~36, 행 0.6·10~48). `fitWidth`를 켠 글자는 너비 기준 문자열(`widthSample`, 비어 있으면 현재 글자)이 자기 너비(여백 제외, 2% 여유)에 들어가는 크기로도 제한하고 둘 중 작은 값을 씁니다. `TotalLabel`(현재 글자 `합계`)과 `TotalValue`(`88`, 두 자리 합계)가 이 설정을 켜서, 좁은 합계 상자에서는 잘리는 대신 글자가 작아집니다. 세 자리 이상 합계는 여전히 잘릴 수 있습니다. 모두 크기가 바뀔 때만 다시 계산합니다.
 - 요약 영역 글자는 굵게(TMP Bold) 표시합니다. 한국어 대체 글꼴 `NotoSansKR-Fallback`이 가변 글꼴의 얇은 기본 굵기로 만들어져 회색 상자 위에서 흐리게 보이기 때문입니다.
 - `SlotReelView`의 `visibleCellCount`(홀수, 기본 5)에 따라 `cells`·`cellVisualRoots`·`cellTexts`·`cellIcons`·`cellAfterimages`는 `visibleCellCount + 2`개여야 합니다. 길이가 맞지 않으면 배치를 건너뛰고 한 번 경고합니다. Payline 칸은 `SymbolCell_{visibleCellCount / 2 + 1}`(기본 `SymbolCell_3`)입니다. 검증 API `ValueAt`·`TextAt`은 ±2칸까지 지원합니다.
 - `SymbolCell`은 `SlotReelView.symbolSprites`에 값에 맞는 Sprite가 있으면 Icon을, 없으면 숫자를 표시합니다. 현재 매핑은 비어 있습니다.
