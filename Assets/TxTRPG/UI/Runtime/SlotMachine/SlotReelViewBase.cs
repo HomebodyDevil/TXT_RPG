@@ -34,5 +34,9 @@ namespace TxTRPG.UI.SlotMachine
         // Applies the panel skin to this reel's own graphics; null restores the recorded Prefab default. A reel
         // implementation without skin support keeps this no-op.
         public virtual void ApplySkin(SlotMachinePanelSkin skin) { }
+
+        // Fortune Critical multiplier near the payline cell ("×3"); empty hides it. The panel calls this once the reel
+        // is at rest on a result, and with an empty text when a spin starts. A reel without the display keeps this no-op.
+        public virtual void ShowFortuneMultiplier(string text) { }
     }
 }

@@ -44,6 +44,8 @@ namespace TxTRPG.UI.SlotMachine
         private SlotSkinColor darkSurfaceTextColor = new();
         [SerializeField, Tooltip("Column titles and rune table rows.")]
         private SlotSkinColor lightSurfaceTextColor = new();
+        [SerializeField, Tooltip("Fortune Critical multipliers (reel badge and total). Without an override the Prefab colors stay.")]
+        private SlotSkinColor fortuneTextColor = new();
 
         public string SkinId => (skinId ?? string.Empty).Trim();
         public string DisplayName => string.IsNullOrWhiteSpace(displayName) ? SkinId : displayName;
@@ -63,6 +65,7 @@ namespace TxTRPG.UI.SlotMachine
         public SlotSkinColor ReelTextColor => reelTextColor;
         public SlotSkinColor DarkSurfaceTextColor => darkSurfaceTextColor;
         public SlotSkinColor LightSurfaceTextColor => lightSurfaceTextColor;
+        public SlotSkinColor FortuneTextColor => fortuneTextColor;
 
         // True when the payline is drawn from an image instead of the code-drawn border.
         public bool HasPaylineImage => paylineFrame != null && paylineFrame.Sprite != null;

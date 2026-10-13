@@ -584,3 +584,4 @@ MonoBehaviour:
   temporaryDiceConfiguration: {fileID: 11400000, guid: a6c6300a055e27c4c8e8e84bfc0a3d6e, type: 2}
   temporarySlotMachineConfiguration: {fileID: 11400000, guid: 5d712abc78dfcae4daf61dbf222fc1de, type: 2}
   temporaryRuneConfiguration: {fileID: 11400000, guid: dd0e46ae1fa55d14aa6a6ab93fce197b, type: 2}
+  temporaryFortuneCriticalConfiguration: {fileID: 11400000, guid: 528f780fe763f584a88e29d207f0890f, type: 2}

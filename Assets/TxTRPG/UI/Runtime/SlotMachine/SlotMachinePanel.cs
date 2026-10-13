@@ -34,6 +34,12 @@ namespace TxTRPG.UI.SlotMachine
         [SerializeField, Tooltip("Hidden while a configuration error is shown.")] private GameObject contentRoot;
         [SerializeField] private TMP_Text totalLabelText;
         [SerializeField] private TMP_Text totalValueText;
+        [SerializeField, Tooltip("Layout-only root (TotalBox/TotalMultiplier) of the total Fortune Critical multiplier. Inactive while none is shown.")]
+        private RectTransform totalMultiplierRoot;
+        [SerializeField, Tooltip("TotalMultiplier/VisualRoot/Text. Effects may change VisualRoot only.")]
+        private TMP_Text totalMultiplierText;
+        [SerializeField, Tooltip("Places TotalMultiplier beside or above the total value glyphs (on TotalBox).")]
+        private SlotTotalMultiplierLayout totalMultiplierLayout;
         [SerializeField] private TMP_Text runeColumnTitleText;
         [SerializeField] private TMP_Text valueColumnTitleText;
         [SerializeField] private SlotRuneTableView runeTable;
@@ -60,6 +66,8 @@ namespace TxTRPG.UI.SlotMachine
         [SerializeField] private SlotSkinTextTarget totalValueSkin = new();
         [SerializeField] private SlotSkinTextTarget runeColumnTitleSkin = new();
         [SerializeField] private SlotSkinTextTarget valueColumnTitleSkin = new();
+        [SerializeField, Tooltip("Total Fortune Critical multiplier; a skin may override its color with Fortune Text Color.")]
+        private SlotSkinTextTarget totalMultiplierSkin = new();
 
         private readonly Vector3[] firstCorners = new Vector3[4];
         private readonly Vector3[] lastCorners = new Vector3[4];
@@ -92,6 +100,9 @@ namespace TxTRPG.UI.SlotMachine
         }
         public string TotalLabelText => totalLabelText != null ? totalLabelText.text : string.Empty;
         public string TotalValueText => totalValueText != null ? totalValueText.text : string.Empty;
+        // Total Fortune Critical multiplier currently shown; empty when hidden.
+        public string TotalMultiplierText => totalMultiplierRoot != null && totalMultiplierRoot.gameObject.activeSelf && totalMultiplierText != null
+            ? totalMultiplierText.text : string.Empty;
         public string RuneColumnTitleText => runeColumnTitleText != null ? runeColumnTitleText.text : string.Empty;
         public string ValueColumnTitleText => valueColumnTitleText != null ? valueColumnTitleText.text : string.Empty;
         // (effect, value) per shown table row; message rows ("장착된 룬이 없습니다", "외 N줄") report the message as the effect.
@@ -199,6 +210,7 @@ namespace TxTRPG.UI.SlotMachine
             var light = skin != null ? skin.LightSurfaceTextColor : null;
             runeColumnTitleSkin.Apply(light);
             valueColumnTitleSkin.Apply(light);
+            totalMultiplierSkin.Apply(skin != null ? skin.FortuneTextColor : null);
             foreach (var divider in reelDividers) ApplyDividerSkin(divider);
             foreach (var view in reelViews) if (view != null) view.ApplySkin(skin);
             if (runeTable != null) runeTable.ApplySkin(skin);
@@ -263,6 +275,8 @@ namespace TxTRPG.UI.SlotMachine
                 var keep = view.ReelId == reels[i].ReelId && SameValues(view.Strip, reels[i].Values);
                 var stop = keep ? view.StopIndex : 0;
                 view.ShowStop(reels[i], stop);
+                // A kept reel still shows the result it stopped on, including its Fortune Critical multiplier.
+                if (!keep) view.ShowFortuneMultiplier(string.Empty);
             }
         }
 
@@ -272,6 +286,7 @@ namespace TxTRPG.UI.SlotMachine
             if (summary == null) throw new ArgumentNullException(nameof(summary));
             SetText(totalLabelText, summary.TotalLabel);
             SetText(totalValueText, summary.TotalValue);
+            SetTotalMultiplier(summary.TotalMultiplierText);
             SetText(runeColumnTitleText, summary.RuneColumnTitle);
             SetText(valueColumnTitleText, summary.ValueColumnTitle);
             if (runeTable != null) runeTable.SetLines(summary.Lines, summary.EmptyText, summary.OverflowFormat);
@@ -304,7 +319,7 @@ namespace TxTRPG.UI.SlotMachine
                 var plans = SlotReelSpinPlanner.Create(Settings, result.Reels.Count, reduceMotion, spinRandom);
                 var tasks = new Task<bool>[result.Reels.Count];
                 for (var i = 0; i < tasks.Length; i++)
-                    tasks[i] = reelViews[i].PlaySpinAsync(result.Reels[i].Reel, result.Reels[i].StopIndex, plans[i], cancellationToken);
+                    tasks[i] = PlayReelAsync(reelViews[i], result.Reels[i], plans[i], token, cancellationToken);
                 var completed = await Task.WhenAll(tasks);
                 if (this == null || token != generation) return false;
                 foreach (var done in completed)
@@ -318,6 +333,16 @@ namespace TxTRPG.UI.SlotMachine
             }
         }
 
+        // The reel clears its multiplier when its spin starts and shows it once it is at rest on the result.
+        private async Task<bool> PlayReelAsync(SlotReelViewBase view, SlotReelStopDisplay stop, SlotReelSpinPlan plan, int token,
+            CancellationToken cancellationToken)
+        {
+            view.ShowFortuneMultiplier(string.Empty);
+            var done = await view.PlaySpinAsync(stop.Reel, stop.StopIndex, plan, cancellationToken);
+            if (done && this != null && view != null && token == generation) view.ShowFortuneMultiplier(stop.MultiplierText);
+            return done;
+        }
+
         // Puts every reel at rest on the accepted result immediately (timeout, cancellation or a restored result).
         public void StopAtResult(SlotSpinDisplay result)
         {
@@ -325,7 +350,10 @@ namespace TxTRPG.UI.SlotMachine
             generation++;
             if (EnsureReelCount(result.Reels.Count))
                 for (var i = 0; i < result.Reels.Count; i++)
+                {
                     reelViews[i].ShowStop(result.Reels[i].Reel, result.Reels[i].StopIndex);
+                    reelViews[i].ShowFortuneMultiplier(result.Reels[i].MultiplierText);
+                }
             SetSummary(result.ResultSummary);
             EndSpin();
         }
@@ -351,6 +379,16 @@ namespace TxTRPG.UI.SlotMachine
             if (statusText == null) return;
             statusText.text = message ?? string.Empty;
             statusText.gameObject.SetActive(!string.IsNullOrEmpty(message));
+        }
+
+        private void SetTotalMultiplier(string value)
+        {
+            value ??= string.Empty;
+            SetText(totalMultiplierText, value);
+            if (totalMultiplierRoot != null && totalMultiplierRoot.gameObject.activeSelf != value.Length > 0)
+                totalMultiplierRoot.gameObject.SetActive(value.Length > 0);
+            // The value text was set just before, so the placement follows the current value glyphs.
+            if (value.Length > 0 && totalMultiplierLayout != null) totalMultiplierLayout.Refresh();
         }
 
         private static void SetText(TMP_Text text, string value)
@@ -570,8 +608,25 @@ namespace TxTRPG.UI.SlotMachine
             changed |= totalValueSkin.Record(totalValueText, overwrite);
             changed |= runeColumnTitleSkin.Record(runeColumnTitleText, overwrite);
             changed |= valueColumnTitleSkin.Record(valueColumnTitleText, overwrite);
+            changed |= totalMultiplierSkin.Record(totalMultiplierText, overwrite);
             return changed;
         }
+
+        // Connects the total Fortune Critical multiplier and records its default text color once. True when something changed.
+        public bool ConfigureFortuneForEditor(RectTransform targetRoot, TMP_Text targetText, SlotTotalMultiplierLayout targetLayout)
+        {
+            var changed = totalMultiplierRoot != targetRoot || totalMultiplierText != targetText || totalMultiplierLayout != targetLayout;
+            totalMultiplierRoot = targetRoot;
+            totalMultiplierText = targetText;
+            totalMultiplierLayout = targetLayout;
+            changed |= totalMultiplierSkin.Record(targetText, false);
+            return changed;
+        }
+
+        public RectTransform TotalMultiplierRootForEditor => totalMultiplierRoot;
+        public TMP_Text TotalMultiplierTextForEditor => totalMultiplierText;
+        public SlotTotalMultiplierLayout TotalMultiplierLayoutForEditor => totalMultiplierLayout;
+        public SlotSkinTextTarget TotalMultiplierSkinForEditor => totalMultiplierSkin;
 
         // Re-records the defaults after a developer changed the Prefab's default look (panel, rune table and row
         // template). Reels record theirs in SlotReel.prefab with the same context menu on SlotReelView.

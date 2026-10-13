@@ -53,6 +53,8 @@ namespace TxTRPG.Application.SlotMachine
         private bool initialized;
         private bool executing;
         private IRandomIndexProvider random;
+        // Separate from the spin random source, so Fortune Critical never changes the spin draws.
+        private IRandomIndexProvider fortuneRandom;
 
         public int InitializationOrder => -800;
         public bool IsReady => initialized && combat != null && sessionHost != null &&
@@ -91,6 +93,9 @@ namespace TxTRPG.Application.SlotMachine
             }
 
             random ??= new SystemRandomIndexProvider();
+            // An explicit seed: two System.Random instances created in the same tick could share a seed, which would
+            // correlate the Fortune Critical draws with the reel stops.
+            fortuneRandom ??= new SystemRandomIndexProvider(Guid.NewGuid().GetHashCode());
             initialized = true;
             if (sessionHost.TemporaryExplorationCombat != null) AttachCombat(sessionHost.TemporaryExplorationCombat);
             else ClearCombat();
@@ -163,15 +168,18 @@ namespace TxTRPG.Application.SlotMachine
             }
         }
 
-        // Step 1-2: the result is decided here, once. From now on it cannot be spun again.
+        // Step 1-2: the result is decided here, once (spin -> Fortune Critical -> allocation of the final total). From now
+        // on it cannot be spun again. An overflowing final total throws and the action is not accepted.
         private TemporarySlotAcceptedAction AcceptSpin(long actionId)
         {
             var spin = sessionHost.TemporarySlotMachine.Spin(random);
-            var allocation = sessionHost.TemporaryRunes.Allocate(spin.PaylineTotal);
+            var rules = sessionHost.TemporaryFortuneCritical?.Rules ?? FortuneCriticalRules.Disabled;
+            var fortune = FortuneCriticalResolver.Resolve(spin, rules, fortuneRandom);
+            var allocation = sessionHost.TemporaryRunes.Allocate(fortune.FinalTotal);
             var accepted = new TemporarySlotAcceptedAction(actionId,
                 sessionHost.TemporaryExploration?.RunId ?? string.Empty,
                 sessionHost.TemporaryExploration?.ActiveNodeId ?? string.Empty,
-                combat, spin, allocation);
+                combat, spin, fortune, allocation);
             sessionHost.AcceptTemporarySlotAction(accepted);
             MarkResultShown(accepted.RunId, accepted.NodeId);
             return accepted;
@@ -195,7 +203,7 @@ namespace TxTRPG.Application.SlotMachine
                 // ExecuteTurn is deliberately invoked once; a partial failure is reported, never retried.
                 accepted.MarkApplied();
                 var result = accepted.Combat.ExecuteTurn(actions);
-                var record = new TemporarySlotTurnRecord(accepted.RunId, accepted.NodeId, accepted.Spin, accepted.Allocation, result);
+                var record = new TemporarySlotTurnRecord(accepted.RunId, accepted.NodeId, accepted.Spin, accepted.Fortune, accepted.Allocation, result);
                 try { acceptedHost.PublishTemporarySlotStory(record); }
                 catch (Exception exception) { Debug.LogError($"Combat Story display failed: {exception}"); }
                 if (this != null)
@@ -266,17 +274,23 @@ namespace TxTRPG.Application.SlotMachine
         { try { await task; } catch (Exception exception) { Debug.LogWarning($"Late slot animation failed: {exception.Message}"); } }
 
         private static SlotSpinDisplay CreateSpinDisplay(TemporarySlotAcceptedAction accepted) =>
-            CreateSpinDisplay(accepted.Spin, accepted.Allocation);
+            CreateSpinDisplay(accepted.Spin, accepted.Fortune, accepted.Allocation);
 
-        public static SlotSpinDisplay CreateSpinDisplay(SlotSpinResult spin, RuneAllocation allocation)
+        public static SlotSpinDisplay CreateSpinDisplay(SlotSpinResult spin, RuneAllocation allocation) =>
+            CreateSpinDisplay(spin, FortuneCriticalResult.None(spin), allocation);
+
+        // Each reel shows its own Fortune Critical multiplier; the total box shows the final total and the total multiplier.
+        public static SlotSpinDisplay CreateSpinDisplay(SlotSpinResult spin, FortuneCriticalResult fortune, RuneAllocation allocation)
         {
+            if (fortune == null) throw new ArgumentNullException(nameof(fortune));
             var reels = new SlotReelStopDisplay[spin.Reels.Count];
             for (var i = 0; i < reels.Length; i++)
             {
                 var stop = spin.Reels[i];
                 var values = new int[stop.Strip.Count];
                 for (var j = 0; j < values.Length; j++) values[j] = stop.Strip[j].Value;
-                reels[i] = new SlotReelStopDisplay(stop.ReelId, stop.StopIndex, values);
+                var multiplier = i < fortune.Reels.Count ? fortune.Reels[i].ReelMultiplier : 1;
+                reels[i] = new SlotReelStopDisplay(stop.ReelId, stop.StopIndex, values, SlotCombatStoryFormatter.MultiplierText(multiplier));
             }
             var spinning = new SlotRuneLineDisplay[allocation.Lines.Count];
             var result = new SlotRuneLineDisplay[allocation.Lines.Count];
@@ -290,13 +304,17 @@ namespace TxTRPG.Application.SlotMachine
             }
             return new SlotSpinDisplay(reels, spin.PaylineTotal,
                 CreateSummary(SlotCombatStoryFormatter.SpinningTotalValue, spinning),
-                CreateSummary(SlotCombatStoryFormatter.TotalValue(spin.PaylineTotal), result));
+                CreateSummary(SlotCombatStoryFormatter.TotalValue(fortune.FinalTotal), result,
+                    SlotCombatStoryFormatter.MultiplierText(fortune.TotalMultiplier)));
         }
 
         public static SlotSummaryDisplay CreateSummary(string totalValue, IReadOnlyList<SlotRuneLineDisplay> lines) =>
+            CreateSummary(totalValue, lines, string.Empty);
+
+        public static SlotSummaryDisplay CreateSummary(string totalValue, IReadOnlyList<SlotRuneLineDisplay> lines, string totalMultiplier) =>
             new(SlotCombatStoryFormatter.TotalLabel, totalValue, SlotCombatStoryFormatter.RuneColumnTitle,
                 SlotCombatStoryFormatter.ValueColumnTitle, lines, SlotCombatStoryFormatter.NoRuneLines,
-                SlotCombatStoryFormatter.OverflowFormat);
+                SlotCombatStoryFormatter.OverflowFormat, totalMultiplier);
 
         // Shows the reel configuration and the rune weights. While this controller presents a spin, the panel defers the
         // reel change until the presentation ends.
@@ -343,7 +361,7 @@ namespace TxTRPG.Application.SlotMachine
             var last = sessionHost.LastTemporarySlotTurn;
             if (last != null && IsCurrentNode(last.RunId, last.NodeId))
             {
-                slotPanel.StopAtResult(CreateSpinDisplay(last.Spin, last.Allocation));
+                slotPanel.StopAtResult(CreateSpinDisplay(last.Spin, last.Fortune, last.Allocation));
                 MarkResultShown(last.RunId, last.NodeId);
             }
         }
@@ -383,7 +401,7 @@ namespace TxTRPG.Application.SlotMachine
                 var last = sessionHost?.LastTemporarySlotTurn;
                 if (slotPanel != null && last != null && !slotPanel.IsSpinning && IsCurrentNode(last.RunId, last.NodeId))
                 {
-                    slotPanel.StopAtResult(CreateSpinDisplay(last.Spin, last.Allocation));
+                    slotPanel.StopAtResult(CreateSpinDisplay(last.Spin, last.Fortune, last.Allocation));
                     MarkResultShown(last.RunId, last.NodeId);
                 }
                 ApplyEnemyPresentation();
@@ -529,6 +547,7 @@ namespace TxTRPG.Application.SlotMachine
         }
 
         public void SetRandomForTests(IRandomIndexProvider source) => random = source;
+        public void SetFortuneRandomForTests(IRandomIndexProvider source) => fortuneRandom = source;
         private float editorTimeoutOverrideSeconds;
         // Verification only: a positive value replaces the computed timeout; zero restores it.
         public void SetSpinTimeoutOverrideForEditor(float seconds) => editorTimeoutOverrideSeconds = Mathf.Max(0f, seconds);

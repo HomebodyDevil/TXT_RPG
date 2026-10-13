@@ -6,6 +6,7 @@
 
 | 문서 | 설명 |
 | --- | --- |
+| [슬롯머신 Fortune Critical](slot-fortune-critical.md) | Reel별(ID별 설정)·합계에 독립적으로 정수 배수를 판정해 곱셈 중첩·유효 배수 상한을 적용하고, 등록형 가중치 함수(기본 기하 r=0.7)로 배수 분포를 설정하며 실행 중 변경 API와 배수 표시·Story 기록을 구현합니다. 분포 함수 비교 분석을 부록으로 담습니다. |
 | [SlotMachinePanel 스킨과 Payline 이미지](slot-machine-panel-skin.md) | 패널 이미지 묶음을 `SlotMachinePanelSkin` 자산과 카탈로그로 분리해 개발자가 고르고 실행 중 교체하며, Payline 이미지가 없으면 코드로 그립니다. 플레이어 선택은 설계만 둡니다. |
 | [SlotMachinePanel 외형 개편과 Reel 회전 연출](slot-machine-panel-visual-and-spin-motion.md) | 목표 이미지처럼 Reel 기계·합계·룬 줄 표로 패널을 바꾸고, 설정 자산으로 easing(기본 InOutElastic)·Reel별 시차와 편차·고속 잔상 연출을 조정하게 합니다. |
 | [슬롯머신과 룬 기반 전투 행동](slot-machine-and-rune-combat.md) | 주사위를 보류하고 3개 Reel 슬롯머신의 Payline 총합을 룬 줄 가중치로 자동 분배해 행동하며, `OwnedDicePanel` 자리에 2D `SlotMachinePanel`과 회전 연출을 배치합니다. |

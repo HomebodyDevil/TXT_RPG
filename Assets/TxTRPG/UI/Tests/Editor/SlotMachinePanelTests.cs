@@ -220,6 +220,111 @@ namespace TxTRPG.UI.Tests
                 "unchanged reels keep their result, a changed or new reel shows its first cell");
         }
 
+        // ---------- Fortune Critical multipliers ----------
+
+        private static SlotSpinDisplay FortuneSpin(string[] reelMultipliers, string totalMultiplier, params int[] stops) => new(
+            stops.Select((stop, i) => new SlotReelStopDisplay($"reel.{i + 1}", stop, OneToSix, reelMultipliers[i])).ToArray(),
+            stops.Sum(stop => OneToSix[stop]),
+            Summary("…"),
+            new SlotSummaryDisplay("합계", "40", "룬", "쌓임 → 분배", new[] { new SlotRuneLineDisplay("공격", "×1 → 40") },
+                "장착된 룬이 없습니다", "외 {0}줄", totalMultiplier));
+
+        private string[] ReelMultiplierTexts => panel.ReelViews.Cast<SlotReelView>().Select(v => v.FortuneMultiplierText).ToArray();
+
+        [Test]
+        public void FortuneDisplays_ExistHiddenAndTakeNoInput()
+        {
+            foreach (var view in panel.ReelViews.Cast<SlotReelView>())
+            {
+                var badge = view.transform.Find("FortuneBadge");
+                Assert.That(badge, Is.Not.Null, $"{view.name} has FortuneBadge");
+                Assert.That(badge.gameObject.activeSelf, Is.False, "hidden until a multiplier is shown");
+                Assert.That(view.FortuneTextForEditor.transform.parent.name, Is.EqualTo("VisualRoot"));
+                Assert.That(view.FortuneTextForEditor.raycastTarget, Is.False);
+                Assert.That(view.FortuneTextForEditor.enableAutoSizing, Is.False);
+                Assert.That(view.FortuneMultiplierText, Is.Empty);
+            }
+            var total = panel.transform.Find("Content/SummaryArea/TotalBox/TotalMultiplier");
+            Assert.That(total, Is.Not.Null);
+            Assert.That(total.gameObject.activeSelf, Is.False);
+            Assert.That(panel.TotalMultiplierTextForEditor.raycastTarget, Is.False);
+            Assert.That(panel.TotalMultiplierText, Is.Empty);
+        }
+
+        [Test]
+        public void FortuneMultipliers_AppearOnlyOnceTheReelsRest()
+        {
+            panel.SetReels(Reels(3));
+            var spin = FortuneSpin(new[] { "", "×3", "" }, "×2", 2, 4, 1);
+            // A long constant-speed phase: Edit Mode time does not advance, so the spin stays running.
+            panel.SetSpinSettingsForEditor(new SlotReelSpinSettings(SlotEasingKind.Linear, 0f, 0f, 0f, 0f, 10f, 0f, 0f, 0f, 0f, 0f,
+                18f, 8f, false, 0f, 0f, 0, 0f, 0f, 1f, 1f, 0f));
+            var running = panel.PlaySpinAsync(spin, false, CancellationToken.None);
+            Assert.That(running.IsCompleted, Is.False);
+            Assert.That(ReelMultiplierTexts, Is.EqualTo(new[] { "", "", "" }), "nothing is shown while spinning");
+            Assert.That(panel.TotalMultiplierText, Is.Empty);
+
+            panel.StopAtResult(spin);
+            Assert.That(ReelMultiplierTexts, Is.EqualTo(new[] { "", "×3", "" }));
+            Assert.That(panel.TotalMultiplierText, Is.EqualTo("×2"));
+            Assert.That(panel.TotalValueText, Is.EqualTo("40"), "the value text is unchanged by the multiplier");
+
+            // The next spin clears the previous multipliers when it starts.
+            var next = panel.PlaySpinAsync(FortuneSpin(new[] { "", "", "" }, "", 0, 0, 0), false, CancellationToken.None);
+            Assert.That(ReelMultiplierTexts, Is.EqualTo(new[] { "", "", "" }));
+            Assert.That(panel.TotalMultiplierText, Is.Empty);
+            panel.StopAtResult(FortuneSpin(new[] { "", "", "" }, "", 0, 0, 0));
+            Assert.That(ReelMultiplierTexts, Is.EqualTo(new[] { "", "", "" }), "an empty text shows nothing");
+            Assert.That(panel.transform.Find("Content/SummaryArea/TotalBox/TotalMultiplier").gameObject.activeSelf, Is.False);
+            Assert.That(panel.IsSpinning, Is.False);
+            Assert.That(running.IsCompleted && next.IsCompleted, Is.False, "the interrupted reels end on a later frame, without showing anything");
+        }
+
+        [Test]
+        public void FortuneMultipliers_AreShownAfterAnInstantAndAReducedMotionSpin()
+        {
+            panel.SetReels(Reels(3));
+            var task = panel.PlaySpinAsync(FortuneSpin(new[] { "×2", "", "×10" }, "", 1, 1, 1), false, CancellationToken.None);
+            Assert.That(task.IsCompleted && task.Result, Is.True);
+            Assert.That(ReelMultiplierTexts, Is.EqualTo(new[] { "×2", "", "×10" }));
+            task = panel.PlaySpinAsync(FortuneSpin(new[] { "", "×4", "" }, "×3", 2, 2, 2), true, CancellationToken.None);
+            Assert.That(task.IsCompleted && task.Result, Is.True);
+            Assert.That(ReelMultiplierTexts, Is.EqualTo(new[] { "", "×4", "" }), "Reduce Motion shows them with the result");
+            Assert.That(panel.TotalMultiplierText, Is.EqualTo("×3"));
+        }
+
+        [Test]
+        public void FortuneMultipliers_SurviveSkinChangesAndUnchangedReelConfigurations()
+        {
+            panel.SetReels(Reels(3));
+            panel.StopAtResult(FortuneSpin(new[] { "×5", "×3", "" }, "×2", 2, 3, 4));
+            var skin = ScriptableObject.CreateInstance<SlotMachinePanelSkin>();
+            try
+            {
+                var serialized = new SerializedObject(skin);
+                serialized.FindProperty("skinId").stringValue = "test.fortune";
+                serialized.FindProperty("fortuneTextColor.overrideColor").boolValue = true;
+                serialized.FindProperty("fortuneTextColor.color").colorValue = Color.cyan;
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+                var reel = (SlotReelView)panel.ReelViews[0];
+                var defaultColor = reel.FortuneTextForEditor.color;
+                panel.SetSkin(skin);
+                Assert.That(ReelMultiplierTexts, Is.EqualTo(new[] { "×5", "×3", "" }));
+                Assert.That(panel.TotalMultiplierText, Is.EqualTo("×2"));
+                Assert.That(reel.FortuneTextForEditor.color, Is.EqualTo(Color.cyan));
+                Assert.That(panel.TotalMultiplierTextForEditor.color, Is.EqualTo(Color.cyan));
+                panel.SetSkin(null);
+                Assert.That(reel.FortuneTextForEditor.color, Is.EqualTo(defaultColor), "the recorded Prefab color returns");
+                Assert.That(ReelMultiplierTexts, Is.EqualTo(new[] { "×5", "×3", "" }));
+            }
+            finally { Object.DestroyImmediate(skin); }
+
+            var changed = Reels(3);
+            changed[1] = new SlotReelDisplay("reel.2", new[] { 9, 9 });
+            panel.SetReels(changed);
+            Assert.That(ReelMultiplierTexts, Is.EqualTo(new[] { "×5", "", "" }), "a changed reel no longer shows the old result");
+        }
+
         // Edit Mode has no canvas update loop: the panel root has no layout controller, so Content and the reel area
         // (below the layout-only ReelMachine) are rebuilt explicitly.
         private void Arrange(Vector2 size)

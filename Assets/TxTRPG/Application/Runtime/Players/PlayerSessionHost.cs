@@ -9,6 +9,7 @@ using TxTRPG.Application.Runes;
 using TxTRPG.Application.SlotMachine;
 using TxTRPG.Gameplay.Combat;
 using TxTRPG.Gameplay.Exploration;
+using TxTRPG.Gameplay.SlotMachine;
 using UnityEngine;
 
 namespace TxTRPG.Application.Players
@@ -25,6 +26,8 @@ namespace TxTRPG.Application.Players
         [SerializeField] private TemporaryDiceConfiguration temporaryDiceConfiguration;
         [SerializeField] private TemporarySlotMachineConfiguration temporarySlotMachineConfiguration;
         [SerializeField] private TemporaryRuneConfiguration temporaryRuneConfiguration;
+        [SerializeField, Tooltip("Optional. Without it (or with an invalid one) the slot machine runs without Fortune Critical.")]
+        private TemporaryFortuneCriticalConfiguration temporaryFortuneCriticalConfiguration;
 
         private CancellationTokenSource lifetimeCancellation;
         private PlayerSession session;
@@ -41,6 +44,7 @@ namespace TxTRPG.Application.Players
         private bool temporarySlotCombatCreated;
         private TemporarySlotMachineState temporarySlotMachine;
         private TemporaryRuneState temporaryRunes;
+        private TemporaryFortuneCriticalState temporaryFortuneCritical;
         private string temporarySlotCombatError = string.Empty;
         private TemporarySlotAcceptedAction pendingSlotAction;
         private TemporarySlotTurnRecord pendingSlotStory;
@@ -66,6 +70,8 @@ namespace TxTRPG.Application.Players
         public bool IsTemporaryCombatActionPending => pendingTemporaryDiceAction != 0;
         public TemporarySlotMachineState TemporarySlotMachine => temporarySlotMachine;
         public TemporaryRuneState TemporaryRunes => temporaryRunes;
+        // Session Fortune Critical rules; never null after initialization (disabled when not configured).
+        public TemporaryFortuneCriticalState TemporaryFortuneCritical => temporaryFortuneCritical;
         // Why the slot machine or runes could not be created (empty when both exist). The game still starts.
         public string TemporarySlotCombatError => temporarySlotCombatError;
         public TemporarySlotAcceptedAction PendingSlotAction => pendingSlotAction;
@@ -243,6 +249,7 @@ namespace TxTRPG.Application.Players
         {
             if (temporarySlotCombatCreated) return;
             temporarySlotCombatCreated = true;
+            CreateTemporaryFortuneCritical();
             if (temporarySlotMachineConfiguration == null && temporaryRuneConfiguration == null)
             {
                 temporarySlotCombatError = "슬롯머신과 룬 설정이 지정되지 않았습니다.";
@@ -262,6 +269,19 @@ namespace TxTRPG.Application.Players
             temporarySlotMachine = machine;
             temporaryRunes = runes;
             temporarySlotCombatError = string.Empty;
+        }
+
+        // Fortune Critical is optional: a missing or invalid configuration leaves it disabled and never sets
+        // TemporarySlotCombatError.
+        private void CreateTemporaryFortuneCritical()
+        {
+            temporaryFortuneCritical = TemporaryFortuneCriticalState.Create(temporaryFortuneCriticalConfiguration,
+                FortuneWeightFunctionRegistry.Default, out var configured, out var reason);
+            if (configured) return;
+            if (temporaryFortuneCriticalConfiguration == null)
+                Debug.LogWarning($"Fortune Critical is disabled. {reason}", this);
+            else
+                Debug.LogError($"Fortune Critical is disabled because its configuration is invalid. {reason}", this);
         }
 
         private void StartInitialization(CancellationToken cancellationToken)
@@ -324,12 +344,19 @@ namespace TxTRPG.Application.Players
             temporaryRuneConfiguration = runes;
         }
 
+        public void ConfigureTemporaryFortuneCritical(TemporaryFortuneCriticalConfiguration configuration)
+        {
+            if (temporarySlotCombatCreated) throw new InvalidOperationException("Temporary slot combat is already initialized.");
+            temporaryFortuneCriticalConfiguration = configuration;
+        }
+
 #if UNITY_EDITOR
         // Edit Mode tests only: Instance is otherwise set in Awake, which runs in Play Mode.
         public static void SetInstanceForEditorTests(PlayerSessionHost host) => instance = host;
         public void UseSessionForEditorTests(PlayerSession testSession) => session = testSession ?? throw new ArgumentNullException(nameof(testSession));
         public TemporarySlotMachineConfiguration TemporarySlotMachineConfigurationForEditor => temporarySlotMachineConfiguration;
         public TemporaryRuneConfiguration TemporaryRuneConfigurationForEditor => temporaryRuneConfiguration;
+        public TemporaryFortuneCriticalConfiguration TemporaryFortuneCriticalConfigurationForEditor => temporaryFortuneCriticalConfiguration;
 #endif
 
         private static string NormalizeSaveFileName(string value)

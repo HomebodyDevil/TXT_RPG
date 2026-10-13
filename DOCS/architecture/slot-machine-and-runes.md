@@ -1,8 +1,8 @@
 # 슬롯머신과 룬 기반 전투 행동
 
-`TMP_MainScene`의 임시 전투에서 플레이어 행동은 슬롯머신(SlotMachine)과 룬(Rune)으로 정합니다. 슬롯머신은 숫자만 정합니다. 각 Reel의 Payline(가운데 줄)에 멈춘 숫자를 더한 값이 이번 턴의 총합입니다. 어떤 행동을 할지는 룬 줄이 정합니다. 총합은 룬 줄의 가중치 비율로 자동 분배되고, 각 줄은 분배받은 수치로 행동을 한 번씩 수행합니다. 주사위 시스템은 코드와 자산을 남긴 채 보류 상태이며, `TMP_MainScene`에서는 꺼져 있습니다([주사위 보류](#주사위-보류)).
+`TMP_MainScene`의 임시 전투에서 플레이어 행동은 슬롯머신(SlotMachine)과 룬(Rune)으로 정합니다. 슬롯머신은 숫자만 정합니다. 각 Reel의 Payline(가운데 줄)에 멈춘 숫자를 더한 값에 [Fortune Critical](#fortune-critical) 배수를 적용한 값이 이번 턴의 총합입니다. 어떤 행동을 할지는 룬 줄이 정합니다. 총합은 룬 줄의 가중치 비율로 자동 분배되고, 각 줄은 분배받은 수치로 행동을 한 번씩 수행합니다. 주사위 시스템은 코드와 자산을 남긴 채 보류 상태이며, `TMP_MainScene`에서는 꺼져 있습니다([주사위 보류](#주사위-보류)).
 
-이 문서는 현재 구현을 설명합니다. 구현 지침은 [`DOCS/instructions/slot-machine-and-rune-combat.md`](../instructions/slot-machine-and-rune-combat.md)입니다.
+이 문서는 현재 구현을 설명합니다. 구현 지침은 [`DOCS/instructions/slot-machine-and-rune-combat.md`](../instructions/slot-machine-and-rune-combat.md)와 [`DOCS/instructions/slot-fortune-critical.md`](../instructions/slot-fortune-critical.md)입니다.
 
 ## 전체 흐름
 
@@ -12,7 +12,8 @@ flowchart LR
     Controller -->|Spin 1회| Slot[TemporarySlotMachineState]
     Controller -->|Allocate| Runes[TemporaryRuneState]
     Slot --> Spin[SlotSpinResult]
-    Spin --> Alloc[WeightedRuneAllocationPolicy]
+    Spin --> Fortune[FortuneCriticalResolver<br/>TemporaryFortuneCriticalState 규칙]
+    Fortune -->|FinalTotal| Alloc[WeightedRuneAllocationPolicy]
     Runes --> Alloc
     Alloc --> Accepted[TemporarySlotAcceptedAction<br/>PlayerSessionHost 보관]
     Accepted -->|PlaySpinAsync| Panel[SlotMachinePanel]
@@ -22,9 +23,9 @@ flowchart LR
 
 | 어셈블리 | 구성 요소 |
 | --- | --- |
-| `TxTRPG.Gameplay` | `IRandomIndexProvider`(공용 난수 계약), `SlotMachine` 네임스페이스(`SlotSymbol`, `SlotReel`, `SlotMachine`, `SlotReelStop`, `SlotSpinResult`), `Runes` 네임스페이스(정의·보유·줄·분배), 전투 입력 `PlayerCombatAction`. Unity에 의존하지 않습니다. |
-| `TxTRPG.Application` | 설정 자산, 세션 상태, `TemporarySlotCombatController`, 수락·턴 기록, `RuneCombatActions`, `SlotCombatStoryFormatter`, 공용 `ITemporaryCombatController`·`TemporaryCombatStoryText`·`TemporaryCombatPresentationTimeout`. |
-| `TxTRPG.UI` | `SlotMachinePanel`, `SlotReelViewBase`/`SlotReelView`, 배치(`SlotMachineContentLayout`, `SlotReelAreaLayout`), `SlotPaylineFrameGraphic`, 스킨(`SlotMachinePanelSkin`, `SlotMachinePanelSkinCatalog`, `SlotSkinImage`, `SlotSkinColor`, `SlotSkinOffset`, `SlotSkinGraphicTarget`, `SlotSkinTextTarget`), 룬 표(`SlotRuneTableView`, `SlotRuneLineRow`), `SlotHeightScaledText`, 회전 연출(`SlotReelSpinProfile`, `SlotReelSpinSettings`, `SlotEasing`, `SlotReelSpinPlanner`, `SlotReelSpinPlan`, `SlotReelSpinCurve`), 표시용 구조(`SlotReelDisplay`, `SlotReelStopDisplay`, `SlotRuneLineDisplay`, `SlotSummaryDisplay`, `SlotSpinDisplay`). Gameplay·Application 타입을 쓰지 않습니다. |
+| `TxTRPG.Gameplay` | `IRandomIndexProvider`(공용 난수 계약), `SlotMachine` 네임스페이스(`SlotSymbol`, `SlotReel`, `SlotMachine`, `SlotReelStop`, `SlotSpinResult`, Fortune Critical 규칙·가중치 함수·판정기), `Runes` 네임스페이스(정의·보유·줄·분배), 전투 입력 `PlayerCombatAction`. Unity에 의존하지 않습니다. |
+| `TxTRPG.Application` | 설정 자산, 세션 상태(Fortune Critical 포함), `TemporarySlotCombatController`, 수락·턴 기록, `RuneCombatActions`, `SlotCombatStoryFormatter`, 공용 `ITemporaryCombatController`·`TemporaryCombatStoryText`·`TemporaryCombatPresentationTimeout`. |
+| `TxTRPG.UI` | `SlotMachinePanel`, `SlotReelViewBase`/`SlotReelView`, 배치(`SlotMachineContentLayout`, `SlotReelAreaLayout`), `SlotPaylineFrameGraphic`, 스킨(`SlotMachinePanelSkin`, `SlotMachinePanelSkinCatalog`, `SlotSkinImage`, `SlotSkinColor`, `SlotSkinOffset`, `SlotSkinGraphicTarget`, `SlotSkinTextTarget`), 룬 표(`SlotRuneTableView`, `SlotRuneLineRow`), `SlotHeightScaledText`, Fortune 배수 배치(`SlotTotalMultiplierLayout`), 회전 연출(`SlotReelSpinProfile`, `SlotReelSpinSettings`, `SlotEasing`, `SlotReelSpinPlanner`, `SlotReelSpinPlan`, `SlotReelSpinCurve`), 표시용 구조(`SlotReelDisplay`, `SlotReelStopDisplay`, `SlotRuneLineDisplay`, `SlotSummaryDisplay`, `SlotSpinDisplay`). Gameplay·Application 타입을 쓰지 않습니다. |
 
 주사위 도메인(`TxTRPG.Gameplay.Dice`)과 슬롯머신·룬 도메인은 서로 참조하지 않습니다. 기존 `IRandomIndexSource`는 이름과 위치를 그대로 둔 채 `IRandomIndexProvider`를 상속하도록 바꿨으므로 주사위 호출부는 바뀌지 않았습니다. 두 시스템이 만나는 곳은 전투 입력 `PlayerCombatAction`뿐입니다.
 
@@ -88,8 +89,9 @@ Payline은 가운데 줄 하나입니다. 여러 Payline이나 기호 조합 판
 | `Assets/TxTRPG/Application/Configuration/TemporaryRuneConfiguration.asset` (`TemporaryRuneConfiguration`) | 정의 `rune.attack`(공격 룬, Attack), `rune.heal`(회복 룬, Heal). 보유 `rune.attack.1`, `rune.heal.1`. 줄 `line.1`(공격 룬 ×1), `line.2`(회복 룬 ×1). Inspector에서 바꿀 수 있는 임시값입니다. |
 | `TemporarySlotMachineState` | 세션 수명의 `SlotMachine` 복사본입니다. `Machine`의 변경 API를 쓰며 `Changed`를 전달합니다. |
 | `TemporaryRuneState` | 세션 수명의 `Catalog`·`Inventory`·`Loadout`입니다. 보유와 줄의 `Changed`를 합쳐 전달하고, `CanAllocate`와 `Allocate(total, policy)`를 제공합니다. |
+| `Assets/TxTRPG/Application/Configuration/TemporaryFortuneCriticalConfiguration.asset`, `TemporaryFortuneCriticalState` | Fortune Critical 규칙의 설정 자산과 세션 상태입니다. [Fortune Critical](#fortune-critical)에서 설명합니다. |
 
-`PlayerSessionHost`(`AppRoot.prefab`)의 `temporarySlotMachineConfiguration`·`temporaryRuneConfiguration`이 두 자산을 참조합니다. Awake와 `EnsureInitializedAsync`에서 한 번 복사하며, 원본 자산은 실행 중 바뀌지 않습니다.
+`PlayerSessionHost`(`AppRoot.prefab`)의 `temporarySlotMachineConfiguration`·`temporaryRuneConfiguration`이 두 자산을 참조합니다. Fortune Critical 설정은 별도 필드 `temporaryFortuneCriticalConfiguration`이 참조하며 같은 시점에 복사합니다. Awake와 `EnsureInitializedAsync`에서 한 번 복사하며, 원본 자산은 실행 중 바뀌지 않습니다.
 
 설정이 비었거나 잘못돼도 게임 시작은 막지 않습니다. 이때 상태를 만들지 않고 `TemporarySlotCombatError`에 사유를 남기며, 잘못된 경우에는 `Debug.LogError`도 기록합니다. 컨트롤러는 행동을 실행 불가로 두고, 패널 `StatusText`에 사유를 보여 줍니다.
 
@@ -111,13 +113,13 @@ Payline은 가운데 줄 하나입니다. 여러 Payline이나 기호 조합 판
 한 번의 실행은 다음 단계로 나뉩니다.
 
 1. `PlayerSessionHost.TryBeginTemporaryCombatAction`으로 공용 행동 잠금을 얻습니다. 기존 `TryBeginTemporaryDiceAction`·`EndTemporaryDiceAction`은 같은 잠금에 위임하는 별칭입니다.
-2. 회전과 분배를 수락합니다. `Spin`을 한 번 호출하고 그 시점의 룬 줄로 분배합니다. run·node·전투와 함께 `TemporarySlotAcceptedAction`으로 묶어 `AcceptTemporarySlotAction`으로 세션에 보관합니다. 이후에는 다시 돌리지 않습니다.
+2. 회전과 분배를 수락합니다. `Spin`을 한 번 호출하고, 그 결과에 `FortuneCriticalResolver.Resolve`로 Fortune Critical을 판정한 뒤, 최종 합계(`FinalTotal`)를 그 시점의 룬 줄로 분배합니다. 최종 합계가 `int` 범위를 넘으면 `OverflowException`으로 수락이 실패하고, 기존 실패 경로가 오류를 기록하고 잠금을 풀며 상태를 바꾸지 않습니다. run·node·전투와 함께 `TemporarySlotAcceptedAction`으로 묶어 `AcceptTemporarySlotAction`으로 세션에 보관합니다. 이후에는 다시 돌리지 않습니다.
 3. 패널 연출을 기다립니다. 제한 시간은 `TemporaryCombatPresentationTimeout.Resolve(최소, panel.GetMaximumPresentationSeconds(Reel 수) + 여유)`(1~15초)입니다. 최대 연출 길이는 회전 연출 설정 자산에서 계산합니다([회전 연출](#회전-연출)). 시간을 넘기거나 연출이 실패하면 `StopAtResult`로 결과를 바로 보여 줍니다. 패널이 없거나 비활성이면 연출 없이 진행합니다.
 4. 수락 당시의 세션·전투·run·node가 그대로인지 확인합니다. 그대로이면 `RuneCombatActions.FromAllocation`으로 줄 순서의 행동 목록을 만들고 `ExecuteTurn`을 정확히 한 번 호출합니다. 수치 0인 줄은 목록에서 빠집니다. 일부가 실패해도 다시 실행하지 않습니다.
 5. `PublishTemporarySlotStory`로 Story 기록을 발행합니다. 적·체력·예고 표시를 갱신하고, 전투가 끝났으면 `NotifyTemporaryCombatCompleted`와 `CombatFinished`를 호출합니다.
 6. 수락 기록과 잠금을 해제합니다. 잠금 해제 시 `TemporaryCombatActionEnded`가 발생하고 실행 가능 상태가 갱신됩니다.
 
-수락된 결과는 세션이 보관합니다. Scene이 다시 로드되면 진행 중이던 작업이 세션 참조로 결과를 한 번 적용합니다. 새 컨트롤러는 같은 전투에 다시 연결되고, `PendingSlotAction` 또는 현재 노드의 `LastTemporarySlotTurn`을 패널에 정지 상태로 보여 줍니다. 그다음 `PendingSlotStory`를 새 Story에 한 번 기록하고, `TemporaryCombatActionEnded`에서 버튼과 표시를 갱신합니다. 게임 창을 열고 닫아도 결과는 바뀌지 않습니다. 컨트롤러는 슬롯머신·룬 상태의 `Changed`를 받아 패널을 갱신합니다. 구독은 `OnDestroy`에서 해제하며, 파괴된 인스턴스는 남은 세션 이벤트를 무시합니다.
+수락 기록(`TemporarySlotAcceptedAction`)과 턴 기록(`TemporarySlotTurnRecord`)은 `Fortune`(`FortuneCriticalResult`)을 함께 가집니다. 기존 생성자는 `FortuneCriticalResult.None(spin)`을 씁니다. 수락된 결과는 세션이 보관합니다. Scene이 다시 로드되면 진행 중이던 작업이 세션 참조로 결과를 한 번 적용합니다. 새 컨트롤러는 같은 전투에 다시 연결되고, `PendingSlotAction` 또는 현재 노드의 `LastTemporarySlotTurn`을 저장된 Fortune 결과와 함께 패널에 정지 상태로 보여 줍니다. 그다음 `PendingSlotStory`를 새 Story에 한 번 기록하고, `TemporaryCombatActionEnded`에서 버튼과 표시를 갱신합니다. 게임 창을 열고 닫아도 결과는 바뀌지 않습니다. 컨트롤러는 슬롯머신·룬 상태의 `Changed`를 받아 패널을 갱신합니다. 구독은 `OnDestroy`에서 해제하며, 파괴된 인스턴스는 남은 세션 이벤트를 무시합니다.
 
 `ExplorationRunController`는 `ITemporaryCombatController`를 통해 전투를 시작하고 정리합니다. Unity가 인터페이스 필드를 직렬화하지 않으므로 필드는 `MonoBehaviour combatControllerBehaviour`이고, `[FormerlySerializedAs("combatController")]`로 기존 참조를 유지합니다. 초기화와 `ConfigureForEditor`·`ConfigureCombatForEditor`는 인터페이스를 구현하지 않은 컴포넌트를 거부합니다.
 
@@ -134,7 +136,139 @@ Payline은 가운데 줄 하나입니다. 여러 Payline이나 기호 조합 판
 [적 행동] 공격 5. 플레이어가 받은 피해 5. 체력 25/30.
 ```
 
-각 줄의 전투 결과는 이벤트 순서가 아니라 `SourceId`로 그 줄에 연결합니다. 분배 0인 줄은 `[룬] 2번 줄 회복 룬 ×1: 0 (실행하지 않음)`으로 기록합니다. 슬롯머신 경로에는 결과 창이 없으며, 결과는 StoryTextPanel에만 기록합니다.
+Fortune Critical이 발생하면 `[슬롯]` 줄이 배수를 표시하고 `[행운 치명]` 줄이 뒤따릅니다([Fortune Critical의 Story 문구](#story-문구)). 각 줄의 전투 결과는 이벤트 순서가 아니라 `SourceId`로 그 줄에 연결합니다. 분배 0인 줄은 `[룬] 2번 줄 회복 룬 ×1: 0 (실행하지 않음)`으로 기록합니다. 슬롯머신 경로에는 결과 창이 없으며, 결과는 StoryTextPanel에만 기록합니다.
+
+## Fortune Critical
+
+Fortune Critical(행운 치명)은 회전 결과에 일정 확률로 정수 배수를 곱합니다. 각 Reel이 독립적으로 판정하고, 합계도 따로 판정합니다. 판정은 회전을 수락할 때 한 번만 하며, 결과는 회전 결과와 별도의 불변 스냅샷(`FortuneCriticalResult`)으로 보관합니다. `SlotSpinResult`와 `SlotMachine.Spin`은 바뀌지 않았습니다. 구현 지침은 [`DOCS/instructions/slot-fortune-critical.md`](../instructions/slot-fortune-critical.md)이며, 배수 분포 함수의 비교 분석은 그 문서의 부록에 있습니다.
+
+### 계산 규칙
+
+| 기호 | 의미 |
+| --- | --- |
+| `vᵢ` | Reel i의 Payline 값 |
+| `rᵢ` | Reel i의 배수. 발생하지 않으면 1 |
+| `t` | 합계 배수. 발생하지 않으면 1 |
+| `C` | 유효 배수 상한 `MaximumEffectiveMultiplier` |
+| `eᵢ = min(C, rᵢ × t)` | Reel i의 유효 배수 |
+| `F = Σ vᵢ × eᵢ` | 최종 합계. 룬 분배와 전투에 씁니다. |
+
+상한이 적용되지 않으면 `F = t × Σ(vᵢ × rᵢ)`입니다. 예를 들어 `v = (3, 5, 2)`, 2번 Reel ×10, 합계 ×5, `C = 30`이면 `e = (5, 30, 5)`이고 `F = 175`입니다. 최종 값은 `long`과 `checked`로 계산하며, `F`가 `int`를 넘으면 `OverflowException`을 던집니다.
+
+판정 순서는 Reel 결과 순서대로 각 Reel, 그다음 합계입니다. 난수는 `IRandomIndexProvider` 하나로 뽑으며 해상도는 백만분율(`FortuneCriticalLimits.ProbabilityResolution`)입니다.
+
+- 발생: 임계값 `k = round(p × 1,000,000)`. `NextIndex(1,000,000) < k`이면 발생합니다. `k = 0`이면 난수를 뽑지 않고 발생하지 않으며, `k = 1,000,000`이면 난수를 뽑지 않고 발생합니다.
+- 배수: 배수별 백만분율 누적표에서 `NextIndex(1,000,000)`으로 고릅니다. 최소 배수와 최대 배수가 같으면 난수를 뽑지 않습니다.
+
+`TemporarySlotCombatController`는 회전 난수와 별도로 `fortuneRandom`을 가집니다. 기본값은 GUID로 시드를 정한 `SystemRandomIndexProvider`입니다. 같은 시각에 만든 `System.Random` 두 개가 같은 시드를 받아 회전과 Fortune 판정이 상관되는 일을 막기 위해서입니다. 테스트는 `SetFortuneRandomForTests`로 주입합니다.
+
+### Gameplay 타입
+
+`Assets/TxTRPG/Gameplay/Runtime/SlotMachine/FortuneCritical/`의 타입은 모두 `TxTRPG.Gameplay.SlotMachine` 네임스페이스에 있으며 Unity에 의존하지 않습니다.
+
+| 타입 | 책임 |
+| --- | --- |
+| `FortuneCriticalLimits` | 최소 배수 2, 절대 상한 100, 유효 배수 상한의 상한 10,000(100 × 100), 확률 해상도 1,000,000 |
+| `IFortuneWeightFunction`, `FortuneFunctionParameter`, `FortuneFunctionArguments` | 가중치 함수 계약, 이름·기본값·범위·설명을 가진 매개변수, 불변 이름→값 인자. 인자 이름은 앞뒤 공백을 제거하고 `Ordinal`로 비교하며 중복을 거부합니다. |
+| 기본 함수 6개, `FortuneWeightFunctionRegistry` | 아래 표. 레지스트리는 ID → 함수이며 중복 ID를 거부합니다. `Default`에 명시적으로 등록합니다. |
+| `FortuneMultiplierDistribution` | 함수 ID와 인자, 또는 최소 배수부터의 가중치 표(`FortuneDistributionSource.Function`·`Table`). 불변입니다. |
+| `FortuneMultiplierTable` | 정수 확률표. 배수별 백만분율·확률, `ExpectedMultiplier`(E[n]), 백만분율 0으로 잘린 배수 목록(`UnreachableMultipliers`)을 제공합니다. |
+| `FortuneCriticalRule` | 확률 `Chance`(0~1), 최소·최대 배수, 분포, 미리 만든 확률표. `TryCreate`로 검증하고, `TryWithChance`는 같은 확률표를 쓰는 새 규칙을 돌려줍니다. `ExpectedMultiplier = 1 + p × (E[n] − 1)`. |
+| `FortuneCriticalRules` | Reel 기본 규칙, Reel ID별 규칙(순서 있는 목록), 합계 규칙, `C`. 불변이며 `TryWith...`가 검증한 새 인스턴스를 돌려줍니다. `Disabled`는 모든 확률이 0입니다. |
+| `FortuneCriticalResolver` | `Resolve(SlotSpinResult, FortuneCriticalRules, IRandomIndexProvider) → FortuneCriticalResult` |
+| `FortuneCriticalResult`, `FortuneCriticalReelResult` | 불변 스냅샷. Reel마다 `ReelId`, `BaseValue`, `ReelMultiplier`, `UncappedMultiplier`, `EffectiveMultiplier`, `FinalValue`, `IsCritical`, `IsCapped`. 전체는 `TotalMultiplier`, `MaximumEffectiveMultiplier`, `BaseTotal`, `FinalTotal`, `HasAnyCritical`, `IsAnyCapped`. `None(spin)`은 모든 배수가 1입니다. |
+
+규칙 선택은 Reel의 `ReelId`로 Reel별 규칙을 찾고, 없으면 기본 규칙을 씁니다. 실행 중 `TryAddReel`로 추가한 Reel도 같은 규칙을 따르므로 Reel 추가 때 Fortune 설정을 맞출 필요가 없습니다. 아직 없는 Reel ID의 규칙도 허용하며, Reel이 제거되어도 규칙은 남습니다. ID는 앞뒤 공백을 제거하고 대소문자를 구분해(`Ordinal`) 비교하며, 빈 ID와 중복 ID는 거부합니다.
+
+### 배수 분포와 가중치 함수
+
+`x = n − 최소`, `L = 최대 − 최소`입니다. 각 배수의 가중치를 계산해 음수·NaN·무한대나 합 0이면 거부하고, 확률을 백만분율로 바꿔 최대 나머지 방식으로 합을 정확히 1,000,000으로 맞춥니다. 나머지가 같으면 낮은 배수가 먼저 받습니다.
+
+| ID | 이름 | 가중치 `w(n)` | 매개변수 (기본값, 범위) |
+| --- | --- | --- | --- |
+| `geometric` | 기하 (지수) | `r^x` | `ratio` (0.7, 0 초과 1 이하) |
+| `power` | 거듭제곱 | `n^(−s)` | `exponent` (2, 0 이상 8 이하) |
+| `half-normal` | 반정규 | `exp(−x² / (2σ²))` | `sigma` (3, 0.1 이상 50 이하) |
+| `linear` | 선형 | `1 + (e − 1) × x / L` (`L = 0`이면 1) | `endWeight` (0.1, 0 이상 1 이하) |
+| `equal-expected` | 기대 피해 균등 | `1 / (n − 1)` | 없음 |
+| `uniform` | 균등 | `1` | 없음 |
+
+인자는 이름으로 찾습니다. 없는 매개변수는 함수 기본값을 쓰고, 함수가 모르는 이름은 무시합니다(Inspector가 경고). 범위를 벗어난 값은 규칙 생성을 거부합니다.
+
+함수를 추가하는 방법은 다음 두 단계입니다. 리플렉션 검색이나 `[SerializeReference]`는 IL2CPP 코드 제거와 클래스 이름 변경에 약하므로 쓰지 않습니다.
+
+1. `IFortuneWeightFunction`을 구현하는 클래스를 하나 추가합니다. `Id`는 설정 자산에 저장되므로 출시 후 바꾸지 않습니다. `Weight`는 음수가 아닌 유한한 값을 돌려줍니다(정규화는 분포 생성기가 합니다).
+2. `FortuneWeightFunctionRegistry.CreateDefault`에 `registry.Register(new ...)` 한 줄을 추가합니다.
+
+### 설정 자산과 세션 상태
+
+`TemporaryFortuneCriticalConfiguration`(만들기 메뉴 `Assets > Create > TxT RPG > Temporary Fortune Critical Configuration`)의 필드는 `defaultReelRule`, `reelRules`(`reelId` + `rule`), `totalRule`, `maximumEffectiveMultiplier`입니다. 규칙은 `chance`(Range 0~1), `minimumMultiplier`, `maximumMultiplier`, `distributionSource`, `functionId`, `parameters`(이름·값 목록), `tableWeights`로 저장합니다. `TryCreateRules(registry, out rules, out reason)`이 Gameplay 규칙을 만듭니다. `OnValidate`는 이 자산의 값만 범위로 보정합니다.
+
+`Assets/TxTRPG/Application/Configuration/TemporaryFortuneCriticalConfiguration.asset`의 값은 확정되지 않은 임시 밸런스 값입니다.
+
+| 항목 | 값 |
+| --- | --- |
+| Reel 기본 규칙 | 확률 0.05, ×2~×10, `geometric` `ratio` 0.7 |
+| 합계 규칙 | 확률 0.03, ×2~×10, `geometric` `ratio` 0.7 |
+| Reel별 규칙 | 없음 |
+| 유효 배수 상한 `C` | 30 |
+
+이 값에서 Reel 하나의 기대 배수는 약 1.148, 합계는 약 1.089입니다.
+
+`TemporaryFortuneCriticalState`는 세션 수명 상태이며 저장하지 않습니다. 룬·아이템·버프 같은 기능은 다음 API로 규칙을 바꿉니다. 모두 후보를 검증한 뒤에만 반영하고 `Changed`를 한 번 발생시킵니다. 실패하면 이전 규칙을 유지하고 사유를 돌려주며, 같은 규칙으로 바꾸면 `Changed`를 발생시키지 않습니다.
+
+| API | 동작 |
+| --- | --- |
+| `TrySetDefaultReelRule`, `TrySetReelRule(reelId, rule)`, `TryRemoveReelRule(reelId)`, `TrySetTotalRule`, `TrySetMaximumEffectiveMultiplier`, `TryReplaceAll(rules)` | 규칙 교체 |
+| `TrySetDefaultReelChance`, `TrySetReelChance(reelId, chance)`, `TrySetTotalChance` | 확률만 교체. 개별 규칙이 없는 Reel의 `TrySetReelChance`는 기본 규칙을 복사해 그 확률로 개별 규칙을 만듭니다. |
+
+새 규칙은 다음 수락부터 쓰입니다. 이미 수락한 결과와 그 표시는 바뀌지 않습니다.
+
+| 상황 | 동작 |
+| --- | --- |
+| `AppRoot.prefab`의 `temporaryFortuneCriticalConfiguration`이 비어 있음 | `Disabled`로 시작하고 `Debug.LogWarning`을 한 번 남깁니다. 전투는 Fortune 없이 동작합니다. |
+| 설정이 잘못됨 (등록되지 않은 함수, 범위 밖 값, 표 길이 불일치, 가중치 합 0 등) | `Disabled`로 시작하고 사유와 함께 `Debug.LogError`를 남깁니다. `TemporarySlotCombatError`는 설정하지 않습니다. |
+| 실행 중 잘못된 변경 | 해당 `Try...`가 `false`와 사유를 돌려주고 이전 규칙을 유지합니다. |
+| 판정 중 오버플로 | 수락 실패로 처리합니다([전투 컨트롤러](#전투-컨트롤러)). |
+
+### Inspector 미리보기
+
+`TemporaryFortuneCriticalConfigurationEditor`(`Assets/TxTRPG/Application/Editor/`)는 규칙마다 등록된 함수의 `DisplayName` 목록과 매개변수 입력란(이름·범위·설명)을 보여 줍니다. 자산에 없는 매개변수는 기본값으로 표시되고, 값을 바꾸면 이름과 함께 저장됩니다. 그 아래에 런타임과 같은 `FortuneCriticalRule`·`FortuneMultiplierTable`로 계산한 읽기 전용 미리보기를 보여 줍니다.
+
+- 배수별 확률(백분율, 소수 둘째 자리)과 막대
+- 발생 시 평균 배수 `E[n]`과 기대 배수 `1 + p(E[n] − 1)`
+- Reel 기본 규칙과 합계 규칙의 대략적 기대 배수 `E[M_reel] × E[M_total]`(상한 무시 문구 포함)
+- 경고: 검증 실패 사유, 백만분율 0이 된 배수, 0으로 반올림된 확률, `C`가 규칙의 최대 배수보다 작음, 함수가 모르는 매개변수(제거 버튼), 현재 `TemporarySlotMachineConfiguration`에 없는 Reel ID(정보)
+
+### 표시
+
+배수 텍스트(`×3`)는 `SlotCombatStoryFormatter.MultiplierText`가 만들며, 배수가 1이면 빈 문자열입니다. 글자 자체로 뜻을 전달하고, 색(기본 #FFC83D)은 보조입니다. 새 Graphic은 모두 `raycastTarget`이 꺼져 있고 TMP Auto Size를 쓰지 않으며 공유 Material을 바꾸지 않습니다. 강조 연출은 없습니다. 나중에 효과는 각 `VisualRoot`에만 붙입니다.
+
+| 표시 | 계층 | 동작 |
+| --- | --- | --- |
+| Reel 배수 | `SlotReel_{n}/FortuneBadge`(배치 루트, Window 밖) > `VisualRoot` > `Text` | 그 Reel의 `ReelMultiplier`입니다. `SlotReelView`가 배치 루트를 Payline 칸의 오른쪽 위 모서리 안쪽(칸 높이 × `fortuneInset` 0.08 만큼 안쪽)에 둡니다. 칸 경계에 걸치게 두지 않는 것은 `PaylineFrame`이 Reel 위에 그려져 테두리가 글자를 가로지르기 때문입니다. 글자 크기는 칸 높이 × `fortuneFontRatio`(0.38)를 [12, 36]으로 제한하고, 좁은 Reel에서는 Payline 숫자 옆이나 위로 비켜날 수 있는 크기까지 줄입니다(최소 12). Window 크기가 바뀔 때와 배수를 보여 줄 때만 계산합니다. |
+| 합계 배수 | `TotalBox/TotalMultiplier`(배치 루트) > `VisualRoot` > `Text` | `TotalMultiplier`입니다. `TotalBox`의 `SlotTotalMultiplierLayout`이 합계 값의 실제 글자 영역을 측정해, 공간이 있으면 오른쪽에 위첨자처럼(글자 크기 = 합계 글자 × 0.5, [12, 36]), 없으면 글자 위에 오른쪽 정렬로 둡니다. 아주 낮은 합계 상자에서는 값을 가리지 않도록 상자 위쪽 여백으로 넘어갑니다(1024×768, 390×844). `TotalLabel`·`TotalValue`의 앵커와 크기는 바꾸지 않습니다. `TotalBox` 크기 변경과 `SetSummary` 때만 계산합니다. |
+
+- `SlotReelViewBase.ShowFortuneMultiplier(string)`은 기본 구현이 비어 있는 가상 메서드입니다. 패널은 회전이 시작되면 각 Reel의 배수를 지우고, Reel이 결과 칸에 멈춘 뒤(`PlaySpinAsync` 완료, Reduce Motion 포함) 또는 `StopAtResult`에서 표시합니다. 중단된 Reel은 표시하지 않으며 컨트롤러의 `StopAtResult`가 결과 상태를 보여 줍니다.
+- 합계 배수는 `SetSummary`가 적용합니다. 회전 중 요약에서는 지워지고 정지 후 요약에서 나타납니다.
+- 구성 변경으로 Strip이 바뀐 Reel은 배수를 지웁니다. ID와 Strip이 같은 Reel은 결과와 함께 배수도 유지합니다. 스킨 교체는 표시를 바꾸지 않습니다.
+- 스킨의 `fortuneTextColor`가 재정의되면 두 표시의 색을 바꾸고, 아니면 기록된 Prefab 색을 씁니다.
+
+### Story 문구
+
+문구는 `SlotCombatStoryFormatter`에만 있습니다. 시스템 이름은 `FortuneCriticalName = "행운 치명"`입니다. Reel 번호는 결과 순서(1부터)입니다.
+
+| 경우 | 예 |
+| --- | --- |
+| Fortune 없음 | `[슬롯] 3 + 5 + 2 = 10` |
+| Reel만 발생 | `[슬롯] 3 + 5×3 + 2 = 20` |
+| 합계만 발생 | `[슬롯] (3 + 5 + 2) ×2 = 20` |
+| 둘 다 발생 | `[슬롯] (3 + 5×3 + 2) ×2 = 40` |
+| 발생 요약 줄 | `[행운 치명] 2번 Reel ×3, 합계 ×2` |
+| 상한 적용 줄 | `[행운 치명] 최대 배수 ×30 적용: 2번 Reel (×50 → ×30)` |
+
+상한이 적용되면 `[슬롯]` 줄의 마지막 값은 상한을 적용한 최종 합계입니다. 룬 줄은 최종 합계를 분배한 값을 보여 줍니다.
+
 
 ## SlotMachinePanel
 
@@ -172,14 +306,16 @@ SlotMachinePanel            (RectTransform, CanvasGroup, FlexibleLayoutItem, Slo
 │  │  │  │  │  ├─ Strip     (연출이 위치를 움직이는 루트)
 │  │  │  │  │  │  └─ SymbolCell_0..6 > VisualRoot > Icon, Afterimage_3..1, Value
 │  │  │  │  │  └─ ShadeOverlay (위·아래 가장자리를 어둡게 덮는 Image)
-│  │  │  │  └─ EffectRoot   (Reel 단위 효과, Window 밖)
+│  │  │  │  ├─ EffectRoot   (Reel 단위 효과, Window 밖)
+│  │  │  │  └─ FortuneBadge (배치 루트, 기본 비활성) > VisualRoot > Text (Fortune 배수)
 │  │  │  └─ ReelDivider_{n} (그라데이션 Sprite × #DCDCDC, LayoutElement 최소 너비 4·유연 0.16)
 │  │  └─ PaylineFrame       (배치 전용 루트, LayoutElement ignoreLayout, Payline 칸 범위)
 │  │     ├─ ProceduralBorder (SlotPaylineFrameGraphic #A3F213, 루트를 두께만큼 바깥으로 넓힌 크기)
 │  │     └─ SkinImage       (Image, 기본 꺼짐, 루트에 스킨 paylineOutset을 더한 크기)
 │  └─ SummaryArea           (레이아웃 전용)
 │     ├─ Background         (#D9D9D9 시각 루트)
-│     ├─ TotalBox > Background(#757575), TotalLabel, TotalValue
+│     ├─ TotalBox (SlotTotalMultiplierLayout) > Background(#757575), TotalLabel, TotalValue,
+│     │             TotalMultiplier (배치 루트, 기본 비활성) > VisualRoot > Text
 │     └─ RuneTableArea
 │        ├─ RuneTable > Background(#757575), Rows (SlotRuneTableView)
 │        │                 ├─ RuneLineRowTemplate (비활성) > Background(#D9D9D9), EffectText, ValueText, MessageText
@@ -209,10 +345,11 @@ UI 어셈블리는 Gameplay·Application 타입을 모릅니다. 사용자에게
 | 타입 | 내용 |
 | --- | --- |
 | `SlotRuneLineDisplay` | `EffectText`(`공격`), `ValueText`(`×2` 또는 `×2 → 6`) |
-| `SlotSummaryDisplay` | `TotalLabel`(`합계`), `TotalValue`(`—`, `…`, `13`), `RuneColumnTitle`(`룬`), `ValueColumnTitle`(`쌓임 → 분배`), `Lines`, `EmptyText`(`장착된 룬이 없습니다`), `OverflowFormat`(`외 {0}줄`) |
+| `SlotReelStopDisplay` | `ReelId`, `StopIndex`, Strip 값, `MultiplierText`(`×3`, 없으면 빈 문자열) |
+| `SlotSummaryDisplay` | `TotalLabel`(`합계`), `TotalValue`(`—`, `…`, `13`), `TotalMultiplierText`(`×2`, 없으면 빈 문자열), `RuneColumnTitle`(`룬`), `ValueColumnTitle`(`쌓임 → 분배`), `Lines`, `EmptyText`(`장착된 룬이 없습니다`), `OverflowFormat`(`외 {0}줄`) |
 | `SlotSpinDisplay` | `Reels`, `PaylineTotal`, `SpinningSummary`, `ResultSummary` |
 
-`SlotMachinePanel.SetSummary(SlotSummaryDisplay)`가 합계 상자와 룬 표를 갱신합니다. 검증용 읽기 속성은 `TotalLabelText`, `TotalValueText`, `RuneColumnTitleText`, `ValueColumnTitleText`, `RuneLineTexts`(행별 효과·값)입니다. `TemporarySlotCombatController.CreateSummary`가 문구를 묶고, `CreateSpinDisplay`가 회전 중(`×N`)과 정지 후(`×N → 분배`) 요약을 만듭니다. 분배 0인 줄도 행으로 표시합니다(`×1 → 0`).
+`SlotMachinePanel.SetSummary(SlotSummaryDisplay)`가 합계 상자와 룬 표를 갱신합니다. 검증용 읽기 속성은 `TotalLabelText`, `TotalValueText`, `TotalMultiplierText`, `RuneColumnTitleText`, `ValueColumnTitleText`, `RuneLineTexts`(행별 효과·값)와 `SlotReelView.FortuneMultiplierText`입니다. `TemporarySlotCombatController.CreateSummary`가 문구를 묶고, `CreateSpinDisplay(spin, fortune, allocation)`이 회전 중(`×N`)과 정지 후(`×N → 분배`, 합계는 `FinalTotal`) 요약을 만듭니다. 기존 `CreateSpinDisplay(spin, allocation)`은 `FortuneCriticalResult.None`으로 위임합니다. 분배 0인 줄도 행으로 표시합니다(`×1 → 0`).
 
 `SlotRuneTableView`(`Rows`)는 줄마다 행 하나를 템플릿에서 만들고 재사용합니다. 행 높이는 표 높이의 22%를 넘지 않고, 줄이 많으면 최소 18까지 줄어듭니다. 그래도 모자라면 앞 줄들을 표시하고 마지막 행에 `외 N줄`을 표시합니다. 줄이 없으면 한 행 너비로 `장착된 룬이 없습니다`를 표시합니다. 쓰지 않는 칸은 GameObject를 끄지 않고 빈 문자열로 둡니다. 크기 변경은 레이아웃 재구성 중에 들어오므로 다음 `LateUpdate`에서 한 번 반영합니다. 크기 변경이 없는 프레임에는 아무것도 하지 않습니다.
 
@@ -222,7 +359,7 @@ UI 어셈블리는 Gameplay·Application 타입을 모릅니다. 사용자에게
 | --- | --- | --- | --- |
 | 전투 없음·첫 회전 전 | 각 Strip 첫 칸이 Payline | `—` | 줄마다 효과 이름과 `×1` |
 | 회전 중 | 3구간 연출 | `…` | 쌓인 수 유지(`×1`) |
-| 정지 후 | 결과 칸이 Payline | Payline 합계 | `×1 → 6`처럼 쌓인 수와 분배 |
+| 정지 후 | 결과 칸이 Payline, 발생한 Reel에 배수 텍스트 | 최종 합계, 합계 배수가 있으면 배수 텍스트 | `×1 → 6`처럼 쌓인 수와 분배 |
 | 장착된 룬 줄 없음 | 이전 상태 | 이전 값 | `장착된 룬이 없습니다` 한 행 |
 | 구성 오류 | `Content` 숨김 | — | `StatusText`에 사유 |
 
@@ -305,7 +442,7 @@ Reduce Motion(`PlayerSessionHost.TemporaryDicePreferences.ReduceMotion`)이 켜�
 | `skinId`, `displayName`, `previewSprite` | string, string, Sprite | 안정적인 ID(앞뒤 공백 제거), 나중의 선택 UI용 이름과 미리보기. 이번에는 표시하지 않습니다. |
 | `paylineFrame`, `paylineOutset` | `SlotSkinImage`, `SlotSkinOffset`(왼쪽·오른쪽·위·아래, 기본 각 4) | Payline 표시 |
 | `panelBackground`, `reelMachineFrame`, `reelMachineEdge`, `reelBackground`, `reelShadeOverlay`, `reelDivider`, `summaryBackground`, `totalBoxBackground`, `runeTableBackground`, `runeRowBackground` | `SlotSkinImage` | `Background`, `ReelMachine/Frame`, `LeftEdge`·`RightEdge`, Reel `Frame`, `Window/ShadeOverlay`, `ReelDivider_{n}`, `SummaryArea/Background`, `TotalBox/Background`, `RuneTable/Background`, 행 `Background` |
-| `reelTextColor`, `darkSurfaceTextColor`, `lightSurfaceTextColor` | `SlotSkinColor` | Reel 숫자와 잔상, 합계 라벨·값, 열 제목과 룬 표 행 글자 |
+| `reelTextColor`, `darkSurfaceTextColor`, `lightSurfaceTextColor`, `fortuneTextColor` | `SlotSkinColor` | Reel 숫자와 잔상, 합계 라벨·값, 열 제목과 룬 표 행 글자, Fortune 배수 글자(Reel 배지와 합계). `fortuneTextColor`가 없는 기존 스킨 자산은 재정의 없음으로 읽혀 기본 외형을 유지합니다. |
 
 `SlotSkinImage`는 `sprite`, `overrideColor`·`color`, `drawMode`(`Simple`·`Sliced`·`Tiled`, 기본 `Sliced`), `pixelsPerUnitMultiplier`(기본 1)를 가집니다. 최종 외형은 다음 규칙으로 정합니다.
 
@@ -325,8 +462,8 @@ Prefab의 기본 외형을 바꾼 뒤에는 Inspector 컴포넌트 메뉴 `기�
 
 | 소유 컴포넌트 | 적용 대상 |
 | --- | --- |
-| `SlotMachinePanel` | 패널 배경, Reel 기계 틀과 가장자리 띠, Payline, 구분대(첫 구분대의 기본값을 모든 구분대에 사용), 요약 영역·합계 상자 배경, 합계·열 제목 글자 |
-| `SlotReelView` (`SlotReelViewBase.ApplySkin`) | Reel `Frame`, `ShadeOverlay`, 숫자와 잔상의 기준 색 |
+| `SlotMachinePanel` | 패널 배경, Reel 기계 틀과 가장자리 띠, Payline, 구분대(첫 구분대의 기본값을 모든 구분대에 사용), 요약 영역·합계 상자 배경, 합계·열 제목 글자, 합계 Fortune 배수 글자 |
+| `SlotReelView` (`SlotReelViewBase.ApplySkin`) | Reel `Frame`, `ShadeOverlay`, 숫자와 잔상의 기준 색, Fortune 배수 글자 |
 | `SlotRuneTableView` → `SlotRuneLineRow` | 룬 표 배경, 템플릿과 생성된 행의 배경·글자 |
 
 `SlotReelViewBase.ApplySkin(SlotMachinePanelSkin)`은 기본 구현이 비어 있는 가상 메서드입니다. 스킨을 지원하지 않는 Reel 구현도 동작합니다. `SlotReelView`는 칸 위치별 알파, 잔상 알파, 고속 회전 알파를 지금처럼 매 갱신에서 계산하고, 그 값을 기준 색(스킨 `reelTextColor` 또는 기록된 기본 색의 불투명 RGB)의 알파에 곱합니다. 스킨 교체는 이 계산 경로에 할당을 추가하지 않습니다.
@@ -367,6 +504,10 @@ Prefab의 기본 외형을 바꾼 뒤에는 Inspector 컴포넌트 메뉴 `기�
 | 룬 획득 | `RuneInventory.TryAdd`. 어느 줄에 둘지는 획득 기능이 정합니다. |
 | 저장 | ID는 안정적인 문자열입니다. 저장 형식은 아직 없습니다. |
 | 기호 이미지·특수 기호 | `SlotSymbol`에 필드를 추가하고, `SlotReelView.symbolSprites`에 값→Sprite를 매핑합니다. |
+| Fortune Critical 연출 | 반짝임·흔들림 같은 강조는 `FortuneBadge/VisualRoot`·`TotalMultiplier/VisualRoot`에 붙입니다. 배치 루트와 Reel 레이아웃은 바뀌지 않습니다. |
+| 게임 효과의 Fortune 규칙 변경 | 룬·아이템·버프는 `TemporaryFortuneCriticalState`의 `Try...` API를 호출합니다. 여러 효과가 겹치면 기본 규칙 위에 수정자(가산·곱셈)를 쌓는 계층이 필요합니다. |
+| 연속 실패 보정(PRD, 천장) | 판정 상태(누적 실패 횟수)를 받는 `FortuneCriticalResolver.Resolve` 오버로드로 추가합니다. |
+| 기호 연계 Fortune | 특정 기호가 Payline에 오면 확률을 바꾸는 규칙은 `SlotSpinResult`를 입력으로 받는 규칙 선택 함수로 추가합니다. |
 | 입체 Reel | `SlotReelViewBase`를 구현하는 다른 Reel Prefab을 `reelPrefab`·`reelViews`에 연결합니다. 스킨이 필요하면 `ApplySkin`을 재정의합니다. |
 | 플레이어 스킨 선택 | System 설정 모달에 `Slot 스킨` 항목을 추가하고 카탈로그 `Skins` 순서대로 `DisplayName`·`PreviewSprite`를 보여 줍니다. 고른 ID는 `ExplorationCardPlayerPreferences`처럼 PlayerPrefs에 저장하고(세이브 형식은 바꾸지 않음), Application의 연결 컴포넌트가 `TrySetSkin`을 호출합니다. 실패하면 개발자 선택으로 돌아가고 저장값을 지웁니다. 패널은 `Awake`에서 아직 스킨이 정해지지 않았을 때만 카탈로그 선택을 쓰므로, 플레이어 선택을 먼저 적용하면 그것이 우선합니다. `SkinChanged`로 미리보기를 갱신합니다. |
 | 스킨 Addressables 지연 로드 | 지금은 카탈로그가 스킨을, 스킨이 Sprite를 직접 참조해 등록된 모든 스킨의 Sprite가 함께 로드됩니다. 스킨이 늘어나면 카탈로그 항목을 Addressables 참조로 바꾸고 `TrySetSkin`을 비동기로 확장합니다. |

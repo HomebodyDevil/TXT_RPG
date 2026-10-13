@@ -989,7 +989,9 @@ Apply 메뉴는 Play Mode를 종료하고 저장된 `TMP_MainScene`을 미저장
 | `Tools > TxT RPG > Application > Temporary > Apply Slot Machine Panel Visual` | [SlotMachinePanel 외형 개편](../instructions/slot-machine-panel-visual-and-spin-motion.md)을 적용합니다. 없을 때만 `UI/Styles/SlotMachine/`의 `DefaultSlotReelSpinProfile.asset`(기본값)과 그라데이션 Sprite 두 장을 만듭니다. `SlotReel.prefab`은 원통 음영 Frame, 5칸 Window(7개 `SymbolCell`, 칸마다 잔상 TMP 3개), `ShadeOverlay`로 부분 수정합니다. `SlotMachinePanel.prefab`은 `ReelMachine`(틀, 구분대, `PaylineFrame`)과 `SummaryArea`(합계 상자, 룬 표)로 부분 수정하고 `spinProfile`을 연결합니다. 생성 당시 그대로인 `PaylineOverlay`·`Summary`는 제거하고, 사용자가 자식이나 컴포넌트를 추가했으면 비활성화만 하고 Console에 경고합니다. 마지막으로 TMP_MainScene의 `SlotMachinePanel` 인스턴스에서 제거된 객체의 재정의와 예전 `ReelArea` 위치 재정의만 정리하고 저장한 뒤 검증합니다. | 두 Prefab, 새 자산, TMP_MainScene 자동 저장(바뀐 경우만) | 안전. 원하는 상태면 `already matches; not saved`만 기록하고 아무 파일도 바꾸지 않습니다. 열린 Scene에 저장되지 않은 변경이 있으면 중단합니다. |
 | `Tools > TxT RPG > Application > Temporary > Apply Slot Machine Panel Skin` | [SlotMachinePanel 스킨](../instructions/slot-machine-panel-skin.md)을 적용합니다. 없을 때만 `UI/Styles/SlotMachine/Skins/`에 예시 Payline Sprite(`SlotPaylineFrameSample.png`, 9-slice 12·Full Rect), `DefaultSlotMachinePanelSkin.asset`, `SampleImagePaylineSkin.asset`, `SlotMachinePanelSkinCatalog.asset`(선택 `slot-skin.default`)을 만듭니다. `SlotMachinePanel.prefab`의 `PaylineFrame`을 배치 전용 루트로 바꾸고, 기존 `SlotPaylineFrameGraphic`을 값(색·두께)과 함께 자식 `ProceduralBorder`로 옮기고, 꺼진 `SkinImage`를 추가합니다. 두 Prefab의 스킨 대상 기본값을 기록하고(이미 기록된 값은 유지) 카탈로그를 연결합니다. TMP_MainScene은 옮긴 테두리 Graphic의 재정의가 있을 때만 그것을 지우고 저장합니다. | 두 Prefab, 새 자산 자동 저장(바뀐 경우만). TMP_MainScene은 충돌 재정의가 있을 때만 | 안전. 원하는 상태면 `already matches; not saved`만 기록합니다. 기존 스킨·카탈로그 내용과 기록된 기본값은 덮어쓰지 않습니다. 열린 Scene에 저장되지 않은 변경이 있으면 중단합니다. |
 | `Tools > TxT RPG > Application > Temporary > Cycle Slot Machine Panel Skin (Play Mode)` | Play Mode에서 패널을 카탈로그의 다음 스킨으로 바꾸고 `SLOT_MACHINE_SKIN_CYCLE: <id>`를 기록합니다. 화면 캡처와 수동 확인용입니다. | Play 상태만 변경 | 안전 |
-| `Tools > TxT RPG > Application > Temporary > Validate Slot Machine Combat (Play Mode)` | 새 탐험이 노드 선택을 기다리는 Play Mode에서 실행합니다. 다음을 차례로 검사하고 `SLOT_MACHINE_PLAY_VALIDATE ... PASS`를 기록합니다. | Play 상태만 변경 | 새 Play 세션에서 실행 |
+| `Tools > TxT RPG > Application > Temporary > Validate Slot Machine Combat (Play Mode)` | 새 탐험이 노드 선택을 기다리는 Play Mode에서 실행합니다. 다음을 차례로 검사하고 `SLOT_MACHINE_PLAY_VALIDATE ... PASS`를 기록합니다. 합계와 분배는 Fortune Critical을 적용한 최종 합계로 확인합니다. | Play 상태만 변경 | 새 Play 세션에서 실행 |
+| `Tools > TxT RPG > Application > Temporary > Apply Slot Fortune Critical` | [Fortune Critical](#fortune-critical)을 적용합니다. | 바뀐 자산·Prefab만 자동 저장 | 안전 |
+| `Tools > TxT RPG > Application > Temporary > Validate Slot Fortune Critical (Play Mode)` | Fortune Critical 표시·Story·화면 크기별 배치를 검사합니다([Fortune Critical](#fortune-critical)). | Play 상태만 변경 | 새 Play 세션에서 실행 |
 
 Play Mode 검증 메뉴가 검사하는 항목은 다음과 같습니다.
 
@@ -1001,6 +1003,8 @@ Play Mode 검증 메뉴가 검사하는 항목은 다음과 같습니다.
 - 실행 중 Reel을 4·5개로 늘리고 칸 값을 바꾸면 다음 회전부터 반영됩니다.
 - 회전 중 `MainScene_VisualProposal`을 거쳐 TMP_MainScene에 다시 들어와도 결과가 1회만 적용되고 새 패널에 표시되며, 새 패널에 잔상이 남지 않습니다.
 - 전투가 끝나면 버튼이 숨겨지고 노드 선택이 다시 패널을 덮습니다.
+
+2026-10-13 확인에서 이 메뉴는 390×844 단계의 `the action button does not cover reel 2` 검사로 실패했습니다. Fortune Critical을 적용하기 전의 두 Prefab(HEAD)으로 바꿔 실행해도 같은 결과였으므로 이번 변경과 관계없는 기존 상태입니다. 이 단계 뒤의 항목(Submit 2회, 창 열기, Reel 4·5개, Scene 재진입, 전투 종료)은 그날 다시 확인하지 못했습니다.
 
 Apply 메뉴는 Play Mode와 Prefab Stage를 종료하고 컴파일이 끝난 뒤 실행합니다. TMP_MainScene에 저장되지 않은 변경이 있으면 실행하지 않고 중단합니다. Scene을 열어 두었다면 저장한 다음 실행합니다. 결과 요약은 Console의 `SLOT_MACHINE_APPLY:`로 확인합니다. 저장 직후 Editor가 Scene을 변경됨으로 표시하는 경우가 있지만 파일 내용은 같습니다.
 
@@ -1052,6 +1056,56 @@ Apply 메뉴는 Play Mode와 Prefab Stage를 종료하고 컴파일이 끝난 �
 Prefab의 기본 외형(색, Sprite)을 바꾼 뒤에는 `SlotMachinePanel.prefab` 루트의 `SlotMachinePanel` 컴포넌트와 `SlotReel.prefab`의 `SlotReelView` 컴포넌트에서 Inspector 메뉴(⋮) `기본 외형 다시 기록`을 실행하고 Prefab을 저장합니다. 기록하지 않으면 스킨을 적용할 때 예전 기본값으로 되돌아갑니다.
 
 `Apply Slot Machine Panel Skin`은 2026-10-11에 이 작업 사본의 두 Prefab과 스킨 자산에 적용했습니다. TMP_MainScene에는 충돌 재정의가 없어 저장하지 않았습니다. 다른 작업 사본은 Prefab·자산 변경을 함께 받으면 실행할 필요가 없습니다. `Apply Slot Machine Combat`으로 Prefab을 새로 만든 작업 사본은 `Apply Slot Machine Panel Visual` 다음에 이 메뉴를 실행합니다. 모든 작업 사본이 이 구조를 받은 뒤 메뉴를 은퇴시킬 수 있습니다. `Apply Slot Machine Panel Visual`은 재실행해도 `PaylineFrame/ProceduralBorder`를 그대로 사용합니다.
+
+### Fortune Critical
+
+구조는 [Fortune Critical](../architecture/slot-machine-and-runes.md#fortune-critical), 지침은 [slot-fortune-critical.md](../instructions/slot-fortune-critical.md)입니다. 2026-10-13에 이 작업 사본의 설정 자산, `AppRoot.prefab`, `SlotReel.prefab`, `SlotMachinePanel.prefab`에 적용·저장하고 검증했으므로, 이 작업 사본에서는 다시 실행할 필요가 없습니다. 다른 작업 사본도 이 자산·Prefab 변경을 함께 받으면 실행할 필요가 없습니다.
+
+`Apply Slot Fortune Critical`(`Application/Editor/TemporarySlotFortuneCriticalApply.cs`)은 다음을 합니다. TMP_MainScene은 바꾸지 않습니다.
+
+1. 없을 때만 `Application/Configuration/TemporaryFortuneCriticalConfiguration.asset`을 임시 기본값으로 만듭니다.
+2. AppRoot `PlayerSessionHost.temporaryFortuneCriticalConfiguration`이 비어 있을 때만 채웁니다.
+3. `SlotReel.prefab`에 `FortuneBadge > VisualRoot > Text`가 없을 때만 추가하고, `SlotReelView`에 연결하고 기본 글자 색을 기록합니다.
+4. `SlotMachinePanel.prefab`의 `TotalBox`에 `TotalMultiplier > VisualRoot > Text`가 없을 때만 추가하고, `SlotTotalMultiplierLayout`을 붙여 연결하고 기본 글자 색을 기록합니다. 첫 버전이 붙였던 `TotalMultiplier/Text`의 `SlotHeightScaledText`가 있으면 제거합니다.
+5. 검증하고 `SLOT_FORTUNE_CRITICAL_APPLY: ... validation: passed`를 기록합니다.
+
+Play Mode와 Prefab Stage를 종료하고 컴파일이 끝난 뒤 실행합니다. 열린 Scene에 저장되지 않은 변경이 있으면 중단합니다. 원하는 상태면 `kept ...`와 `already matches; not saved`만 기록하고 파일을 쓰지 않으므로 다시 실행해도 안전합니다. 기존 설정 자산 값과 기록된 기본 색은 덮어쓰지 않습니다. 등록 기반 Prefab Rebuild에는 등록하지 않습니다(AppRoot와 설정 자산도 바꾸기 때문). 모든 작업 사본이 이 구조를 받은 뒤 은퇴시킬 수 있습니다.
+
+확률·배수 범위·분포·상한은 `TemporaryFortuneCriticalConfiguration.asset`의 Inspector에서 바꿉니다. 기본값은 확정되지 않은 임시 밸런스 값입니다. Inspector 아래쪽 미리보기가 배수별 확률, `E[n]`, 기대 배수와 경고를 런타임과 같은 계산으로 보여 줍니다.
+
+실행 중 변경은 `PlayerSessionHost.Instance.TemporaryFortuneCritical`의 다음 API로 합니다. 모두 검증 후 반영하고 실패하면 이전 규칙을 유지하며 사유를 돌려줍니다. 새 규칙은 다음 회전부터 쓰입니다.
+
+- `TrySetDefaultReelRule`, `TrySetReelRule(reelId, rule)`, `TryRemoveReelRule(reelId)`, `TrySetTotalRule`, `TrySetMaximumEffectiveMultiplier`, `TryReplaceAll(rules)`
+- `TrySetDefaultReelChance`, `TrySetReelChance(reelId, chance)`, `TrySetTotalChance`
+- 규칙은 `FortuneCriticalRule.TryCreate(chance, min, max, distribution, FortuneWeightFunctionRegistry.Default, out rule, out reason)`로 만듭니다.
+
+가중치 함수를 추가하는 절차는 다음과 같습니다.
+
+1. `Assets/TxTRPG/Gameplay/Runtime/SlotMachine/FortuneCritical/`에 `IFortuneWeightFunction` 구현 클래스를 추가합니다. `Id`는 설정 자산에 저장되므로 배포 후 바꾸지 않고, 매개변수는 `FortuneFunctionParameter`(이름, 기본값, 범위, 설명)로 선언합니다. `Weight`는 음수가 아닌 유한한 값을 돌려줍니다.
+2. `FortuneWeightFunctionRegistry.CreateDefault`에 `registry.Register(new 새함수());` 한 줄을 추가합니다.
+3. 설정 자산 Inspector의 `가중치 함수` 목록에서 고르고 미리보기를 확인합니다. `FortuneCriticalTests`에 가중치 검사를 추가합니다.
+
+Play Mode 확인 절차는 다음과 같습니다.
+
+```text
+1. Play Mode를 종료하고 컴파일이 끝날 때까지 기다립니다. 열린 Scene에 저장되지 않은 변경이 없어야 합니다.
+2. AppScene 시작 정책 그대로 Play를 시작해 TMP_MainScene에서 새 탐험이 노드 선택을 기다리는 상태로 둡니다.
+3. Tools > TxT RPG > Application > Temporary > Validate Slot Fortune Critical (Play Mode)를 실행합니다.
+   - 세션 상태 API로 reel.2를 항상 ×3, 합계를 항상 ×2로 바꾸고(나머지 Reel 확률 0) 전투를 시작합니다.
+   - 키보드 Submit, 포인터 클릭, Reduce Motion으로 한 번씩 실행해 회전 중에는 배수가 없고 정지 후 Reel·합계 배수,
+     최종 합계, 분배, Story의 [슬롯]·[행운 치명] 줄이 수락된 결과와 같은지 검사합니다.
+   - 1920x1080, 21:9, 1024x768, 390x844에서 배수 글자가 Payline 숫자·합계 값·합계 라벨·행동 버튼과 겹치지 않는지
+     실제 결과와 ×10 문자열로 검사하고, Application.temporaryCachePath/SlotFortuneCritical에 화면을 저장합니다.
+   - 끝나면 세션 규칙을 설정 자산 값으로 되돌립니다. 자산은 저장하지 않습니다.
+4. Console에서 SLOT_FORTUNE_PLAY_VALIDATE ... PASS를 확인합니다. FAIL이면 사유를 확인하고 Play를 종료합니다.
+```
+
+관련 Edit Mode 테스트(클래스 단위로 실행하고 `AssetWriting`은 제외합니다):
+
+- `TxTRPG.Gameplay.Tests.FortuneCriticalTests`(기본 함수와 분석표, 기대 배수, 정수 확률표 합·결정성·동률, 표 분포, 난수 소비, 상한 예 `F = 175`, Reel별 규칙 선택·실행 중 추가된 Reel, 빈·중복 ID, 잘못된 규칙, 모르는 매개변수, 오버플로, 고정 시드 100,000회 표본, 레지스트리 확장)
+- `TxTRPG.Application.Tests.SlotFortuneCriticalCombatTests`(회전·Fortune·분배 순서와 1회 적용, 별도 난수, 추가된 Reel, 수락 후 변경, Scene 재로드 복원, 오버플로 수락 실패, 설정 없음·잘못된 설정, 세션 API, 설정 자산 기본값·`OnValidate`, Story 6가지와 표시 데이터)
+- `TxTRPG.UI.Tests.SlotMachinePanelTests`의 `Fortune*` 테스트(숨김·입력 없음, 회전 중 지움과 정지 후 표시, 즉시·Reduce Motion, 스킨 교체·구성 변경)
+- 기존 `SlotMachineTests`, `RuneTests`, `SlotMachineCombatTests`, `SlotMachinePanelSkinTests`, `SlotReelSpinPlannerTests`
 
 ### 보류된 주사위 도구
 

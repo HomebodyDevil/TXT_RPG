@@ -29,8 +29,9 @@ namespace TxTRPG.UI.SlotMachine
 
     // 2D uGUI reel. Hierarchy (see slot-machine-and-runes.md):
     //   SlotReel_{index} (layout only) > Frame (cylinder shading), Window (RectMask2D) > Strip (motion root) >
-    //   SymbolCell_0..{visible + 1} > VisualRoot > Icon, Value, Afterimage_1..3, plus Window > ShadeOverlay and an
-    //   EffectRoot outside the Window for effects that must not be clipped.
+    //   SymbolCell_0..{visible + 1} > VisualRoot > Icon, Value, Afterimage_1..3, plus Window > ShadeOverlay, an
+    //   EffectRoot outside the Window for effects that must not be clipped, and FortuneBadge (layout root, outside the
+    //   Window) > VisualRoot > Text for the Fortune Critical multiplier.
     // With c = visibleCellCount / 2 + 1, cell i sits at y = -(i - c) × cellHeight inside Strip and shows
     // strip[(base + i - c) mod n], so the cell above the payline is the previous value and the one below is the next.
     // Spinning moves Strip up by a fraction of a cell; at each whole cell the base index advances and Strip snaps back.
@@ -63,6 +64,19 @@ namespace TxTRPG.UI.SlotMachine
         [SerializeField, Tooltip("Window/ShadeOverlay.")] private SlotSkinGraphicTarget shadeSkin = new();
         [SerializeField, Tooltip("Payline Value text; its default color is the RGB base of every cell and afterimage text.")]
         private SlotSkinTextTarget valueTextSkin = new();
+        [Header("Fortune Critical multiplier")]
+        [SerializeField, Tooltip("Layout-only root (FortuneBadge) outside the Window, placed in the top-right corner of the payline cell. Inactive while no multiplier is shown.")]
+        private RectTransform fortuneBadge;
+        [SerializeField, Tooltip("FortuneBadge/VisualRoot/Text. Effects may change VisualRoot only.")]
+        private TMP_Text fortuneText;
+        [SerializeField, Range(.1f, 1f), Tooltip("Font size as a fraction of the payline cell height.")]
+        private float fortuneFontRatio = .38f;
+        [SerializeField, Min(1f)] private float fortuneMinimumFontSize = 12f;
+        [SerializeField, Min(1f)] private float fortuneMaximumFontSize = 36f;
+        [SerializeField, Range(0f, .5f), Tooltip("Gap from the payline cell's top and right edges, as a fraction of the cell height.")]
+        private float fortuneInset = .08f;
+        [SerializeField, Tooltip("Multiplier text; a skin may override its color with Fortune Text Color.")]
+        private SlotSkinTextTarget fortuneTextSkin = new();
 
         private readonly int[] noValues = Array.Empty<int>();
         private readonly Vector3[] corners = new Vector3[4];
@@ -81,6 +95,9 @@ namespace TxTRPG.UI.SlotMachine
         private Color textBase = Color.white;
 
         public override string ReelId => reelId;
+        // Fortune Critical multiplier currently shown; empty when hidden.
+        public string FortuneMultiplierText =>
+            fortuneBadge != null && fortuneBadge.gameObject.activeSelf && fortuneText != null ? fortuneText.text : string.Empty;
         public override int PaylineValue => values.Length == 0 ? 0 : values[baseIndex];
         public override IReadOnlyList<int> Strip => values.Length == 0 ? noValues : Array.AsReadOnly(values);
         public override int StopIndex => baseIndex;
@@ -142,6 +159,7 @@ namespace TxTRPG.UI.SlotMachine
         {
             if (reel == null) throw new ArgumentNullException(nameof(reel));
             var token = ++generation;
+            ShowFortuneMultiplier(string.Empty);
             var start = Wrap(baseIndex);
             Assign(reel);
             start = Wrap(start);
@@ -209,12 +227,24 @@ namespace TxTRPG.UI.SlotMachine
             return leftUp.sqrMagnitude > 0f;
         }
 
+        // Shown only at rest on a result; an empty text hides the badge. The text is assigned only when it changes.
+        public override void ShowFortuneMultiplier(string text)
+        {
+            if (fortuneBadge == null || fortuneText == null) return;
+            text ??= string.Empty;
+            var show = text.Length > 0;
+            if (fortuneText.text != text) fortuneText.text = text;
+            if (fortuneBadge.gameObject.activeSelf != show) fortuneBadge.gameObject.SetActive(show);
+            if (show) LayoutFortuneBadge();
+        }
+
         // Images take the skin entry or their recorded default. Text keeps its per-cell and afterimage alpha, which is
         // multiplied by the alpha of the skin (or default) color; only the base color changes here, so spinning is unaffected.
         public override void ApplySkin(SlotMachinePanelSkin skin)
         {
             frameSkin.Apply(skin != null ? skin.ReelBackground : null, this);
             shadeSkin.Apply(skin != null ? skin.ReelShadeOverlay : null, this);
+            fortuneTextSkin.Apply(skin != null ? skin.FortuneTextColor : null);
             if (!valueTextSkin.HasDefaults && (skin == null || !skin.ReelTextColor.Override)) hasTextBase = false;
             else
             {
@@ -348,6 +378,51 @@ namespace TxTRPG.UI.SlotMachine
             }
             appliedOffset = -1f;
             ApplyAppearance(Mathf.Max(0f, appliedStrength) > 0f ? CurrentOffset : 0f, Mathf.Max(0f, appliedStrength));
+            LayoutFortuneBadge();
+        }
+
+        // Places the badge root inside the top-right corner of the payline cell and sizes its text from the cell height,
+        // shrunk to clear the payline digit on narrow reels. The payline frame is drawn above the reels, so a badge across
+        // the cell edge would be crossed by its border. Runs with the cell layout (Window size changes) and when a
+        // multiplier is shown, never per frame.
+        private void LayoutFortuneBadge()
+        {
+            if (fortuneBadge == null || window == null || !(fortuneBadge.parent is RectTransform parent)) return;
+            var rect = window.rect;
+            var height = rect.height / VisibleCells;
+            if (height <= 0f || rect.width <= 0f) return;
+            var inset = height * fortuneInset;
+            Vector2 corner = parent.InverseTransformPoint(window.TransformPoint(
+                new Vector3(rect.xMax - inset, rect.center.y + height * .5f - inset, 0f)));
+            var size = new Vector2(Mathf.Max(0f, rect.width * .5f - inset), height * .5f);
+            var middle = new Vector2(.5f, .5f);
+            if (fortuneBadge.anchorMin != middle) fortuneBadge.anchorMin = middle;
+            if (fortuneBadge.anchorMax != middle) fortuneBadge.anchorMax = middle;
+            if (fortuneBadge.pivot != Vector2.one) fortuneBadge.pivot = Vector2.one;
+            var position = corner - parent.rect.center;
+            if (fortuneBadge.anchoredPosition != position) fortuneBadge.anchoredPosition = position;
+            if (fortuneBadge.sizeDelta != size) fortuneBadge.sizeDelta = size;
+            if (fortuneText == null) return;
+            var maximum = Mathf.Max(fortuneMinimumFontSize, fortuneMaximumFontSize);
+            var fontSize = Mathf.Clamp(height * fortuneFontRatio, fortuneMinimumFontSize, maximum);
+            // On narrow or short reels the size shrinks until the text clears the payline digit either beside it or
+            // above it (never below the minimum size).
+            var payline = cellTexts.Length > Center ? cellTexts[Center] : null;
+            if (fortuneBadge.gameObject.activeSelf && !string.IsNullOrEmpty(fortuneText.text) && payline != null && payline.enabled)
+            {
+                var current = Mathf.Max(1f, fortuneText.fontSize);
+                var widthPerFont = fortuneText.GetPreferredValues(fortuneText.text, float.PositiveInfinity, float.PositiveInfinity).x / current;
+                var digit = payline.GetPreferredValues(payline.text, float.PositiveInfinity, float.PositiveInfinity).x;
+                var clearance = height * .04f;
+                var right = rect.xMax - inset;
+                var top = rect.center.y + height * .5f - inset;
+                // Digit and capital heights are about 0.75 of the font size.
+                var besideFit = widthPerFont > 0f ? (right - (rect.center.x + digit * .5f) - clearance) / widthPerFont : fontSize;
+                var aboveFit = (top - (rect.center.y + payline.fontSize * .375f) - clearance) / .75f;
+                fontSize = Mathf.Clamp(Mathf.Min(fontSize, Mathf.Max(besideFit, aboveFit)), fortuneMinimumFontSize, maximum);
+            }
+            if (fortuneText.enableAutoSizing) fortuneText.enableAutoSizing = false;
+            if (!Mathf.Approximately(fortuneText.fontSize, fontSize)) fortuneText.fontSize = fontSize;
         }
 
         private float CurrentOffset => strip == null || CellHeight <= 0f ? 0f : strip.anchoredPosition.y / CellHeight;
@@ -480,8 +555,23 @@ namespace TxTRPG.UI.SlotMachine
             changed |= shadeSkin.Record(targetShade, overwrite);
             var center = cellTexts.Length > Center ? cellTexts[Center] : null;
             changed |= valueTextSkin.Record(center, overwrite);
+            changed |= fortuneTextSkin.Record(fortuneText, overwrite);
             return changed;
         }
+
+        // Connects the Fortune Critical badge and records its default text color once. True when something changed.
+        public bool ConfigureFortuneBadgeForEditor(RectTransform targetBadge, TMP_Text targetText)
+        {
+            var changed = fortuneBadge != targetBadge || fortuneText != targetText;
+            fortuneBadge = targetBadge;
+            fortuneText = targetText;
+            changed |= fortuneTextSkin.Record(targetText, false);
+            return changed;
+        }
+
+        public RectTransform FortuneBadgeForEditor => fortuneBadge;
+        public TMP_Text FortuneTextForEditor => fortuneText;
+        public SlotSkinTextTarget FortuneTextSkinForEditor => fortuneTextSkin;
 
         [ContextMenu("기본 외형 다시 기록")]
         private void RecordSkinDefaultsFromContextMenu()

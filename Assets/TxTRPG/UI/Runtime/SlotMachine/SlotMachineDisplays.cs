@@ -22,17 +22,22 @@ namespace TxTRPG.UI.SlotMachine
 
     public sealed class SlotReelStopDisplay
     {
-        public SlotReelStopDisplay(string reelId, int stopIndex, IReadOnlyList<int> strip)
+        public SlotReelStopDisplay(string reelId, int stopIndex, IReadOnlyList<int> strip) : this(reelId, stopIndex, strip, string.Empty) { }
+
+        // multiplierText is shown near the payline cell once the reel stops ("×3"); empty shows nothing.
+        public SlotReelStopDisplay(string reelId, int stopIndex, IReadOnlyList<int> strip, string multiplierText)
         {
             Reel = new SlotReelDisplay(reelId, strip);
             if (stopIndex < 0 || stopIndex >= Reel.Values.Count) throw new ArgumentOutOfRangeException(nameof(stopIndex));
             StopIndex = stopIndex;
+            MultiplierText = multiplierText ?? string.Empty;
         }
 
         public SlotReelDisplay Reel { get; }
         public string ReelId => Reel.ReelId;
         public int StopIndex { get; }
         public int PaylineValue => Reel.Values[StopIndex];
+        public string MultiplierText { get; }
     }
 
     // One rune line row: the effect name ("공격") and the stacked weight with its allocation ("×2" or "×2 → 6").
@@ -54,7 +59,13 @@ namespace TxTRPG.UI.SlotMachine
     {
         public SlotSummaryDisplay(string totalLabel, string totalValue, string runeColumnTitle, string valueColumnTitle,
             IReadOnlyList<SlotRuneLineDisplay> lines, string emptyText, string overflowFormat)
+            : this(totalLabel, totalValue, runeColumnTitle, valueColumnTitle, lines, emptyText, overflowFormat, string.Empty) { }
+
+        // totalMultiplierText is shown in the total box next to the value ("×2"); empty shows nothing.
+        public SlotSummaryDisplay(string totalLabel, string totalValue, string runeColumnTitle, string valueColumnTitle,
+            IReadOnlyList<SlotRuneLineDisplay> lines, string emptyText, string overflowFormat, string totalMultiplierText)
         {
+            TotalMultiplierText = totalMultiplierText ?? string.Empty;
             TotalLabel = totalLabel ?? string.Empty;
             TotalValue = totalValue ?? string.Empty;
             RuneColumnTitle = runeColumnTitle ?? string.Empty;
@@ -69,6 +80,7 @@ namespace TxTRPG.UI.SlotMachine
 
         public string TotalLabel { get; }
         public string TotalValue { get; }
+        public string TotalMultiplierText { get; }
         public string RuneColumnTitle { get; }
         public string ValueColumnTitle { get; }
         public IReadOnlyList<SlotRuneLineDisplay> Lines { get; }

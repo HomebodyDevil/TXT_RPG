@@ -136,7 +136,7 @@ namespace TxTRPG.Application.Editor
                 var attack = accepted.Allocation.Lines.Where(l => l.EffectKind == TxTRPG.Gameplay.Runes.RuneEffectKind.Attack).Sum(l => l.Amount);
                 // The first enemy action is an attack, so the enemy health changes only by the attack lines.
                 Require(refs.Controller.Combat.EnemyHealth.Current == Math.Max(0, enemyBefore - attack), "the attack lines hit the enemy once");
-                log.AppendLine($" submit: {SlotCombatStoryFormatter.Spin(accepted.Spin)}, {AllocationLog(accepted)}, presentation {watch.Elapsed.TotalSeconds:F2}s, {(windowChecked ? "window open/close mid-spin" : "game window NOT verified (no active GameWindowService)")}, afterimages seen, one turn.");
+                log.AppendLine($" submit: {SlotCombatStoryFormatter.Spin(accepted.Fortune)}, {AllocationLog(accepted)}, presentation {watch.Elapsed.TotalSeconds:F2}s, {(windowChecked ? "window open/close mid-spin" : "game window NOT verified (no active GameWindowService)")}, afterimages seen, one turn.");
 
                 // 4. Pointer click (mouse; touch uses the same pointer events on the uGUI button).
                 await WaitWhile(() => !refs.Action.IsInteractable && !refs.Controller.Combat.IsComplete, 5d);
@@ -222,7 +222,7 @@ namespace TxTRPG.Application.Editor
                         Require(stories == before + 1, $"the spin accepted before the reload was applied once ({stories - before})");
                         Require(host.LastTemporarySlotTurn.Spin == accepted.Spin, "the applied result is the accepted one");
                         Require(refs.Controller.Combat == combat, "the new Scene continues the same combat");
-                        Require(refs.Panel.TotalValueText == SlotCombatStoryFormatter.TotalValue(accepted.Spin.PaylineTotal), $"the new panel shows the result ({refs.Panel.TotalValueText})");
+                        Require(refs.Panel.TotalValueText == SlotCombatStoryFormatter.TotalValue(accepted.Fortune.FinalTotal), $"the new panel shows the result ({refs.Panel.TotalValueText})");
                         CheckEffectsCleared(refs, "scene re-entry");
                         log.AppendLine($" scene re-entry mid-spin (via MainScene_VisualProposal): applied once (enemy {enemy} -> {combat.EnemyHealth.Current}), new panel shows '{refs.Panel.TotalValueText}', no afterimages left.");
                     }
@@ -269,7 +269,7 @@ namespace TxTRPG.Application.Editor
             Debug.Log($"SLOT_MACHINE_SKIN_CYCLE: {next.SkinId} (payline {(panel.PaylineImageShown ? "image" : "code border")})");
         }
 
-        private sealed class References
+        internal sealed class References
         {
             public ExplorationRunController Run;
             public TemporarySlotCombatController Controller;
@@ -279,7 +279,7 @@ namespace TxTRPG.Application.Editor
             public ResponsiveMainScreen Screen;
         }
 
-        private static References Find()
+        internal static References Find()
         {
             var controller = Object.FindAnyObjectByType<TemporarySlotCombatController>() ?? throw new InvalidOperationException("TemporarySlotCombatController is missing.");
             return new References
@@ -304,13 +304,14 @@ namespace TxTRPG.Application.Editor
                 Require(view.ValueAt(-1) == strip[(view.StopIndex - 1 + strip.Count) % strip.Count] &&
                     view.ValueAt(1) == strip[(view.StopIndex + 1) % strip.Count], $"{label}: neighbours are the previous and next strip values");
             }
-            Require(refs.Panel.TotalValueText == SlotCombatStoryFormatter.TotalValue(accepted.Spin.PaylineTotal), $"{label}: total shown ({refs.Panel.TotalValueText})");
+            Require(refs.Panel.TotalValueText == SlotCombatStoryFormatter.TotalValue(accepted.Fortune.FinalTotal), $"{label}: total shown ({refs.Panel.TotalValueText})");
             var expectedRows = string.Join(";", accepted.Allocation.Lines.Select(l =>
                 $"{SlotCombatStoryFormatter.EffectName(l.EffectKind)}|{SlotCombatStoryFormatter.LineAllocation(l.Weight, l.Amount)}"));
             Require(Rows(refs.Panel) == expectedRows, $"{label}: rune rows shown ({Rows(refs.Panel)})");
             CheckEffectsCleared(refs, label);
-            Require(accepted.Allocation.Lines.Sum(l => l.Amount) == accepted.Spin.PaylineTotal, $"{label}: allocation adds up to the total");
-            if (label != "submit") log.AppendLine($" {label}: {SlotCombatStoryFormatter.Spin(accepted.Spin)}, {AllocationLog(accepted)}.");
+            // Fortune Critical (slot-fortune-critical) may multiply the payline total; the final total is allocated and shown.
+            Require(accepted.Allocation.Lines.Sum(l => l.Amount) == accepted.Fortune.FinalTotal, $"{label}: allocation adds up to the final total");
+            if (label != "submit") log.AppendLine($" {label}: {SlotCombatStoryFormatter.Spin(accepted.Fortune)}, {AllocationLog(accepted)}.");
         }
 
         private static async Task CheckViewports(References refs, StringBuilder log)
@@ -397,17 +398,17 @@ namespace TxTRPG.Application.Editor
 
         private static RectTransform WindowOf(SlotReelViewBase view) => (RectTransform)view.transform.Find("Window");
 
-        private static Rect WorldRect(RectTransform rect)
+        internal static Rect WorldRect(RectTransform rect)
         {
             var corners = new Vector3[4];
             rect.GetWorldCorners(corners);
             return Rect.MinMaxRect(corners[0].x, corners[0].y, corners[2].x, corners[2].y);
         }
 
-        private static void Submit(BoundaryCommandButton action) =>
+        internal static void Submit(BoundaryCommandButton action) =>
             ExecuteEvents.Execute(action.Button.gameObject, new BaseEventData(EventSystem.current), ExecuteEvents.submitHandler);
 
-        private static void StartCombat(ExplorationRunController controller)
+        internal static void StartCombat(ExplorationRunController controller)
         {
             var run = controller.Run;
             var select = typeof(ExplorationRunController).GetMethod("SelectChoice", BindingFlags.Instance | BindingFlags.NonPublic, null, new[] { typeof(string), typeof(string) }, null)
@@ -430,7 +431,7 @@ namespace TxTRPG.Application.Editor
             if (!condition) throw new InvalidOperationException(message);
         }
 
-        private static async Task Frames(int count)
+        internal static async Task Frames(int count)
         {
             for (var i = 0; i < count; i++)
             {
@@ -440,7 +441,7 @@ namespace TxTRPG.Application.Editor
             }
         }
 
-        private static async Task WaitWhile(Func<bool> condition, double seconds)
+        internal static async Task WaitWhile(Func<bool> condition, double seconds)
         {
             var deadline = EditorApplication.timeSinceStartup + seconds;
             while (condition() && EditorApplication.timeSinceStartup < deadline) await Task.Yield();
