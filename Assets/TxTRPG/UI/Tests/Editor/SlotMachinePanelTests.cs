@@ -208,6 +208,25 @@ namespace TxTRPG.UI.Tests
             Assert.That(layout.Arrangement, Is.EqualTo(SlotMachineContentArrangement.Stacked));
         }
 
+        [TestCase(968f, 413f)]
+        [TestCase(470f, 332f)]
+        [TestCase(332f, 274f)]
+        public void TotalBox_LabelAndTwoDigitTotalFitTheirWidth(float width, float height)
+        {
+            Arrange(new Vector2(width, height));
+            panel.SetSummary(Summary("88", ("공격", "×1"), ("회복", "×1")));
+            foreach (var name in new[] { "TotalLabel", "TotalValue" })
+            {
+                var text = panel.transform.Find($"Content/SummaryArea/TotalBox/{name}").GetComponent<TMPro.TMP_Text>();
+                text.GetComponent<SlotHeightScaledText>().Apply();
+                text.ForceMeshUpdate();
+                var rect = text.rectTransform.rect;
+                Assert.That(text.GetPreferredValues(text.text).x, Is.LessThanOrEqualTo(rect.width + .5f), $"{name} '{text.text}' fits {rect.size} at {text.fontSize}");
+                Assert.That(text.isTextTruncated, Is.False, $"{name} is not truncated");
+                Assert.That(text.fontSize, Is.LessThanOrEqualTo(rect.height * .55f + .01f), $"{name} stays within its height-based size");
+            }
+        }
+
         [Test]
         public void ConfigurationKeptForUnchangedReels_AfterAResult()
         {

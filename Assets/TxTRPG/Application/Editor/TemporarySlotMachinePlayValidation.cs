@@ -336,7 +336,7 @@ namespace TxTRPG.Application.Editor
                     // Within the hysteresis band either arrangement is valid.
                     Require(layout.Arrangement == expected || Mathf.Abs(ratio - layout.StackBelowAspectRatio) < .06f,
                         $"{name}: arrangement {layout.Arrangement} for ratio {ratio:F2}");
-                    log.AppendLine($" {name}: panel {panelSize.x:F0}x{panelSize.y:F0} (ratio {ratio:F2}, {layout.Arrangement}), reel window {WindowOf(refs.Panel.ReelViews[0]).rect.size.x:F0}x{WindowOf(refs.Panel.ReelViews[0]).rect.size.y:F0}, button clear of reels, total and rune rows.");
+                    log.AppendLine($" {name}: panel {panelSize.x:F0}x{panelSize.y:F0} (ratio {ratio:F2}, {layout.Arrangement}), reel window {WindowOf(refs.Panel.ReelViews[0]).rect.size.x:F0}x{WindowOf(refs.Panel.ReelViews[0]).rect.size.y:F0}, button clear of payline cells, total and rune rows, total label and '88' fit (font {Text(refs, "TotalLabel").fontSize:F1}/{Text(refs, "TotalValue").fontSize:F1}){ButtonReelNote(refs)}.");
                 }
             }
             finally
@@ -347,7 +347,9 @@ namespace TxTRPG.Application.Editor
             }
         }
 
-        // The boundary button never covers a reel window or the total, the reels do not overlap, and the payline digits fit.
+        // The boundary button never covers a payline cell, the total or a rune row (it may cover the top edge of a reel
+        // window, as in the stacked phone arrangement), the reels do not overlap, the payline digits fit, and the total
+        // label and a two-digit total fit their halves of TotalBox.
         private static void CheckReelLayout(References refs, string label)
         {
             Canvas.ForceUpdateCanvases();
@@ -355,6 +357,12 @@ namespace TxTRPG.Application.Editor
             var texts = refs.Panel.GetComponentsInChildren<TMP_Text>(true);
             var total = texts.First(t => t.name == "TotalValue");
             Require(!button.Overlaps(WorldRect(total.rectTransform)), $"{label}: the action button does not cover the total");
+            var totalLabel = texts.First(t => t.name == "TotalLabel");
+            totalLabel.ForceMeshUpdate();
+            Require(!totalLabel.isTextTruncated && totalLabel.GetPreferredValues(totalLabel.text).x <= totalLabel.rectTransform.rect.width + .5f,
+                $"{label}: the total label '{totalLabel.text}' fits ({totalLabel.GetPreferredValues(totalLabel.text).x:F1} in {totalLabel.rectTransform.rect.width:F1}, font {totalLabel.fontSize:F1})");
+            Require(total.GetPreferredValues("88").x <= total.rectTransform.rect.width + .5f,
+                $"{label}: a two-digit total fits ({total.GetPreferredValues("88").x:F1} in {total.rectTransform.rect.width:F1}, font {total.fontSize:F1})");
             foreach (var row in refs.Panel.GetComponentsInChildren<SlotRuneLineRow>(false))
                 Require(!button.Overlaps(WorldRect((RectTransform)row.transform)), $"{label}: the action button does not cover {row.name}");
             Require(refs.Panel.ActiveDividerCount == refs.Panel.ReelCount - 1, $"{label}: one divider between neighbouring reels ({refs.Panel.ActiveDividerCount})");
@@ -363,10 +371,11 @@ namespace TxTRPG.Application.Editor
             {
                 var rect = WorldRect(windows[i]);
                 Require(rect.width > 1f && rect.height > 1f, $"{label}: reel {i + 1} is visible");
-                Require(!button.Overlaps(rect), $"{label}: the action button does not cover reel {i + 1}");
                 if (i > 0) Require(!WorldRect(windows[i - 1]).Overlaps(rect), $"{label}: reels {i} and {i + 1} do not overlap");
                 var payline = $"SymbolCell_{((SlotReelView)refs.Panel.ReelViews[i]).VisibleCellCount / 2 + 1}";
                 var cell = windows[i].GetComponentsInChildren<TMP_Text>(true).First(t => t.name == "Value" && t.transform.parent.parent.name == payline);
+                var paylineCell = WorldRect((RectTransform)cell.transform.parent.parent);
+                Require(!button.Overlaps(paylineCell), $"{label}: the action button does not cover the payline cell of reel {i + 1} ({button} vs {paylineCell})");
                 var preferred = cell.GetPreferredValues(cell.text);
                 var cellRect = ((RectTransform)cell.transform.parent.parent).rect;
                 Require(preferred.x <= cellRect.width + .5f && preferred.y <= cellRect.height + .5f,
@@ -383,6 +392,17 @@ namespace TxTRPG.Application.Editor
             var visible = WorldRect(refs.Panel.PaylineVisibleRect);
             Require(visible.xMin <= frame.xMin + .5f && visible.xMax >= frame.xMax - .5f && visible.yMin <= frame.yMin + .5f && visible.yMax >= frame.yMax - .5f,
                 $"{label}: the {(refs.Panel.PaylineImageShown ? "payline image" : "payline border")} surrounds the payline cells ({visible} vs {frame})");
+        }
+
+        private static TMP_Text Text(References refs, string name) => refs.Panel.GetComponentsInChildren<TMP_Text>(true).First(t => t.name == name);
+
+        // Reports (without failing) which reel windows the button overlaps above their payline cells.
+        private static string ButtonReelNote(References refs)
+        {
+            var button = WorldRect((RectTransform)refs.Action.Button.transform);
+            var covered = refs.Panel.ReelViews.Select((view, i) => (i, rect: WorldRect(WindowOf(view)))).Where(item => button.Overlaps(item.rect))
+                .Select(item => $"{item.i + 1} ({item.rect.yMax - button.yMin:F0}px deep)").ToArray();
+            return covered.Length == 0 ? string.Empty : $", button over the top edge of reel window {string.Join(", ", covered)}";
         }
 
         private static void CheckEffectsCleared(References refs, string label)
