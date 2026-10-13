@@ -121,6 +121,10 @@ Payline은 가운데 줄 하나입니다. 여러 Payline이나 기호 조합 판
 
 수락 기록(`TemporarySlotAcceptedAction`)과 턴 기록(`TemporarySlotTurnRecord`)은 `Fortune`(`FortuneCriticalResult`)을 함께 가집니다. 기존 생성자는 `FortuneCriticalResult.None(spin)`을 씁니다. 수락된 결과는 세션이 보관합니다. Scene이 다시 로드되면 진행 중이던 작업이 세션 참조로 결과를 한 번 적용합니다. 새 컨트롤러는 같은 전투에 다시 연결되고, `PendingSlotAction` 또는 현재 노드의 `LastTemporarySlotTurn`을 저장된 Fortune 결과와 함께 패널에 정지 상태로 보여 줍니다. 그다음 `PendingSlotStory`를 새 Story에 한 번 기록하고, `TemporaryCombatActionEnded`에서 버튼과 표시를 갱신합니다. 게임 창을 열고 닫아도 결과는 바뀌지 않습니다. 컨트롤러는 슬롯머신·룬 상태의 `Changed`를 받아 패널을 갱신합니다. 구독은 `OnDestroy`에서 해제하며, 파괴된 인스턴스는 남은 세션 이벤트를 무시합니다.
 
+### 탐험 이벤트의 슬롯 판정
+
+탐험 이벤트의 슬롯 판정(`ExplorationEventController`)은 같은 세션 Reel과 Fortune Critical 규칙으로 돌리고 같은 `SlotMachinePanel` 연출을 씁니다. 판정은 최종 합계로 하며 룬 분배와 전투 턴은 없습니다. 전투 없이 공용 행동 잠금을 얻도록 `PlayerSessionHost.TryBeginTemporarySlotPresentation(out actionId)` 오버로드가 있고(`IsTemporaryActionHeld`로 확인), 해제는 같은 `EndTemporaryCombatAction`입니다. 기존 `TryBeginTemporaryCombatAction`과 별칭의 동작은 바뀌지 않았습니다. 표시 데이터는 `TemporarySlotCombatController.CreateSpinDisplay(spin, fortune, weightLines)` 오버로드와 공개된 `WeightLines(TemporaryRuneState)`로 만들어, 룬 표가 회전 중·정지 후 모두 쌓인 수(`×N`)를 보여 줍니다. `RefreshSlotPanel`은 현재 노드의 이벤트 기록(`PlayerSessionHost.ActiveExplorationEvent`)에 슬롯 판정이 있으면 합계·룬 표를 유휴 표시로 덮어쓰지 않습니다. 이벤트 효과는 `TemporarySlotMachineState`·`TemporaryRuneState`·`TemporaryFortuneCriticalState`(Gameplay 계약 `IFortuneCriticalRuleStore` 구현)를 직접 바꾸며, 상태 `Changed`로 패널이 갱신되고 다음 전투부터 반영됩니다. 자세한 흐름은 [탐험 이벤트 노드와 이벤트 시스템](exploration-events.md#슬롯-판정)에 있습니다.
+
 `ExplorationRunController`는 `ITemporaryCombatController`를 통해 전투를 시작하고 정리합니다. Unity가 인터페이스 필드를 직렬화하지 않으므로 필드는 `MonoBehaviour combatControllerBehaviour`이고, `[FormerlySerializedAs("combatController")]`로 기존 참조를 유지합니다. 초기화와 `ConfigureForEditor`·`ConfigureCombatForEditor`는 인터페이스를 구현하지 않은 컴포넌트를 거부합니다.
 
 ## Story 기록

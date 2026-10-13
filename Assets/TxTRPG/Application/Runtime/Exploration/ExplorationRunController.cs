@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using TMPro;
 using TxTRPG.Application.Combat;
+using TxTRPG.Application.Exploration.Events;
 using TxTRPG.Application.Players;
 using TxTRPG.Gameplay.Characters;
 using TxTRPG.Gameplay.Combat;
@@ -25,6 +27,8 @@ namespace TxTRPG.Application.Exploration
         [FormerlySerializedAs("combatController")]
         [SerializeField, Tooltip("A component implementing ITemporaryCombatController (TemporarySlotCombatController in TMP_MainScene).")]
         private MonoBehaviour combatControllerBehaviour;
+        [SerializeField, Tooltip("A component implementing IExplorationEventController (ExplorationEventController in TMP_MainScene). Without it, event nodes do not appear.")]
+        private MonoBehaviour eventControllerBehaviour;
         [SerializeField] private StoryTextPanel storyPanel;
         [SerializeField] private GameObject panel;
         [SerializeField] private TMP_Text statusText;
@@ -35,6 +39,8 @@ namespace TxTRPG.Application.Exploration
         [SerializeField] private Button continueButton;
 
         private ITemporaryCombatController combatController;
+        private IExplorationEventController eventController;
+        private HealthState boundHealth;
         private ExplorationRunState run;
         private bool initialized;
         private bool processing;
@@ -51,6 +57,10 @@ namespace TxTRPG.Application.Exploration
             await host.EnsureInitializedAsync(cancellationToken); cancellationToken.ThrowIfCancellationRequested();
             if (configuration == null || combatControllerBehaviour == null || storyPanel == null) throw new InvalidOperationException("Exploration references are incomplete.");
             combatController = ResolveCombatController(combatControllerBehaviour);
+            eventController = eventControllerBehaviour != null ? ResolveEventController(eventControllerBehaviour) : null;
+            eventController?.Configure(configuration.EventCatalog);
+            if (eventController == null && configuration.EventWeight > 0)
+                Debug.LogWarning("Event nodes are disabled: no exploration event controller is assigned.", this);
             if (choiceCardList == null) EnsureChoiceCapacity(configuration.ChoiceCount);
             var created = false;
             run = host.GetOrCreateTemporaryExploration(() =>
@@ -58,11 +68,17 @@ namespace TxTRPG.Application.Exploration
                 created = true;
                 var source = host.Session.CurrentPlayer.ActiveCharacter.Health;
                 var explorationHealth = new HealthState(source.Maximum, source.Current);
+                var picker = eventController?.CreateContentPicker();
+                var pickers = new Dictionary<string, IExplorationNodeContentPicker>(StringComparer.Ordinal);
+                if (picker != null) pickers.Add(ExplorationNodeTypeIds.Event, picker);
                 return new ExplorationRunState(Guid.NewGuid().ToString("N"), explorationHealth,
-                    new ExplorationNodeGenerator(configuration.ChoiceCount, configuration.CreateWeights(), new SystemExplorationRandomSource()));
+                    new ExplorationNodeGenerator(configuration.ChoiceCount, configuration.CreateWeights(picker != null), new SystemExplorationRandomSource(), pickers));
             });
             boundHost = host;
             host.TemporaryCombatCompleted += OnTemporaryCombatCompleted;
+            if (eventController != null) eventController.Completed += OnEventCompleted;
+            boundHealth = run.PlayerHealth;
+            boundHealth.Changed += OnExplorationHealthChanged;
             BindLegacyChoices();
             continueButton.onClick.AddListener(ContinuePlaceholder);
             initialized = true;
@@ -110,6 +126,12 @@ namespace TxTRPG.Application.Exploration
                 SetChoicesInteractable(false);
                 var node = run.Select(choiceSetId, nodeId);
                 RefreshTree();
+                if (node.TypeId == ExplorationNodeTypeIds.Event)
+                {
+                    storyPanel.AddMessage(ExplorationEventStoryFormatter.NodeSelected(EventTitle(node), node.Id));
+                    BeginEvent(node, false);
+                    return;
+                }
                 storyPanel.AddMessage($"[탐험] {DisplayName(node.TypeId)} 노드를 선택했습니다. ({node.Id})");
                 if (node.TypeId == ExplorationNodeTypeIds.Combat)
                 {
@@ -168,6 +190,61 @@ namespace TxTRPG.Application.Exploration
             }
         }
 
+        // Event nodes: the event screen replaces the cards inside the node panel. Without an event controller the node
+        // completes as EventUnavailable and the exploration continues.
+        private void BeginEvent(ExplorationNodeRecord node, bool restore)
+        {
+            if (eventController == null)
+            {
+                storyPanel.AddMessage($"[탐험] {ExplorationEventStoryFormatter.UnavailableBody}. ({node.Id})");
+                run.CompleteActive(node.Id, "EventUnavailable");
+                ShowChoices();
+                return;
+            }
+            ShowEventFrame();
+            if (restore) eventController.Restore(run, node);
+            else eventController.Begin(run, node);
+        }
+
+        private void ShowEventFrame()
+        {
+            panel.SetActive(true); SetChoiceButtons(false); continueButton.gameObject.SetActive(false);
+            statusText.text = ExplorationEventStoryFormatter.Status(run.PlayerHealth.Current, run.PlayerHealth.Maximum);
+        }
+
+        private void OnEventCompleted(string nodeId, ExplorationEventOutcome outcome)
+        {
+            if (!initialized || run.Phase != ExplorationPhase.ResolvingNode || !string.Equals(run.ActiveNodeId, nodeId, StringComparison.Ordinal)) return;
+            if (outcome == ExplorationEventOutcome.Defeated)
+            {
+                run.FailActive(nodeId, "EventDefeat");
+                RefreshTree();
+                storyPanel.AddMessage("[탐험] 체력이 0이 되어 탐험이 종료되었습니다.");
+                ShowFailure();
+                return;
+            }
+            run.CompleteActive(nodeId, outcome == ExplorationEventOutcome.Unavailable ? "EventUnavailable" : "EventCompleted");
+            storyPanel.AddMessage("[탐험] 이벤트 노드를 완료했습니다. 다음 노드를 선택하세요.");
+            ShowChoices();
+        }
+
+        private void OnExplorationHealthChanged(HealthChangeResult _)
+        {
+            if (!initialized || run == null || run.Phase != ExplorationPhase.ResolvingNode) return;
+            var active = FindNode(run.ActiveNodeId);
+            if (active != null && active.TypeId == ExplorationNodeTypeIds.Event)
+                statusText.text = ExplorationEventStoryFormatter.Status(run.PlayerHealth.Current, run.PlayerHealth.Maximum);
+        }
+
+        private void ShowFailure()
+        {
+            eventController?.Hide();
+            panel.SetActive(true); statusText.text = "탐험 종료: 패배"; SetChoiceButtons(false); continueButton.gameObject.SetActive(false);
+        }
+
+        private string EventTitle(ExplorationNodeRecord node) =>
+            eventController != null && eventController.TryDescribe(node.ContentId, out var title, out _) ? title : ExplorationEventStoryFormatter.NodeTypeName;
+
         private void OnTemporaryCombatCompleted(TemporaryCombatState finishedCombat, bool victory)
         {
             if (finishedCombat == combatController.Combat) OnCombatFinished(victory);
@@ -177,16 +254,15 @@ namespace TxTRPG.Application.Exploration
         {
             if (run.Phase == ExplorationPhase.AwaitingChoice) { ShowChoices(); return; }
             RefreshTree();
-            if (run.Phase == ExplorationPhase.Failed)
-            {
-                panel.SetActive(true); statusText.text = "탐험 종료: 패배"; SetChoiceButtons(false); continueButton.gameObject.SetActive(false); return;
-            }
+            if (run.Phase == ExplorationPhase.Failed) { ShowFailure(); return; }
             var active = FindNode(run.ActiveNodeId);
             if (active != null && active.TypeId == ExplorationNodeTypeIds.RecoveryUpgrade) ShowPlaceholder();
+            else if (active != null && active.TypeId == ExplorationNodeTypeIds.Event) BeginEvent(active, true);
             else panel.SetActive(false);
         }
         private void ShowChoices()
         {
+            eventController?.Hide();
             RefreshTree();
             panel.SetActive(true); statusText.text = $"다음 노드 선택 · 현재 체력 {run.PlayerHealth.Current}/{run.PlayerHealth.Maximum}"; continueButton.gameObject.SetActive(false);
             var choices = run.CurrentChoices;
@@ -209,6 +285,12 @@ namespace TxTRPG.Application.Exploration
             var request = new ExplorationNodeChoiceRequest(run.RunId, run.CurrentChoiceSetId, node.Id);
             if (node.TypeId == ExplorationNodeTypeIds.Combat) return new ExplorationNodeChoiceCardData(request, "전투", "적과 전투를 시작합니다.", string.Empty, null, true);
             if (node.TypeId == ExplorationNodeTypeIds.RecoveryUpgrade) return new ExplorationNodeChoiceCardData(request, "회복 및 강화", "향후 회복 또는 강화 효과가 제공됩니다.", "미구현", null, true);
+            if (node.TypeId == ExplorationNodeTypeIds.Event)
+            {
+                return eventController != null && eventController.TryDescribe(node.ContentId, out var title, out var summary)
+                    ? new ExplorationNodeChoiceCardData(request, ExplorationEventStoryFormatter.CardTitle(title), summary, ExplorationEventStoryFormatter.CardBadge, null, true)
+                    : new ExplorationNodeChoiceCardData(request, ExplorationEventStoryFormatter.NodeTypeName, ExplorationEventStoryFormatter.UnavailableBody, ExplorationEventStoryFormatter.CardBadge, null, true);
+            }
             return new ExplorationNodeChoiceCardData(request, node.TypeId, "처리기가 등록되지 않은 노드입니다.", "지원 안 함", null, true);
         }
 
@@ -222,7 +304,8 @@ namespace TxTRPG.Application.Exploration
         private void SetLegacyChoicesVisible(bool value) { foreach (var button in choiceButtons) if (button != null) button.gameObject.SetActive(value); }
         private void SetChoicesInteractable(bool value) { choiceCardList?.SetInteractable(value); foreach (var button in choiceButtons) if (button != null) button.interactable = value; }
         private ExplorationNodeRecord FindNode(string id) { foreach (var node in run.Nodes) if (node.Id == id) return node; return null; }
-        private static string DisplayName(string typeId) => typeId == ExplorationNodeTypeIds.Combat ? "전투" : typeId == ExplorationNodeTypeIds.RecoveryUpgrade ? "회복 및 강화 (미구현)" : typeId;
+        private static string DisplayName(string typeId) => typeId == ExplorationNodeTypeIds.Combat ? "전투" : typeId == ExplorationNodeTypeIds.RecoveryUpgrade ? "회복 및 강화 (미구현)" :
+            typeId == ExplorationNodeTypeIds.Event ? ExplorationEventStoryFormatter.NodeTypeName : typeId;
 
         private void RefreshTree()
         {
@@ -239,6 +322,9 @@ namespace TxTRPG.Application.Exploration
         {
             if (boundHost != null) boundHost.TemporaryCombatCompleted -= OnTemporaryCombatCompleted;
             boundHost = null;
+            if (eventController != null) eventController.Completed -= OnEventCompleted;
+            if (boundHealth != null) boundHealth.Changed -= OnExplorationHealthChanged;
+            boundHealth = null;
             for (var i = 0; i < choiceButtons.Length && i < legacyChoiceListeners.Length; i++) if (choiceButtons[i] != null && legacyChoiceListeners[i] != null) choiceButtons[i].onClick.RemoveListener(legacyChoiceListeners[i]);
             legacyChoiceListeners = Array.Empty<UnityAction>();
             if (choiceCardList != null) choiceCardList.Hide();
@@ -259,12 +345,21 @@ namespace TxTRPG.Application.Exploration
         public MonoBehaviour CombatControllerForEditor => combatControllerBehaviour;
         public void ConfigureTreeForEditor(ExplorationNodeTreePanel targetTree) => treePanel = targetTree;
         public void ConfigureCardsForEditor(ExplorationNodeChoiceCardList targetCardList) => choiceCardList = targetCardList;
+        public void ConfigureEventsForEditor(MonoBehaviour targetEvents) { if (targetEvents != null) ResolveEventController(targetEvents); eventControllerBehaviour = targetEvents; }
+        public MonoBehaviour EventControllerForEditor => eventControllerBehaviour;
+        public ExplorationRunConfiguration ConfigurationForEditor => configuration;
+        public GameObject PanelForEditor => panel;
+        public StoryTextPanel StoryForEditor => storyPanel;
 #endif
 
         // Unity cannot serialize interface fields, so the reference is a MonoBehaviour validated here.
         private static ITemporaryCombatController ResolveCombatController(MonoBehaviour behaviour) =>
             behaviour as ITemporaryCombatController ?? throw new InvalidOperationException(
                 $"Exploration combat controller '{(behaviour != null ? behaviour.GetType().Name : "null")}' does not implement {nameof(ITemporaryCombatController)}.");
+
+        private static IExplorationEventController ResolveEventController(MonoBehaviour behaviour) =>
+            behaviour as IExplorationEventController ?? throw new InvalidOperationException(
+                $"Exploration event controller '{behaviour.GetType().Name}' does not implement {nameof(IExplorationEventController)}.");
 
         private sealed class SystemExplorationRandomSource : IExplorationRandomSource
         {

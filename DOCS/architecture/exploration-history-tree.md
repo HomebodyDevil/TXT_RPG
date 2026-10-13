@@ -6,7 +6,7 @@
 
 | 구성 | 책임 |
 | --- | --- |
-| `ExplorationRunController` | 세션 바인딩, 선택 성공, 완료 후 후보 생성, 전투 패배와 미등록 처리기 실패 경계에서 트리를 갱신합니다. |
+| `ExplorationRunController` | 세션 바인딩, 선택 성공, 완료 후 후보 생성, 전투·이벤트 패배와 미등록 처리기 실패 경계에서 트리를 갱신합니다. |
 | `ExplorationTreeProjection` | 전체 Nodes와 SelectedPath를 불변 표시 스냅샷으로 변환합니다. 도메인을 변경하지 않습니다. |
 | `ExplorationTreeSnapshot` / `ExplorationTreeLayout` | ID 검증, Depth·SiblingIndex·ID 순서, 중앙 정렬과 부모 연결점 계산을 담당합니다. |
 | `ExplorationNodeTreePanel` | 스크롤, 최신 위치 따라가기, 노드·선 View의 풀링과 표시 영역 가상화를 담당합니다. |
@@ -49,7 +49,7 @@ flowchart LR
 
 - `Assets/TxTRPG/UI/Prefabs/ExplorationTreeNode.prefab`
 - `Assets/TxTRPG/UI/Prefabs/ExplorationTreeEdge.prefab`
-- `Assets/TxTRPG/UI/Styles/ExplorationTreeDefaultStyle.asset`
+- `Assets/TxTRPG/UI/Styles/ExplorationTreeDefaultStyle.asset` (`combat` 전투, `recovery-upgrade` 회복·강화, `event` 이벤트. `event`는 전용 Sprite가 없어 `fallbackIcon`을 표시하며, 트리 노드에 이벤트 제목은 표시하지 않습니다.)
 
 노드 Root는 레이아웃 좌표, VisualRoot는 장식 배율·회전·CanvasGroup 알파를 소유합니다. 선 Root는 길이·방향·중심 좌표이며 선 VisualRoot와 EffectOverlay는 장식 전용입니다. 선 끝점은 노드의 안정적인 위·아래 연결점에서 계산하므로 장식 확대가 연결 관계를 움직이지 않습니다. 연결점 자체를 변경하는 기능을 추가할 때에는 새 스냅샷 또는 `RefreshStyle`로 명시적으로 재배치해야 합니다.
 

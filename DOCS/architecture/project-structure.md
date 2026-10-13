@@ -330,6 +330,8 @@ flowchart TD
 
 `Assets/TxTRPG/Gameplay/Runtime/Exploration/`은 노드 생성·트리 기록·상태 전환을 소유합니다. `Assets/TxTRPG/Application/Runtime/Exploration/`은 AppScene 수명의 임시 탐험과 TMP_MainScene의 선택 UI·전투 처리기를 연결합니다. 자세한 내용은 [점진 생성 탐험 노드 트리](exploration-node-tree.md)를 참조합니다.
 
+탐험 이벤트 노드는 다음으로 구성합니다. `Gameplay/Runtime/Exploration/Events/`(Unity 비의존 이벤트 모델·상호작용·효과/조건 계약·실행 상태 기계 `ExplorationEventExecution`), `Gameplay/Runtime/SlotMachine/FortuneCritical/IFortuneCriticalRuleStore.cs`, `Application/Runtime/Exploration/Events/`(이벤트 자산 `ExplorationEventDefinition`, `ExplorationEventCatalog`, 효과·조건 클래스, 세션 어댑터 `ExplorationEventContext`, 세션 기록 `TemporaryExplorationEventRecord`, `ExplorationEventController`(`ISceneInitializer`, 초기화 순서 -795), `ExplorationEventStoryFormatter`), `UI/Runtime/Exploration/ExplorationEventView.cs`·`ExplorationEventChoiceView.cs`. 자산은 `Application/Configuration/Events/ExplorationEventCatalog.asset`과 `Events/Test/`의 테스트 이벤트 5개이며 `ExplorationRunConfiguration.asset`의 `eventCatalog`가 참조합니다. TMP_MainScene에서는 `ExplorationNodePanel/EventView`와 GameMenuPanel 인스턴스 루트의 `ExplorationEventController`(ExplorationRunController와 같은 오브젝트)가 있습니다. Editor 쪽은 `Application/Editor/ExplorationEventReferencePickerDrawer.cs`(SerializeReference 드롭다운·이벤트 Inspector 경고), 임시 메뉴 `TemporaryExplorationEventNodesApply.cs`(적용·검증, `ExplorationEventViewBuilder` 포함), 테스트 이벤트 내용 `ExplorationTestEventContent.cs`, Play 확인 `TemporaryExplorationEventPlayValidation.cs`입니다(Prefab 배치 제외). 상세 구조는 [탐험 이벤트 노드와 이벤트 시스템](exploration-events.md)을 참조합니다.
+
 
 ### Actions 표면 배치와 Editor 적용 경계
 

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using TxTRPG.Application.Configuration;
 using TxTRPG.Application.Persistence;
 using TxTRPG.Application.Dice;
+using TxTRPG.Application.Exploration.Events;
 using TxTRPG.Application.Runes;
 using TxTRPG.Application.SlotMachine;
 using TxTRPG.Gameplay.Combat;
@@ -49,6 +50,7 @@ namespace TxTRPG.Application.Players
         private TemporarySlotAcceptedAction pendingSlotAction;
         private TemporarySlotTurnRecord pendingSlotStory;
         private TemporarySlotTurnRecord lastSlotTurn;
+        private TemporaryExplorationEventRecord activeExplorationEvent;
         public event Action<TemporarySlotTurnRecord> TemporarySlotStoryReady;
         // Raised when the shared combat action lock is released, so a controller created by a Scene reload can refresh.
         public event Action TemporaryCombatActionEnded;
@@ -79,6 +81,16 @@ namespace TxTRPG.Application.Players
         public TemporarySlotTurnRecord LastTemporarySlotTurn => lastSlotTurn;
         public TemporaryDiceTurnRecord PendingDiceResult => pendingDiceResult;
         public TemporaryDiceTurnRecord PendingDiceStory => pendingDiceStory;
+        // The event node in progress (or finished and not yet reported to the exploration). Session lifetime only.
+        public TemporaryExplorationEventRecord ActiveExplorationEvent => activeExplorationEvent;
+
+        public void SetActiveExplorationEvent(TemporaryExplorationEventRecord record) =>
+            activeExplorationEvent = record ?? throw new ArgumentNullException(nameof(record));
+
+        public void ClearActiveExplorationEvent(TemporaryExplorationEventRecord record)
+        {
+            if (ReferenceEquals(activeExplorationEvent, record)) activeExplorationEvent = null;
+        }
 
         public void PublishTemporaryDiceStory(TemporaryDiceTurnRecord record)
         {
@@ -122,6 +134,20 @@ namespace TxTRPG.Application.Players
             pendingTemporaryDiceAction = actionId;
             return true;
         }
+
+        // The same lock for a slot presentation outside combat (an exploration event slot check), so it never runs
+        // together with a combat action. TryBeginTemporaryCombatAction keeps requiring the current combat.
+        public bool TryBeginTemporarySlotPresentation(out long actionId)
+        {
+            actionId = 0;
+            if (pendingTemporaryDiceAction != 0) return false;
+            actionId = ++temporaryDiceActionSequence;
+            if (actionId == 0) actionId = ++temporaryDiceActionSequence;
+            pendingTemporaryDiceAction = actionId;
+            return true;
+        }
+
+        public bool IsTemporaryActionHeld(long actionId) => actionId != 0 && pendingTemporaryDiceAction == actionId;
 
         public void EndTemporaryCombatAction(long actionId)
         {
@@ -357,6 +383,15 @@ namespace TxTRPG.Application.Players
         public TemporarySlotMachineConfiguration TemporarySlotMachineConfigurationForEditor => temporarySlotMachineConfiguration;
         public TemporaryRuneConfiguration TemporaryRuneConfigurationForEditor => temporaryRuneConfiguration;
         public TemporaryFortuneCriticalConfiguration TemporaryFortuneCriticalConfigurationForEditor => temporaryFortuneCriticalConfiguration;
+
+        // Play Mode verification only: starts over with the given exploration (no combat, no event in progress). The
+        // exploration controller must be initialized again to bind to it.
+        public void ReplaceTemporaryExplorationForEditor(ExplorationRunState run)
+        {
+            temporaryExploration = run ?? throw new ArgumentNullException(nameof(run));
+            temporaryExplorationCombat = null;
+            activeExplorationEvent = null;
+        }
 #endif
 
         private static string NormalizeSaveFileName(string value)

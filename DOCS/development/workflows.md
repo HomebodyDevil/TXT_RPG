@@ -628,7 +628,7 @@ Scene 연결을 복구할 때에는 기존 메뉴의 Transform, 형제 순서, �
 - 관련 Edit Mode 테스트: `TxTRPG.UI.Tests.PanelBoundaryCalculatorTests`(Spacing 0·양수, 세로·가로 경계, 비활성·겹침, 보정), `TxTRPG.UI.Tests.UiShapeGeometryTests`(도형 판정, 카드 열거형 일치, 카드·공용 Graphic Mesh 동일), `TxTRPG.UI.Tests.BoundaryCommandButtonTests`(계층 분리, 경계 배치와 패널 불변, 표시·실행 상태, 포커스 해제·복귀, 모양 모드, 효과 Material), `TxTRPG.Application.Tests.TemporaryMenuIconTests`. 이 테스트들은 저장된 `BoundaryCommandButton.prefab`을 읽기만 하므로 `AssetWriting` 분류가 아닙니다. Prefab이 없으면 `EnsurePrefab`이 새로 만들므로 먼저 적용 메뉴로 Prefab을 만들어 둡니다. `MainSceneMenuInputPlayModeTests`는 경계선 버튼 기준으로 갱신했지만, Editor Play 시작 Scene 정책(AppScene) 때문에 Test Runner의 Play Mode 실행이 신뢰할 수 없으므로 위 Play 검증 메뉴로 대신 확인합니다.
 ## 점진 생성 탐험 검증
 
-- 설정 자산: `Assets/TxTRPG/Application/Configuration/ExplorationRunConfiguration.asset`에서 `Choice Count`, `Combat Weight`, `Recovery Upgrade Weight`를 설정합니다. 가중치 합계는 양수여야 합니다.
+- 설정 자산: `Assets/TxTRPG/Application/Configuration/ExplorationRunConfiguration.asset`에서 `Choice Count`, `Node Weights`(종류 ID와 가중치 목록: `combat` 40, `recovery-upgrade` 30, `event` 30)와 `Event Catalog`를 설정합니다. 종류 ID는 중복될 수 없고 가중치는 0 이상, 합계는 양수여야 합니다. 옛 `Combat Weight`·`Recovery Upgrade Weight` 형식의 자산은 열 때 목록으로 그대로 옮겨집니다. 이벤트 노드 적용·작성 절차는 아래 [탐험 이벤트 노드](#탐험-이벤트-노드)를 참고합니다.
 - Scene 적용: `Tools > TxT RPG > Application > Temporary > Apply Player Dice Roll Menu`는 탐험 설정이 없을 때만 기본 자산을 만들고, TMP_MainScene의 Canvas에 `ExplorationNodePanel`과 필수 참조를 선별 적용합니다. 기존 설정 자산 값은 덮어쓰지 않습니다.
 - 카드 Prefab: `Assets/TxTRPG/UI/Prefabs/ExplorationNodeChoiceCard.prefab`에서 Background, ShapeVisual/Artwork, ShapeBorder, Title, Description, StatusBadge, FocusVisual과 EffectOverlay를 설정합니다. 카드 루트는 Layout 전용이므로 이동·회전·확대 연출은 `MotionRoot`에 적용합니다.
 - 카드 배치: TMP_MainScene의 `ExplorationNodePanel/CardScroll/Viewport/Content`에 있는 `ExplorationNodeChoiceLayoutGroup`에서 Card Width, Card Height, 수평·수직 간격과 Padding을 설정합니다. 실제 Viewport 너비가 부족하면 카드 크기를 줄이지 않고 다음 행으로 넘기며, 높이가 부족하면 세로 ScrollRect를 사용합니다.
@@ -1129,3 +1129,36 @@ Play Mode 확인 절차는 다음과 같습니다.
 
 그다음 주사위 Apply 메뉴의 보호 조건(`TemporarySlotMachineIntegration.ThrowIfAppliedToMainScene`)을 확인합니다.
 
+
+## 탐험 이벤트 노드
+
+구조는 [탐험 이벤트 노드와 이벤트 시스템](../architecture/exploration-events.md), 작업 범위는 [지침서](../instructions/exploration-event-nodes.md)를 참고합니다.
+
+### 적용과 검증 메뉴
+
+- `Tools > TxT RPG > Application > Temporary > Apply Exploration Event Nodes`: Play Mode·컴파일·Prefab Stage가 아니고 열린 Scene에 미저장 변경이 없을 때 실행합니다(있으면 중단). 다음만 합니다. 다시 실행해도 안전하며, 바꿀 것이 없으면 `already matches; not saved`를 기록합니다.
+  1. `Application/Configuration/Events/ExplorationEventCatalog.asset`과 `Events/Test/`의 테스트 이벤트 5개를 없을 때만 만듭니다. 있는 자산은 덮어쓰지 않으며, 기존 카탈로그 목록도 바꾸지 않습니다.
+  2. `ExplorationRunConfiguration.asset`의 노드 가중치에 `event`가 없을 때만 40/30/30을 쓰고 이전 값을 로그에 남깁니다. `eventCatalog`가 비어 있으면 카탈로그를 연결합니다. 이미 `event`가 있으면 개발자가 조정한 가중치를 유지합니다.
+  3. `UI/Styles/ExplorationTreeDefaultStyle.asset`에 `event`(`이벤트`) 항목이 없으면 추가합니다.
+  4. TMP_MainScene의 `ExplorationNodePanel/EventView`가 없으면 만들고(`ExplorationEventViewBuilder`), `ExplorationRunController`와 같은 오브젝트에 `ExplorationEventController`가 없으면 추가한 뒤 빈 참조만 채우고 Scene을 저장합니다.
+  성공하면 `EXPLORATION_EVENT_NODES_APPLY` 로그와 `validation: passed`가 남습니다. 운영 Scene과 자산에는 2026-10-13에 적용·저장했습니다. 모든 작업 사본의 이전이 끝나면 이 메뉴는 삭제할 수 있습니다. 자산 생성·Scene 편집을 함께 하므로 Prefab 일괄 Rebuild에는 등록하지 않습니다.
+- `Tools > TxT RPG > Application > Temporary > Validate Exploration Event Nodes`: 변경 없이 카탈로그 빌드(구조 오류, 빠진 이벤트, 테스트 이벤트 5개), 설정 가중치·카탈로그 연결, 트리 스타일, Scene 참조(EventView 위치·비활성·템플릿·창 서비스, 컨트롤러 참조 4개, 장식 Graphic Raycast)를 검사합니다.
+- `Tools > TxT RPG > Application > Temporary > Validate Exploration Event Nodes In Play Mode`: AppScene에서 Play를 시작해 TMP_MainScene이 뜬 뒤 실행합니다. 세션 탐험을 각본 후보(이벤트 카드 2장 + 전투 카드)로 바꾸고, 테스트 이벤트 5개를 카드·선택지 버튼(포인터 클릭·Submit)으로 진행합니다. 4개 화면 크기, 모달 중 입력 무시, 슬롯 판정 중 가방 창·Scene 재로드(`MainScene_VisualProposal` 경유)·Reduce Motion, 다음 전투의 Reel·룬 반영, 체력 6에서 함정 패배를 확인하고 `EXPLORATION_EVENT_PLAY_VALIDATE ... result: PASSED`를 남깁니다. 아무것도 저장하지 않으며 Play를 끝내면 바뀐 세션은 사라집니다. 같은 메뉴의 `(Show Shrine)`은 체력 5로 제단 페이지를 띄워 두어 화면을 캡처할 때 씁니다. Play Mode에서 한국어 글자를 그리면 `NotoSansKR-Fallback.asset`의 동적 아틀라스가 커질 수 있으니, 의도한 변경이 아니면 확인 후 되돌립니다.
+- 관련 Edit Mode 테스트(클래스별로 실행, `AssetWriting` 아님): `TxTRPG.Gameplay.Tests.ExplorationRunStateTests`, `TxTRPG.Gameplay.Tests.ExplorationEventExecutionTests`, `TxTRPG.Application.Tests.ExplorationEventEffectTests`, `TxTRPG.Application.Tests.ExplorationEventAssetTests`(저장된 테스트 이벤트 자산이 필요하므로 적용 메뉴를 먼저 실행), `TxTRPG.Application.Tests.ExplorationEventControllerTests`, `TxTRPG.UI.Tests.ExplorationEventViewTests`.
+
+### 새 이벤트 만들기
+
+1. Project 창에서 `Create > TxT RPG > Exploration > Event`로 자산을 만듭니다(테스트용이 아니면 `Application/Configuration/Events/` 아래 적절한 폴더).
+2. `Event Id`(노드 기록에 저장되는 안정적인 ID, 예: `event.forest.spring`), `Title`, `Summary`(카드 설명), `Start Page Id`를 정합니다.
+3. `Pages`에 페이지를 추가하고 `Page Id`, `Title`(비우면 이벤트 제목), `Body`를 씁니다. `On Enter`에 들어올 때 적용할 효과를 드롭다운으로 추가합니다.
+4. `Interaction` 드롭다운에서 `Exploration Event Continue Definition`·`Choice Definition`·`Slot Check Definition`을 고르고, 각 분기의 `Effects`와 `Next`(페이지 ID 또는 `End`)를 채웁니다. 선택지에는 `Conditions`를, 슬롯 판정에는 `Has Minimum/Minimum`·`Has Maximum/Maximum` 구간(포함 경계, 위에서부터 처음 맞는 구간)과 `Fallback`을 둡니다.
+5. Inspector 맨 위의 오류(빨강)와 경고(노랑: 구간 겹침, 모든 선택지에 조건)를 확인합니다.
+6. `ExplorationEventCatalog.asset`의 `Entries`에 자산과 등장 가중치를 추가하고 `Validate Exploration Event Nodes`를 실행합니다.
+
+### 새 효과·조건 추가
+
+1. `Assets/TxTRPG/Application/Runtime/Exploration/Events/`에 `[Serializable]` 클래스를 추가하고 `IExplorationEventEffect`(또는 `IExplorationEventCondition`)를 구현합니다. 매개변수 없는 생성자와 `[SerializeField]` 필드만 두고 실행 상태를 필드에 저장하지 않습니다.
+2. `Validate`는 세션 없이 판단할 수 있는 정적 오류만 거부합니다. `Apply`는 `IExplorationEventContext.TryGet...`으로 기능을 얻고, 없으면 `ExplorationEventEffectResult.Skipped(사유)`를 돌려줍니다. 여러 상태를 바꾸면 실패 시 자기 변경을 되돌립니다. Story 문구는 `ExplorationEventStoryFormatter`에 추가합니다.
+3. 새 게임 시스템이 필요하면 Gameplay에 기능 계약을 두고 `IExplorationEventContext`에 `TryGet...`를 추가한 뒤 `ExplorationEventContext`(Application)에서 세션 상태에 연결합니다. 테스트용 문맥 구현도 함께 갱신합니다.
+4. 컴파일 후 Inspector 드롭다운에 새 클래스가 나타납니다. 클래스 이름·네임스페이스·어셈블리를 바꿀 때는 `[UnityEngine.Scripting.APIUpdating.MovedFrom]`을 붙여 기존 자산의 데이터를 보존합니다.
+5. `ExplorationEventEffectTests`와 같은 방식으로 Edit Mode 테스트를 추가합니다.

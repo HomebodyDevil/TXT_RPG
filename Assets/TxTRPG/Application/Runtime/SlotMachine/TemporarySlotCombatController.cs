@@ -308,6 +308,27 @@ namespace TxTRPG.Application.SlotMachine
                     SlotCombatStoryFormatter.MultiplierText(fortune.TotalMultiplier)));
         }
 
+        // A spin without rune allocation (an exploration event slot check): the rune table shows the stacked weights
+        // ("×N") both while spinning and at rest.
+        public static SlotSpinDisplay CreateSpinDisplay(SlotSpinResult spin, FortuneCriticalResult fortune, IReadOnlyList<SlotRuneLineDisplay> weightLines)
+        {
+            if (fortune == null) throw new ArgumentNullException(nameof(fortune));
+            if (weightLines == null) throw new ArgumentNullException(nameof(weightLines));
+            var reels = new SlotReelStopDisplay[spin.Reels.Count];
+            for (var i = 0; i < reels.Length; i++)
+            {
+                var stop = spin.Reels[i];
+                var values = new int[stop.Strip.Count];
+                for (var j = 0; j < values.Length; j++) values[j] = stop.Strip[j].Value;
+                var multiplier = i < fortune.Reels.Count ? fortune.Reels[i].ReelMultiplier : 1;
+                reels[i] = new SlotReelStopDisplay(stop.ReelId, stop.StopIndex, values, SlotCombatStoryFormatter.MultiplierText(multiplier));
+            }
+            return new SlotSpinDisplay(reels, spin.PaylineTotal,
+                CreateSummary(SlotCombatStoryFormatter.SpinningTotalValue, weightLines),
+                CreateSummary(SlotCombatStoryFormatter.TotalValue(fortune.FinalTotal), weightLines,
+                    SlotCombatStoryFormatter.MultiplierText(fortune.TotalMultiplier)));
+        }
+
         public static SlotSummaryDisplay CreateSummary(string totalValue, IReadOnlyList<SlotRuneLineDisplay> lines) =>
             CreateSummary(totalValue, lines, string.Empty);
 
@@ -342,6 +363,9 @@ namespace TxTRPG.Application.SlotMachine
             slotPanel.SetReels(reels);
             if (presenting != null || slotPanel.IsSpinning) return;
             if (shownRunId != null && IsCurrentNode(shownRunId, shownNodeId)) return;
+            // An exploration event slot check of the current node keeps its result on the panel, like a combat turn.
+            var eventRecord = sessionHost.ActiveExplorationEvent;
+            if (eventRecord?.SlotCheck != null && IsCurrentNode(eventRecord.RunId, eventRecord.NodeId)) return;
             shownRunId = shownNodeId = null;
             slotPanel.SetSummary(CreateSummary(SlotCombatStoryFormatter.IdleTotalValue, WeightLines(runes)));
         }
@@ -378,7 +402,7 @@ namespace TxTRPG.Application.SlotMachine
             sessionHost.TemporaryExploration.ActiveNodeId == nodeId;
 
         // Rune line rows before a spin: effect name and stacked weight ("×1").
-        private static SlotRuneLineDisplay[] WeightLines(TemporaryRuneState runes)
+        public static SlotRuneLineDisplay[] WeightLines(TemporaryRuneState runes)
         {
             var lines = new SlotRuneLineDisplay[runes.Loadout.LineCount];
             var index = 0;

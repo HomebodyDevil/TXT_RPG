@@ -8,9 +8,9 @@
 
 | 타입 | 책임 |
 | --- | --- |
-| `ExplorationNodeGenerator` | 선택지 수와 종류별 정수 가중치로 후보 종류를 독립 추첨합니다. |
-| `ExplorationRunState` | 노드 ID, 부모, 형제 순서, 깊이, 상태, 완료 이유와 탐험 체력을 관리합니다. |
-| `ExplorationRunConfiguration` | 기본 선택지 3개와 전투/회복·강화 50/50 가중치를 제공합니다. |
+| `ExplorationNodeGenerator` | 선택지 수와 종류별 정수 가중치로 후보 종류를 독립 추첨하고, 종류에 등록된 `IExplorationNodeContentPicker`가 있으면 내용 ID(이벤트 노드의 이벤트 ID)를 추첨합니다. 피커가 실패한 칸은 그 종류를 빼고 다시 추첨합니다. |
+| `ExplorationRunState` | 노드 ID, 부모, 형제 순서, 깊이, 종류, 내용 ID(`ContentId`, 내용이 없는 종류는 빈 문자열), 상태, 완료 이유와 탐험 체력을 관리합니다. |
+| `ExplorationRunConfiguration` | 선택지 수(3), 종류별 가중치 목록 `nodeWeights`(전투 40, 회복·강화 30, 이벤트 30)와 이벤트 카탈로그를 제공합니다. 옛 고정 필드 `combatWeight`·`recoveryUpgradeWeight`는 읽을 때 목록으로 그대로 옮깁니다. |
 | `ExplorationRunController` | 선택 UI, 처리기 연결, Story 기록, 포커스와 Scene 재바인딩을 담당합니다. |
 | `TemporaryDiceRollMenuController` | 전투 노드에서만 행동을 허용하고 탐험의 동일한 `HealthState`를 사용합니다. |
 
@@ -27,7 +27,7 @@ Root(Completed)
 └─ Choice Set 2를 선택 노드의 자식으로 생성
 ```
 
-후보 집합 ID가 다른 선택 요청, 활성 Node ID가 다른 완료 요청과 중복 완료는 거부합니다. 미선택 노드는 방문할 수 없으며 실패나 완료로 취급하지 않습니다. 회복·강화 노드는 `PlaceholderAcknowledged`, 전투 승리는 `CombatVictory`, 패배는 `CombatDefeat` 이유를 기록합니다.
+후보 집합 ID가 다른 선택 요청, 활성 Node ID가 다른 완료 요청과 중복 완료는 거부합니다. 미선택 노드는 방문할 수 없으며 실패나 완료로 취급하지 않습니다. 회복·강화 노드는 `PlaceholderAcknowledged`, 전투 승리는 `CombatVictory`, 패배는 `CombatDefeat`, 이벤트 노드는 `EventCompleted`·`EventUnavailable`(이벤트를 불러오지 못함, 탐험 계속)·`EventDefeat`(체력 0, 탐험 실패) 이유를 기록합니다.
 
 예를 들어 세 번 진행하면 선택 경로는 `node-1 → node-4 → node-7`처럼 부모 연결을 유지합니다. 각 선택 집합에서 선택하지 않은 두 형제는 `Unchosen`으로 남으며 자식을 갖지 않습니다.
 
@@ -39,7 +39,7 @@ Root(Completed)
 
 ## 현재 범위
 
-현재는 전투와 효과 없는 회복·강화 처리기만 등록되어 있습니다. 전체 트리 시각화, 되돌아가기, 최대 깊이, 엔딩, 보상, 실제 강화 효과와 디스크 저장·이어하기는 구현하지 않았습니다.
+현재는 전투, 효과 없는 회복·강화, 이벤트 처리기가 연결되어 있습니다. 이벤트 노드는 `IExplorationEventController`(`ExplorationEventController`)로 처리하며 구조는 [탐험 이벤트 노드와 이벤트 시스템](exploration-events.md)에 있습니다. 처리기 레지스트리로의 전면 재구성은 하지 않았으며 `ExplorationRunController`는 종류별 분기를 유지합니다. 전체 트리 시각화, 되돌아가기, 최대 깊이, 엔딩, 보상, 실제 강화 효과와 디스크 저장·이어하기는 구현하지 않았습니다.
 
 ![탐험 노드 선택 실행 화면](../images/exploration-node-selection-runtime.png)
 

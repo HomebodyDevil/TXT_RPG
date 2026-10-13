@@ -19,6 +19,9 @@ MonoBehaviour:
   - typeId: recovery-upgrade
     displayName: "\uD68C\uBCF5\xB7\uAC15\uD654"
     sprite: {fileID: 21300000, guid: 78e378677c8e38549a6d5cb5326595b1, type: 3}
+  - typeId: event
+    displayName: "\uC774\uBCA4\uD2B8"
+    sprite: {fileID: 0}
   fallbackIcon: {fileID: 21300000, guid: f21b4d527bc339243ac4d6cb92ca1fe8, type: 3}
   lineSprite: {fileID: 0}
   nodeSize: {x: 92, y: 124}

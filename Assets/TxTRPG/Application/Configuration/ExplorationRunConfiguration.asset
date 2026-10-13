@@ -13,5 +13,13 @@ MonoBehaviour:
   m_Name: ExplorationRunConfiguration
   m_EditorClassIdentifier: TxTRPG.Application::TxTRPG.Application.Exploration.ExplorationRunConfiguration
   choiceCount: 3
-  combatWeight: 50
-  recoveryUpgradeWeight: 50
+  nodeWeights:
+  - typeId: combat
+    weight: 40
+  - typeId: recovery-upgrade
+    weight: 30
+  - typeId: event
+    weight: 30
+  eventCatalog: {fileID: 11400000, guid: 42b964b078da0944191b7314864c01f4, type: 2}
+  combatWeight: -1
+  recoveryUpgradeWeight: -1

@@ -13,13 +13,14 @@ namespace TxTRPG.Gameplay.Exploration
         public const string Root = "root";
         public const string Combat = "combat";
         public const string RecoveryUpgrade = "recovery-upgrade";
+        public const string Event = "event";
     }
 
     public sealed class ExplorationNodeRecord
     {
-        internal ExplorationNodeRecord(string id, string parentId, string choiceSetId, int siblingIndex, int depth, string typeId, ExplorationNodeStatus status)
+        internal ExplorationNodeRecord(string id, string parentId, string choiceSetId, int siblingIndex, int depth, string typeId, ExplorationNodeStatus status, string contentId = "")
         {
-            Id = id; ParentId = parentId; ChoiceSetId = choiceSetId; SiblingIndex = siblingIndex; Depth = depth; TypeId = typeId; Status = status;
+            Id = id; ParentId = parentId; ChoiceSetId = choiceSetId; SiblingIndex = siblingIndex; Depth = depth; TypeId = typeId; Status = status; ContentId = contentId ?? string.Empty;
         }
         public string Id { get; }
         public string ParentId { get; }
@@ -27,6 +28,9 @@ namespace TxTRPG.Gameplay.Exploration
         public int SiblingIndex { get; }
         public int Depth { get; }
         public string TypeId { get; }
+        // What the node contains, decided when the candidate is created (the event ID of an event node). Empty for node
+        // types without a content picker.
+        public string ContentId { get; }
         public ExplorationNodeStatus Status { get; internal set; }
         public string CompletionReason { get; internal set; } = string.Empty;
     }
@@ -45,40 +49,150 @@ namespace TxTRPG.Gameplay.Exploration
 
     public interface IExplorationRandomSource { int Next(int exclusiveMaximum); }
 
+    public readonly struct ExplorationNodeCandidate
+    {
+        public ExplorationNodeCandidate(string typeId, string contentId)
+        {
+            TypeId = typeId ?? throw new ArgumentNullException(nameof(typeId));
+            ContentId = contentId ?? string.Empty;
+        }
+        public string TypeId { get; }
+        public string ContentId { get; }
+    }
+
+    public sealed class ExplorationNodeContentRequest
+    {
+        public ExplorationNodeContentRequest(string typeId, int depth, IReadOnlyList<string> pickedContentIds)
+        {
+            TypeId = typeId; Depth = depth; PickedContentIds = pickedContentIds ?? Array.Empty<string>();
+        }
+        public string TypeId { get; }
+        public int Depth { get; }
+        // Content IDs already picked for the same choice set, in slot order.
+        public IReadOnlyList<string> PickedContentIds { get; }
+    }
+
+    // Decides the content of a node type when its candidate is created (for example which event an event node runs).
+    public interface IExplorationNodeContentPicker
+    {
+        bool TryPick(ExplorationNodeContentRequest request, IExplorationRandomSource random, out string contentId);
+    }
+
+    public sealed class ExplorationNodeContentWeight
+    {
+        public ExplorationNodeContentWeight(string contentId, int weight)
+        {
+            if (string.IsNullOrWhiteSpace(contentId)) throw new ArgumentException("Content ID is required.", nameof(contentId));
+            if (weight < 0) throw new ArgumentOutOfRangeException(nameof(weight));
+            ContentId = contentId.Trim(); Weight = weight;
+        }
+        public string ContentId { get; }
+        public int Weight { get; }
+    }
+
+    // Weighted draw that avoids content already picked for the same choice set; repeats are allowed only when nothing else
+    // with weight remains. Fails when no entry has weight.
+    public sealed class WeightedExplorationContentPicker : IExplorationNodeContentPicker
+    {
+        private readonly ExplorationNodeContentWeight[] entries;
+
+        public WeightedExplorationContentPicker(IEnumerable<ExplorationNodeContentWeight> source)
+        {
+            entries = source?.Where(item => item != null && item.Weight > 0).ToArray() ?? throw new ArgumentNullException(nameof(source));
+        }
+
+        public int Count => entries.Length;
+
+        public bool TryPick(ExplorationNodeContentRequest request, IExplorationRandomSource random, out string contentId)
+        {
+            if (random == null) throw new ArgumentNullException(nameof(random));
+            var picked = new HashSet<string>(request?.PickedContentIds ?? Array.Empty<string>(), StringComparer.Ordinal);
+            var fresh = entries.Where(item => !picked.Contains(item.ContentId)).ToArray();
+            return TryDraw(fresh.Length > 0 ? fresh : entries, random, out contentId);
+        }
+
+        private static bool TryDraw(ExplorationNodeContentWeight[] pool, IExplorationRandomSource random, out string contentId)
+        {
+            contentId = string.Empty;
+            var total = pool.Sum(item => item.Weight);
+            if (total <= 0) return false;
+            var value = random.Next(total);
+            if (value < 0 || value >= total) throw new InvalidOperationException("Exploration random source returned an out-of-range value.");
+            var cumulative = 0;
+            foreach (var item in pool)
+            {
+                cumulative += item.Weight;
+                if (value < cumulative) { contentId = item.ContentId; return true; }
+            }
+            return false;
+        }
+    }
+
     public sealed class ExplorationNodeGenerator
     {
         private readonly int choiceCount;
         private readonly ExplorationNodeWeight[] weights;
-        private readonly int totalWeight;
         private readonly IExplorationRandomSource random;
+        private readonly Dictionary<string, IExplorationNodeContentPicker> pickers = new(StringComparer.Ordinal);
 
-        public ExplorationNodeGenerator(int choiceCount, IEnumerable<ExplorationNodeWeight> weights, IExplorationRandomSource random)
+        public ExplorationNodeGenerator(int choiceCount, IEnumerable<ExplorationNodeWeight> weights, IExplorationRandomSource random,
+            IReadOnlyDictionary<string, IExplorationNodeContentPicker> contentPickers = null)
         {
             if (choiceCount < 1) throw new ArgumentOutOfRangeException(nameof(choiceCount));
             this.weights = weights?.ToArray() ?? throw new ArgumentNullException(nameof(weights));
             if (this.weights.Length == 0 || this.weights.Any(item => item.Weight < 0)) throw new ArgumentException("At least one valid node weight is required.", nameof(weights));
             if (this.weights.GroupBy(item => item.TypeId, StringComparer.Ordinal).Any(group => group.Count() > 1)) throw new ArgumentException("Node type IDs must be unique.", nameof(weights));
-            totalWeight = this.weights.Sum(item => item.Weight);
-            if (totalWeight <= 0) throw new ArgumentException("The total node weight must be positive.", nameof(weights));
+            if (this.weights.Sum(item => item.Weight) <= 0) throw new ArgumentException("The total node weight must be positive.", nameof(weights));
             this.choiceCount = choiceCount;
             this.random = random ?? throw new ArgumentNullException(nameof(random));
+            if (contentPickers != null)
+                foreach (var pair in contentPickers) if (pair.Value != null) pickers[pair.Key] = pair.Value;
         }
 
-        public IReadOnlyList<string> Generate()
+        // Type IDs only, for callers that do not use node content.
+        public IReadOnlyList<string> Generate() => GenerateCandidates(0).Select(item => item.TypeId).ToArray();
+
+        // Draws a type per slot, then its content when the type has a picker. When the picker fails, that type is excluded
+        // and the slot is drawn again from the remaining types; when no type with weight remains, this throws.
+        public IReadOnlyList<ExplorationNodeCandidate> GenerateCandidates(int depth)
         {
-            var result = new string[choiceCount];
+            var result = new ExplorationNodeCandidate[choiceCount];
+            var pickedContent = new List<string>();
             for (var i = 0; i < result.Length; i++)
             {
-                var value = random.Next(totalWeight);
-                if (value < 0 || value >= totalWeight) throw new InvalidOperationException("Exploration random source returned an out-of-range value.");
-                var cumulative = 0;
-                for (var j = 0; j < weights.Length; j++)
+                var excluded = new HashSet<string>(StringComparer.Ordinal);
+                while (true)
                 {
-                    cumulative += weights[j].Weight;
-                    if (value < cumulative) { result[i] = weights[j].TypeId; break; }
+                    var typeId = DrawType(excluded);
+                    if (!pickers.TryGetValue(typeId, out var picker)) { result[i] = new ExplorationNodeCandidate(typeId, string.Empty); break; }
+                    if (picker.TryPick(new ExplorationNodeContentRequest(typeId, depth, pickedContent.ToArray()), random, out var contentId) &&
+                        !string.IsNullOrWhiteSpace(contentId))
+                    {
+                        pickedContent.Add(contentId.Trim());
+                        result[i] = new ExplorationNodeCandidate(typeId, contentId.Trim());
+                        break;
+                    }
+                    excluded.Add(typeId);
                 }
             }
             return result;
+        }
+
+        private string DrawType(HashSet<string> excluded)
+        {
+            var total = 0;
+            foreach (var item in weights) if (!excluded.Contains(item.TypeId)) total += item.Weight;
+            if (total <= 0) throw new InvalidOperationException("No exploration node type with weight can provide a candidate.");
+            var value = random.Next(total);
+            if (value < 0 || value >= total) throw new InvalidOperationException("Exploration random source returned an out-of-range value.");
+            var cumulative = 0;
+            foreach (var item in weights)
+            {
+                if (excluded.Contains(item.TypeId)) continue;
+                cumulative += item.Weight;
+                if (value < cumulative) return item.TypeId;
+            }
+            throw new InvalidOperationException("Exploration node weights are inconsistent.");
         }
     }
 
@@ -134,8 +248,8 @@ namespace TxTRPG.Gameplay.Exploration
 
         private void GenerateChoices(string parentId, int depth)
         {
-            var types = generator.Generate(); var choiceSetId = $"choice-{nextChoiceSetNumber++}";
-            for (var i = 0; i < types.Count; i++) Add(new ExplorationNodeRecord($"node-{nextNodeNumber++}", parentId, choiceSetId, i, depth, types[i], ExplorationNodeStatus.Available));
+            var candidates = generator.GenerateCandidates(depth); var choiceSetId = $"choice-{nextChoiceSetNumber++}";
+            for (var i = 0; i < candidates.Count; i++) Add(new ExplorationNodeRecord($"node-{nextNodeNumber++}", parentId, choiceSetId, i, depth, candidates[i].TypeId, ExplorationNodeStatus.Available, candidates[i].ContentId));
             CurrentChoiceSetId = choiceSetId;
         }
 

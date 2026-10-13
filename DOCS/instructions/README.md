@@ -6,6 +6,7 @@
 
 | 문서 | 설명 |
 | --- | --- |
+| [탐험 이벤트 노드와 확장 가능한 이벤트 시스템](exploration-event-nodes.md) | 노드 종류 `event`를 추가해 후보 생성 때 이벤트를 확정하고, ScriptableObject 이벤트(페이지·선택지·슬롯 구간 판정·조건·효과)와 상태 기계로 체력·Reel·Fortune·룬 변화를 처리하며 테스트 이벤트 5개와 노드 패널 안 이벤트 화면을 구현합니다. 아이템·룬 강화·합성은 확장 지점만 둡니다. |
 | [슬롯머신 Fortune Critical](slot-fortune-critical.md) | Reel별(ID별 설정)·합계에 독립적으로 정수 배수를 판정해 곱셈 중첩·유효 배수 상한을 적용하고, 등록형 가중치 함수(기본 기하 r=0.7)로 배수 분포를 설정하며 실행 중 변경 API와 배수 표시·Story 기록을 구현합니다. 분포 함수 비교 분석을 부록으로 담습니다. |
 | [SlotMachinePanel 스킨과 Payline 이미지](slot-machine-panel-skin.md) | 패널 이미지 묶음을 `SlotMachinePanelSkin` 자산과 카탈로그로 분리해 개발자가 고르고 실행 중 교체하며, Payline 이미지가 없으면 코드로 그립니다. 플레이어 선택은 설계만 둡니다. |
 | [SlotMachinePanel 외형 개편과 Reel 회전 연출](slot-machine-panel-visual-and-spin-motion.md) | 목표 이미지처럼 Reel 기계·합계·룬 줄 표로 패널을 바꾸고, 설정 자산으로 easing(기본 InOutElastic)·Reel별 시차와 편차·고속 잔상 연출을 조정하게 합니다. |

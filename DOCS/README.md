@@ -22,6 +22,7 @@
 | [캐릭터 상태 UI 설계](architecture/character-status-ui.md) | 선택적 상태 Element, HealthBarPanel과 외형·상태 Binder 분리를 설명합니다. |
 | [개발 및 검증 절차](development/workflows.md) | 프리팹 재생성, 데모 미리보기, 테스트와 변경 시 확인 사항을 설명합니다. |
 | [점진 생성 탐험 노드 트리](architecture/exploration-node-tree.md) | 선택·미선택 기록, 지연 후보 생성, 탐험 체력·전투 연결과 반응형 노드 선택 카드 구조를 설명합니다. |
+| [탐험 이벤트 노드와 이벤트 시스템](architecture/exploration-events.md) | 이벤트 노드의 내용 ID, 자산(페이지·선택지·슬롯 구간·조건·효과) 조합, 실행 상태 기계, 효과 추가 절차, 슬롯 판정과 Scene 재로드, 노드 패널 안 이벤트 화면을 설명합니다. |
 | [임시 적 전투](architecture/temporary-combat.md) | 격리된 플레이어·적 체력, 플레이어 행동 적용, 적 행동 예고와 Scene 수명 경계를 설명합니다. |
 | [슬롯머신과 룬 기반 전투 행동](architecture/slot-machine-and-runes.md) | Reel·Payline 총합, 룬 줄 가중치 분배, 세션 수명의 수락 결과, 2D Reel 패널과 연출, 주사위 보류 상태와 확장 지점을 설명합니다. |
 | [경계선 명령 버튼](architecture/boundary-command-button.md) | 두 패널 경계선 위 오버레이 버튼(전투 "행동")의 구성, 공용 UI 도형, 모양·입력 영역 설정과 효과 Material 확장 지점을 설명합니다. |

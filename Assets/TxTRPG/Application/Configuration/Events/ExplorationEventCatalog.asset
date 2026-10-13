@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 19918534f85b67d46b57648657159871, type: 3}
+  m_Name: ExplorationEventCatalog
+  m_EditorClassIdentifier: TxTRPG.Application::TxTRPG.Application.Exploration.Events.ExplorationEventCatalog
+  entries:
+  - definition: {fileID: 11400000, guid: 605efc8b0fc5bf940bc56db8e9f5fcdd, type: 2}
+    weight: 3
+  - definition: {fileID: 11400000, guid: e87cd757ea470ca44a4f033811ff996a, type: 2}
+    weight: 3
+  - definition: {fileID: 11400000, guid: f8dfbe8e3a840b3418b7ca18baf64312, type: 2}
+    weight: 3
+  - definition: {fileID: 11400000, guid: 89a9221d209029d428e963413ca840de, type: 2}
+    weight: 3
+  - definition: {fileID: 11400000, guid: e4632ec96a37f7b46b23916cd534fd66, type: 2}
+    weight: 1

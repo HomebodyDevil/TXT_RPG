@@ -208,7 +208,7 @@ namespace TxTRPG.Application.SlotMachine
     // Session-lifetime Fortune Critical rules, copied from the configuration once. Runes, items or buffs change them
     // through the Try methods: each validates the candidate, keeps the previous rules on failure, and raises Changed once
     // on success. Setting the same rules again does not raise Changed. An accepted spin keeps its own result.
-    public sealed class TemporaryFortuneCriticalState
+    public sealed class TemporaryFortuneCriticalState : IFortuneCriticalRuleStore
     {
         public TemporaryFortuneCriticalState(FortuneCriticalRules rules)
         {
