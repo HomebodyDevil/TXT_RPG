@@ -173,7 +173,10 @@ namespace TxTRPG.Application.Editor
         }
         private static void SetMinimum(FlexibleLayoutItem item, float minimum) => item.Configure(item.SizeMode,item.Weight,item.FixedSize,minimum,item.MaximumSize);
         private static string GetPath(Transform t) => t.parent==null?t.name:GetPath(t.parent)+"/"+t.name;
-        private static void RemoveSize() { if(mainRect!=null) { mainRect.offsetMin=savedOffsetMin; mainRect.offsetMax=savedOffsetMax; } selectedIndex.SetValue(view,previousIndex); group.GetType().GetMethod("RemoveCustomSize").Invoke(group,new object[]{customIndex}); phase=0; }
+        private static void RemoveSize() { if(mainRect!=null) { mainRect.offsetMin=savedOffsetMin; mainRect.offsetMax=savedOffsetMax; } selectedIndex.SetValue(view,previousIndex);
+            // RemoveCustomSize takes the total index (built-in sizes first), not the custom-list index.
+            var builtin = (int)group.GetType().GetMethod("GetBuiltinCount").Invoke(group,null);
+            group.GetType().GetMethod("RemoveCustomSize").Invoke(group,new object[]{builtin+customIndex}); phase=0; }
         private static void PlayChanged(PlayModeStateChange state) { if(state==PlayModeStateChange.ExitingPlayMode) Finish(); }
         private static void Finish()
         {
