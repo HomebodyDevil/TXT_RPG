@@ -26,6 +26,19 @@ flowchart LR
 | `CharacterAppearanceDefinition` | 캐릭터 ID와 외형·포즈·표정 조합을 실제 Sprite에 연결합니다. |
 | `CharacterEffectPlayer` | 선택적으로 연결된 Animator의 효과 상태를 재생하고 초기화합니다. |
 
+## TMP_MainScene의 부모 배분
+
+`TMP_MainScene`의 `Main_FlexibleLayoutPanel/ContentLayer/RightPanel/ContentLayer`는 세로 축 `FlexibleContentLayoutGroup`(Spacing 12)이며 네 항목을 다음과 같이 배분합니다.
+
+| 순서 | 항목 | 배분 | 1920×1080 측정 높이 |
+| --- | --- | --- | --- |
+| 1 | `HealthBarPanel` | `FlexibleLayoutItem` Fixed 50, Minimum 50 (Weight 0.15는 되돌리기용으로 보존) | 50 |
+| 2 | `CharacterDisplayPanel` | 유일한 Weighted 항목(Weight 2). 남는 높이를 모두 받음 | 722 |
+| 3 | `ActionGridPanel`(Actions) | `ActionGridContentFitHeight`가 Cell과 Gap으로 계산한 Fixed 높이. 공급 중단 시 `FlexibleLayoutItem` Fixed 100, Minimum 180 | 124 |
+| 4 | `GameMenuPanel` | Fixed 100 | 100 |
+
+따라서 Actions의 Gap이나 Header 표시가 바뀌면 `CharacterDisplayPanel`만 반대 방향으로 크기가 변합니다. `HealthBarPanel`은 자체 높이 계산 API가 없으므로, 적용 직전 1920×1080 Game View에서 측정한 높이 49.95를 반올림한 값으로 고정했습니다. 좁은 화면에서는 `ResponsiveMainScreen`이 `RightPanel`을 Fixed 640으로 바꾸며, 이 경우에도 Actions·HealthBar·GameMenu 높이는 유지되고 `CharacterDisplayPanel`만 줄어듭니다(390×844에서 306). 844×390 Play Mode 측정에서도 다른 세 항목은 유지되고 `CharacterDisplayPanel`이 32로 줄었으며, 최소 크기 합이 부족해 비례 축소되는 상황은 발생하지 않았습니다. 계산은 [ActionGridPanel 설계](action-grid-panel.md#cell-기준-높이-공급)를 참조합니다.
+
 ## Prefab 계층
 
 `Assets/TxTRPG/UI/Prefabs/CharacterDisplayPanel.prefab`은 다음 계층을 사용합니다.

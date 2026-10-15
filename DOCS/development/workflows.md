@@ -716,6 +716,8 @@ Bag은 `InventoryWindowPage`의 `Grid Settings / Presentation`에서 선택합�
    FAIL이면 Console 원인을 확인하고 검증 완료로 처리하지 않습니다. 테스트 오브젝트는 종료 시 정리합니다.
 ```
 
+> 주의: Actions에 `ActionGridContentFitHeight`를 적용한 뒤에는 `Apply Balanced To Main Scene`을 다시 실행하지 않습니다. 이 메뉴는 Actions의 `FlexibleLayoutItem` Minimum을 184로 저장하며, 구성 요소가 활성인 동안 그 값은 무시되지만 대체 경로 값이 달라집니다. [Actions Cell 기준 높이](#actions-cell-기준-높이와-characterdisplaypanel-재배분)를 참조합니다.
+
 `TemporaryActionsGridVerification`은 일회 적용·측정 도구이며 영구 생성기나 자동 재생성이 아닙니다. 모든 작업 사본에서 적용을 마친 뒤 제거할 수 있습니다. `TemporaryActionsScrollVerification`은 Test Runner가 Domain Reload 후 작업을 복구하지 못하는 환경의 검증 어댑터입니다. 정상 Play Mode Test Runner에서도 같은 테스트를 실행할 수 있습니다.
 
 변경 전후 측정은 [before JSON](verification/actions-grid-before.json)과 [after JSON](verification/actions-grid-after.json)에 있습니다. 이미지 경로는 `Assets/Screenshots/actions-{before,after}-{desktop,phone-portrait,phone-landscape,tablet,ultrawide}.png`입니다. 실제 게임 진행을 바꾸지 않고 비교하려고 노드 선택 Overlay의 표시만 임시로 숨깁니다. 이는 운영 노드 선택 화면 자체의 가독성 검증을 의미하지 않습니다.
@@ -813,6 +815,46 @@ Edit Mode Test Runner에서 `ActionGridSingleRowTests` 17개, `ActionGridPanelTe
 최종 화면 전환·입력 검증 후 Console Error는 0건입니다. 코드·문서·asmdef의 `git diff --check`는 통과했고, Unity가 생성한 YAML의 빈 필드 뒤 공백은 별도로 확인했습니다. Scene 저장에는 Story 스크롤바의 자동 계산 Size 값이 함께 직렬화되었지만, Story 코드나 부모 배분 정책은 변경하지 않았습니다.
 
 Windows64와 Android Player 관리 스크립트는 각각 39개 어셈블리로 컴파일되었습니다. iOS 지원 모듈은 설치되어 있지 않아 컴파일하지 않았습니다. 물리 장치의 마우스·키보드·컨트롤러·터치·트랙패드, 실제 safe area, iOS, IL2CPP 링크와 최종 Player 패키지/스토어 빌드는 미검증입니다. 작은 화면에서 기존 Story·상태·하단 메뉴의 잘림은 이번 Actions/Header 범위에서 수정하지 않았습니다. 추가 수동 Tools 적용 단계는 없습니다.
+
+## Actions Cell 기준 높이와 CharacterDisplayPanel 재배분
+
+`ActionGridContentFitHeight`는 SingleRow Actions의 높이를 `Body Margin + Header 예약 + Cell + 2 × Gap + 가로 Scrollbar 예약`으로 부모 `FlexibleContentLayoutGroup`에 공급합니다. 같은 부모의 `HealthBarPanel`을 Fixed로 바꾸면 남는 높이는 `CharacterDisplayPanel`만 받습니다. 설계는 [ActionGridPanel 설계](../architecture/action-grid-panel.md#cell-기준-높이-공급)와 [CharacterDisplayPanel 부모 배분](../architecture/character-display-panel.md#tmp_mainscene의-부모-배분)에 있습니다.
+
+`TMP_MainScene`에는 2026-10-15에 적용·저장했으며 사용자가 추가로 실행할 Tools 단계는 없습니다. 아래는 이후 실제 Main Scene이나 다른 작업 사본에 같은 정책을 적용하는 절차입니다. 메뉴는 Scene 경로나 오브젝트 이름이 아니라 선택한 ActionGridPanel을 대상으로 합니다.
+
+| 메뉴 (`Tools > TxT RPG > UI > Actions > Temporary`) | 동작 | 재실행 |
+| --- | --- | --- |
+| `Apply Content-Fit Height To Selected Actions` | 선택한 ActionGridPanel에 구성 요소를 추가(`panel` 참조, Gap 12)하고, 같은 부모에서 `HealthBarPanel`을 가진 유일한 형제가 Weighted이면 현재 높이를 반올림해 Fixed·Minimum으로 저장합니다. Weight는 보존합니다. Undo를 기록하고 Prefab 인스턴스 Override만 남기며 Scene은 저장하지 않습니다. | 안전합니다. 두 번째 실행은 `already applied`를 출력하고 변경하지 않습니다. 기존 Gap과 이미 Fixed인 HealthBarPanel은 건드리지 않습니다. |
+| `Measure Content-Fit Height Of Selected Actions` | 패널·Viewport 높이, 첫 활성 Cell의 위·아래 간격, 공급 상태, 형제 높이를 `ACTIONS_FIT:`로 출력합니다. Edit·Play Mode 모두 가능합니다. | 읽기 전용입니다. |
+| `Measure Content-Fit Height Across Resolutions (Play Mode)` | Game View를 1920×1080, 2560×1080, 1024×768, 390×844, 390×844 safe-area 모사, 844×390으로 차례로 바꾸며 `ACTIONS_FIT_SWEEP:`로 측정합니다. 임시 Game View 크기와 이전 선택, safe-area 모사 Offset은 종료 시 복원합니다. | 읽기 전용입니다. 이전 측정이 끝난 뒤 실행합니다. |
+
+적용 조건은 Edit Mode, 컴파일 완료, Prefab Stage 닫힘, 정확히 하나의 ActionGridPanel 선택, 부모에 `FlexibleContentLayoutGroup`, SingleRow입니다. 실제 변경이 필요할 때는 Scene에 저장되지 않은 변경이 없어야 합니다. HealthBarPanel을 고정해야 하면 루트 Canvas가 1920×1080이어야 합니다. 조건이 맞지 않으면 아무것도 바꾸지 않고 `ACTIONS_FIT_APPLY: FAIL` 이유를 출력합니다.
+
+```text
+1. Play Mode를 종료하고 컴파일이 끝날 때까지 기다립니다. Prefab Stage가 열려 있으면 닫습니다.
+2. 대상 Scene을 열고 미저장 변경은 의도대로 먼저 저장합니다. 도구는 미저장 변경을 버리지 않고 중단합니다.
+3. Game View 해상도를 1920x1080으로 둡니다(HealthBarPanel 높이 측정 기준).
+4. Hierarchy에서 Actions의 ActionGridPanel 오브젝트 하나만 선택합니다.
+5. Tools > TxT RPG > UI > Actions > Temporary > Apply Content-Fit Height To Selected Actions를 실행합니다.
+   확인 대화상자는 없습니다. Console에서 ACTIONS_FIT_APPLY: PASS와 HealthBarPanel 고정값을 확인합니다.
+   FAIL이면 이유를 해결하기 전에는 다음 단계로 진행하지 않습니다.
+6. 같은 선택으로 Measure Content-Fit Height Of Selected Actions를 실행합니다.
+   Gap 12, Cell 64, Header 비활성, Scrollbar Hidden이면 panel=124 viewport=88 state=Supplying이어야 합니다.
+7. Scene은 Dirty 상태로 남습니다. git diff로 구성 요소 추가와 HealthBarPanel FlexibleLayoutItem Override만
+   의도한 변경인지 확인한 뒤 File > Save로 저장합니다. 되돌리려면 저장 전에 Edit > Undo를 사용합니다.
+8. Assets/Scenes/AppScene.unity에서 Play Mode를 시작하고 TMP_MainScene 진입을 기다립니다.
+   ActionGridPanel을 선택하고 Measure Content-Fit Height Across Resolutions (Play Mode)를 실행합니다.
+   ACTIONS_FIT_SWEEP: PASS completed까지 기다리고 각 화면에서 panel=124, cellTopGap=12, cellBottomGap=12를 확인합니다.
+```
+
+`ActionGridContentFitHeightTemporaryMenu`(`Assets/TxTRPG/UI/Editor/`)는 임시 도구이며 공용 Prefab Rebuild 일괄 작업에 등록하지 않습니다. 실제 Main Scene 구성 후 정식 작성 절차로 대체되면 제거합니다. 구성 요소를 비활성화하거나 제거하면 Actions는 작성된 `FlexibleLayoutItem` 값으로 돌아가므로 그 값은 지우지 않습니다.
+
+### 적용 검증 기록 (2026-10-15)
+
+- Edit Mode: `ActionGridContentFitHeightTests` 11개, `ActionGridSingleRowTests` 17개, `FlexibleLayoutPanelTests`의 `AssetWriting`이 아닌 메서드 11개가 통과했습니다. REST `test_run` 필터는 클래스나 메서드 하나만 받으므로 `AssetWriting` 메서드를 제외하고 이름으로 개별 실행했습니다.
+- Edit Mode 1920×1080 적용 전후: HealthBarPanel 49.95 → 50, CharacterDisplayPanel 666.05 → 722, Actions 180 → 124(Viewport 144 → 88), GameMenuPanel 100 → 100. Gap 0·24·12에서 Actions 100·148·124, Character 746·698·722였고, Header 표시 시 Actions 190, 숨김 시 124였습니다.
+- Play Mode(AppScene 시작): 여섯 화면 모두 Actions 124, Viewport 88, Cell 64, Cell 위·아래 간격 12/12, HealthBarPanel 50, GameMenuPanel 100이었습니다. CharacterDisplayPanel은 1920×1080·2560×1080에서 722, 1024×768에서 410, 390×844(safe-area 모사 포함)에서 306, 844×390에서 32였습니다.
+- 마우스·키보드·게임패드·터치 입력 경로는 변경하지 않았으며 이번 작업에서 실제 입력으로 재확인하지 않았습니다. 실제 기기 safe area, Standalone·Android·iOS Player 스크립트 컴파일은 수행하지 않았습니다.
 
 ## 탐험 카드 초기 무선택 적용과 검증
 

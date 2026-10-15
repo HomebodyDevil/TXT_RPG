@@ -1355,10 +1355,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 689679881c5d81d48966eaae5544e679, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TxTRPG.UI::TxTRPG.UI.FlexibleLayoutItem
-  sizeMode: 0
+  sizeMode: 1
   weight: 0.15
-  fixedSize: 100
-  minimumSize: 0
+  fixedSize: 50
+  minimumSize: 50
   maximumSize: 0
 --- !u!1 &273503799
 GameObject:
@@ -1439,7 +1439,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 245895500473356421, guid: a8df080f67f80eb4fa0b14d4cb60df66, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 35.95343
+      value: 36
       objectReference: {fileID: 0}
     - target: {fileID: 245895500473356421, guid: a8df080f67f80eb4fa0b14d4cb60df66, type: 3}
       propertyPath: m_AnchoredPosition.x
@@ -6927,7 +6927,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2753455743794963697, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 144
+      value: 88
       objectReference: {fileID: 0}
     - target: {fileID: 2753455743794963697, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       propertyPath: m_AnchoredPosition.y
@@ -7175,6 +7175,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 2762015896075174702, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1323868607}
+    - targetCorrespondingSourceObject: {fileID: 2762015896075174702, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1323868608}
     - targetCorrespondingSourceObject: {fileID: 8196803812808442673, guid: 949c1e50d6be96a4b8a1e794af8c8cce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1152172704}
@@ -7206,6 +7209,20 @@ MonoBehaviour:
   itemCatalog: {fileID: 11400000, guid: caca08c5c58a838489eeaecf51cc6043, type: 2}
   sessionHost: {fileID: 0}
   configureGridPolicy: 1
+--- !u!114 &1323868608
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 355548793}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a521dae4c9085be46909783c3bb9ed0a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TxTRPG.UI::TxTRPG.UI.ActionGridContentFitHeight
+  panel: {fileID: 1323868606}
+  gap: 12
 --- !u!1 &1335545754
 GameObject:
   m_ObjectHideFlags: 0

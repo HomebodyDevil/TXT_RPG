@@ -221,7 +221,7 @@ Bag의 설정 원본은 `GridContentLayoutSettings.presentation`입니다. `Inve
 
 ## 단일 행과 Header 영역
 
-`ActionGridDisplaySettings.flow`는 `Grid`(0)와 `SingleRow`(1)를 선택합니다. 프리셋과 별개이며, 기존 자산의 기본값은 Grid입니다. 운영 TMP_MainScene의 Actions만 Balanced + SingleRow이고 Header GameObject는 비활성입니다. 기존 부모 FlexibleLayout 배분은 변경하지 않습니다.
+`ActionGridDisplaySettings.flow`는 `Grid`(0)와 `SingleRow`(1)를 선택합니다. 프리셋과 별개이며, 기존 자산의 기본값은 Grid입니다. 운영 TMP_MainScene의 Actions만 Balanced + SingleRow이고 Header GameObject는 비활성입니다. Actions의 부모 배분 높이는 아래 [Cell 기준 높이 공급](#cell-기준-높이-공급)에서 결정합니다.
 
 | 책임 | 구현 |
 | --- | --- |
@@ -236,6 +236,34 @@ SingleRow는 표시되는 빈 슬롯까지 N개를 모두 한 행에 배치합�
 필요 너비는 `Padding.horizontal + N × CellWidth + max(0,N−1) × Gap`입니다. 넘치면 왼쪽 정렬과 기본 간격을 유지합니다. 들어가는 경우 기본 `ConditionalCenterOrEnds`는 `N <= centerThreshold`에서 중앙 묶음 정렬이고, 그보다 많으면 양 끝 정렬입니다. K 기본값은 4이며 0 이상으로 정규화됩니다. 양 끝 정렬은 `Gap = (ViewportWidth − Padding.horizontal − N × CellWidth)/(N−1)`이며 상한을 적용하지 않습니다. N=1은 중앙, N=0은 나눗셈 없이 처리합니다. `FixedGapGroup`은 Left/Center/Right, `AlwaysEnds`는 개수와 무관한 양 끝 정책을 제공합니다. 세로 배치는 Top/Center/Bottom이며 Actions 기본값은 Center입니다.
 
 Content는 왼쪽 상단 고정 앵커·피벗을 사용하고, 너비는 Viewport와 필요 너비 중 큰 값이며 높이는 Viewport와 같습니다. 높이가 부족해도 줄바꿈하거나 세로 스크롤로 바꾸지 않으며 Inspector에서 부족 상태를 표시합니다. 최초 준비 완료와 fit→overflow 전환은 왼쪽에서 시작합니다. overflow 중 데이터·화면·Header 변경은 기존 픽셀 이동량을 보존하고 범위에 맞게 제한합니다. overflow→fit 및 Grid 전환은 관성을 정지합니다. Grid 복원용 좌표·축·바인딩은 작성 시 저장된 상태를 사용하므로 저장/재로드 후에도 복원할 수 있습니다.
+
+### Cell 기준 높이 공급
+
+`ActionGridContentFitHeight`(`Assets/TxTRPG/UI/Runtime/ActionGridContentFitHeight.cs`)는 ActionGridPanel 루트에 붙는 선택 구성 요소입니다. `IFlexibleLayoutSizeSource`를 구현하며, 부모 `FlexibleContentLayoutGroup`이 계산할 때 Actions의 높이를 `Fixed` 요청(Fixed·Minimum·Maximum 모두 H)으로 공급합니다. 높이 계산만 담당하며 Entry·선택·스크롤 책임은 ActionGridPanel과 ActionGridSurfaceLayout에 그대로 있습니다.
+
+```text
+CellHeight = SafeSize(활성 Preset.targetCellSize, Manual이면 singleRow.targetCellSize).y
+H = bodyMargins.top + HeaderReservation + (CellHeight + 2 × Gap) + 가로 Scrollbar 예약 + bodyMargins.bottom
+```
+
+| 항목 | 내용 |
+| --- | --- |
+| 직렬화 필드 | `panel`(같은 오브젝트의 ActionGridPanel, Scene 검색으로 보완하지 않음), `gap`(Inspector `Gap`, 기본 12) |
+| Gap 정규화 | NaN·Infinity는 12, 음수는 0, 상한 4096 (`NormalizeGap`) |
+| 가로 Scrollbar 예약 | `ActionGridSurfaceLayout.RowScrollbarReservation`. Always, 또는 Auto이면서 가로 overflow일 때 `scrollbarHeight + scrollbarGap`, 그 밖에는 0 |
+| 공급 조건 | 구성 요소와 패널이 활성, `SurfaceLayout` 참조 있음, `IsSingleRow`, 부모 주축이 Vertical, `ActionGridSurfaceLayout.ManagesBodyLayout` |
+| 공급 중단 | `State`가 `Disabled`·`MissingReference`·`GridFlow`·`HorizontalAxis`·`UnmanagedBodyLayout`이면 `false`를 반환하고 부모는 `FlexibleLayoutItem` 값(TMP_MainScene Actions는 Fixed 100, Minimum 180)을 사용 |
+| 런타임 API | `SetGap(float)`, `Gap`, `ResolvedHeight`, `State`, `IsSupplying`, `TryResolveHeight`, 순수 정적 `CalculateHeight`, `Initialize(panel, gap)` |
+| Inspector | `ActionGridContentFitHeightEditor`가 공급 상태, 계산된 H, 실제 높이와 공급하지 않는 이유를 읽기 전용으로 표시. 부모 축소로 실제 높이가 H보다 작으면 안내 표시 |
+
+- 높이는 패널 자신의 높이에 의존하지 않습니다. Auto Scrollbar 판정은 너비로 결정되는 `IsRowOverflowing`만 사용하므로 순환하지 않습니다. 표시 Cell이 0개여도 CellHeight를 예약합니다.
+- `manageHeaderLayout`이 꺼진 인스턴스는 Body Margin을 소유하지 않으므로 공급을 중단하고 경고를 한 번 출력합니다. 작성된 `Scroll View` Offset을 Margin으로 추정하지 않습니다. 참조 누락도 Editor와 Development Build에서 경고를 한 번 출력하고 공급을 중단합니다.
+- 공급 중이면 `ApplyLayoutCore`의 SingleRow 분기가 재사용 사본 Padding의 `top`·`bottom`만 `floor(Gap)`으로 바꿉니다. `left`·`right`, 간격, 정렬, overflow 판정과 Preset·수동 Padding 원본은 그대로입니다. Viewport 높이가 `Cell + 2 × Gap`이므로 세로 정렬 Center에서는 정수가 아닌 Gap도 정확히 Gap만큼 떨어집니다. Top·Bottom은 정수 Gap에서 같은 결과입니다. Grid flow나 공급 중단 시에는 원래 Padding을 사용합니다.
+- ActionGridPanel은 `OnEnable`에서 등록된 구성 요소(`AttachContentFitHeight`)에 매 레이아웃 적용 후 `NotifyPanelLayoutApplied`를 호출합니다. 공급 여부가 바뀌거나 H가 마지막으로 부모에 보고한 값과 0.5 이상 다르면 부모를 `LayoutRebuilder.MarkLayoutForRebuild`로 표시합니다. 레이아웃 재계산 중이면 `Canvas.willRenderCanvases`로 한 번 미룹니다. `OnValidate`는 값 정규화 후 `EditorValidationRefreshPump`로 지연 갱신만 예약합니다. 매 프레임 계산이나 Scene 검색은 없습니다.
+- 높이가 부족하면 부모의 기존 `ShrinkBelowMinimum` 규칙으로 비례 축소됩니다. 새 클리핑이나 스크롤은 추가하지 않습니다.
+- RectTransform 크기만 결정하며 `ActionGridCell`의 `Border`·`ContentRoot` 같은 시각 효과 계층에는 접근하지 않습니다.
+
+현재 TMP_MainScene Actions에는 Gap 12로 적용되어 있습니다. Balanced Cell 64, Body Margin 18/18, Header 비활성, 가로 Scrollbar Hidden이므로 H = 124, Viewport = 88이며 Cell과 Viewport 위·아래 간격은 각 12입니다. 같은 부모의 `HealthBarPanel`은 Fixed 50, `CharacterDisplayPanel`은 유일한 Weighted 항목으로 남는 높이를 모두 받습니다([CharacterDisplayPanel 부모 배분](character-display-panel.md#tmp_mainscene의-부모-배분)). 적용·측정 메뉴는 [작업 절차](../development/workflows.md#actions-cell-기준-높이와-characterdisplaypanel-재배분)를 참조합니다.
 
 가로 Scrollbar는 별도 `HorizontalScrollbar` 참조를 사용합니다. Hidden 기본값은 바·간격·반대쪽 영역을 예약하지 않습니다. Auto/Always에서는 아래쪽에 설정한 높이와 간격을 예약합니다. 기존 `ConfigurableScrollbarController`는 SingleRow 동안 비활성화하고 Grid로 돌아갈 때 복원합니다. 다른 세로 스크롤 패널의 정책은 바꾸지 않습니다. Unity `ScrollRect`의 가로 전용 입력 처리가 세로 휠과 가로 트랙패드 델타를 처리하며 마우스/터치 드래그도 동일한 UI 이벤트 경로를 사용합니다.
 

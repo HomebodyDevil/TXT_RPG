@@ -30,6 +30,15 @@ namespace TxTRPG.UI
         public Scrollbar HorizontalScrollbar => horizontalBar;
         public bool IsRowActive => rowActive;
         public Vector2 RowAvailableSize => body != null ? body.rect.size : viewport.rect.size;
+        // Body margins are owned only while the header layout is managed; ApplyHeader treats a missing value as 18.
+        public bool ManagesBodyLayout => manageHeaderLayout;
+        public float BodyMarginTop => Mathf.Clamp(bodyMargins?.top ?? 18, 0, 4096);
+        public float BodyMarginBottom => Mathf.Clamp(bodyMargins?.bottom ?? 18, 0, 4096);
+        public bool IsRowScrollbarVisible(ActionGridSingleRowSettings settings, bool overflow) =>
+            horizontalBar != null && settings != null && (settings.scrollbarVisibility == ScrollbarVisibilityMode.Always ||
+                (settings.scrollbarVisibility == ScrollbarVisibilityMode.Auto && overflow));
+        public float RowScrollbarReservation(ActionGridSingleRowSettings settings, bool overflow) =>
+            IsRowScrollbarVisible(settings, overflow) ? settings.scrollbarHeight + settings.scrollbarGap : 0;
 
         [Serializable] private struct RectState
         {
@@ -113,8 +122,7 @@ namespace TxTRPG.UI
         }
         public void ConfigureRowViewport(ActionGridSingleRowSettings settings, bool overflow)
         {
-            var visible = horizontalBar != null && (settings.scrollbarVisibility == ScrollbarVisibilityMode.Always ||
-                (settings.scrollbarVisibility == ScrollbarVisibilityMode.Auto && overflow));
+            var visible = IsRowScrollbarVisible(settings, overflow);
             if (scrollRect.horizontalScrollbar != (visible ? horizontalBar : null)) scrollRect.horizontalScrollbar = visible ? horizontalBar : null;
             if (horizontalBar != null)
             {
@@ -123,7 +131,7 @@ namespace TxTRPG.UI
                 rect.anchorMin = Vector2.zero; rect.anchorMax = new Vector2(1,0); rect.pivot = new Vector2(.5f,0);
                 rect.anchoredPosition = Vector2.zero; rect.sizeDelta = new Vector2(0, settings.scrollbarHeight);
             }
-            var min = new Vector2(0, visible ? settings.scrollbarHeight + settings.scrollbarGap : 0);
+            var min = new Vector2(0, RowScrollbarReservation(settings, overflow));
             if (viewport.offsetMin != min) viewport.offsetMin = min;
             if (viewport.offsetMax != Vector2.zero) viewport.offsetMax = Vector2.zero;
         }

@@ -95,6 +95,16 @@ BackgroundLayer, ContentLayer와 ForegroundLayer에는 각각 CanvasGroup이 있
 3. 남은 공간을 `Weighted` 항목의 Weight 비율로 배분합니다.
 4. Maximum Size에 도달한 항목의 남은 몫은 다른 가중치 항목에 재분배합니다.
 
+### 크기 공급자
+
+`FlexibleContentLayoutGroup`은 자식 오브젝트에 `IFlexibleLayoutSizeSource`를 구현한 구성 요소가 있으면 계산할 때마다 `TryGetSizeRequest(현재 주축, out request)`를 조회합니다. 우선순위는 다음과 같습니다.
+
+1. 활성(`Behaviour.isActiveAndEnabled`) 공급자가 `true`를 반환하면 그 `FlexibleLayoutSizeRequest`를 사용합니다.
+2. 공급자가 없거나, 비활성이거나, `false`를 반환하면 `FlexibleLayoutItem` 값을 사용합니다.
+3. `FlexibleLayoutItem`도 없으면 기본 `Weighted` 1을 사용합니다.
+
+공급자 요청도 같은 `CalculateSizes`와 Overflow 정책을 거칩니다. 공급자는 직렬화된 `FlexibleLayoutItem` 값을 바꾸지 않으므로, 공급을 멈추면 작성된 값이 대체 경로로 다시 사용됩니다. 공급자 목록은 `items`와 함께 재사용 목록에 수집합니다. 공급자가 없는 기존 화면의 계산 결과는 변하지 않습니다. 공급 값이 바뀌면 공급자 쪽에서 부모 레이아웃 재계산을 요청해야 합니다. 현재 구현은 [`ActionGridContentFitHeight`](action-grid-panel.md#cell-기준-높이-공급)뿐입니다. `FlexibleLayoutPanel`의 최상위 계산은 공급자를 조회하지 않습니다.
+
 Weight는 전체 패널 크기의 고정 백분율이 아니라 Padding, Spacing, 고정 크기와 최소·최대 크기를 제외한 배분 가능 공간의 비율입니다.
 
 최소 크기의 합이 가용 공간보다 클 때 `ShrinkBelowMinimum`은 모든 항목을 비례 축소하여 부모 안에 유지합니다. `Clip`은 최소 크기를 보존하고 부모 영역 밖으로 넘칠 수 있게 합니다. 일반 게임 UI에서는 `ShrinkBelowMinimum`을 기본값으로 사용하며, 최소 터치 영역이나 가독성을 반드시 보존해야 하는 화면에서는 ScrollRect와 `Clip`의 조합을 검토합니다.

@@ -6,6 +6,7 @@
 
 | 문서 | 설명 |
 | --- | --- |
+| [Actions 영역의 Cell 기준 높이와 CharacterDisplayPanel 재배분](action-grid-content-fit-height.md) | Actions 높이를 Cell 높이와 Cell·Viewport 사이의 상하 `Gap`(기본 12)으로 계산해 부모 레이아웃에 공급하고, HealthBarPanel을 고정하여 남는 높이를 CharacterDisplayPanel만 받게 합니다. 선택한 Actions에 적용하는 재사용 가능한 메뉴를 둡니다. |
 | [탐험 이벤트 노드와 확장 가능한 이벤트 시스템](exploration-event-nodes.md) | 노드 종류 `event`를 추가해 후보 생성 때 이벤트를 확정하고, ScriptableObject 이벤트(페이지·선택지·슬롯 구간 판정·조건·효과)와 상태 기계로 체력·Reel·Fortune·룬 변화를 처리하며 테스트 이벤트 5개와 노드 패널 안 이벤트 화면을 구현합니다. 아이템·룬 강화·합성은 확장 지점만 둡니다. |
 | [슬롯머신 Fortune Critical](slot-fortune-critical.md) | Reel별(ID별 설정)·합계에 독립적으로 정수 배수를 판정해 곱셈 중첩·유효 배수 상한을 적용하고, 등록형 가중치 함수(기본 기하 r=0.7)로 배수 분포를 설정하며 실행 중 변경 API와 배수 표시·Story 기록을 구현합니다. 분포 함수 비교 분석을 부록으로 담습니다. |
 | [SlotMachinePanel 스킨과 Payline 이미지](slot-machine-panel-skin.md) | 패널 이미지 묶음을 `SlotMachinePanelSkin` 자산과 카탈로그로 분리해 개발자가 고르고 실행 중 교체하며, Payline 이미지가 없으면 코드로 그립니다. 플레이어 선택은 설계만 둡니다. |

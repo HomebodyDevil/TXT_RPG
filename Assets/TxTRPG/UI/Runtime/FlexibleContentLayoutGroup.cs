@@ -17,6 +17,7 @@ namespace TxTRPG.UI
         [SerializeField] private bool includeInactiveChildren;
 
         private readonly List<FlexibleLayoutItem> items = new();
+        private readonly List<IFlexibleLayoutSizeSource> sizeSources = new();
 
         public FlexibleLayoutAxis CurrentAxis => ResolveAxis(rectTransform.rect.width);
         public FlexibleLayoutAxis FixedAxis => fixedAxis;
@@ -102,6 +103,7 @@ namespace TxTRPG.UI
         {
             rectChildren.Clear();
             items.Clear();
+            sizeSources.Clear();
             for (var i = 0; i < rectTransform.childCount; i++)
             {
                 if (rectTransform.GetChild(i) is not RectTransform child ||
@@ -109,12 +111,14 @@ namespace TxTRPG.UI
                     continue;
                 rectChildren.Add(child);
                 items.Add(child.GetComponent<FlexibleLayoutItem>());
+                sizeSources.Add(child.TryGetComponent<IFlexibleLayoutSizeSource>(out var source) ? source : null);
             }
         }
 
         private void SetInputForAxis(int axis)
         {
-            var mainAxis = CurrentAxis == FlexibleLayoutAxis.Horizontal ? 0 : 1;
+            var currentAxis = CurrentAxis;
+            var mainAxis = currentAxis == FlexibleLayoutAxis.Horizontal ? 0 : 1;
             if (axis == mainAxis)
             {
                 var inset = axis == 0 ? padding.horizontal : padding.vertical;
@@ -122,7 +126,7 @@ namespace TxTRPG.UI
                 var preferred = minimum;
                 for (var i = 0; i < rectChildren.Count; i++)
                 {
-                    var request = GetRequest(i);
+                    var request = GetRequest(i, currentAxis);
                     minimum += request.MinimumSize;
                     preferred += request.Mode == FlexibleLayoutSizeMode.Fixed
                         ? Mathf.Max(request.FixedSize, request.MinimumSize) : request.MinimumSize;
@@ -145,7 +149,8 @@ namespace TxTRPG.UI
         private void ArrangeAxis(int axis)
         {
             CollectContentChildren();
-            var mainAxis = CurrentAxis == FlexibleLayoutAxis.Horizontal ? 0 : 1;
+            var currentAxis = CurrentAxis;
+            var mainAxis = currentAxis == FlexibleLayoutAxis.Horizontal ? 0 : 1;
             if (axis != mainAxis)
             {
                 var start = axis == 0 ? padding.left : padding.top;
@@ -157,7 +162,7 @@ namespace TxTRPG.UI
 
             var available = rectTransform.rect.size[axis] - (axis == 0 ? padding.horizontal : padding.vertical);
             var requests = new FlexibleLayoutSizeRequest[rectChildren.Count];
-            for (var i = 0; i < requests.Length; i++) requests[i] = GetRequest(i);
+            for (var i = 0; i < requests.Length; i++) requests[i] = GetRequest(i, currentAxis);
             var sizes = FlexibleLayoutPanel.CalculateSizes(available, spacing, overflow, requests);
             var required = Mathf.Max(0, sizes.Length - 1) * spacing;
             for (var i = 0; i < sizes.Length; i++) required += sizes[i];
@@ -169,8 +174,12 @@ namespace TxTRPG.UI
             }
         }
 
-        private FlexibleLayoutSizeRequest GetRequest(int index)
+        private FlexibleLayoutSizeRequest GetRequest(int index, FlexibleLayoutAxis currentAxis)
         {
+            var source = index < sizeSources.Count ? sizeSources[index] : null;
+            if (source != null && (source is not Behaviour behaviour || (behaviour != null && behaviour.isActiveAndEnabled)) &&
+                source.TryGetSizeRequest(currentAxis, out var supplied))
+                return supplied;
             var item = index < items.Count ? items[index] : null;
             return item == null
                 ? new FlexibleLayoutSizeRequest(FlexibleLayoutSizeMode.Weighted, 1f, 0f, 0f, 0f)

@@ -32,6 +32,21 @@ namespace TxTRPG.UI
         public bool IsSingleRow => displaySettings?.flow == ActionGridFlow.SingleRow;
         public void BindSurfaceLayout(ActionGridSurfaceLayout surface) => surfaceLayout = surface;
 
+        // Optional height source registered by ActionGridContentFitHeight on enable; it is never searched for.
+        private ActionGridContentFitHeight contentFitHeight;
+        private RectOffset rowPaddingOverride;
+        private bool rowOverflowing;
+        public bool IsRowOverflowing => IsSingleRow && rowOverflowing;
+        public float RowCellHeight => ActionGridDisplayPreset.SafeSize(
+            displaySettings?.ActivePreset?.targetCellSize ?? displaySettings?.singleRow?.targetCellSize ?? Vector2.one * 64,
+            Vector2.one * 64).y;
+        internal ActionGridSingleRowSettings RowSettings => displaySettings?.singleRow;
+        internal void AttachContentFitHeight(ActionGridContentFitHeight source) => contentFitHeight = source;
+        internal void DetachContentFitHeight(ActionGridContentFitHeight source)
+        {
+            if (ReferenceEquals(contentFitHeight, source)) contentFitHeight = null;
+        }
+
         [SerializeField] private ActionGridDisplaySettings displaySettings = new();
         private ActionGridLayoutResult currentLayout;
         public ActionGridDisplayMode DisplayMode => displaySettings?.mode ?? ActionGridDisplayMode.Manual;
@@ -683,6 +698,19 @@ namespace TxTRPG.UI
             applyingLayout = true;
             try { ApplyLayoutCore(); }
             finally { applyingLayout = false; }
+            if (contentFitHeight != null) contentFitHeight.NotifyPanelLayoutApplied();
+        }
+
+        // Replaces only the vertical padding in a reused copy; the preset or manual padding is never modified.
+        private RectOffset ResolveRowPaddingOverride(RectOffset source, float gap)
+        {
+            rowPaddingOverride ??= new RectOffset();
+            var vertical = Mathf.FloorToInt(gap);
+            rowPaddingOverride.left = source?.left ?? 0;
+            rowPaddingOverride.right = source?.right ?? 0;
+            rowPaddingOverride.top = vertical;
+            rowPaddingOverride.bottom = vertical;
+            return rowPaddingOverride;
         }
 
         private void FlushDeferredLayout()
@@ -708,9 +736,12 @@ namespace TxTRPG.UI
             {
                 surfaceLayout.EnterRow();
                 var options = displaySettings.singleRow;
+                if (contentFitHeight != null && contentFitHeight.SuppliesRowGap(this))
+                    effectivePadding = ResolveRowPaddingOverride(effectivePadding, contentFitHeight.Gap);
                 // Hidden bars reserve no area, including any legacy symmetric side reservation.
                 var row = ActionGridSingleRowCalculator.Calculate(surfaceLayout.RowAvailableSize, GetDisplayedCount(),
                     preset?.targetCellSize ?? options.targetCellSize, preset?.spacing.x ?? spacing.x, effectivePadding, options);
+                rowOverflowing = row.Overflow;
                 surfaceLayout.ConfigureRowViewport(options, row.Overflow);
                 row = ActionGridSingleRowCalculator.Calculate(viewport.rect.size, GetDisplayedCount(),
                     preset?.targetCellSize ?? options.targetCellSize, preset?.spacing.x ?? spacing.x, effectivePadding, options);
