@@ -56,7 +56,9 @@ namespace TxTRPG.Application.Editor
             }
             catch(Exception e){Finish();Debug.LogError("TREE_CAPTURE: FAIL "+e);}
         }
-        private static void Remove(){if(main!=null){main.offsetMin=min;main.offsetMax=max;}if(custom>=0){selected.SetValue(view,previous);group.GetType().GetMethod("RemoveCustomSize").Invoke(group,new object[]{custom});custom=-1;}}
+        private static void Remove(){if(main!=null){main.offsetMin=min;main.offsetMax=max;}if(custom>=0){selected.SetValue(view,previous);
+            // RemoveCustomSize takes the total index (built-in sizes first), not the custom-list index.
+            var builtin=(int)group.GetType().GetMethod("GetBuiltinCount").Invoke(group,null);group.GetType().GetMethod("RemoveCustomSize").Invoke(group,new object[]{builtin+custom});custom=-1;}}
         private static void Changed(PlayModeStateChange state){if(state==PlayModeStateChange.ExitingPlayMode)Finish();}
         private static void Finish(){Remove();EditorApplication.update-=Tick;EditorApplication.playModeStateChanged-=Changed;group=null;}
     }
