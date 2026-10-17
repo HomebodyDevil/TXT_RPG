@@ -19,7 +19,7 @@ using UnityEngine.UI;
 
 namespace TxTRPG.Application.Editor
 {
-    // Play Mode verification for the boundary combat action button. Start Play Mode from AppScene with a fresh
+    // Play Mode verification for the boundary combat action button. Start Play Mode from AppScene and load TMP_MainScene (Tools/TxT RPG/Application/Play Mode/Load TMP_MainScene) with a fresh
     // exploration run (awaiting a node choice). Results are logged with the COMBAT_ACTION_VALIDATE prefix.
     public static class CombatActionBoundaryValidation
     {

@@ -6,6 +6,7 @@ using TxTRPG.Application.Players;
 using TxTRPG.Application.SlotMachine;
 using TxTRPG.Application.Exploration;
 using TxTRPG.Gameplay.Exploration;
+using TxTRPG.SceneTransition;
 using TxTRPG.UI;
 using TxTRPG.UI.Windows;
 using TxTRPG.UI.Exploration;
@@ -24,8 +25,7 @@ namespace TxTRPG.UI.Tests
         [UnityTest]
         public IEnumerator AppScene_MenuButtonsOpenInventoryAndEmptySystemModal()
         {
-            SceneManager.LoadScene(AppScenePath, LoadSceneMode.Single);
-            yield return WaitForScene(MainScenePath, 600);
+            yield return LoadMainSceneThroughAppScene();
 
             var mainScene = SceneManager.GetSceneByPath(MainScenePath);
             Assert.That(mainScene.IsValid() && mainScene.isLoaded, Is.True);
@@ -107,8 +107,7 @@ namespace TxTRPG.UI.Tests
         [UnityTest]
         public IEnumerator AppScene_TemporaryCombatAction_UpdatesTemporaryStateAndPreservesOperatingHealth()
         {
-            SceneManager.LoadScene(AppScenePath, LoadSceneMode.Single);
-            yield return WaitForScene(MainScenePath, 600);
+            yield return LoadMainSceneThroughAppScene();
             var mainScene = SceneManager.GetSceneByPath(MainScenePath);
             var components = mainScene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<Component>(true)).ToArray();
             var menu = components.OfType<GameMenuPanel>().Single();
@@ -166,6 +165,26 @@ namespace TxTRPG.UI.Tests
             Assert.That(texts.Count(text => text.Contains("[룬]")), Is.GreaterThanOrEqualTo(4));
             Assert.That(texts.Any(text => text.Contains("[적 행동]")), Is.True);
         }
+        // AppScene loads its initial content scene (Candidate_MainScene) first; the menu and combat checks need
+        // TMP_MainScene, so switch to it through the same SceneTransitionService that keeps AppRoot alive.
+        private static IEnumerator LoadMainSceneThroughAppScene()
+        {
+            SceneManager.LoadScene(AppScenePath, LoadSceneMode.Single);
+            for (var frame = 0; frame < 600 && AppSceneRoot.Instance == null; frame++) yield return null;
+            var root = AppSceneRoot.Instance;
+            Assert.That(root, Is.Not.Null, "AppSceneRoot did not start.");
+            Assert.That(root.SceneTransitions, Is.Not.Null);
+            yield return WaitForScene(root.InitialContentScenePath, 600);
+            var transitions = root.SceneTransitions;
+            for (var frame = 0; frame < 600 && transitions.IsTransitioning; frame++) yield return null;
+            Assert.That(transitions.IsTransitioning, Is.False, "The initial content transition did not finish.");
+            var load = transitions.LoadContentSceneAsync(MainScenePath);
+            for (var frame = 0; frame < 600 && !load.IsCompleted; frame++) yield return null;
+            Assert.That(load.IsCompleted, Is.True, $"Switching to '{MainScenePath}' did not finish.");
+            Assert.That(load.IsFaulted, Is.False, load.Exception?.ToString());
+            yield return WaitForScene(MainScenePath, 1);
+        }
+
         private static IEnumerator WaitForScene(string path, int frameLimit)
         {
             for (var frame = 0; frame < frameLimit; frame++)

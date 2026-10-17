@@ -398,7 +398,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: TxTRPG.SceneTransition::TxTRPG.SceneTransition.AppSceneRoot
   sceneTransitionService: {fileID: 17285924536818846}
   loadInitialContentOnStart: 1
-  initialContentScenePath: Assets/Scenes/TMP_MainScene.unity
+  initialContentScenePath: Assets/Scenes/Candidate_MainScene.unity
 --- !u!114 &3027649738454536906
 MonoBehaviour:
   m_ObjectHideFlags: 0

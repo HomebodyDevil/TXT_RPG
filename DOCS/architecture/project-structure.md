@@ -12,6 +12,8 @@
 | UI | uGUI와 TextMeshPro |
 | 테스트 | Unity Test Framework 1.6.0 |
 | 기본 빌드 씬 | `Assets/Scenes/AppScene.unity` |
+| 초기 콘텐츠 씬 | `Assets/Scenes/Candidate_MainScene.unity`(AppScene이 처음 로드, `MainArea`의 1:3:1 영역과 `OverlayLayer`의 하단 슬롯 Reel 독 `SlotReelDock`이 있음) |
+| 게임 화면 씬 | `Assets/Scenes/TMP_MainScene.unity`(Story·Actions·Character·적·슬롯머신 등 게임 패널, Play 중 `Tools > TxT RPG > Application > Play Mode > Load TMP_MainScene`으로 전환) |
 
 `StoryTextPanel`은 특정 씬에 직접 연결되어 있지 않습니다. 필요한 씬의 Canvas 아래에 프리팹을 배치하여 사용합니다.
 
@@ -40,6 +42,7 @@ TxT-RPG/
 ├── Assets/
 │   ├── Scenes/
 │   │   ├── AppScene.unity
+│   │   ├── Candidate_MainScene.unity
 │   │   └── TMP_MainScene.unity
 │   ├── TextMesh Pro/
 │   │   └── Resources, Fonts, Shaders, Sprites
@@ -310,10 +313,6 @@ flowchart TD
 - `Assets/TxTRPG/Application/Runtime/Items`: ?ъ슜 洹쒖튃, Presenter? ?댁쁺 李??섏씠吏?낅땲??
 - `Assets/TxTRPG/UI/Runtime/Windows`: ?섏씠吏 ID 湲곕컲 硫붾돱, 紐⑤떖 ?몄뒪?몄? 李??섎챸 愿由ъ엯?덈떎.
 
-## UI 시각 제안 자산
-
-`Assets/TxTRPG/UI/VisualProposals/MainScene/`에는 운영용 공용 프리팹과 분리된 Main Scene 제안 스타일만 둡니다. `Assets/Scenes/MainScene_VisualProposal.unity`는 원본 `TMP_MainScene.unity`의 프리팹 연결을 유지하는 비교용 Scene이며, 실행·재생성 절차는 `DOCS/development/main-scene-visual-proposal.md`에 기록합니다.
-
 ### 임시 주사위 메뉴
 
 `Assets/TxTRPG/Application/Runtime/Dice/`는 (보류 상태인) PlayerSession 수명의 임시 주사위 보유 상태와 TMP_MainScene 표시 어댑터와 로컬라이제이션 가능한 효과 표시명 경계를 포함합니다. 영구 Gameplay Dice 규칙은 계속 `Assets/TxTRPG/Gameplay/Runtime/Dice/`에 있으며 저장 모델과 분리됩니다.
@@ -323,7 +322,7 @@ flowchart TD
 
 ### 임시 적 전투
 
-`Assets/TxTRPG/Gameplay/Runtime/Combat/`은 UI와 저장에 독립적인 임시 전투 상태와 전투 입력 `PlayerCombatAction`을 포함합니다. `Assets/TxTRPG/Application/Runtime/Combat/`은 Scene별 시험 적 설정, 탐험이 쓰는 `ITemporaryCombatController`, 공용 Story 문구와 연출 제한 시간 계산을 담당합니다. `Application/Runtime/SlotMachine/`(`TemporarySlotMachineConfiguration`·`TemporarySlotMachineState`, Fortune Critical 설정·세션 상태 `TemporaryFortuneCriticalConfiguration`·`TemporaryFortuneCriticalState`, `TemporarySlotCombatController`, 수락·턴 기록, `SlotCombatStoryFormatter`)과 `Application/Runtime/Runes/`(`TemporaryRuneConfiguration`·`TemporaryRuneState`)가 TMP_MainScene의 현재 전투 행동을 담당합니다. 설정 자산은 `Application/Configuration/TemporarySlotMachineConfiguration.asset`·`TemporaryRuneConfiguration.asset`·`TemporaryFortuneCriticalConfiguration.asset`이며 AppRoot의 `PlayerSessionHost`가 참조합니다. Fortune Critical 설정의 Inspector 미리보기는 `Application/Editor/TemporaryFortuneCriticalConfigurationEditor.cs`입니다. Dice 컨트롤러는 보류 상태로 Scene에서 꺼져 있습니다. UI 표시는 `UI/Runtime/SlotMachine/`(`SlotMachinePanel`, `SlotReelViewBase`·`SlotReelView`, 좌우·상하 전환 배치 `SlotMachineContentLayout`, `SlotReelAreaLayout`, Payline 테두리 `SlotPaylineFrameGraphic`, 스킨 자산·카탈로그와 적용 대상 `Skins/`(`SlotMachinePanelSkin`, `SlotMachinePanelSkinCatalog`, `SlotSkinImage`·`SlotSkinColor`·`SlotSkinOffset`, `SlotSkinGraphicTarget`·`SlotSkinTextTarget`), 룬 표 `SlotRuneTableView`·`SlotRuneLineRow`, `SlotHeightScaledText`, 합계 배수 배치 `SlotTotalMultiplierLayout`, 회전 연출 `SlotReelSpinProfile`·`SlotEasing`·`SlotReelSpinPlanner`, 표시 구조)과 `UI/Prefabs/SlotMachine/`(`SlotMachinePanel.prefab`, `SlotReel.prefab`)에 있습니다. `UI/Styles/SlotMachine/`에는 회전 연출 기본 설정 `DefaultSlotReelSpinProfile.asset`과 Reel 음영용 그라데이션 Sprite(`SlotReelCylinderGradient.png`, `SlotReelEdgeShade.png`)가 있고, `UI/Styles/SlotMachine/Skins/`에는 패널 스킨 카탈로그·기본 스킨·예시 이미지 Payline 스킨과 예시 Sprite가 있습니다. 카탈로그 Inspector는 `UI/Editor/SlotMachinePanelSkinCatalogEditor.cs`입니다. 적용·검증 임시 메뉴는 `Application/Editor/TemporarySlotMachineIntegration.cs`, `TemporarySlotMachinePanelVisualApply.cs`, `TemporarySlotMachinePanelSkinApply.cs`, `TemporarySlotMachinePlayValidation.cs`, `TemporarySlotFortuneCriticalApply.cs`, `TemporarySlotFortuneCriticalPlayValidation.cs`입니다(Prefab 배치 제외). 상세 계약은 [슬롯머신과 룬](slot-machine-and-runes.md)과 [임시 적 전투](temporary-combat.md)를 참조합니다.
+`Assets/TxTRPG/Gameplay/Runtime/Combat/`은 UI와 저장에 독립적인 임시 전투 상태와 전투 입력 `PlayerCombatAction`을 포함합니다. `Assets/TxTRPG/Application/Runtime/Combat/`은 Scene별 시험 적 설정, 탐험이 쓰는 `ITemporaryCombatController`, 공용 Story 문구와 연출 제한 시간 계산을 담당합니다. `Application/Runtime/SlotMachine/`(`TemporarySlotMachineConfiguration`·`TemporarySlotMachineState`, Fortune Critical 설정·세션 상태 `TemporaryFortuneCriticalConfiguration`·`TemporaryFortuneCriticalState`, `TemporarySlotCombatController`, 수락·턴 기록, `SlotCombatStoryFormatter`)과 `Application/Runtime/Runes/`(`TemporaryRuneConfiguration`·`TemporaryRuneState`)가 TMP_MainScene의 현재 전투 행동을 담당합니다. 설정 자산은 `Application/Configuration/TemporarySlotMachineConfiguration.asset`·`TemporaryRuneConfiguration.asset`·`TemporaryFortuneCriticalConfiguration.asset`이며 AppRoot의 `PlayerSessionHost`가 참조합니다. Fortune Critical 설정의 Inspector 미리보기는 `Application/Editor/TemporaryFortuneCriticalConfigurationEditor.cs`입니다. Dice 컨트롤러는 보류 상태로 Scene에서 꺼져 있습니다. UI 표시는 `UI/Runtime/SlotMachine/`(`SlotMachinePanel`, Reel 처리 공용 구성 요소 `SlotReelMachineCore`, 표시 계약 `ISlotMachinePresenter`, Candidate_MainScene 하단 독 `SlotReelDock`·전환 계약 `ISlotReelDockTransition`·합계 카드 `SlotTotalCardView`(`SlotTotalCardAppearance`), `SlotReelViewBase`·`SlotReelView`, 좌우·상하 전환 배치 `SlotMachineContentLayout`, `SlotReelAreaLayout`, Payline 테두리 `SlotPaylineFrameGraphic`, 스킨 자산·카탈로그와 적용 대상 `Skins/`(`SlotMachinePanelSkin`, `SlotMachinePanelSkinCatalog`, `SlotSkinImage`·`SlotSkinColor`·`SlotSkinOffset`, `SlotSkinGraphicTarget`·`SlotSkinTextTarget`), 룬 표 `SlotRuneTableView`·`SlotRuneLineRow`, `SlotHeightScaledText`, 합계 배수 배치 `SlotTotalMultiplierLayout`, 회전 연출 `SlotReelSpinProfile`·`SlotEasing`·`SlotReelSpinPlanner`, 표시 구조)과 `UI/Prefabs/SlotMachine/`(`SlotMachinePanel.prefab`, `SlotReel.prefab`, `SlotReelDock.prefab`)에 있습니다. `UI/Styles/SlotMachine/`에는 회전 연출 기본 설정 `DefaultSlotReelSpinProfile.asset`과 Reel 음영용 그라데이션 Sprite(`SlotReelCylinderGradient.png`, `SlotReelEdgeShade.png`)가 있고, `UI/Styles/SlotMachine/Skins/`에는 패널 스킨 카탈로그·기본 스킨·예시 이미지 Payline 스킨과 예시 Sprite가 있습니다. 카탈로그 Inspector는 `UI/Editor/SlotMachinePanelSkinCatalogEditor.cs`입니다. 적용·검증 임시 메뉴는 `Application/Editor/TemporarySlotMachineIntegration.cs`, `TemporarySlotMachinePanelVisualApply.cs`, `TemporarySlotMachinePanelSkinApply.cs`, `TemporarySlotMachinePlayValidation.cs`, `TemporarySlotFortuneCriticalApply.cs`, `TemporarySlotFortuneCriticalPlayValidation.cs`, `TemporarySlotReelDockApply.cs`입니다(Prefab 배치 제외). 독의 Play Mode 미리보기 메뉴는 영구 도구 `Application/Editor/SlotReelDockPreviewMenu.cs`입니다. 상세 계약은 [슬롯머신과 룬](slot-machine-and-runes.md)과 [임시 적 전투](temporary-combat.md)를 참조합니다.
 
 
 ### 점진 생성 탐험

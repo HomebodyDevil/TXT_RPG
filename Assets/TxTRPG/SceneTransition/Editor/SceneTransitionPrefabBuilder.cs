@@ -20,7 +20,7 @@ namespace TxTRPG.SceneTransition.Editor
         public const string AppRootPrefabPath =
             "Assets/TxTRPG/SceneTransition/Prefabs/AppRoot.prefab";
         public const string AppScenePath = "Assets/Scenes/AppScene.unity";
-        public const string InitialContentScenePath = "Assets/Scenes/TMP_MainScene.unity";
+        public const string InitialContentScenePath = "Assets/Scenes/Candidate_MainScene.unity";
 
         [MenuItem(
             TxTRPGEditorMenuPaths.Application + "Rebuild App Scene",

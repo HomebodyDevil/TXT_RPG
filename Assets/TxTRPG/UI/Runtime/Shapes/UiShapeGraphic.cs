@@ -34,6 +34,15 @@ namespace TxTRPG.UI.Shapes
             SetVerticesDirty();
         }
 
+        // Clamped to the UiShapeGeometry range; the same value does nothing.
+        public void SetCurveSegments(int value)
+        {
+            value = Mathf.Clamp(value, UiShapeGeometry.MinimumCurveSegments, UiShapeGeometry.MaximumCurveSegments);
+            if (curveSegments == value) return;
+            curveSegments = value;
+            SetVerticesDirty();
+        }
+
         protected override void OnPopulateMesh(VertexHelper vh) =>
             UiShapeGeometry.Populate(vh, GetPixelAdjustedRect(), shape, cornerRadius, curveSegments, drawMode, borderThickness, color, outer, inner);
 

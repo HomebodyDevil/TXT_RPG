@@ -1,5 +1,7 @@
 # TMP_MainScene 기반 시각적 개선안 Scene 제작
 
+> 이 지침의 결과물(제안 Scene `MainScene_VisualProposal.unity`, `MainSceneVisualProposalBuilder`, `MainSceneVisualProposalTests`, `Assets/TxTRPG/UI/VisualProposals/MainScene/` 자산과 `DOCS/development/main-scene-visual-proposal.md`)은 [candidate-main-scene-initial-content-and-layout.md](candidate-main-scene-initial-content-and-layout.md)에 따라 제거되었습니다. 이 문서는 기록으로만 남깁니다.
+
 ## 목적과 작업 범위
 
 `Assets/Scenes/TMP_MainScene.unity`에 임시 배치된 기존 UI를 바탕으로, 텍스트 중심 RPG에 적합한 개선안을 실제 실행 가능한 새 Scene으로 제작한다. 문서나 정적 목업만 만드는 작업이 아니다. 기존 기능을 유지하면서 레이아웃, 정보 우선순위, 이미지, 색상, 여백과 상호작용 상태를 개선하고 원본과 비교할 수 있어야 한다.

@@ -66,7 +66,7 @@ namespace TxTRPG.UI.Editor
         public static void CaptureStates()
         {
             var scene = SceneManager.GetSceneByPath("Assets/Scenes/TMP_MainScene.unity");
-            if (!EditorApplication.isPlaying || !scene.isLoaded || running.Count != 0) throw new InvalidOperationException("Wait for TMP_MainScene and previous checks.");
+            if (!EditorApplication.isPlaying || !scene.isLoaded || running.Count != 0) throw new InvalidOperationException("Load TMP_MainScene with Tools/TxT RPG/Application/Play Mode/Load TMP_MainScene and wait for previous checks.");
             var card = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<ExplorationNodeChoiceCardView>()).First(c => c.gameObject.activeInHierarchy);
             running.Push(CaptureStatesRoutine(card));
             operation = "runtime card state captures completed";
@@ -123,7 +123,7 @@ namespace TxTRPG.UI.Editor
         public static void Inspect()
         {
             var scene = SceneManager.GetSceneByPath("Assets/Scenes/TMP_MainScene.unity");
-            if (!EditorApplication.isPlaying || !scene.isLoaded) throw new InvalidOperationException("Start from AppScene and wait for TMP_MainScene.");
+            if (!EditorApplication.isPlaying || !scene.isLoaded) throw new InvalidOperationException("Start from AppScene and run Tools/TxT RPG/Application/Play Mode/Load TMP_MainScene first.");
             var cards = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<ExplorationNodeChoiceCardView>(true)).Where(c => c.gameObject.activeInHierarchy);
             foreach (var card in cards)
             {

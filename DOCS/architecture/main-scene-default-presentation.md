@@ -2,7 +2,7 @@
 
 ## 목적
 
-> 현재 적용 상태: `MainScenePresentationController`는 운영 `TMP_MainScene`에 적용되어 있지 않으며 `Assets/Scenes/MainScene_VisualProposal.unity`에서만 사용됩니다. `TMP_MainScene`에는 `EnemyDisplayPanelDemo` Prefab 인스턴스와 그 안의 `EnemyDisplayPanelDemoLoader`·`PanelStartupController`·`FadePanelRevealTransition`이 남아 있지만, `PanelStartupController.initialDataLoader` 연결이 해제되어 데모 적을 쓰지 않고 임시 전투 컨트롤러가 적 표시를 소유합니다. `MainSceneDefaultPresentationTests.ConfiguredScene_HasNoEnemyDemoWriterAndKeepsCorePanels`가 이 운영 구성을 검증합니다. 아래 내용은 `Tools > TxT RPG > Application > Configure Main Scene Default Content`를 실행했을 때의 동작입니다.
+> 현재 적용 상태: `MainScenePresentationController`는 운영 `TMP_MainScene`을 포함한 어떤 Scene에도 적용되어 있지 않습니다(이를 사용하던 `MainScene_VisualProposal.unity` 제안 Scene은 제거되었습니다). `TMP_MainScene`에는 `EnemyDisplayPanelDemo` Prefab 인스턴스와 그 안의 `EnemyDisplayPanelDemoLoader`·`PanelStartupController`·`FadePanelRevealTransition`이 남아 있지만, `PanelStartupController.initialDataLoader` 연결이 해제되어 데모 적을 쓰지 않고 임시 전투 컨트롤러가 적 표시를 소유합니다. `MainSceneDefaultPresentationTests.ConfiguredScene_HasNoEnemyDemoWriterAndKeepsCorePanels`가 이 운영 구성을 검증합니다. 아래 내용은 `Tools > TxT RPG > Application > Configure Main Scene Default Content`를 실행했을 때의 동작입니다.
 
 `MainScenePresentationController`는 기존 `TMP_MainScene`의 레이아웃과 패널 인스턴스를 유지하면서 운영 데이터의 누락·빈 상태·로드 실패를 명시적으로 표시합니다. UI가 새 `PlayerState`나 적, 아이템을 만들지 않으며 배포용 대체 표시는 저장 데이터에 포함되지 않습니다.
 

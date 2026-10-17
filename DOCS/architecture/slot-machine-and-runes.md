@@ -276,6 +276,8 @@ Fortune Critical(행운 치명)은 회전 결과에 일정 확률로 정수 배�
 
 ## SlotMachinePanel
 
+Reel 처리는 [Reel 처리 공용 구성 요소](#reel-처리-공용-구성-요소와-표시-계약)인 `SlotReelMachineCore`에 위임하며, 공개 API·직렬화 필드·Prefab은 분리 전과 같습니다. `Candidate_MainScene`의 하단 독은 [SlotReelDock](#slotreeldock-candidate_mainscene-하단-슬롯-reel-독)을 참조합니다.
+
 ### 배치
 
 `MiddlePanel/ContentLayer`에서 `SlotMachinePanel`은 `OwnedDicePanel` 바로 다음 형제입니다. `FlexibleLayoutItem` 값은 `OwnedDicePanel`에서 복사했습니다(Weighted, Weight 0.7, 최소 200). `OwnedDicePanel`은 비활성이며, `ContentLayer`의 `FlexibleContentLayoutGroup`은 비활성 자식을 계산에서 뺍니다(`includeInactiveChildren` 꺼짐). 그래서 패널은 기존 주사위 패널과 같은 위치와 크기를 차지합니다.
@@ -487,6 +489,130 @@ Prefab의 기본 외형을 바꾼 뒤에는 Inspector 컴포넌트 메뉴 `기�
 - 회전 중에 바꿔도 결과, 연출 시간, 위치 계산은 바뀌지 않습니다. Payline 확장 값이 바뀌면 `UpdatePaylineFrame`을 한 번 호출합니다.
 - `TMP_MainScene`의 패널 인스턴스가 기본 외형 대상의 값을 Scene에서 재정의해도, 스킨을 적용하면(빈 기본 스킨 포함) Prefab에서 기록한 기본값이 쓰입니다. 현재 `ReelMachine/Frame` 색이 Scene에서 `#000000`으로 재정의되어 있어 Play Mode에서는 Prefab 기본값 `#0A0A0A`로 표시됩니다.
 
+## Reel 처리 공용 구성 요소와 표시 계약
+
+`SlotMachinePanel`과 `SlotReelDock`은 Reel·구분대·Payline·회전 처리를 `SlotReelMachineCore`(`UI/Runtime/SlotMachine/SlotReelMachineCore.cs`, `internal` 일반 C# 클래스)에 위임합니다. MonoBehaviour가 아니므로 소유 컴포넌트의 직렬화 필드와 Prefab 직렬화는 그대로입니다. 소유 컴포넌트는 `ISlotReelMachineHost`를 명시적으로 구현하여 참조(Reel 영역, Reel Prefab, Reel·구분대 목록, Payline 루트·테두리·이미지, 글자 크기 범위, 회전 설정, 스킨 상태)와 콜백(구분대 스킨 적용, 요약 표시)을 넘기며, 코어는 이 값을 사용할 때마다 다시 읽습니다.
+
+| 책임 | 소유 |
+| --- | --- |
+| Reel 수 맞추기, 구분대 추가·제거·형제 순서, 새 Reel·구분대 스킨 적용 | `SlotReelMachineCore.EnsureReelCount` |
+| `SetReels`(회전 중 보류), `PlaySpinAsync`(Reel별 계획·동시 시작·세대 번호), `StopAtResult`, 비활성화 시 회전 종료 | `SlotReelMachineCore` |
+| Payline 위치·자식 확장, `SlotReelAreaLayout.LayoutApplied` 구독·해제(`Enable`/`Disable`), Payline 스킨(`ApplyPaylineSkin`) | `SlotReelMachineCore` |
+| 요약 영역(합계 상자, 룬 표), 스킨 대상 기록과 적용 순서, 회전 설정 대체 경고 | `SlotMachinePanel` |
+| 합계 카드, 독 배치, 표시·숨김, Reel 대상 스킨 | `SlotReelDock` |
+
+`ISlotMachinePresenter`(`UI/Runtime/SlotMachine/ISlotMachinePresenter.cs`)는 컨트롤러가 쓰는 표시 계약이며 `SlotMachinePanel`과 `SlotReelDock`이 구현합니다. 멤버는 `TemporarySlotCombatController`(`IsSpinning`, `SetReels`, `SetSummary`, `PlaySpinAsync`, `StopAtResult`, `ShowError`, `ClearError`, `GetMaximumPresentationSeconds`)와 `ExplorationEventController`(`IsSpinning`, `PlaySpinAsync`, `StopAtResult`, `GetMaximumPresentationSeconds`)가 실제로 호출하는 것으로 한정합니다. 두 컨트롤러의 `slotPanel` 필드는 아직 `SlotMachinePanel` 형식입니다.
+
+## SlotReelDock (Candidate_MainScene 하단 슬롯 Reel 독)
+
+`Candidate_MainScene`에서는 슬롯 영역이 레이아웃 항목이 아니라 `Canvas` 하단에 떠 있는 독립 영역입니다. Reel만 있고, 합계는 Reel 기계 위쪽 가장자리에 걸친 합계 카드로 표시합니다. 표시와 Editor 미리보기까지 구현되어 있으며 실제 전투·탐험 이벤트 연결은 아직 없습니다.
+
+### 배치와 계층
+
+```text
+Candidate_MainScene/Canvas
+├── MainArea                 (변경 없음)
+└── OverlayLayer             (RectTransform Stretch, Graphic 없음)
+    └── SlotReelDock         (SlotReelDock.prefab 인스턴스, 루트 기본 재정의 외 재정의 없음)
+```
+
+```text
+SlotReelDock                 (배치 루트: 부모 아래 가운데 앵커, CanvasGroup(blocksRaycasts·interactable 꺼짐), SlotReelDock)
+├─ PresentationRoot          (Stretch. 표시·숨김과 이후 전환 연출이 위치를 바꾸는 유일한 대상)
+│  ├─ ReelMachine            (레이아웃 전용. 배치 루트를 채우고 위쪽은 카드 돌출 높이만큼 비움)
+│  │  ├─ Frame > LeftEdge, RightEdge   (SlotMachinePanel의 ReelMachine/Frame 복제본, Prefab 연결 없음)
+│  │  ├─ ReelArea            (SlotReelAreaLayout)
+│  │  │  ├─ SlotReel_{n}     (SlotReel.prefab 중첩 인스턴스, 기본 3개)
+│  │  │  └─ ReelDivider_{n}
+│  │  └─ PaylineFrame        (배치 전용) > ProceduralBorder, SkinImage
+│  ├─ TotalCard              (배치 루트, SlotTotalCardView. ReelMachine보다 뒤 형제)
+│  │  ├─ VisualRoot          (효과 대상) > Fill (UiShapeGraphic Fill), Border (UiShapeGraphic InnerBorder, 기본 비활성)
+│  │  └─ ContentRoot         (모양별 안쪽 글자 영역, SlotTotalMultiplierLayout)
+│  │     ├─ TotalLabel       (TMP, SlotHeightScaledText 0.8, 위 35%)
+│  │     ├─ TotalValue       (TMP, SlotHeightScaledText 0.9, fitWidth "999", 아래 65%)
+│  │     └─ TotalMultiplier  (배치 루트, 기본 비활성) > VisualRoot > Text (#B45309)
+│  ├─ StatusText             (구성 오류, 평소 비활성)
+│  └─ EffectRoot             (독 단위 효과)
+```
+
+- Prefab은 `Assets/TxTRPG/UI/Prefabs/SlotMachine/SlotReelDock.prefab`입니다. `SlotMachinePanel.prefab`과 같은 `SlotReel.prefab`, `DefaultSlotReelSpinProfile.asset`, `SlotMachinePanelSkinCatalog.asset`을 참조합니다.
+- 모든 저작 Graphic의 `raycastTarget`이 꺼져 있습니다. 독은 입력을 받지 않으며 뒤 화면의 클릭·탭을 막지 않습니다. 모달 등록, Cancel 경로, 입력 차단은 없습니다.
+- 합계 배수 글자 색은 흰 카드 위의 대비를 위해 패널의 호박색 대신 `#B45309`를 씁니다. 의미는 `×N` 글자로 전달합니다.
+
+### 배치 설정
+
+크기 단위는 Canvas 단위이며 비율은 부모(`OverlayLayer`) 크기 기준입니다.
+
+| 필드 | 기본값 | 의미 |
+| --- | --- | --- |
+| `heightRatio`, `minimumHeight`, `maximumHeight` | 0.28, 140, 320 | Reel 기계 높이 = 부모 높이 × 비율을 최소·최대로 제한. 카드 돌출 높이는 포함하지 않습니다. 부모가 낮아 카드가 부모 위쪽을 넘으면 Reel 기계 높이를 최소값 아래로 줄입니다. |
+| `horizontalMargin`, `bottomMargin` | 16, 12 | 좌우·아래 바깥 여백 |
+| `maximumWidth` | 1200 (0이면 제한 없음) | 너비 제한, 가운데 정렬 |
+| `respectSafeArea` | 켜짐 | `Screen.safeArea`의 아래·좌·우 여백을 바깥 여백에 더하고, 위쪽 여백은 카드와 드래그 위치 제한에만 씁니다. 루트 Canvas 크기와 화면 크기의 비율로 Canvas 단위로 바꿉니다. |
+| `initiallyShown` | 켜짐 | Awake 시 표시 상태 |
+| `transitionBehaviour` | 없음 | `ISlotReelDockTransition`을 구현한 `MonoBehaviour`. 비어 있거나 구현하지 않으면(한 번 경고) 즉시 전환합니다. |
+
+배치(`RefreshLayout`)는 부모 크기, Safe Area, 화면 크기가 바뀌었을 때와 설정 변경·`SetDockedOffset` 때만 실행합니다. `LateUpdate`는 이 값들을 비교만 합니다. 배치 루트 높이는 Reel 기계 높이 + 카드 돌출 높이이며, `ReelMachine`은 위쪽을 돌출 높이만큼 비우고 카드는 그 위에 걸칩니다.
+
+Play Mode에서 측정한 값은 다음과 같습니다(2026-10-17, Candidate_MainScene, Safe Area 없음).
+
+| 화면 | Reel 기계 | 카드 | 카드 위쪽 / 화면 높이 | 카드 글자(라벨/값) |
+| --- | --- | --- | --- | --- |
+| 1920×1080 | 1200×302 | 229×127 | 378 / 1080 | 29.9 / 62.4 |
+| 2560×1080 | 1200×302 | 229×127 | 378 / 1080 | 29.9 / 62.4 |
+| 1280×720 | 1200×202 | 152×85 | 256 / 720 | 19.9 / 41.6 |
+| 1080×1920 | 1048×320 | 242×134 | 399 / 1920 | 31.6 / 66 |
+| 750×1334 | 718×320 | 242×134 | 399 / 1334 | 31.6 / 66 |
+
+독이 세 Area의 아래쪽을 가립니다. 현재 세 Area에는 콘텐츠가 없으므로 공간을 비워 두지 않습니다.
+
+### 표시·숨김 API
+
+| API | 동작 |
+| --- | --- |
+| `IsShown` | 현재 목표 상태 |
+| `Show()`, `Hide()`, `SetShown(bool)` | 목표 상태를 바꿉니다. 같은 상태면 아무것도 하지 않습니다. |
+| `DockedOffset`, `SetDockedOffset(Vector2)` | 표시 상태의 추가 위치(기본 0). 결과 위치(`ShownPosition`)는 부모의 Safe Area 사각형 안으로 제한합니다. |
+| `HiddenOffset` | 숨김 상태의 `PresentationRoot` 위치. 배치 루트 높이(카드 돌출 포함)와 아래 여백만큼 내려 부모 아래쪽 밖에 둡니다. |
+| `ShownChanged` (`Action<bool>`) | 상태가 실제로 바뀐 뒤 한 번 발생합니다. |
+| `ReduceMotion` | 전환 연출에 넘기는 값 |
+
+- 표시·숨김은 `PresentationRoot.anchoredPosition`만 바꿉니다. 배치 루트, Reel 레이아웃, 카드 배치는 바뀌지 않습니다. 숨김 상태에서는 `CanvasGroup.alpha`가 0입니다. GameObject를 끄지 않으므로 숨긴 동안에도 회전은 끝까지 진행되고 결과를 돌려줍니다.
+- `ISlotReelDockTransition.PlayAsync(RectTransform target, Vector2 from, Vector2 to, bool reduceMotion, CancellationToken cancellationToken) → Task`는 확장 지점이며 구현체는 없습니다. 상태가 다시 바뀌면 이전 전환의 토큰을 취소하고 현재 위치에서 다음 전환을 시작합니다. 전환이 예외로 끝나면 로그를 남기고 목표 위치로 옮깁니다. Edit Mode에서는 항상 즉시 전환합니다.
+
+### 합계 카드 `SlotTotalCardView`
+
+모양 설정은 직렬화 값 형식 `SlotTotalCardAppearance`입니다.
+
+| 필드 | 기본값 | 의미 |
+| --- | --- | --- |
+| `shape` | `Rectangle` | `Rectangle`, `RoundedRectangle`, `Circle`, `Ellipse`. `Triangle`이나 알 수 없는 값은 `Rectangle`로 그리고 한 번 경고합니다. |
+| `cornerRadiusUnit`, `cornerRadius` | `ShortSideRatio`, 0.2 | `RoundedRectangle`에만 쓰입니다. 비율은 [0, 0.5], `Pixels`는 [0, 짧은 변/2]로 제한한 픽셀 값을 `UiShapeGraphic`에 넘깁니다. |
+| `curveSegments` | 8 | `UiShapeGeometry` 범위로 제한 |
+| `fillColor` | #FFFFFF | |
+| `borderEnabled`, `borderColor`, `borderThickness` | 꺼짐, #0A0A0A, 3 | 안쪽 테두리. 카드 크기를 바꾸지 않습니다. |
+| `textColor` | #0A0A0A | 라벨·값 글자 색 |
+
+| 크기·위치 필드 | 기본값 | 의미 |
+| --- | --- | --- |
+| `heightRatio`, `minimumHeight`, `maximumHeight` | 0.42, 56, 140 | 카드 높이 = Reel 기계 높이 × 비율 |
+| `aspectRatio` | 1.8 | 카드 너비 = 높이 × 비율(`Circle`은 1), Reel 기계 너비의 90% 이하 |
+| `horizontalPosition` | 0.5 | Reel 기계 너비 기준 카드 중심. 카드는 Reel 기계 밖으로 나가지 않습니다. |
+| `overhangRatio` | 0.5 | 카드 높이 중 Reel 기계 위쪽 가장자리 위로 나오는 비율 |
+
+- 크기와 위치는 `ReelMachine`의 효과 적용 전 RectTransform을 기준으로 계산하며, `SlotReelDock`의 배치 뒤(`Refresh`)와 모양 변경 때만 다시 계산합니다. 기본값에서 카드 아래쪽 가장자리는 가장 위의 보이는 칸 범위 안에 있고 Payline 칸을 가리지 않습니다. `heightRatio`를 키우거나 `overhangRatio`를 줄이면 위쪽 칸과 Payline을 가릴 수 있으며 Inspector Tooltip에 적혀 있습니다.
+- 글자 영역(`ContentRoot`)은 `Rectangle`·`RoundedRectangle`에서 카드 사각형에서 짧은 변 × 0.08(둥근 직사각형은 반지름 × 0.3 추가)을 뺀 영역, `Ellipse`는 가로·세로 × 0.707, `Circle`은 짧은 변 × 0.707 정사각형입니다. 글자 크기는 `SlotHeightScaledText`가, 배수 위치는 `SlotTotalMultiplierLayout`이 정합니다.
+- `Appearance`, `SetAppearance(SlotTotalCardAppearance)`로 실행 중에 바꿉니다. 같은 값이면 아무것도 하지 않습니다. `UiShapeGraphic`에는 곡선 분할 수를 바꾸는 `SetCurveSegments(int)`만 추가했고 기존 공개 동작은 같습니다.
+
+### 표시 데이터와 실패 동작
+
+- `SetSummary`는 `SlotSummaryDisplay`의 `TotalLabel`, `TotalValue`, `TotalMultiplierText`만 표시하고 룬 항목·열 제목·빈 문구·넘침 형식은 무시합니다.
+- Reel 수는 받은 표시 데이터를 따르며 1개부터 동작합니다. 가로 스크롤은 없고, 최소 너비보다 좁아지는 경우의 동작은 `SlotMachinePanel`과 같습니다.
+- 회전 설정이 없으면 기본값으로 대체하고 한 번 경고합니다. 스킨 카탈로그가 없거나 선택 스킨이 없으면 Prefab 기본 외형을 쓰고 한 번 경고합니다. Reel Prefab이나 Reel 영역이 없어 Reel을 만들 수 없으면 `PlaySpinAsync`는 `false`를 돌려줍니다.
+- 스킨은 Reel 대상(Reel 기계 틀, 가장자리 띠, 구분대, Payline, 각 Reel)에만 적용합니다. 기본값은 컴포넌트 메뉴 `기본 외형 다시 기록`으로 다시 기록합니다.
+- `ShowError`는 `ReelMachine`과 합계 카드를 숨기고 `StatusText`에 사유를 표시합니다. `ClearError`는 되돌립니다.
+- 합계 카드의 `Fill` 참조가 비어 있으면 글자만 표시하고 한 번 경고합니다.
+
 ## 주사위 보류
 
 | 대상 | TMP_MainScene 상태 |
@@ -514,4 +640,9 @@ Prefab의 기본 외형을 바꾼 뒤에는 Inspector 컴포넌트 메뉴 `기�
 | 기호 연계 Fortune | 특정 기호가 Payline에 오면 확률을 바꾸는 규칙은 `SlotSpinResult`를 입력으로 받는 규칙 선택 함수로 추가합니다. |
 | 입체 Reel | `SlotReelViewBase`를 구현하는 다른 Reel Prefab을 `reelPrefab`·`reelViews`에 연결합니다. 스킨이 필요하면 `ApplySkin`을 재정의합니다. |
 | 플레이어 스킨 선택 | System 설정 모달에 `Slot 스킨` 항목을 추가하고 카탈로그 `Skins` 순서대로 `DisplayName`·`PreviewSprite`를 보여 줍니다. 고른 ID는 `ExplorationCardPlayerPreferences`처럼 PlayerPrefs에 저장하고(세이브 형식은 바꾸지 않음), Application의 연결 컴포넌트가 `TrySetSkin`을 호출합니다. 실패하면 개발자 선택으로 돌아가고 저장값을 지웁니다. 패널은 `Awake`에서 아직 스킨이 정해지지 않았을 때만 카탈로그 선택을 쓰므로, 플레이어 선택을 먼저 적용하면 그것이 우선합니다. `SkinChanged`로 미리보기를 갱신합니다. |
+| 컨트롤러와 `SlotReelDock` 연결 | Unity는 인터페이스 필드를 직렬화하지 않으므로 `ExplorationRunController.combatControllerBehaviour`와 같은 방식을 씁니다. `TemporarySlotCombatController`·`ExplorationEventController`의 `slotPanel`을 `MonoBehaviour` 필드로 바꾸고 `[FormerlySerializedAs("slotPanel")]`로 기존 참조를 유지한 뒤, 사용 시 `ISlotMachinePresenter`인지 검사합니다. 룬 표가 없는 독에서는 룬 정보를 다른 화면에 보여 줄지 정해야 합니다. |
+| 독 등장 전환 연출 | `ISlotReelDockTransition`을 구현한 `MonoBehaviour`를 `SlotReelDock.transitionBehaviour`에 연결합니다. `PresentationRoot`만 움직이며 Reduce Motion 값을 받습니다. |
+| 독 드래그 위치 설정 | 드래그 입력 컴포넌트가 `SetDockedOffset`을 호출합니다. 결과 위치는 Safe Area 안으로 제한됩니다. 현재 독은 입력을 받지 않으므로 드래그 핸들에만 `raycastTarget`을 켜야 합니다. |
+| 세 Area의 가려지는 공간 | `ReservedOverhang`과 독 루트 높이로 `MainArea`의 아래쪽 여백을 계산하는 연결이 필요합니다. |
+| 합계 카드 스킨 | 카드 Graphic은 아직 스킨 대상이 아닙니다. `SlotMachinePanelSkin`에 카드 항목을 추가하고 `SlotTotalCardAppearance`의 색과 함께 적용 순서를 정해야 합니다. |
 | 스킨 Addressables 지연 로드 | 지금은 카탈로그가 스킨을, 스킨이 Sprite를 직접 참조해 등록된 모든 스킨의 Sprite가 함께 로드됩니다. 스킨이 늘어나면 카탈로그 항목을 Addressables 참조로 바꾸고 `TrySetSkin`을 비동기로 확장합니다. |

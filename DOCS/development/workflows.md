@@ -40,7 +40,7 @@ Play Mode를 종료하고 새 이미지를 Sprite로 임포트합니다. 공유 
 ### TMP_MainScene 연결 및 실행
 
 1. `TMP_MainScene`의 저장된 구성에서 기존 메뉴와 `GameWindowsOverlay`의 연결을 확인합니다. 별도의 일회성 적용 메뉴는 제공하지 않습니다.
-2. Build Settings의 첫 Scene인 `Assets/Scenes/AppScene.unity`를 열고 Play Mode를 시작합니다. `AppScene`의 `PlayerSessionHost`가 저장 데이터를 준비한 뒤 `TMP_MainScene`을 로드합니다.
+2. Build Settings의 첫 Scene인 `Assets/Scenes/AppScene.unity`를 열고 Play Mode를 시작합니다. `AppScene`의 `PlayerSessionHost`가 저장 데이터를 준비한 뒤 초기 콘텐츠 `Candidate_MainScene`을 로드합니다. 이어서 `Tools > TxT RPG > Application > Play Mode > Load TMP_MainScene`을 실행해 `TMP_MainScene`으로 전환합니다.
 3. 기존 가방 버튼으로 창을 열고 Close 또는 Cancel로 닫은 뒤 포커스가 가방 버튼으로 복원되는지 확인합니다. `TMP_MainScene` 직접 Play에는 AppScene 세션이 없으므로 정식 실행 경로로 지원하지 않습니다.
 4. System 버튼으로 제목과 닫기 버튼만 있는 빈 설정 모달이 열리는지 확인합니다.
 5. 실제 저장 데이터가 비어 있으면 EmptyState가 정상입니다. 테스트 아이템이 필요하면 사용자 저장 파일이 아닌 격리된 테스트 세션을 사용합니다.
@@ -136,7 +136,7 @@ Story, Character, Enemy와 Action Grid Demo는 동일한 `PanelStartupController
 4. 생성된 `Assets/TxTRPG/Application/Configuration/DefaultNewGameProfile.asset`에서 Catalog와 Initial Character가 올바른지 확인합니다.
 5. `Assets/TxTRPG/SceneTransition/Prefabs/AppRoot.prefab`의 `PlayerSessionHost`와 `Assets/Scenes/TMP_MainScene.unity`의 `ActiveCharacterDisplayBinder` 참조를 확인합니다.
 
-재생성 과정은 `TMP_MainScene`의 캐릭터 Demo 인스턴스를 운영용 `CharacterDisplayPanel.prefab`으로 교체하고 `CharacterDisplayPresenter`와 외형 전용 `ActiveCharacterDisplayBinder`를 구성합니다. 상태 UI는 자동 생성하지 않습니다. 이미 로드된 Scene에 저장하지 않은 변경이 있으면 덮어쓰지 않고 실패합니다. 운영 Scene에는 `CharacterDisplayPanelDemoLoader`, `PanelStartupController`, `CharacterStatusPanel`, `ActiveCharacterStatusBinder` 또는 Demo 데이터가 남지 않아야 합니다.
+재생성 과정은 최초 콘텐츠 Scene에 캐릭터 패널(`ActiveCharacterDisplayBinder` 또는 `CharacterDisplayPanelDemoLoader`)이 있을 때만 운영 캐릭터 UI를 연결합니다. 패널이 없으면(현재 초기 콘텐츠인 `Candidate_MainScene`) Console에 건너뛴 사실과 Scene 경로를 남기고 그 Scene을 수정하거나 저장하지 않습니다. 패널이 있으면 캐릭터 Demo 인스턴스를 운영용 `CharacterDisplayPanel.prefab`으로 교체하고 `CharacterDisplayPresenter`와 외형 전용 `ActiveCharacterDisplayBinder`를 구성합니다. 상태 UI는 자동 생성하지 않습니다. 이미 로드된 Scene에 저장하지 않은 변경이 있으면 덮어쓰지 않고 실패합니다. 운영 Scene에는 `CharacterDisplayPanelDemoLoader`, `PanelStartupController`, `CharacterStatusPanel`, `ActiveCharacterStatusBinder` 또는 Demo 데이터가 남지 않아야 합니다.
 
 정식 실행은 `Assets/Scenes/AppScene.unity`에서 시작합니다. 저장 파일이 없으면 `character.default`가 생성되고, 파일이 있으면 기존 `PlayerState`가 복원됩니다. 기본 저장 경로는 `Application.persistentDataPath/player-save.json`입니다. 손상된 저장 파일은 자동으로 새 게임으로 교체되지 않으므로 Console 오류와 원본 파일을 확인한 뒤 사용자에게 복구 또는 초기화 선택을 제공해야 합니다. 캐릭터 이름은 현지화 서비스가 `ICharacterNameLocalizer`로 연결되기 전까지 숨겨집니다.
 
@@ -184,7 +184,7 @@ healthBar.SetEffectsEnabled(accessibilitySettings.EnableUiMotion);
 
 ### Editor에서 AppScene 경유로 Play하기
 
-프로젝트 기본값에서는 `TMP_MainScene`이나 다른 콘텐츠 Scene을 열어 둔 상태에서 Play해도 `Assets/Scenes/AppScene.unity`가 먼저 실행됩니다. AppScene의 기존 초기화가 완료되면 `AppSceneRoot.Initial Content Scene Path`에 지정된 `Assets/Scenes/TMP_MainScene.unity`로 진입합니다. Play 종료 후에는 Play 전의 편집 Scene 구성과 활성 Scene으로 돌아옵니다.
+프로젝트 기본값에서는 `TMP_MainScene`이나 다른 콘텐츠 Scene을 열어 둔 상태에서 Play해도 `Assets/Scenes/AppScene.unity`가 먼저 실행됩니다. AppScene의 기존 초기화가 완료되면 `AppSceneRoot.Initial Content Scene Path`에 지정된 `Assets/Scenes/Candidate_MainScene.unity`로 진입합니다. 게임 패널이 있는 `TMP_MainScene`이 필요한 Play Mode 확인과 검증 메뉴는 Play 중 `Tools > TxT RPG > Application > Play Mode > Load TMP_MainScene`을 먼저 실행합니다. 이 메뉴는 AppRoot의 `SceneTransitionService.LoadContentSceneAsync`로 콘텐츠 Scene만 바꾸므로 `PlayerSessionHost`와 세션 상태가 유지되며, Play Mode가 아니거나 AppRoot가 없거나 전환 중이면 오류만 남기고, 이미 `TMP_MainScene`이면 그 사실만 남깁니다. Play 종료 후에는 Play 전의 편집 Scene 구성과 활성 Scene으로 돌아옵니다.
 
 설정은 `Edit > Project Settings > TxT RPG > Play Mode Start`에서 관리합니다. `Always start Play Mode through AppScene`을 끄면 현재 Scene을 직접 실행할 수 있습니다. 다시 켜거나 `Reapply AppScene Start Policy`를 누르면 AppScene을 시작 Scene으로 지정합니다. 기존에 다른 Play 시작 Scene이 있었다면 명시적 적용 시 백업하며, 정책을 끌 때 정책이 아직 AppScene을 소유하고 있는 경우에만 복원합니다.
 
@@ -194,13 +194,13 @@ healthBar.SetEffectsEnabled(accessibilitySettings.EnableUiMotion);
 
 - `Assets/Scenes/AppScene.unity`가 Build Settings의 첫 번째 활성 Scene인지 확인합니다.
 - `Assets/TxTRPG/SceneTransition/Prefabs/AppRoot.prefab`의 `Load Initial Content On Start`가 활성화되어 있는지 확인합니다.
-- 최초 콘텐츠 경로가 `Assets/Scenes/TMP_MainScene.unity`인지 확인합니다.
+- 최초 콘텐츠 경로가 `Assets/Scenes/Candidate_MainScene.unity`(`SceneTransitionPrefabBuilder.InitialContentScenePath`)인지 확인합니다.
 - Project Settings의 경고를 확인하고 필요한 경우 정책을 다시 적용합니다.
 
 Enter Play Mode Options는 프로젝트의 기존 설정을 변경하지 않습니다. 현재 기본 구성처럼 Domain Reload와 Scene Reload가 모두 활성화된 조합을 기준으로 검증하며, 다른 조합을 사용한다면 정적 서비스와 이벤트 구독의 반복 Play 동작을 별도로 확인합니다.
 
-1. 현재 작업 Scene을 저장한 뒤 `Tools > TxT RPG > Application > Rebuild App Scene`을 실행합니다. 이 메뉴는 기본 Scene Transition Profile, `DefaultNewGameProfile.asset`, PlayerSessionHost가 포함된 `AppRoot.prefab`, 운영 캐릭터 UI가 연결된 최초 콘텐츠 Scene과 `AppScene.unity`를 생성하고 AppScene을 Build Settings의 0번으로 등록합니다.
-2. `AppRoot`의 `AppSceneRoot.Initial Content Scene Path` 목록에서 최초로 로드할 Scene을 선택합니다. 목록에는 활성화된 Build Settings Scene이 `Scene 이름 (Assets/.../*.unity)` 형식으로 표시되며 AppScene은 제외됩니다. 기본값은 `Assets/Scenes/TMP_MainScene.unity`입니다.
+1. 현재 작업 Scene을 저장한 뒤 `Tools > TxT RPG > Application > Rebuild App Scene`을 실행합니다. 이 메뉴는 기본 Scene Transition Profile, `DefaultNewGameProfile.asset`, PlayerSessionHost가 포함된 `AppRoot.prefab`, 최초 콘텐츠 Scene의 운영 캐릭터 UI 연결(캐릭터 패널이 있을 때만), `AppScene.unity`를 생성하고 AppScene을 Build Settings의 0번으로 등록합니다.
+2. `AppRoot`의 `AppSceneRoot.Initial Content Scene Path` 목록에서 최초로 로드할 Scene을 선택합니다. 목록에는 활성화된 Build Settings Scene이 `Scene 이름 (Assets/.../*.unity)` 형식으로 표시되며 AppScene은 제외됩니다. 기본값은 `Assets/Scenes/Candidate_MainScene.unity`입니다.
 3. 이후 전환에는 `AppSceneRoot.Instance.SceneTransitions.LoadContentSceneAsync(scenePath, profile, cancellationToken)`을 호출합니다. `scenePath`에는 Build Settings에 등록된 전체 프로젝트 경로를 전달하고, 콘텐츠 Scene에서 Unity의 `LoadScene`을 직접 호출하지 않습니다.
 4. 서비스가 시작해야 하는 초기화는 `ISceneInitializer`로 구현하고, Addressables·세이브·현지화처럼 의존성이 있는 작업은 `InitializationOrder`를 지정합니다.
 5. 이미 다른 관리자가 시작한 비동기 작업은 `ISceneReadySource` 또는 `SceneReadySignal`로 노출하고, 필수 자산·카메라·초기 포커스가 모두 준비된 뒤 `MarkReady()`를 호출합니다.
@@ -214,6 +214,39 @@ Enter Play Mode Options는 프로젝트의 기존 설정을 변경하지 않습�
 Player 빌드 전에 `Tools > TxT RPG > Application > Validate App Scene Configuration`을 실행하면 빌드 전처리와 동일한 검증을 수동으로 수행할 수 있습니다. Scene 자산 이동이나 이름 변경, Build Settings 변경 뒤에는 이 검증을 실행합니다. `Tools > TxT RPG > Application > Rebuild App Scene`은 유효한 기존 전체 경로와 `Load Initial Content On Start` 값을 보존하며, 기존 Scene 이름은 유일하게 해석할 수 있을 때에만 전체 경로로 마이그레이션합니다.
 
 기본 `Scene Swap Mode = Load Then Unload`는 실패 시 이전 Scene 복구를 우선합니다. 모바일 메모리 한계 때문에 `Unload Before Load`를 선택한 경우에는 이전 화면 복구가 불가능할 수 있으므로 `ErrorFallback`과 재시도 흐름을 반드시 확인합니다.
+
+### Candidate_MainScene 초기 콘텐츠와 임시 적용·측정 메뉴
+
+`Candidate_MainScene`은 AppScene이 처음 로드하는 콘텐츠 Scene이며, 현재는 게임 패널 없이 `Canvas/MainArea`의 세 영역과 `Canvas/OverlayLayer/SlotReelDock`(하단 슬롯 Reel 독)을 표시합니다(구성은 [FlexibleLayoutPanel](../architecture/flexible-layout-panel.md#candidate_mainscene-적용-예) 참고). Build Settings 순서는 `AppScene`, `Candidate_MainScene`, `TMP_MainScene`이며 모두 활성입니다. 게임 화면 검증은 Play 중 `Tools > TxT RPG > Application > Play Mode > Load TMP_MainScene`으로 `TMP_MainScene`에 전환한 뒤 수행합니다.
+
+다음 두 메뉴는 `candidate-main-scene-initial-content-and-layout` 작업용 임시 메뉴(`Assets/TxTRPG/Application/Editor/`)입니다. 적용은 2026-10-17에 운영 자산에 완료했으므로 다시 실행할 필요가 없으며, 필요하지 않게 되면 두 파일을 삭제할 수 있습니다.
+
+| 메뉴 | 동작 |
+| --- | --- |
+| `Tools > TxT RPG > Application > Temporary > Apply Candidate Main Scene Initial Content` (`TemporaryCandidateMainSceneApply`) | Play Mode·컴파일 중이거나 `AppScene`·`Candidate_MainScene`에 미저장 변경이 있으면 아무것도 바꾸지 않습니다. Build Settings를 `AppScene`·`Candidate_MainScene`·`TMP_MainScene` 순서로 맞추고 파일이 없는 Scene 항목을 제거한 뒤, `AppRoot.prefab`의 초기 경로를 `Candidate_MainScene`으로 바꾸고, AppScene의 같은 Override를 되돌리고, `Candidate_MainScene`의 `MainArea`와 세 Area를 `FlexibleLayoutPanel.prefab` 인스턴스로 재구성합니다. 바꾼 자산만 저장하며, 이미 적용된 단계는 건너뛰므로 재실행해도 안전합니다. 결과는 `CANDIDATE_MAIN_SCENE_APPLY` 로그로 남습니다. |
+| `Tools > TxT RPG > Application > Temporary > Measure Candidate Main Scene Layout (Play Mode)` (`TemporaryCandidateLayoutProbe`) | AppScene 경유 Play에서 `Candidate_MainScene`이 표시된 상태로 실행합니다. Game View를 1920×1080, 2560×1080, 1280×720, 1080×1920, 750×1334, 640×1136, 700×400으로 차례로 바꾸며 세 영역의 위치·크기와 축을 `CANDIDATE_LAYOUT` 로그로 남기고 `Temp/candidate-layout-*.png`를 저장합니다. 임시 Game View 크기는 전체 인덱스로 제거하며 아무 자산도 저장하지 않습니다. |
+
+### Candidate_MainScene 슬롯 Reel 독 적용과 미리보기
+
+구조와 설정은 [슬롯머신과 룬 기반 전투 행동](../architecture/slot-machine-and-runes.md#slotreeldock-candidate_mainscene-하단-슬롯-reel-독)에 있습니다.
+
+| 메뉴 | 동작 |
+| --- | --- |
+| `Tools > TxT RPG > Application > Temporary > Apply Slot Reel Dock To Candidate Main Scene` (`TemporarySlotReelDockApply`, 임시) | Play Mode·컴파일 중·Prefab Stage이거나 열린 Scene에 미저장 변경이 있으면 아무것도 바꾸지 않습니다. `SlotReelDock.prefab`이 없으면 `SlotMachinePanel.prefab`의 Reel 기계 외형과 합계 글자를 독립 객체로 복제하고 `SlotReel.prefab` 인스턴스 3개를 넣어 만듭니다. 이미 있으면 다시 만들지 않고 검증만 하며, Reel·구분대 형제 순서가 어긋난 경우에만 그 순서를 고쳐 저장합니다. `Candidate_MainScene`에 독이 없으면 `Canvas/OverlayLayer`와 Prefab 인스턴스를 추가하고 저장합니다. 이미 목표 상태이면 파일을 쓰지 않고 `kept` 로그만 남기므로 재실행해도 안전합니다. 결과는 `SLOT_REEL_DOCK_APPLY` 로그로 남습니다. `SlotMachinePanel.prefab`, `SlotReel.prefab`, `TMP_MainScene`은 읽기만 합니다. 적용은 2026-10-17에 완료했으므로 다시 실행할 필요가 없으며, 사용자가 독을 확인한 뒤 파일을 삭제할 수 있습니다. 검증 실패 시 `SlotReelDock.prefab`을 지우고 다시 실행하면 새로 만들지만, Scene 인스턴스의 GUID 참조가 끊기므로 Scene의 `OverlayLayer/SlotReelDock`도 함께 지워야 합니다. |
+| `Tools > TxT RPG > Application > Preview > Slot Reel Dock > Spin` (`SlotReelDockPreviewMenu`, 영구) | Play Mode에서 로드된 Scene의 활성 `SlotReelDock` 하나를 찾아(없거나 둘 이상이면 경고만 남김) 세션 슬롯머신의 Reel(세션이 없으면 `TemporarySlotMachineConfiguration.asset`)과 미리보기 전용 난수 정지 위치로 `PlaySpinAsync`를 재생합니다. 합계는 Payline 값의 합이며 세션·룬·Fortune Critical 상태는 바뀌지 않습니다. 회전 중에 다시 실행하면 이전 회전을 `StopAtResult`로 끝내고 새로 시작합니다. Reduce Motion은 `PlayerSessionHost.TemporaryDicePreferences.ReduceMotion`(세션이 없으면 꺼짐)을 따릅니다. |
+| `... > Spin With Total Multiplier` | 위와 같고 합계를 2배로 표시하며 합계 배수 `×2`를 보여 줍니다. |
+| `... > Add Reel`, `... > Remove Reel` | 미리보기가 표시하는 Reel 구성의 끝에 Reel을 하나 더하거나 빼고(최소 1개) `SetReels`를 호출합니다. 이후 `Spin`은 이 구성을 씁니다. Play Mode를 다시 시작하면 세션 구성으로 돌아갑니다. |
+| `... > Toggle Shown` | `SetShown(!IsShown)` |
+| `... > Cycle Card Shape` | 합계 카드 모양을 `Rectangle` → `RoundedRectangle` → `Circle` → `Ellipse` 순서로 바꿉니다. 실행 중 값이며 Prefab에 저장하지 않습니다. |
+
+미리보기 결과는 `SLOT_REEL_DOCK_PREVIEW` 로그로 남습니다. `EditorMenuTests`는 `TxTRPG.Application.Editor` 어셈블리를 검사하지 않으므로 이 메뉴는 그 테스트의 기대 목록에 없습니다.
+
+확인 절차:
+
+1. 아무 Scene에서 Play를 시작하면 AppScene을 거쳐 `Candidate_MainScene`이 로드되고, 화면 하단에 Reel 3개의 독과 흰색 직사각형 합계 카드가 Reel 기계 위쪽 가장자리 가운데에 걸쳐 보입니다.
+2. `Preview > Slot Reel Dock`의 각 메뉴를 실행하고 Console의 `SLOT_REEL_DOCK_PREVIEW` 로그와 화면을 확인합니다.
+3. Inspector에서 `OverlayLayer/SlotReelDock/PresentationRoot/TotalCard`의 `Appearance > Shape`를 `RoundedRectangle`로, `Corner Radius`를 0, 0.2, 0.5로 바꿔 둥근 정도를 확인합니다. Play Mode에서 바꾼 값은 종료 후 저장되지 않습니다.
+4. Edit Mode 테스트는 `TxTRPG.UI.Tests.SlotReelDockTests`이며, Reel 처리 회귀는 `SlotMachinePanelTests`, `SlotMachinePanelSkinTests`, `SlotMachineCombatTests`, `SlotFortuneCriticalCombatTests`, `ExplorationEventControllerTests`로 확인합니다.
 
 ## EnemyDisplayPanel을 씬에서 사용하기
 
@@ -382,9 +415,9 @@ Edit Mode에서는 `[ExecuteAlways]`가 없는 MonoBehaviour의 `Awake`·`OnEnab
 
 ### 자산을 다시 쓰는 테스트와 실행 범위
 
-운영 Builder(`CreateOrUpdate*`, `Upgrade*`)를 호출해 저장된 Scene, Prefab, 설정 자산을 다시 쓰는 Edit Mode 테스트에는 `[Category("AssetWriting")]`이 붙어 있습니다. 대상은 `ActionGridPanelTests`, `ActionGridCell*SizingTests`, `AssetManagementTests`, `CharacterDisplayPanelTests`, `EnemyDisplayPanelTests`, `HealthBarPanelTests`, `FlexibleLayoutPanelTests`, `StoryTextPanel*Tests`, `MainSceneDefaultPresentationTests`, `SceneTransitionTests`, `MainSceneVisualProposalTests`의 해당 메서드입니다. 임시 폴더에 자산을 만들고 테스트 끝에 지우는 테스트와, 저장된 자산을 검증만 하는 테스트는 이 분류에 넣지 않습니다.
+운영 Builder(`CreateOrUpdate*`, `Upgrade*`)를 호출해 저장된 Scene, Prefab, 설정 자산을 다시 쓰는 Edit Mode 테스트에는 `[Category("AssetWriting")]`이 붙어 있습니다. 대상은 `ActionGridPanelTests`, `ActionGridCell*SizingTests`, `AssetManagementTests`, `CharacterDisplayPanelTests`, `EnemyDisplayPanelTests`, `HealthBarPanelTests`, `FlexibleLayoutPanelTests`, `StoryTextPanel*Tests`, `MainSceneDefaultPresentationTests`, `SceneTransitionTests`의 해당 메서드입니다. 임시 폴더에 자산을 만들고 테스트 끝에 지우는 테스트와, 저장된 자산을 검증만 하는 테스트는 이 분류에 넣지 않습니다.
 
-`MainSceneVisualProposalTests`는 클래스 전체에 `[Explicit]`도 붙어 있습니다. 이 테스트는 `MainScene_VisualProposal.unity`, `MainScenePresentation/Preview/*.asset`, `MainScenePreviewHarness.prefab`과 Build Settings를 다시 쓰고 실행 시간이 길기 때문에, 전체 실행이나 분류 필터 실행에서 빠집니다. `MainSceneVisualProposalBuilder`를 변경했을 때만 Test Runner 창에서 이 클래스를 직접 선택하거나 이름으로 지정해서 실행합니다.
+`SceneTransitionTests.GeneratedAppScene_HasRequiredHierarchyReferencesAndBuildOrder`는 `Rebuild App Scene`을 호출합니다. Editor의 Test Runner에서 실행하면 테스트용 미저장 Scene이 활성 상태이므로 `Save the current scene before rebuilding AppScene.`으로 실패하며, 실패하기 전에 `AppRoot.prefab`을 다시 저장하면서 `PlayerSessionHost`의 임시 주사위·슬롯머신·룬·Fortune Critical 설정 참조를 비웁니다(2026-10-17 확인). 이 테스트를 실행했다면 `AppRoot.prefab`의 변경을 확인하고, 작업 전 상태로 되돌린 뒤 의도한 값만 다시 적용합니다.
 
 평소에는 변경과 관련된 테스트 클래스나 어셈블리만 실행하고, `AssetWriting` 분류는 해당 Builder나 그 Builder가 만드는 자산을 변경했을 때만 실행합니다.
 
@@ -553,11 +586,6 @@ Scene 연결을 복구할 때에는 기존 메뉴의 Transform, 형제 순서, �
 
 기존 자산의 `displayMode`, `itemsPerPage`, `fillPageWithEmptySlots`는 최초 역직렬화 때 `GridContentLayoutSettings`로 이전됩니다. 기존 `ActionGridLayoutMode` enum의 숫자는 바뀌지 않았습니다. 저장된 운영 Prefab은 전체 재생성하지 않고 대상 계층과 참조만 갱신해야 하며, `TMP_MainScene`의 `GameMenuPanel` Transform과 Prefab Override는 유지합니다.
 
-## Main Scene 시각 개선 제안안
-
-- `Tools > TxT RPG > UI > Visual Proposals > Rebuild Main Scene Visual Proposal`은 `TMP_MainScene`을 보존하면서 `MainScene_VisualProposal`과 전용 스타일을 생성하거나 갱신합니다.
-- `Tools > TxT RPG > UI > Visual Proposals > Play Main Scene Visual Proposal`은 AppScene을 먼저 실행하고 기존 초기화가 끝난 뒤 같은 Scene 전환 서비스로 제안 Scene을 엽니다.
-- 생성기가 소유하는 설정, 비교 화면과 수동 검증 항목은 [Main Scene 시각 개선 제안안](main-scene-visual-proposal.md)을 확인합니다.
 ## ActionGridCell 아이콘 크기 설정
 
 `ActionGridCell` Inspector의 `Icon Layout`에서 `Relative To Content`와 `Fixed Padding`을 선택합니다. 비율 기반 기본값은 0.9이며, 고정 여백 값은 Canvas UI 단위입니다. 기존 Prefab의 다른 사용자 설정을 보존하면서 신규 기본값만 적용하려면 `Tools > TxT RPG > UI > Prefabs > Upgrade Action Grid Cell Icon Layout`을 실행합니다. 전체 `Rebuild Action Grid`도 같은 비율 기본값을 생성하지만 Cell·Panel·Context Menu를 함께 재생성하므로 개별 사용자 설정을 유지해야 할 때에는 사용하지 않습니다.
@@ -585,7 +613,7 @@ Scene 연결을 복구할 때에는 기존 메뉴의 Transform, 형제 순서, �
 
 - 설정 자산: `Assets/TxTRPG/Application/Configuration/TemporaryDiceConfiguration.asset`
 - 적용 메뉴: `Tools > TxT RPG > Application > Temporary > Apply Player Dice Roll Menu`
-- 실행 경로: `Assets/Scenes/AppScene.unity`에서 시작하여 `TMP_MainScene`이 로드된 후 전투 노드를 고르고, 적 패널과 주사위 패널(`OwnedDicePanel`) 경계선의 "행동" 버튼을 사용합니다. 게임 메뉴에는 행동 버튼이 없습니다.
+- 실행 경로: `Assets/Scenes/AppScene.unity`에서 시작하여 `Tools > TxT RPG > Application > Play Mode > Load TMP_MainScene`으로 `TMP_MainScene`에 전환한 후 전투 노드를 고르고, 적 패널과 주사위 패널(`OwnedDicePanel`) 경계선의 "행동" 버튼을 사용합니다. 게임 메뉴에는 행동 버튼이 없습니다.
 - 면 설정: 각 Dice 항목의 `Faces`에서 `Effect Kind`와 `Amount`를 편집합니다. 현재 런타임은 Attack과 Heal만 허용합니다.
 - 기능 해제: 설정 자산의 `Enabled For Session`을 끄면 세션 지급과 버튼 실행이 비활성화됩니다.
 - 제거 지점: 정식 주사위 소유 시스템으로 전환할 때 `TemporaryDiceRollMenuController`, 경계선 행동 버튼(`CombatActionBoundary`)과 AppRoot의 임시 설정 참조를 제거합니다. 저장 스키마에는 이전할 데이터가 없습니다.
@@ -599,7 +627,7 @@ Scene 연결을 복구할 때에는 기존 메뉴의 Transform, 형제 순서, �
 
 1. Edit Mode에서 `TxTRPG.UI.Tests.StoryTextPanelTests`를 실행하여 운영 Prefab 참조와 누락 참조 경고를 확인합니다.
 2. Play Mode에서 `TxTRPG.UI.Tests.StoryTextPanelLifecyclePlayModeTests`를 실행합니다. 활성화 전 미구성, 활성화 후 참조 복구, 반복 크기 변경, Canvas 갱신, 비활성화·재활성화와 파괴 경로를 포함합니다.
-3. `Assets/Scenes/AppScene.unity`에서 실행하여 `TMP_MainScene` 진입 후 StoryTextPanel에 메시지를 추가하고 창 크기를 변경합니다.
+3. `Assets/Scenes/AppScene.unity`에서 실행하고 `Tools > TxT RPG > Application > Play Mode > Load TMP_MainScene`으로 `TMP_MainScene`에 진입한 후 StoryTextPanel에 메시지를 추가하고 창 크기를 변경합니다.
 4. Scene 전환 또는 Play Mode 종료 후 `StoryTextPanel.RebuildAndRefresh`, `ScrollToBottomAfterLayout`과 MissingReference 관련 예외가 없는지 Console에서 확인합니다.
 
 운영 Prefab과 Scene 참조가 정상이라면 별도 적용 메뉴를 실행하지 않습니다. 누락이 확인되었을 때에도 자동 Scene 검색으로 숨기지 말고 Prefab 또는 해당 Scene Override의 직렬화 참조를 복구합니다.
@@ -662,7 +690,7 @@ Play Mode 회귀 테스트는 `ExplorationCardFeedbackPlayModeTests`입니다. T
 3. Tools > TxT RPG > Application > Temporary > Apply Modal Outside Close And Bag Empty State를 실행합니다.
    선택할 오브젝트나 추가 확인 창은 없습니다. Console의 MODAL_INTERACTION_UPGRADE 메시지를 확인합니다.
    오류가 나오면 중단하고 누락된 Window/EmptyState 참조를 복구한 뒤 재실행합니다. 다른 Scene은 저장하지 않습니다.
-4. Assets/Scenes/AppScene.unity에서 Play Mode를 시작하고 TMP_MainScene 진입을 기다립니다.
+4. Assets/Scenes/AppScene.unity에서 Play Mode를 시작하고 Candidate_MainScene이 표시되면 Tools > TxT RPG > Application > Play Mode > Load TMP_MainScene을 실행해 TMP_MainScene 전환을 기다립니다.
    Bag에 빈 슬롯이 있으면 빈 문구가 숨겨지고, Paged에서 빈 칸 채우기를 끈 0개 결과에서는 문구가 표시되는지 확인합니다.
 5. Bag·System·Status의 내부 조작은 창을 유지하고 바깥 클릭·탭은 창을 닫으며 호출 버튼으로 포커스가 돌아오는지 확인합니다.
    드래그·취소된 터치는 닫지 않고, 바깥 닫기로 뒤의 버튼이 실행되지 않아야 합니다.
@@ -704,7 +732,7 @@ Bag은 `InventoryWindowPage`의 `Grid Settings / Presentation`에서 선택합�
    선택 오브젝트는 필요하지 않습니다. QuickItemGridPresenter가 있는 운영 Actions만 참조합니다.
    TMP_MainScene만 자동 저장합니다. Console의 ACTIONS_APPLY: PASS를 확인합니다.
    오류이면 다음 단계로 진행하지 않습니다. 같은 값으로 재실행할 수 있습니다.
-4. Assets/Scenes/AppScene.unity에서 Play Mode를 시작하고 TMP_MainScene 전환을 기다립니다.
+4. Assets/Scenes/AppScene.unity에서 Play Mode를 시작하고 Candidate_MainScene이 표시되면 Tools > TxT RPG > Application > Play Mode > Load TMP_MainScene을 실행해 TMP_MainScene 전환을 기다립니다.
    기존 퀵 슬롯 수와 순서를 유지하면서 좁은 화면에서는 열 수가 줄고 세로 스크롤로 마지막 슬롯까지 접근해야 합니다.
 5. 필요하면 Tools > TxT RPG > UI > Actions > Temporary > Capture Before와 Capture After를 각각 실행합니다.
    각 작업의 ACTIONS_CAPTURE: PASS 로그가 나온 뒤 다음 작업을 시작합니다.
@@ -769,7 +797,7 @@ Windows Editor의 Game View 고정 해상도로 검증했습니다. 운영 Canva
    ActionGridPanel.prefab와 InventoryWindowPage.prefab의 필수 참조 및 운영 Actions 설정을 저장합니다.
    ACTIONS_SINGLE_ROW_APPLY: PASS 로그가 나와야 합니다. 오류가 있으면 다음 단계로 진행하지 않습니다.
    두 Prefab과 TMP_MainScene은 자동 저장되며, 별도의 Ctrl+S는 필요하지 않습니다.
-4. Assets/Scenes/AppScene.unity에서 Play Mode를 시작하고 TMP_MainScene 로딩을 기다립니다.
+4. Assets/Scenes/AppScene.unity에서 Play Mode를 시작하고 Candidate_MainScene이 표시되면 Tools > TxT RPG > Application > Play Mode > Load TMP_MainScene을 실행해 TMP_MainScene 전환을 기다립니다.
    Actions의 Header가 없어야 하며 슬롯 5개가 모두 한 행에 있어야 합니다.
    넓은 화면에서는 첫 슬롯과 마지막 슬롯의 바깥 변이 Padding 경계에 맞아야 합니다.
    좁은 화면에서는 휠/드래그/방향 탐색으로 나머지 슬롯을 볼 수 있어야 합니다.
@@ -842,7 +870,7 @@ Windows64와 Android Player 관리 스크립트는 각각 39개 어셈블리로 
    Gap 12, Cell 64, Header 비활성, Scrollbar Hidden이면 panel=124 viewport=88 state=Supplying이어야 합니다.
 7. Scene은 Dirty 상태로 남습니다. git diff로 구성 요소 추가와 HealthBarPanel FlexibleLayoutItem Override만
    의도한 변경인지 확인한 뒤 File > Save로 저장합니다. 되돌리려면 저장 전에 Edit > Undo를 사용합니다.
-8. Assets/Scenes/AppScene.unity에서 Play Mode를 시작하고 TMP_MainScene 진입을 기다립니다.
+8. Assets/Scenes/AppScene.unity에서 Play Mode를 시작하고 Candidate_MainScene이 표시되면 Tools > TxT RPG > Application > Play Mode > Load TMP_MainScene을 실행해 TMP_MainScene 전환을 기다립니다.
    ActionGridPanel을 선택하고 Measure Content-Fit Height Across Resolutions (Play Mode)를 실행합니다.
    ACTIONS_FIT_SWEEP: PASS completed까지 기다리고 각 화면에서 panel=124, cellTopGap=12, cellBottomGap=12를 확인합니다.
 ```
@@ -866,7 +894,7 @@ Windows64와 Android Player 관리 스크립트는 각각 39개 어셈블리로 
 3. Tools > TxT RPG > UI > Exploration > Temporary > Apply Input Ownership을 실행합니다.
    선택할 오브젝트와 확인 대화상자는 없습니다. 목록의 Window Service 참조만 연결하고 Scene을 자동 저장합니다.
    Console의 EXPLORATION_SELECTION_APPLIED를 확인합니다. 오류가 있으면 다음 단계로 진행하지 않습니다.
-4. Assets/Scenes/AppScene.unity에서 Play Mode를 시작하고 TMP_MainScene 진입을 기다립니다.
+4. Assets/Scenes/AppScene.unity에서 Play Mode를 시작하고 Candidate_MainScene이 표시되면 Tools > TxT RPG > Application > Play Mode > Load TMP_MainScene을 실행해 TMP_MainScene 전환을 기다립니다.
 5. 포인터를 카드 밖에 두고 초기 포커스와 박동이 없는지 확인합니다. 장식 테두리는 유지됩니다.
 6. 초기 Submit은 무동작이어야 합니다. 첫 방향 입력은 방향과 관계없이 첫 카드에 포커스만 주고,
    다음 방향 입력은 탐색하며 별도 Submit은 한 번만 노드를 선택해야 합니다.
@@ -1043,7 +1071,7 @@ Play Mode 검증 메뉴가 검사하는 항목은 다음과 같습니다.
 - 연속 `Submit` 두 번과 회전 중 가방 창 열기·닫기에도 결과가 1회만 적용됩니다. 회전 중 잔상과 세로 늘림이 한 번 이상 보이고, 정지 후에는 잔상이 꺼지고 `VisualRoot` 배율이 1입니다. 정지 후 합계 값과 룬 표 행(`×N → 분배`)이 수락된 결과와 같습니다. Scene에 활성 `GameWindowService`가 없으면 창 단계는 건너뛰고 `game window NOT verified`를 기록합니다.
 - 포인터 클릭과 Reduce Motion으로도 실행됩니다.
 - 실행 중 Reel을 4·5개로 늘리고 칸 값을 바꾸면 다음 회전부터 반영됩니다.
-- 회전 중 `MainScene_VisualProposal`을 거쳐 TMP_MainScene에 다시 들어와도 결과가 1회만 적용되고 새 패널에 표시되며, 새 패널에 잔상이 남지 않습니다.
+- 회전 중 `Candidate_MainScene`을 거쳐 TMP_MainScene에 다시 들어와도 결과가 1회만 적용되고 새 패널에 표시되며, 새 패널에 잔상이 남지 않습니다.
 - 전투가 끝나면 버튼이 숨겨지고 노드 선택이 다시 패널을 덮습니다.
 
 2026-10-13 확인에서 이 메뉴는 390×844 단계의 `the action button does not cover reel 2` 검사로 실패했습니다. Fortune Critical을 적용하기 전의 두 Prefab(HEAD)으로 바꿔 실행해도 같은 결과였으므로 이번 변경과 관계없는 기존 상태입니다. 이 단계 뒤의 항목(Submit 2회, 창 열기, Reel 4·5개, Scene 재진입, 전투 종료)은 그날 다시 확인하지 못했습니다.
@@ -1131,7 +1159,7 @@ Play Mode 확인 절차는 다음과 같습니다.
 
 ```text
 1. Play Mode를 종료하고 컴파일이 끝날 때까지 기다립니다. 열린 Scene에 저장되지 않은 변경이 없어야 합니다.
-2. AppScene 시작 정책 그대로 Play를 시작해 TMP_MainScene에서 새 탐험이 노드 선택을 기다리는 상태로 둡니다.
+2. AppScene 시작 정책 그대로 Play를 시작하고 `Tools > TxT RPG > Application > Play Mode > Load TMP_MainScene`으로 전환해 TMP_MainScene에서 새 탐험이 노드 선택을 기다리는 상태로 둡니다.
 3. Tools > TxT RPG > Application > Temporary > Validate Slot Fortune Critical (Play Mode)를 실행합니다.
    - 세션 상태 API로 reel.2를 항상 ×3, 합계를 항상 ×2로 바꾸고(나머지 Reel 확률 0) 전투를 시작합니다.
    - 키보드 Submit, 포인터 클릭, Reduce Motion으로 한 번씩 실행해 회전 중에는 배수가 없고 정지 후 Reel·합계 배수,
@@ -1185,7 +1213,7 @@ Play Mode 확인 절차는 다음과 같습니다.
   4. TMP_MainScene의 `ExplorationNodePanel/EventView`가 없으면 만들고(`ExplorationEventViewBuilder`), `ExplorationRunController`와 같은 오브젝트에 `ExplorationEventController`가 없으면 추가한 뒤 빈 참조만 채우고 Scene을 저장합니다.
   성공하면 `EXPLORATION_EVENT_NODES_APPLY` 로그와 `validation: passed`가 남습니다. 운영 Scene과 자산에는 2026-10-13에 적용·저장했습니다. 모든 작업 사본의 이전이 끝나면 이 메뉴는 삭제할 수 있습니다. 자산 생성·Scene 편집을 함께 하므로 Prefab 일괄 Rebuild에는 등록하지 않습니다.
 - `Tools > TxT RPG > Application > Temporary > Validate Exploration Event Nodes`: 변경 없이 카탈로그 빌드(구조 오류, 빠진 이벤트, 테스트 이벤트 5개), 설정 가중치·카탈로그 연결, 트리 스타일, Scene 참조(EventView 위치·비활성·템플릿·창 서비스, 컨트롤러 참조 4개, 장식 Graphic Raycast)를 검사합니다.
-- `Tools > TxT RPG > Application > Temporary > Validate Exploration Event Nodes In Play Mode`: AppScene에서 Play를 시작해 TMP_MainScene이 뜬 뒤 실행합니다. 세션 탐험을 각본 후보(이벤트 카드 2장 + 전투 카드)로 바꾸고, 테스트 이벤트 5개를 카드·선택지 버튼(포인터 클릭·Submit)으로 진행합니다. 4개 화면 크기, 모달 중 입력 무시, 슬롯 판정 중 가방 창·Scene 재로드(`MainScene_VisualProposal` 경유)·Reduce Motion, 다음 전투의 Reel·룬 반영, 체력 6에서 함정 패배를 확인하고 `EXPLORATION_EVENT_PLAY_VALIDATE ... result: PASSED`를 남깁니다. 아무것도 저장하지 않으며 Play를 끝내면 바뀐 세션은 사라집니다. 같은 메뉴의 `(Show Shrine)`은 체력 5로 제단 페이지를 띄워 두어 화면을 캡처할 때 씁니다. Play Mode에서 한국어 글자를 그리면 `NotoSansKR-Fallback.asset`의 동적 아틀라스가 커질 수 있으니, 의도한 변경이 아니면 확인 후 되돌립니다.
+- `Tools > TxT RPG > Application > Temporary > Validate Exploration Event Nodes In Play Mode`: AppScene에서 Play를 시작하고 `Tools > TxT RPG > Application > Play Mode > Load TMP_MainScene`으로 TMP_MainScene에 전환한 뒤 실행합니다. 세션 탐험을 각본 후보(이벤트 카드 2장 + 전투 카드)로 바꾸고, 테스트 이벤트 5개를 카드·선택지 버튼(포인터 클릭·Submit)으로 진행합니다. 4개 화면 크기, 모달 중 입력 무시, 슬롯 판정 중 가방 창·Scene 재로드(`Candidate_MainScene` 경유)·Reduce Motion, 다음 전투의 Reel·룬 반영, 체력 6에서 함정 패배를 확인하고 `EXPLORATION_EVENT_PLAY_VALIDATE ... result: PASSED`를 남깁니다. 아무것도 저장하지 않으며 Play를 끝내면 바뀐 세션은 사라집니다. 같은 메뉴의 `(Show Shrine)`은 체력 5로 제단 페이지를 띄워 두어 화면을 캡처할 때 씁니다. Play Mode에서 한국어 글자를 그리면 `NotoSansKR-Fallback.asset`의 동적 아틀라스가 커질 수 있으니, 의도한 변경이 아니면 확인 후 되돌립니다.
 - 관련 Edit Mode 테스트(클래스별로 실행, `AssetWriting` 아님): `TxTRPG.Gameplay.Tests.ExplorationRunStateTests`, `TxTRPG.Gameplay.Tests.ExplorationEventExecutionTests`, `TxTRPG.Application.Tests.ExplorationEventEffectTests`, `TxTRPG.Application.Tests.ExplorationEventAssetTests`(저장된 테스트 이벤트 자산이 필요하므로 적용 메뉴를 먼저 실행), `TxTRPG.Application.Tests.ExplorationEventControllerTests`, `TxTRPG.UI.Tests.ExplorationEventViewTests`.
 
 ### 새 이벤트 만들기

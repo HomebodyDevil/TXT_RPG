@@ -14,8 +14,10 @@ namespace TxTRPG.UI.SlotMachine
     // off. Reels are SlotReelViewBase instances, so the reel implementation can be replaced.
     // The look comes from a SlotMachinePanelSkin chosen from the skin catalog in Play Mode (SetSkin swaps it at runtime);
     // every skin target keeps its recorded Prefab default, which an empty skin entry or a null skin restores.
+    // Reel, divider, payline and spin handling is delegated to SlotReelMachineCore (shared with SlotReelDock); the panel
+    // keeps its serialized fields, the summary area and the skin targets.
     [DisallowMultipleComponent]
-    public sealed class SlotMachinePanel : MonoBehaviour
+    public sealed class SlotMachinePanel : MonoBehaviour, ISlotMachinePresenter, ISlotReelMachineHost
     {
         [SerializeField] private RectTransform reelArea;
         [SerializeField, Tooltip("Raises LayoutApplied after the reel area is laid out; the payline frame follows it.")]
@@ -69,35 +71,21 @@ namespace TxTRPG.UI.SlotMachine
         [SerializeField, Tooltip("Total Fortune Critical multiplier; a skin may override its color with Fortune Text Color.")]
         private SlotSkinTextTarget totalMultiplierSkin = new();
 
-        private readonly Vector3[] firstCorners = new Vector3[4];
-        private readonly Vector3[] lastCorners = new Vector3[4];
-        private int generation;
-        private IReadOnlyList<SlotReelDisplay> pendingReels;
-        private System.Random spinRandom;
+        private SlotReelMachineCore machine;
         private bool warnedMissingProfile;
         private bool hasSettingsOverride;
         private SlotReelSpinSettings settingsOverride;
         private SlotMachinePanelSkin activeSkin;
         private bool skinResolved;
         private bool warnedSkinCatalog;
-        private float appliedBorderOutset = float.NaN;
-        private Vector4 appliedImageOutset = new(float.NaN, 0f, 0f, 0f);
 
         // Raised once after the skin actually changed.
         public event Action<SlotMachinePanel> SkinChanged;
 
-        public bool IsSpinning { get; private set; }
+        public bool IsSpinning => Machine.IsSpinning;
         public int ReelCount => reelViews.Count;
         public IReadOnlyList<SlotReelViewBase> ReelViews => reelViews.AsReadOnly();
-        public int ActiveDividerCount
-        {
-            get
-            {
-                var count = 0;
-                foreach (var divider in reelDividers) if (divider != null && divider.gameObject.activeSelf) count++;
-                return count;
-            }
-        }
+        public int ActiveDividerCount => Machine.ActiveDividerCount;
         public string TotalLabelText => totalLabelText != null ? totalLabelText.text : string.Empty;
         public string TotalValueText => totalValueText != null ? totalValueText.text : string.Empty;
         // Total Fortune Critical multiplier currently shown; empty when hidden.
@@ -134,6 +122,24 @@ namespace TxTRPG.UI.SlotMachine
                 return SlotReelSpinSettings.Default;
             }
         }
+
+        private SlotReelMachineCore Machine => machine ??= new SlotReelMachineCore(this);
+
+        MonoBehaviour ISlotReelMachineHost.Owner => this;
+        RectTransform ISlotReelMachineHost.ReelArea => reelArea;
+        SlotReelViewBase ISlotReelMachineHost.ReelPrefab => reelPrefab;
+        List<SlotReelViewBase> ISlotReelMachineHost.ReelViews => reelViews;
+        List<RectTransform> ISlotReelMachineHost.ReelDividers => reelDividers;
+        RectTransform ISlotReelMachineHost.PaylineRoot => paylineRoot;
+        SlotPaylineFrameGraphic ISlotReelMachineHost.PaylineFrame => paylineFrame;
+        Image ISlotReelMachineHost.PaylineImage => paylineImage;
+        float ISlotReelMachineHost.MinimumFontSize => minimumFontSize;
+        float ISlotReelMachineHost.MaximumFontSize => maximumFontSize;
+        SlotReelSpinSettings ISlotReelMachineHost.SpinSettings => Settings;
+        bool ISlotReelMachineHost.SkinResolved => skinResolved;
+        SlotMachinePanelSkin ISlotReelMachineHost.ActiveSkin => activeSkin;
+        void ISlotReelMachineHost.ApplyDividerSkin(RectTransform divider) => ApplyDividerSkin(divider);
+        void ISlotReelMachineHost.SetSummary(SlotSummaryDisplay summary) => SetSummary(summary);
 
         public float GetMaximumPresentationSeconds(int reelCount) =>
             SlotReelSpinPlanner.GetMaximumPresentationSeconds(Settings, Mathf.Max(1, reelCount));
@@ -225,60 +231,14 @@ namespace TxTRPG.UI.SlotMachine
             if (graphic != null) dividerSkin.ApplyTo(graphic, activeSkin != null ? activeSkin.ReelDivider : null, this);
         }
 
-        // Exactly one payline display is enabled: the skin image when the skin has a payline sprite, otherwise the
-        // code-drawn border (recolored when the skin overrides the color). Both keep their GameObjects.
-        private void ApplyPaylineSkin()
-        {
-            var entry = activeSkin != null ? activeSkin.PaylineFrame : null;
-            var useImage = activeSkin != null && activeSkin.HasPaylineImage && paylineImage != null && paylineRoot != null;
-            if (paylineImage != null)
-            {
-                if (useImage)
-                {
-                    entry.WarnIfBorderMissing(this);
-                    if (paylineImage.sprite != entry.Sprite) paylineImage.sprite = entry.Sprite;
-                    if (paylineImage.type != entry.ImageType) paylineImage.type = entry.ImageType;
-                    if (!Mathf.Approximately(paylineImage.pixelsPerUnitMultiplier, entry.PixelsPerUnitMultiplier))
-                        paylineImage.pixelsPerUnitMultiplier = entry.PixelsPerUnitMultiplier;
-                    var color = entry.OverrideColor ? entry.Color : Color.white;
-                    if (paylineImage.color != color) paylineImage.color = color;
-                }
-                if (paylineImage.raycastTarget) paylineImage.raycastTarget = false;
-                if (paylineImage.enabled != useImage) paylineImage.enabled = useImage;
-            }
-            if (paylineFrame != null)
-            {
-                // The border takes the color override only; a sprite applies to the image alone.
-                paylineBorderSkin.ApplyTo(paylineFrame, useImage || entry == null || !entry.OverrideColor ? null : entry, this);
-                if (paylineFrame.enabled == useImage) paylineFrame.enabled = !useImage;
-            }
-        }
+        private void ApplyPaylineSkin() => Machine.ApplyPaylineSkin(paylineBorderSkin, this);
 
-        private void OnEnable()
-        {
-            if (reelAreaLayout != null) reelAreaLayout.LayoutApplied += UpdatePaylineFrame;
-            UpdatePaylineFrame();
-        }
+        private void OnEnable() => Machine.Enable(reelAreaLayout);
 
         // Applies a reel configuration. While a spin is playing it is deferred until the spin ends, because the running
         // presentation always finishes with the accepted spin's strip copies. Reels whose ID and strip are unchanged keep
         // the cell they show; others show their first cell on the payline.
-        public void SetReels(IReadOnlyList<SlotReelDisplay> reels)
-        {
-            if (reels == null || reels.Count == 0) throw new ArgumentException("At least one reel is required.", nameof(reels));
-            if (IsSpinning) { pendingReels = reels; return; }
-            pendingReels = null;
-            if (!EnsureReelCount(reels.Count)) return;
-            for (var i = 0; i < reels.Count; i++)
-            {
-                var view = reelViews[i];
-                var keep = view.ReelId == reels[i].ReelId && SameValues(view.Strip, reels[i].Values);
-                var stop = keep ? view.StopIndex : 0;
-                view.ShowStop(reels[i], stop);
-                // A kept reel still shows the result it stopped on, including its Fortune Critical multiplier.
-                if (!keep) view.ShowFortuneMultiplier(string.Empty);
-            }
-        }
+        public void SetReels(IReadOnlyList<SlotReelDisplay> reels) => Machine.SetReels(reels);
 
         // Total box and rune line table. Every string comes from the display data.
         public void SetSummary(SlotSummaryDisplay summary)
@@ -305,74 +265,14 @@ namespace TxTRPG.UI.SlotMachine
             SetStatus(string.Empty);
         }
 
-        public async Task<bool> PlaySpinAsync(SlotSpinDisplay result, bool reduceMotion, CancellationToken cancellationToken)
-        {
-            if (result == null) throw new ArgumentNullException(nameof(result));
-            if (!isActiveAndEnabled || !EnsureReelCount(result.Reels.Count)) return false;
-            var token = ++generation;
-            IsSpinning = true;
-            SetSummary(result.SpinningSummary);
-            try
-            {
-                // Every reel gets its plan first, then all start together and each waits for its own start delay.
-                spinRandom ??= new System.Random();
-                var plans = SlotReelSpinPlanner.Create(Settings, result.Reels.Count, reduceMotion, spinRandom);
-                var tasks = new Task<bool>[result.Reels.Count];
-                for (var i = 0; i < tasks.Length; i++)
-                    tasks[i] = PlayReelAsync(reelViews[i], result.Reels[i], plans[i], token, cancellationToken);
-                var completed = await Task.WhenAll(tasks);
-                if (this == null || token != generation) return false;
-                foreach (var done in completed)
-                    if (!done) return false;
-                SetSummary(result.ResultSummary);
-                return true;
-            }
-            finally
-            {
-                if (this != null && token == generation) EndSpin();
-            }
-        }
-
-        // The reel clears its multiplier when its spin starts and shows it once it is at rest on the result.
-        private async Task<bool> PlayReelAsync(SlotReelViewBase view, SlotReelStopDisplay stop, SlotReelSpinPlan plan, int token,
-            CancellationToken cancellationToken)
-        {
-            view.ShowFortuneMultiplier(string.Empty);
-            var done = await view.PlaySpinAsync(stop.Reel, stop.StopIndex, plan, cancellationToken);
-            if (done && this != null && view != null && token == generation) view.ShowFortuneMultiplier(stop.MultiplierText);
-            return done;
-        }
+        // Shows result.SpinningSummary, plays every reel and shows result.ResultSummary once all reels completed.
+        public Task<bool> PlaySpinAsync(SlotSpinDisplay result, bool reduceMotion, CancellationToken cancellationToken) =>
+            Machine.PlaySpinAsync(result, reduceMotion, cancellationToken);
 
         // Puts every reel at rest on the accepted result immediately (timeout, cancellation or a restored result).
-        public void StopAtResult(SlotSpinDisplay result)
-        {
-            if (result == null) throw new ArgumentNullException(nameof(result));
-            generation++;
-            if (EnsureReelCount(result.Reels.Count))
-                for (var i = 0; i < result.Reels.Count; i++)
-                {
-                    reelViews[i].ShowStop(result.Reels[i].Reel, result.Reels[i].StopIndex);
-                    reelViews[i].ShowFortuneMultiplier(result.Reels[i].MultiplierText);
-                }
-            SetSummary(result.ResultSummary);
-            EndSpin();
-        }
+        public void StopAtResult(SlotSpinDisplay result) => Machine.StopAtResult(result);
 
-        private void OnDisable()
-        {
-            if (reelAreaLayout != null) reelAreaLayout.LayoutApplied -= UpdatePaylineFrame;
-            if (!IsSpinning) return;
-            generation++;
-            EndSpin();
-        }
-
-        private void EndSpin()
-        {
-            IsSpinning = false;
-            var pending = pendingReels;
-            pendingReels = null;
-            if (pending != null) SetReels(pending);
-        }
+        private void OnDisable() => Machine.Disable();
 
         private void SetStatus(string message)
         {
@@ -398,146 +298,7 @@ namespace TxTRPG.UI.SlotMachine
             if (text.text != value) text.text = value;
         }
 
-        // Adds reels from the prefab or removes surplus ones, with one divider between neighbouring reels. Runs only
-        // when the reel count changes.
-        private bool EnsureReelCount(int count)
-        {
-            reelViews.RemoveAll(view => view == null);
-            if (reelViews.Count < count && (reelPrefab == null || reelArea == null)) return false;
-            var changed = reelViews.Count != count;
-            while (reelViews.Count < count)
-            {
-                var view = Instantiate(reelPrefab, reelArea, false);
-                view.name = $"SlotReel_{reelViews.Count + 1}";
-                if (skinResolved) view.ApplySkin(activeSkin);
-                reelViews.Add(view);
-            }
-            while (reelViews.Count > count)
-            {
-                var last = reelViews[reelViews.Count - 1];
-                reelViews.RemoveAt(reelViews.Count - 1);
-                DestroyObject(last.gameObject);
-            }
-            changed |= EnsureDividers(count - 1);
-            if (changed) ArrangeSiblings();
-            // Fewer, wider reels get larger digits; the range keeps narrow screens and many reels readable.
-            foreach (var view in reelViews) view.SetFontSizeRange(minimumFontSize, maximumFontSize);
-            if (changed) UpdatePaylineFrame();
-            return true;
-        }
-
-        // The first divider is kept (inactive) as the template, so dividers can be added again after a single reel.
-        private bool EnsureDividers(int count)
-        {
-            reelDividers.RemoveAll(divider => divider == null);
-            if (reelDividers.Count == 0 || reelArea == null) return false;
-            var changed = false;
-            while (reelDividers.Count < count)
-            {
-                var divider = Instantiate(reelDividers[0], reelArea, false);
-                divider.name = $"ReelDivider_{reelDividers.Count + 1}";
-                if (skinResolved) ApplyDividerSkin(divider);
-                reelDividers.Add(divider);
-                changed = true;
-            }
-            while (reelDividers.Count > Mathf.Max(1, count))
-            {
-                var last = reelDividers[reelDividers.Count - 1];
-                reelDividers.RemoveAt(reelDividers.Count - 1);
-                DestroyObject(last.gameObject);
-                changed = true;
-            }
-            for (var i = 0; i < reelDividers.Count; i++)
-            {
-                var active = i < count;
-                if (reelDividers[i].gameObject.activeSelf == active) continue;
-                reelDividers[i].gameObject.SetActive(active);
-                changed = true;
-            }
-            return changed;
-        }
-
-        // Reel, divider, reel, ... so a divider is only ever between two reels.
-        private void ArrangeSiblings()
-        {
-            var index = 0;
-            for (var i = 0; i < reelViews.Count; i++)
-            {
-                reelViews[i].transform.SetSiblingIndex(index++);
-                if (i < reelViews.Count - 1 && i < reelDividers.Count) reelDividers[i].SetSiblingIndex(index++);
-            }
-        }
-
-        // Places the payline root from the first reel window's left edge to the last one's right edge at the payline
-        // cell height. Its children stretch over it with negative offsets: the border by its thickness, the image by the
-        // skin's payline outset. Runs after reel area layout passes, reel count changes and skin changes only.
-        // A Prefab not yet migrated (no root) keeps the old single-graphic frame, expanded by the border thickness.
-        private void UpdatePaylineFrame()
-        {
-            var frame = paylineRoot != null ? paylineRoot : paylineFrame != null ? paylineFrame.rectTransform : null;
-            if (frame == null || reelViews.Count == 0) return;
-            if (!(frame.parent is RectTransform parent)) return;
-            var first = reelViews[0];
-            var last = reelViews[reelViews.Count - 1];
-            if (first == null || last == null || !first.GetPaylineWorldCorners(firstCorners) || !last.GetPaylineWorldCorners(lastCorners)) return;
-            var min = (Vector2)parent.InverseTransformPoint(firstCorners[0]);
-            var max = (Vector2)parent.InverseTransformPoint(lastCorners[2]);
-            var expand = paylineRoot == null ? paylineFrame.EffectiveThickness : 0f;
-            var size = new Vector2(Mathf.Abs(max.x - min.x), Mathf.Abs(max.y - min.y)) + Vector2.one * (2f * expand);
-            var center = (min + max) * .5f - parent.rect.center;
-            var middle = new Vector2(.5f, .5f);
-            if (frame.anchorMin != middle) frame.anchorMin = middle;
-            if (frame.anchorMax != middle) frame.anchorMax = middle;
-            if (frame.pivot != middle) frame.pivot = middle;
-            if (frame.sizeDelta != size) frame.sizeDelta = size;
-            if (frame.anchoredPosition != center) frame.anchoredPosition = center;
-            if (paylineRoot != null) UpdatePaylineChildren();
-        }
-
-        // Rewrites the child offsets only when the expansion changed (skin swap or canvas scale change).
-        private void UpdatePaylineChildren()
-        {
-            if (paylineFrame != null && paylineFrame.rectTransform.parent == paylineRoot)
-            {
-                var thickness = paylineFrame.EffectiveThickness;
-                if (!Mathf.Approximately(thickness, appliedBorderOutset))
-                {
-                    appliedBorderOutset = thickness;
-                    Expand(paylineFrame.rectTransform, thickness, thickness, thickness, thickness);
-                }
-            }
-            if (paylineImage != null && paylineImage.rectTransform.parent == paylineRoot)
-            {
-                var outset = activeSkin != null ? activeSkin.PaylineOutset : null;
-                var value = outset != null ? new Vector4(outset.Left, outset.Right, outset.Top, outset.Bottom) : Vector4.zero;
-                if (value != appliedImageOutset)
-                {
-                    appliedImageOutset = value;
-                    Expand(paylineImage.rectTransform, value.x, value.y, value.z, value.w);
-                }
-            }
-        }
-
-        private static void Expand(RectTransform rect, float left, float right, float top, float bottom)
-        {
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.pivot = new Vector2(.5f, .5f);
-            rect.offsetMin = new Vector2(-left, -bottom);
-            rect.offsetMax = new Vector2(right, top);
-        }
-
-        private static void DestroyObject(GameObject target)
-        {
-            if (UnityEngine.Application.isPlaying) Destroy(target); else DestroyImmediate(target);
-        }
-
-        private static bool SameValues(IReadOnlyList<int> left, IReadOnlyList<int> right)
-        {
-            if (left == null || right == null || left.Count != right.Count) return false;
-            for (var i = 0; i < left.Count; i++) if (left[i] != right[i]) return false;
-            return true;
-        }
+        private void UpdatePaylineFrame() => Machine.UpdatePaylineFrame();
 
 #if UNITY_EDITOR
         public void ConfigureForEditor(RectTransform targetReelArea, SlotReelAreaLayout targetReelAreaLayout,
@@ -571,7 +332,7 @@ namespace TxTRPG.UI.SlotMachine
         }
 
         // Verification only: makes the per-reel jitter reproducible.
-        public void SetSpinRandomSeedForEditor(int seed) => spinRandom = new System.Random(seed);
+        public void SetSpinRandomSeedForEditor(int seed) => Machine.SetRandomSeed(seed);
 
         // Verification only: places the payline frame immediately (Edit Mode has no layout callbacks).
         public void UpdatePaylineFrameForEditor() => UpdatePaylineFrame();

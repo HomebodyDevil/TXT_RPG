@@ -27,14 +27,14 @@ using Object = UnityEngine.Object;
 
 namespace TxTRPG.Application.Editor
 {
-    // TEMPORARY Play Mode verification (exploration-event-nodes). Enter Play Mode through AppScene, then run the menu. It
+    // TEMPORARY Play Mode verification (exploration-event-nodes). Enter Play Mode through AppScene, run Tools/TxT RPG/Application/Play Mode/Load TMP_MainScene, then run the menu. It
     // replaces the session exploration with one whose candidates are scripted (event cards first, then a combat card),
     // plays all five test events through the real card and choice buttons, and logs EXPLORATION_EVENT_PLAY_VALIDATE.
     // Nothing is saved; the session state it changes lives only until Play Mode ends.
     public static class TemporaryExplorationEventPlayValidation
     {
         public const string MenuPath = "Tools/TxT RPG/Application/Temporary/Validate Exploration Event Nodes In Play Mode";
-        private const string OtherContentScene = "Assets/Scenes/MainScene_VisualProposal.unity";
+        private const string OtherContentScene = "Assets/Scenes/Candidate_MainScene.unity";
         private const string Signpost = "event.test.signpost", Shrine = "event.test.shrine", SlotTrial = "event.test.slot-trial",
             Workshop = "event.test.workshop", Trap = "event.test.trap";
 
@@ -66,7 +66,7 @@ namespace TxTRPG.Application.Editor
             var log = new StringBuilder("EXPLORATION_EVENT_PLAY_VALIDATE:\n");
             try
             {
-                if (!EditorApplication.isPlaying) throw new InvalidOperationException("Enter Play Mode from AppScene first.");
+                if (!EditorApplication.isPlaying) throw new InvalidOperationException("Enter Play Mode from AppScene and run Tools/TxT RPG/Application/Play Mode/Load TMP_MainScene first.");
                 var refs = Find();
                 log.AppendLine($" scene: {refs.Run.gameObject.scene.path}");
 
@@ -185,7 +185,7 @@ namespace TxTRPG.Application.Editor
         {
             try
             {
-                if (!EditorApplication.isPlaying) throw new InvalidOperationException("Enter Play Mode from AppScene first.");
+                if (!EditorApplication.isPlaying) throw new InvalidOperationException("Enter Play Mode from AppScene and run Tools/TxT RPG/Application/Play Mode/Load TMP_MainScene first.");
                 var refs = Find();
                 var maximum = refs.Host.TemporaryExploration.PlayerHealth.Maximum;
                 refs.Slot.ClearCombat();
