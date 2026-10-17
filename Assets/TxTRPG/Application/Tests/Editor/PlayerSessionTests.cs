@@ -58,7 +58,7 @@ namespace TxTRPG.Application.Tests
         }
 
         [Test]
-        public void InitialContentScene_UsesPlayerSessionInsteadOfDemoLoader()
+        public void MainScene_UsesPlayerSessionInsteadOfDemoLoader()
         {
             const string scenePath = "Assets/Scenes/TMP_MainScene.unity";
             var fullPath = Path.GetFullPath(Path.Combine(

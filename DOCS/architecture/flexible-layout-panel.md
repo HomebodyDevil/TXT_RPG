@@ -137,6 +137,32 @@ FlexibleLayoutPanelDemo
 
 각 Area에는 기존 UI Demo Prefab이 중첩되어 있으므로, Prefab Mode에서 전체 화면 비율과 개별 패널의 실제 표현을 함께 확인할 수 있습니다.
 
+## Candidate_MainScene 적용 예
+
+`Assets/Scenes/Candidate_MainScene.unity`(AppScene의 초기 콘텐츠)는 `TMP_MainScene`과 같은 방식으로 `FlexibleLayoutPanel.prefab` 인스턴스를 중첩합니다. 오브젝트 이름은 사용자가 만든 원래 이름을 유지합니다.
+
+```text
+Canvas                          Constant Pixel Size(TMP_MainScene과 동일, 이번 작업에서 변경하지 않음)
+└── MainArea                    FlexibleLayoutPanel.prefab 인스턴스, Stretch·Offset 0
+    ├── BackgroundLayer/BackgroundVisualRoot/BackgroundA   흰색 α0.392
+    └── ContentLayer
+        ├── LeftArea            FlexibleLayoutPanel.prefab 인스턴스 + FlexibleLayoutItem(Weighted 1), 주황 α0.392
+        ├── MiddleArea          FlexibleLayoutPanel.prefab 인스턴스 + FlexibleLayoutItem(Weighted 3), 파랑 α0.392
+        └── RightArea           FlexibleLayoutPanel.prefab 인스턴스 + FlexibleLayoutItem(Weighted 1), 초록 α0.392
+```
+
+| `MainArea` 설정 | 값 |
+| --- | --- |
+| Node Id | `8a1cefb1f6c94b8bbf238bcc6f2373a8`(기존 `MainArea` 값 유지) |
+| Fixed Axis / Axis Policy / Breakpoint | `Horizontal` / `Vertical When Narrow` / 720 |
+| Spacing | 20 |
+| Override Content Margins / Content Margins | 켬 / 좌우 15, 상하 10(`TMP_MainScene`의 `Main_FlexibleLayoutPanel`과 같음) |
+| Overflow / Include Inactive Children / Clip Content | `ShrinkBelowMinimum` / 끔 / 끔 |
+
+영역 색상은 각 인스턴스의 `BackgroundA` Image 색상 Override이며, 영역을 구분하는 임시 표시입니다. 배경 Image는 Prefab 기본값대로 Raycast Target이 꺼져 있습니다. 레이아웃이 제어하는 Area 루트에는 효과를 붙이지 않고, 이후 효과는 각 Area의 `BackgroundVisualRoot` 또는 별도 `VisualRoot`에 적용합니다([시각 효과 준비](../development/visual-effect-readiness.md)).
+
+2026-10-17 Editor Play Mode 측정(Canvas 배율 1)에서 너비 720 이상(1920×1080, 2560×1080, 1280×720, 1080×1920, 750×1334)은 왼쪽부터 가로 1:3:1(1920×1080에서 365.2 / 1095.6 / 365.2), 720 미만(640×1136, 700×400)은 위에서부터 세로 1:3:1로 배치되었습니다. Constant Pixel Size이므로 Breakpoint는 실제 화면 픽셀 너비와 비교되며, 1080px 이상인 휴대폰 세로 화면도 가로 배치가 됩니다. Canvas Scaler와 Safe Area 정책은 후속 작업입니다.
+
 ## 레이아웃에 참여하지 않는 경계선 오버레이
 
 두 형제 패널의 경계선 위에 겹쳐 놓는 요소는 `ContentLayer`의 Area가 아니라 오버레이로 둡니다. `FlexibleContentLayoutGroup`은 직계 자식 중 `LayoutElement.ignoreLayout`이 꺼진 항목만 배분하므로, 오버레이는 다음 규칙을 따릅니다. TMP_MainScene의 `MiddlePanel/ContentLayer/CombatActionBoundary`(전투 "행동" 버튼, `EnemyDisplayPanelDemo`와 `OwnedDicePanel`의 경계)가 현재 적용 예이며, 같은 방식의 선례는 `ExplorationNodePanel`입니다.

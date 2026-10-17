@@ -89,7 +89,7 @@ namespace TxTRPG.Application.Editor
         public static void SingleRowAfter() => Start("single-row-after");
         private static void Start(string label)
         {
-            if (!EditorApplication.isPlaying || group != null) throw new InvalidOperationException("Enter AppScene Play Mode and wait for the previous capture.");
+            if (!EditorApplication.isPlaying || group != null) throw new InvalidOperationException("Enter AppScene Play Mode, run Tools/TxT RPG/Application/Play Mode/Load TMP_MainScene and wait for the previous capture.");
             var controller = Object.FindObjectsByType<TxTRPG.Application.Exploration.ExplorationRunController>(FindObjectsSortMode.None).Single();
             var overlayRoot = (GameObject)new SerializedObject(controller).FindProperty("panel").objectReferenceValue;
             choiceOverlay = overlayRoot.GetComponent<CanvasGroup>(); addedOverlayGroup = choiceOverlay == null;

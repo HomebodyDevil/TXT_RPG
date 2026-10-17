@@ -140,7 +140,7 @@ namespace TxTRPG.Application.Editor
 
         public const string ValidateMenuPath = "Tools/TxT RPG/Application/Temporary/Validate Story Dice Panel Swap (Play Mode)";
 
-        // Requires a fresh awaiting-choice run (enter Play Mode from AppScene and wait for TMP_MainScene).
+        // Requires a fresh awaiting-choice run (enter Play Mode from AppScene and run Tools/TxT RPG/Application/Play Mode/Load TMP_MainScene).
         [MenuItem(ValidateMenuPath)]
         public static async void ValidatePlay()
         {

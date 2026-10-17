@@ -5,6 +5,7 @@
     "TxTRPG.UI",
     "TxTRPG.Application",
     "TxTRPG.Gameplay",
+    "TxTRPG.SceneTransition",
     "Unity.ugui",
     "Unity.TextMeshPro",
     "Unity.InputSystem"

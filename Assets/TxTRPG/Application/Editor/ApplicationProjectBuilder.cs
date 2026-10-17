@@ -83,8 +83,10 @@ namespace TxTRPG.Application.Editor
                         .FirstOrDefault();
                     if (demoLoader == null)
                     {
-                        throw new InvalidOperationException(
-                            $"No character display panel was found in '{normalizedPath}'.");
+                        Debug.Log(
+                            $"No character display panel was found in '{normalizedPath}'; " +
+                            "skipped the runtime character UI binding and left the scene unsaved.");
+                        return;
                     }
                     binder = ReplaceDemoPanel(demoLoader, catalog);
                 }

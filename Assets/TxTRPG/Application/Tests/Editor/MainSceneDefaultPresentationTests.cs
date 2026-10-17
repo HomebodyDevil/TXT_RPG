@@ -38,7 +38,7 @@ namespace TxTRPG.Application.Tests
 
         // TMP_MainScene keeps the EnemyDisplayPanelDemo Prefab instance, but its startup no longer loads demo
         // enemies; the temporary combat controller owns enemy display. MainScenePresentationController is not
-        // part of the operating Scene (it is used by MainScene_VisualProposal.unity only).
+        // part of any operating Scene.
         [Test]
         public void ConfiguredScene_HasNoEnemyDemoWriterAndKeepsCorePanels()
         {

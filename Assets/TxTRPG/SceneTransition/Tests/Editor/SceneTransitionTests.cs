@@ -43,7 +43,7 @@ namespace TxTRPG.SceneTransition.Tests
             Assert.That(profile, Is.Not.Null);
             Assert.That(prefab.GetComponent<AppSceneRoot>(), Is.Not.Null);
             Assert.That(prefab.GetComponent<AppSceneRoot>().InitialContentScenePath,
-                Is.EqualTo("Assets/Scenes/TMP_MainScene.unity"));
+                Is.EqualTo(SceneTransitionPrefabBuilder.InitialContentScenePath));
             Assert.That(prefab.GetComponent<SceneTransitionService>(), Is.Not.Null);
             Assert.That(prefab.GetComponent<UnitySceneLoader>(), Is.Not.Null);
             Assert.That(prefab.transform.Find("TransitionCanvas/InputBlocker"), Is.Not.Null);

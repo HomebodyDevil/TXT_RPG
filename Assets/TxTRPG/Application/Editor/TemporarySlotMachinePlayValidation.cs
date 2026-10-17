@@ -26,7 +26,7 @@ using Object = UnityEngine.Object;
 
 namespace TxTRPG.Application.Editor
 {
-    // TEMPORARY Play Mode verification for slot-machine-and-rune-combat. Enter Play Mode through AppScene with a fresh
+    // TEMPORARY Play Mode verification for slot-machine-and-rune-combat. Enter Play Mode through AppScene, load TMP_MainScene (Tools/TxT RPG/Application/Play Mode/Load TMP_MainScene) with a fresh
     // exploration run (awaiting a node choice), then run the menu. It drives Submit, pointer click, Reduce Motion, a game
     // window and a Scene reload during a spin, runtime reel changes and several viewports, then finishes the combat.
     // Results are logged with the SLOT_MACHINE_PLAY_VALIDATE prefix. It changes only session (Play Mode) state.
@@ -35,7 +35,7 @@ namespace TxTRPG.Application.Editor
         public const string MenuPath = "Tools/TxT RPG/Application/Temporary/Validate Slot Machine Combat (Play Mode)";
 
         // Registered content scene used to leave and re-enter TMP_MainScene during a spin.
-        private const string OtherContentScene = "Assets/Scenes/MainScene_VisualProposal.unity";
+        private const string OtherContentScene = "Assets/Scenes/Candidate_MainScene.unity";
 
         // Skins swapped during the run (slot-machine-panel-skin); the catalog selection is restored at the end.
         private const string SampleSkinId = "slot-skin.sample-image-payline";
@@ -54,7 +54,7 @@ namespace TxTRPG.Application.Editor
             var log = new StringBuilder("SLOT_MACHINE_PLAY_VALIDATE:\n");
             try
             {
-                if (!EditorApplication.isPlaying) throw new InvalidOperationException("Enter Play Mode from AppScene first.");
+                if (!EditorApplication.isPlaying) throw new InvalidOperationException("Enter Play Mode from AppScene and run Tools/TxT RPG/Application/Play Mode/Load TMP_MainScene first.");
                 var host = PlayerSessionHost.Instance ?? throw new InvalidOperationException("The player session is missing.");
                 var stories = 0;
                 host.TemporarySlotStoryReady += _ => stories++;
@@ -224,7 +224,7 @@ namespace TxTRPG.Application.Editor
                         Require(refs.Controller.Combat == combat, "the new Scene continues the same combat");
                         Require(refs.Panel.TotalValueText == SlotCombatStoryFormatter.TotalValue(accepted.Fortune.FinalTotal), $"the new panel shows the result ({refs.Panel.TotalValueText})");
                         CheckEffectsCleared(refs, "scene re-entry");
-                        log.AppendLine($" scene re-entry mid-spin (via MainScene_VisualProposal): applied once (enemy {enemy} -> {combat.EnemyHealth.Current}), new panel shows '{refs.Panel.TotalValueText}', no afterimages left.");
+                        log.AppendLine($" scene re-entry mid-spin (via Candidate_MainScene): applied once (enemy {enemy} -> {combat.EnemyHealth.Current}), new panel shows '{refs.Panel.TotalValueText}', no afterimages left.");
                     }
                 }
 

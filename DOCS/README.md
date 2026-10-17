@@ -29,7 +29,6 @@
 | [설정 가능한 주사위 Gameplay 도메인](architecture/dice-domain.md) | 면별 효과·수치 구성, 런타임 변경, 외부 면 판정과 결과 스냅샷 계약을 설명합니다. |
 | [보유 주사위 3D 표시와 결과 기록](architecture/owned-dice-presentation.md) | 확률 판정 결과를 물리 던지기로 보여주는 연출, D6·D8 형태 데이터, 굴림 후 판정 적용, 전투별 결과 창과 Scene 연결을 설명합니다. |
 | [시각 효과 적용을 전제로 한 표시 요소 설계](development/visual-effect-readiness.md) | uGUI·2D Sprite·3D 모델·RenderTexture 표시에서 글리치·노이즈·모양 셰이더·border/outline 등 효과를 고려한 표시 루트 분리, 입력·물리 보호, Material·상태 정리, 가독성과 검증 기준을 설명합니다. |
-| [Main Scene 시각 개선 제안안](development/main-scene-visual-proposal.md) | 원본과 격리된 제안 Scene의 구성, 생성·실행·비교 절차와 검증 범위를 설명합니다. |
 | [등록 기반 Prefab Rebuild](architecture/prefab-rebuild-registry.md) | 안전한 생성 작업의 명시적 등록, 계획 검증, 실행과 제외 정책을 설명합니다. |
 | [한국어 TMP 대체 폰트](architecture/korean-font-fallback.md) | 기존 영문 폰트를 유지하는 전역 Noto Sans KR fallback, 라이선스, 적용과 검증 절차를 설명합니다. |
 

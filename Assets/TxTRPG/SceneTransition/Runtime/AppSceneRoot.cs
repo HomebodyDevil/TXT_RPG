@@ -15,7 +15,7 @@ namespace TxTRPG.SceneTransition
         [FormerlySerializedAs("initialContentScene")]
         [ScenePath(excludeAppScene: true)]
         [SerializeField] private string initialContentScenePath =
-            "Assets/Scenes/TMP_MainScene.unity";
+            "Assets/Scenes/Candidate_MainScene.unity";
 
         public static AppSceneRoot Instance => instance;
         public SceneTransitionService SceneTransitions => sceneTransitionService;

@@ -12,7 +12,8 @@ namespace TxTRPG.SceneTransition.Editor
     public static class EditorPlayStartPolicy
     {
         public const string AppScenePath = "Assets/Scenes/AppScene.unity";
-        public const string ExpectedInitialContentScenePath = "Assets/Scenes/TMP_MainScene.unity";
+        public const string ExpectedInitialContentScenePath =
+            SceneTransitionPrefabBuilder.InitialContentScenePath;
         public const string SettingsPath = "Project/TxT RPG/Play Mode Start";
         private const string AppRootPrefabPath = "Assets/TxTRPG/SceneTransition/Prefabs/AppRoot.prefab";
 
@@ -140,7 +141,7 @@ namespace TxTRPG.SceneTransition.Editor
 
         [SettingsProvider]
         public static SettingsProvider Create() => new EditorPlayStartSettingsProvider(EditorPlayStartPolicy.SettingsPath)
-        { label = "Play Mode Start", keywords = new[] { "Play", "AppScene", "Bootstrap", "TMP_MainScene" } };
+        { label = "Play Mode Start", keywords = new[] { "Play", "AppScene", "Bootstrap", "Candidate_MainScene" } };
 
         public override void OnGUI(string searchContext)
         {

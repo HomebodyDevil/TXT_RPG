@@ -12,6 +12,8 @@
 | UI | uGUI와 TextMeshPro |
 | 테스트 | Unity Test Framework 1.6.0 |
 | 기본 빌드 씬 | `Assets/Scenes/AppScene.unity` |
+| 초기 콘텐츠 씬 | `Assets/Scenes/Candidate_MainScene.unity`(AppScene이 처음 로드, 현재 `MainArea`의 1:3:1 영역만 있음) |
+| 게임 화면 씬 | `Assets/Scenes/TMP_MainScene.unity`(Story·Actions·Character·적·슬롯머신 등 게임 패널, Play 중 `Tools > TxT RPG > Application > Play Mode > Load TMP_MainScene`으로 전환) |
 
 `StoryTextPanel`은 특정 씬에 직접 연결되어 있지 않습니다. 필요한 씬의 Canvas 아래에 프리팹을 배치하여 사용합니다.
 
@@ -40,6 +42,7 @@ TxT-RPG/
 ├── Assets/
 │   ├── Scenes/
 │   │   ├── AppScene.unity
+│   │   ├── Candidate_MainScene.unity
 │   │   └── TMP_MainScene.unity
 │   ├── TextMesh Pro/
 │   │   └── Resources, Fonts, Shaders, Sprites
@@ -309,10 +312,6 @@ flowchart TD
 - `Assets/TxTRPG/Content/Runtime/Items`: ?꾩씠??肄섑뀗痢??뺤쓽? 移댄깉濡쒓렇?낅땲??
 - `Assets/TxTRPG/Application/Runtime/Items`: ?ъ슜 洹쒖튃, Presenter? ?댁쁺 李??섏씠吏?낅땲??
 - `Assets/TxTRPG/UI/Runtime/Windows`: ?섏씠吏 ID 湲곕컲 硫붾돱, 紐⑤떖 ?몄뒪?몄? 李??섎챸 愿由ъ엯?덈떎.
-
-## UI 시각 제안 자산
-
-`Assets/TxTRPG/UI/VisualProposals/MainScene/`에는 운영용 공용 프리팹과 분리된 Main Scene 제안 스타일만 둡니다. `Assets/Scenes/MainScene_VisualProposal.unity`는 원본 `TMP_MainScene.unity`의 프리팹 연결을 유지하는 비교용 Scene이며, 실행·재생성 절차는 `DOCS/development/main-scene-visual-proposal.md`에 기록합니다.
 
 ### 임시 주사위 메뉴
 

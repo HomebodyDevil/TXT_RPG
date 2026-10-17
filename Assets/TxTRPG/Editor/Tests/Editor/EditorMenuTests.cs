@@ -81,6 +81,8 @@ namespace TxTRPG.Editor.Tests
                 [TxTRPGEditorMenuPaths.Application +
                  "Validate App Scene Configuration"] =
                     TxTRPGEditorMenuPriorities.Validate,
+                [TxTRPGEditorMenuPaths.Application + "Play Mode/Load TMP_MainScene"] =
+                    TxTRPGEditorMenuPriorities.Validate,
                 [TxTRPGEditorMenuPaths.Addressables + "Register UI Assets"] =
                     TxTRPGEditorMenuPriorities.Register,
                 [TxTRPGEditorMenuPaths.Addressables + "Validate Settings"] =
