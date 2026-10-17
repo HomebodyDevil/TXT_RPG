@@ -6,6 +6,7 @@
 
 | 문서 | 설명 |
 | --- | --- |
+| [Candidate_MainScene 하단 슬롯 Reel 독과 합계 카드](candidate-main-scene-slot-reel-dock.md) | `SlotMachinePanel`의 Reel 처리를 공용 구성 요소로 분리하고(TMP_MainScene 화면 유지), `Candidate_MainScene`의 Canvas 하단에 입력을 막지 않는 슬롯 Reel 독과 모양(직사각형·둥근 직사각형·원·타원)과 둥근 정도를 설정하는 합계 카드를 배치합니다. 표시·숨김 API와 전환·드래그 확장 지점, Play Mode 미리보기 메뉴를 두며 실제 전투 연결은 후속 작업입니다. 2026-10-17 구현·적용 완료(`SlotReelDock.prefab`, `Candidate_MainScene` 배치). |
 | [Candidate_MainScene 초기 콘텐츠 전환과 FlexibleLayout 영역 구성](candidate-main-scene-initial-content-and-layout.md) | AppScene의 초기 콘텐츠를 `Candidate_MainScene`으로 바꾸고 검증·기본값·테스트를 함께 갱신하며, `MainArea`와 세 Area를 `FlexibleLayoutPanel.prefab` 인스턴스(1:3:1, 좁으면 세로)로 구성합니다. 삭제된 `MainScene_VisualProposal`의 Build Settings 항목과 생성기·테스트·자산·문서를 정리합니다. |
 | [Actions 영역의 Cell 기준 높이와 CharacterDisplayPanel 재배분](action-grid-content-fit-height.md) | Actions 높이를 Cell 높이와 Cell·Viewport 사이의 상하 `Gap`(기본 12)으로 계산해 부모 레이아웃에 공급하고, HealthBarPanel을 고정하여 남는 높이를 CharacterDisplayPanel만 받게 합니다. 선택한 Actions에 적용하는 재사용 가능한 메뉴를 둡니다. |
 | [탐험 이벤트 노드와 확장 가능한 이벤트 시스템](exploration-event-nodes.md) | 노드 종류 `event`를 추가해 후보 생성 때 이벤트를 확정하고, ScriptableObject 이벤트(페이지·선택지·슬롯 구간 판정·조건·효과)와 상태 기계로 체력·Reel·Fortune·룬 변화를 처리하며 테스트 이벤트 5개와 노드 패널 안 이벤트 화면을 구현합니다. 아이템·룬 강화·합성은 확장 지점만 둡니다. |

@@ -217,7 +217,7 @@ Player 빌드 전에 `Tools > TxT RPG > Application > Validate App Scene Configu
 
 ### Candidate_MainScene 초기 콘텐츠와 임시 적용·측정 메뉴
 
-`Candidate_MainScene`은 AppScene이 처음 로드하는 콘텐츠 Scene이며, 현재는 게임 패널 없이 `Canvas/MainArea`의 세 영역만 표시합니다(구성은 [FlexibleLayoutPanel](../architecture/flexible-layout-panel.md#candidate_mainscene-적용-예) 참고). Build Settings 순서는 `AppScene`, `Candidate_MainScene`, `TMP_MainScene`이며 모두 활성입니다. 게임 화면 검증은 Play 중 `Tools > TxT RPG > Application > Play Mode > Load TMP_MainScene`으로 `TMP_MainScene`에 전환한 뒤 수행합니다.
+`Candidate_MainScene`은 AppScene이 처음 로드하는 콘텐츠 Scene이며, 현재는 게임 패널 없이 `Canvas/MainArea`의 세 영역과 `Canvas/OverlayLayer/SlotReelDock`(하단 슬롯 Reel 독)을 표시합니다(구성은 [FlexibleLayoutPanel](../architecture/flexible-layout-panel.md#candidate_mainscene-적용-예) 참고). Build Settings 순서는 `AppScene`, `Candidate_MainScene`, `TMP_MainScene`이며 모두 활성입니다. 게임 화면 검증은 Play 중 `Tools > TxT RPG > Application > Play Mode > Load TMP_MainScene`으로 `TMP_MainScene`에 전환한 뒤 수행합니다.
 
 다음 두 메뉴는 `candidate-main-scene-initial-content-and-layout` 작업용 임시 메뉴(`Assets/TxTRPG/Application/Editor/`)입니다. 적용은 2026-10-17에 운영 자산에 완료했으므로 다시 실행할 필요가 없으며, 필요하지 않게 되면 두 파일을 삭제할 수 있습니다.
 
@@ -225,6 +225,28 @@ Player 빌드 전에 `Tools > TxT RPG > Application > Validate App Scene Configu
 | --- | --- |
 | `Tools > TxT RPG > Application > Temporary > Apply Candidate Main Scene Initial Content` (`TemporaryCandidateMainSceneApply`) | Play Mode·컴파일 중이거나 `AppScene`·`Candidate_MainScene`에 미저장 변경이 있으면 아무것도 바꾸지 않습니다. Build Settings를 `AppScene`·`Candidate_MainScene`·`TMP_MainScene` 순서로 맞추고 파일이 없는 Scene 항목을 제거한 뒤, `AppRoot.prefab`의 초기 경로를 `Candidate_MainScene`으로 바꾸고, AppScene의 같은 Override를 되돌리고, `Candidate_MainScene`의 `MainArea`와 세 Area를 `FlexibleLayoutPanel.prefab` 인스턴스로 재구성합니다. 바꾼 자산만 저장하며, 이미 적용된 단계는 건너뛰므로 재실행해도 안전합니다. 결과는 `CANDIDATE_MAIN_SCENE_APPLY` 로그로 남습니다. |
 | `Tools > TxT RPG > Application > Temporary > Measure Candidate Main Scene Layout (Play Mode)` (`TemporaryCandidateLayoutProbe`) | AppScene 경유 Play에서 `Candidate_MainScene`이 표시된 상태로 실행합니다. Game View를 1920×1080, 2560×1080, 1280×720, 1080×1920, 750×1334, 640×1136, 700×400으로 차례로 바꾸며 세 영역의 위치·크기와 축을 `CANDIDATE_LAYOUT` 로그로 남기고 `Temp/candidate-layout-*.png`를 저장합니다. 임시 Game View 크기는 전체 인덱스로 제거하며 아무 자산도 저장하지 않습니다. |
+
+### Candidate_MainScene 슬롯 Reel 독 적용과 미리보기
+
+구조와 설정은 [슬롯머신과 룬 기반 전투 행동](../architecture/slot-machine-and-runes.md#slotreeldock-candidate_mainscene-하단-슬롯-reel-독)에 있습니다.
+
+| 메뉴 | 동작 |
+| --- | --- |
+| `Tools > TxT RPG > Application > Temporary > Apply Slot Reel Dock To Candidate Main Scene` (`TemporarySlotReelDockApply`, 임시) | Play Mode·컴파일 중·Prefab Stage이거나 열린 Scene에 미저장 변경이 있으면 아무것도 바꾸지 않습니다. `SlotReelDock.prefab`이 없으면 `SlotMachinePanel.prefab`의 Reel 기계 외형과 합계 글자를 독립 객체로 복제하고 `SlotReel.prefab` 인스턴스 3개를 넣어 만듭니다. 이미 있으면 다시 만들지 않고 검증만 하며, Reel·구분대 형제 순서가 어긋난 경우에만 그 순서를 고쳐 저장합니다. `Candidate_MainScene`에 독이 없으면 `Canvas/OverlayLayer`와 Prefab 인스턴스를 추가하고 저장합니다. 이미 목표 상태이면 파일을 쓰지 않고 `kept` 로그만 남기므로 재실행해도 안전합니다. 결과는 `SLOT_REEL_DOCK_APPLY` 로그로 남습니다. `SlotMachinePanel.prefab`, `SlotReel.prefab`, `TMP_MainScene`은 읽기만 합니다. 적용은 2026-10-17에 완료했으므로 다시 실행할 필요가 없으며, 사용자가 독을 확인한 뒤 파일을 삭제할 수 있습니다. 검증 실패 시 `SlotReelDock.prefab`을 지우고 다시 실행하면 새로 만들지만, Scene 인스턴스의 GUID 참조가 끊기므로 Scene의 `OverlayLayer/SlotReelDock`도 함께 지워야 합니다. |
+| `Tools > TxT RPG > Application > Preview > Slot Reel Dock > Spin` (`SlotReelDockPreviewMenu`, 영구) | Play Mode에서 로드된 Scene의 활성 `SlotReelDock` 하나를 찾아(없거나 둘 이상이면 경고만 남김) 세션 슬롯머신의 Reel(세션이 없으면 `TemporarySlotMachineConfiguration.asset`)과 미리보기 전용 난수 정지 위치로 `PlaySpinAsync`를 재생합니다. 합계는 Payline 값의 합이며 세션·룬·Fortune Critical 상태는 바뀌지 않습니다. 회전 중에 다시 실행하면 이전 회전을 `StopAtResult`로 끝내고 새로 시작합니다. Reduce Motion은 `PlayerSessionHost.TemporaryDicePreferences.ReduceMotion`(세션이 없으면 꺼짐)을 따릅니다. |
+| `... > Spin With Total Multiplier` | 위와 같고 합계를 2배로 표시하며 합계 배수 `×2`를 보여 줍니다. |
+| `... > Add Reel`, `... > Remove Reel` | 미리보기가 표시하는 Reel 구성의 끝에 Reel을 하나 더하거나 빼고(최소 1개) `SetReels`를 호출합니다. 이후 `Spin`은 이 구성을 씁니다. Play Mode를 다시 시작하면 세션 구성으로 돌아갑니다. |
+| `... > Toggle Shown` | `SetShown(!IsShown)` |
+| `... > Cycle Card Shape` | 합계 카드 모양을 `Rectangle` → `RoundedRectangle` → `Circle` → `Ellipse` 순서로 바꿉니다. 실행 중 값이며 Prefab에 저장하지 않습니다. |
+
+미리보기 결과는 `SLOT_REEL_DOCK_PREVIEW` 로그로 남습니다. `EditorMenuTests`는 `TxTRPG.Application.Editor` 어셈블리를 검사하지 않으므로 이 메뉴는 그 테스트의 기대 목록에 없습니다.
+
+확인 절차:
+
+1. 아무 Scene에서 Play를 시작하면 AppScene을 거쳐 `Candidate_MainScene`이 로드되고, 화면 하단에 Reel 3개의 독과 흰색 직사각형 합계 카드가 Reel 기계 위쪽 가장자리 가운데에 걸쳐 보입니다.
+2. `Preview > Slot Reel Dock`의 각 메뉴를 실행하고 Console의 `SLOT_REEL_DOCK_PREVIEW` 로그와 화면을 확인합니다.
+3. Inspector에서 `OverlayLayer/SlotReelDock/PresentationRoot/TotalCard`의 `Appearance > Shape`를 `RoundedRectangle`로, `Corner Radius`를 0, 0.2, 0.5로 바꿔 둥근 정도를 확인합니다. Play Mode에서 바꾼 값은 종료 후 저장되지 않습니다.
+4. Edit Mode 테스트는 `TxTRPG.UI.Tests.SlotReelDockTests`이며, Reel 처리 회귀는 `SlotMachinePanelTests`, `SlotMachinePanelSkinTests`, `SlotMachineCombatTests`, `SlotFortuneCriticalCombatTests`, `ExplorationEventControllerTests`로 확인합니다.
 
 ## EnemyDisplayPanel을 씬에서 사용하기
 
