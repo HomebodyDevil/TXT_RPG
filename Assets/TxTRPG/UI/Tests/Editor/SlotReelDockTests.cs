@@ -75,7 +75,9 @@ namespace TxTRPG.UI.Tests
             Assert.That(dock.TotalCard.transform.GetSiblingIndex(), Is.GreaterThan(dock.ReelMachine.GetSiblingIndex()), "the card draws above the reels");
             Assert.That(dock.TotalCard.VisualRoot, Is.Not.Null);
             Assert.That(dock.TotalCard.FillGraphic, Is.Not.Null);
-            Assert.That(dock.TotalCard.BorderGraphic.gameObject.activeSelf, Is.False, "the border is off by default");
+            Assert.That(dock.TotalCard.BorderGraphic, Is.Not.Null);
+            Assert.That(dock.TotalCard.BorderGraphic.gameObject.activeSelf, Is.EqualTo(dock.TotalCard.Appearance.BorderEnabled),
+                "the border GameObject follows the Prefab's appearance");
             Assert.That(dock.PresentationRoot.Find("EffectRoot"), Is.Not.Null);
             Assert.That(dock.ReelCount, Is.EqualTo(3));
             Assert.That(dock.ReelViews.All(view => PrefabUtility.GetCorrespondingObjectFromOriginalSource(view.gameObject) != null), Is.True,
@@ -250,9 +252,27 @@ namespace TxTRPG.UI.Tests
             Assert.That(card.FillGraphic.raycastTarget || card.BorderGraphic.raycastTarget, Is.False);
         }
 
+        // Puts the documented card defaults on this test instance only (the Prefab asset is not changed), so placement
+        // tests do not depend on the look a developer chose for SlotReelDock.prefab.
+        private void UseDefaultCardSettings()
+        {
+            var card = new SerializedObject(dock.TotalCard);
+            card.FindProperty("heightRatio").floatValue = .42f;
+            card.FindProperty("minimumHeight").floatValue = 56f;
+            card.FindProperty("maximumHeight").floatValue = 140f;
+            card.FindProperty("aspectRatio").floatValue = 1.8f;
+            card.FindProperty("horizontalPosition").floatValue = .5f;
+            card.FindProperty("overhangRatio").floatValue = .5f;
+            card.ApplyModifiedPropertiesWithoutUndo();
+            dock.TotalCard.SetAppearance(SlotTotalCardAppearance.Default);
+            Arrange(new Vector2(1920f, 1080f));
+            dock.TotalCard.Refresh(true);
+        }
+
         [Test]
         public void CardPosition_DefaultIsCenteredHalfAboveAndClearOfThePayline()
         {
+            UseDefaultCardSettings();
             var machine = WorldRect(dock.ReelMachine);
             var card = WorldRect((RectTransform)dock.TotalCard.transform);
             Assert.That(card.center.x, Is.EqualTo(machine.center.x).Within(.5f));
