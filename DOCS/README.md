@@ -25,6 +25,8 @@
 | [탐험 이벤트 노드와 이벤트 시스템](architecture/exploration-events.md) | 이벤트 노드의 내용 ID, 자산(페이지·선택지·슬롯 구간·조건·효과) 조합, 실행 상태 기계, 효과 추가 절차, 슬롯 판정과 Scene 재로드, 노드 패널 안 이벤트 화면을 설명합니다. |
 | [임시 적 전투](architecture/temporary-combat.md) | 격리된 플레이어·적 체력, 플레이어 행동 적용, 적 행동 예고와 Scene 수명 경계를 설명합니다. |
 | [슬롯머신과 룬 기반 전투 행동](architecture/slot-machine-and-runes.md) | Reel·Payline 총합, 룬 줄 가중치 분배, 세션 수명의 수락 결과, 2D Reel 패널과 연출, 주사위 보류 상태와 확장 지점을 설명합니다. |
+| [룬 Grid 패널](architecture/rune-grid-panel.md) | `Candidate_MainScene` LeftArea의 표시 전용 룬 라인 카드 Grid, Weight 배지, 열·크기 계산, 아이콘 설정 자산과 대체 카드, 세션 연결을 설명합니다. |
+| [요소 토글과 이벤트 판정](architecture/encounter-roll.md) | `Candidate_MainScene` MiddleArea 상단의 다중 선택 요소 토글 바, 발생 확률과 독립적인 요소·종류(전투·이벤트·휴식) 판정 규칙, 개발 빌드 전용 디버그 패널, 바깥 클릭으로 닫히는 결과 모달과 요소 추가 방법을 설명합니다. |
 | [경계선 명령 버튼](architecture/boundary-command-button.md) | 두 패널 경계선 위 오버레이 버튼(전투 "행동")의 구성, 공용 UI 도형, 모양·입력 영역 설정과 효과 Material 확장 지점을 설명합니다. |
 | [설정 가능한 주사위 Gameplay 도메인](architecture/dice-domain.md) | 면별 효과·수치 구성, 런타임 변경, 외부 면 판정과 결과 스냅샷 계약을 설명합니다. |
 | [보유 주사위 3D 표시와 결과 기록](architecture/owned-dice-presentation.md) | 확률 판정 결과를 물리 던지기로 보여주는 연출, D6·D8 형태 데이터, 굴림 후 판정 적용, 전투별 결과 창과 Scene 연결을 설명합니다. |

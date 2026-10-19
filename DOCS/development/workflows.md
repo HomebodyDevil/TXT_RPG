@@ -217,7 +217,7 @@ Player 빌드 전에 `Tools > TxT RPG > Application > Validate App Scene Configu
 
 ### Candidate_MainScene 초기 콘텐츠와 임시 적용·측정 메뉴
 
-`Candidate_MainScene`은 AppScene이 처음 로드하는 콘텐츠 Scene이며, 현재는 게임 패널 없이 `Canvas/MainArea`의 세 영역과 `Canvas/OverlayLayer/SlotReelDock`(하단 슬롯 Reel 독)을 표시합니다(구성은 [FlexibleLayoutPanel](../architecture/flexible-layout-panel.md#candidate_mainscene-적용-예) 참고). Build Settings 순서는 `AppScene`, `Candidate_MainScene`, `TMP_MainScene`이며 모두 활성입니다. 게임 화면 검증은 Play 중 `Tools > TxT RPG > Application > Play Mode > Load TMP_MainScene`으로 `TMP_MainScene`에 전환한 뒤 수행합니다.
+`Candidate_MainScene`은 AppScene이 처음 로드하는 콘텐츠 Scene이며, 현재는 게임 패널 없이 `Canvas/MainArea`의 세 영역, `LeftArea`의 룬 Grid `RuneGrid`, `Canvas/OverlayLayer/SlotReelDock`(하단 슬롯 Reel 독)을 표시합니다(구성은 [FlexibleLayoutPanel](../architecture/flexible-layout-panel.md#candidate_mainscene-적용-예) 참고). Build Settings 순서는 `AppScene`, `Candidate_MainScene`, `TMP_MainScene`이며 모두 활성입니다. 게임 화면 검증은 Play 중 `Tools > TxT RPG > Application > Play Mode > Load TMP_MainScene`으로 `TMP_MainScene`에 전환한 뒤 수행합니다.
 
 다음 두 메뉴는 `candidate-main-scene-initial-content-and-layout` 작업용 임시 메뉴(`Assets/TxTRPG/Application/Editor/`)입니다. 적용은 2026-10-17에 운영 자산에 완료했으므로 다시 실행할 필요가 없으며, 필요하지 않게 되면 두 파일을 삭제할 수 있습니다.
 
@@ -247,6 +247,44 @@ Player 빌드 전에 `Tools > TxT RPG > Application > Validate App Scene Configu
 2. `Preview > Slot Reel Dock`의 각 메뉴를 실행하고 Console의 `SLOT_REEL_DOCK_PREVIEW` 로그와 화면을 확인합니다.
 3. Inspector에서 `OverlayLayer/SlotReelDock/PresentationRoot/TotalCard`의 `Appearance > Shape`를 `RoundedRectangle`로, `Corner Radius`를 0, 0.2, 0.5로 바꿔 둥근 정도를 확인합니다. Play Mode에서 바꾼 값은 종료 후 저장되지 않습니다.
 4. Edit Mode 테스트는 `TxTRPG.UI.Tests.SlotReelDockTests`이며, Reel 처리 회귀는 `SlotMachinePanelTests`, `SlotMachinePanelSkinTests`, `SlotMachineCombatTests`, `SlotFortuneCriticalCombatTests`, `ExplorationEventControllerTests`로 확인합니다.
+
+### Candidate_MainScene 룬 Grid 적용과 Play Mode 확인
+
+구조와 계산은 [룬 Grid 패널](../architecture/rune-grid-panel.md)에 있습니다. 두 메뉴는 `candidate-main-scene-rune-grid` 작업용 임시 메뉴(`Assets/TxTRPG/Application/Editor/`)입니다.
+
+| 메뉴 | 동작 |
+| --- | --- |
+| `Tools > TxT RPG > Application > Temporary > Apply Candidate Rune Grid` (`TemporaryRuneGridApply`, 임시) | Play Mode·컴파일 중·Prefab Stage이거나 열린 Scene에 미저장 변경이 있으면 아무것도 바꾸지 않습니다. `Candidate_MainScene`의 `LeftArea/ContentLayer`에 `RuneGrid`가 아닌 자식이 있어도 멈춥니다. 없는 것만 만듭니다: `UI/Icons/TemporaryRunes/attack.png`·`heal.png`(128×128, 메뉴 아이콘과 같은 Import 설정), `UI/Styles/Runes/TemporaryRuneIconCatalog.asset`, `UI/Prefabs/Runes/RuneGridCard.prefab`·`RuneGridPanel.prefab`. `RuneGrid`가 없으면 Prefab 인스턴스·`FlexibleLayoutItem`·`TemporaryRuneGridBinder`·아이콘 설정 자산 Override를 추가하고 Scene을 저장합니다. 이미 있으면 덮어쓰지 않고 `kept` 로그만 남기므로 재실행해도 안전합니다. 결과는 `RUNE_GRID_APPLY` 로그입니다. 적용은 2026-10-19에 완료했으므로 다시 실행할 필요가 없으며, 사용자가 확인한 뒤 파일을 삭제할 수 있습니다. |
+| `Tools > TxT RPG > Application > Temporary > Rune Grid Play Check` (`TemporaryRuneGridPlayCheck`, 임시) | AppScene 경유 Play에서 `Candidate_MainScene`이 표시된 상태로 실행합니다. (1) 카드 수·배지가 라인 수·Weight와 같은지, (2) 첫 라인에 같은 정의의 룬을 쌓아 배지가 늘어나는지, (3) 세로 스크롤이 생길 때까지 라인을 추가하고 가로 넘침이 없는지(Content 너비 ≤ Viewport 너비), (4) 추가한 라인·룬을 모두 제거해 처음 상태로 돌아왔는지 확인합니다. 임시 ID는 `rune.check.` 접두사이고 결과는 `RUNE_GRID_CHECK` 로그입니다. 룬 상태는 저장되지 않으며 아무 자산도 저장하지 않습니다. |
+
+`Measure Candidate Main Scene Layout (Play Mode)`는 각 화면 크기에서 룬 Grid의 열 수, 카드·셀 크기, 사용 너비, Content·Viewport 크기와 가로 넘침 여부도 `CANDIDATE_LAYOUT` 줄에 기록합니다.
+
+확인 절차:
+
+1. 아무 Scene에서 Play를 시작하면 AppScene을 거쳐 `Candidate_MainScene`이 로드되고, `LeftArea`에 칼(공격 룬)·십자(회복 룬) 카드 2개가 왼쪽 위 배지 `1`과 함께 보입니다.
+2. `Rune Grid Play Check`를 실행하고 `RUNE_GRID_CHECK: PASS all steps`를 확인합니다.
+3. Play 중 `LeftArea/ContentLayer/RuneGrid`의 `RuneGridPanel > Icon Catalog`를 비우면 이름 카드(`공격 룬`, `회복 룬`)로 바뀝니다. Play 종료 시 원래대로 돌아갑니다.
+4. Edit Mode 테스트는 클래스별로 `TxTRPG.UI.Tests.RuneGridLayoutMathTests`, `TxTRPG.UI.Tests.RuneGridPanelTests`, `TxTRPG.UI.Tests.RuneIconCatalogTests`, `TxTRPG.Application.Tests.TemporaryRuneGridBinderTests`이고, 도메인 회귀는 `TxTRPG.Gameplay.Tests.RuneTests`입니다. 모두 `AssetWriting`이 아니며 `RuneGridPanelTests`·`TemporaryRuneGridBinderTests`는 `RuneGridPanel.prefab`을 읽기만 합니다.
+
+### Candidate_MainScene 요소 토글과 디버그 이벤트 판정
+
+구조와 판정 규칙은 [요소 토글과 이벤트 판정](../architecture/encounter-roll.md)에 있습니다. 두 메뉴는 `candidate-main-scene-encounter-toggles-and-debug-roll` 작업용 임시 메뉴(`Assets/TxTRPG/Application/Editor/`)입니다.
+
+| 메뉴 | 동작 |
+| --- | --- |
+| `Tools > TxT RPG > Application > Temporary > Apply Candidate Encounter Toggles` (`TemporaryEncounterTogglesApply`, 임시) | Play Mode·컴파일 중·Prefab Stage이거나 열린 Scene에 미저장 변경이 있으면 아무것도 바꾸지 않습니다. `Candidate_MainScene`의 `MiddleArea/ContentLayer`에 다른 자식이 있거나 `OverlayLayer`에 `EncounterDebugPanel`·`EncounterResultModal`이 이미 있으면(컨트롤러가 없을 때) 멈춥니다. 없는 것만 만듭니다: `Application/Configuration/Encounters/EncounterElementCatalog.asset`(`rune`/`룬`)·`EncounterRollConfiguration.asset`(0.5, 0.5, 1·1·1), `UI/Prefabs/Encounters/` Prefab 4개. Canvas에 `EncounterRollController`가 없으면 `MiddleArea`를 세로축 고정으로 바꾸고 토글 바·Placeholder·디버그 패널·결과 모달·컨트롤러를 배치하고 Scene을 저장합니다. 이미 있으면 덮어쓰지 않고 `kept` 로그만 남기므로 재실행해도 안전합니다. 결과는 `ENCOUNTER_APPLY` 로그입니다. 적용은 2026-10-19에 완료했으므로 다시 실행할 필요가 없으며, 사용자가 확인한 뒤 파일을 삭제할 수 있습니다. |
+| `Tools > TxT RPG > Application > Temporary > Encounter Roll Play Check` (`TemporaryEncounterRollPlayCheck`, 임시) | AppScene 경유 Play에서 `Candidate_MainScene`이 표시된 상태로 실행합니다. 컨트롤러 공개 API로 (1) 선택 없음 → `NoElementsSelected`·모달 닫힘, (2) `룬` 선택·발생 확률 0 → `ChanceFailed`, (3) 발생 확률 1·전투만 → 모달 `룬 : 전투`, (4) 모달이 열린 동안 판정 거부, (5) 닫은 뒤 휴식만 → `룬 : 휴식`, (6) 가중치 모두 0 → `NoKindAvailable`, (7) 설정 기본값 복원·선택 해제를 확인합니다. 결과는 `ENCOUNTER_ROLL_CHECK` 로그입니다. 선택과 설정은 저장되지 않으며 아무 자산도 저장하지 않습니다. 바깥 클릭 닫기는 사람이 직접 확인합니다. |
+
+확인 절차:
+
+1. 아무 Scene에서 Play를 시작하면 AppScene을 거쳐 `Candidate_MainScene`이 로드되고, `MiddleArea` 상단에 `룬` 버튼 하나가 미선택 상태로, 오른쪽 위에 `DEBUG · 이벤트 판정` 패널이 보입니다.
+2. `룬`을 클릭하면 Checkmark와 노란 테두리가 함께 보이고, 다시 클릭하면 사라집니다.
+3. 선택 없이 `이벤트 발생` → 패널에 `선택된 요소가 없습니다`. 발생 확률 0% → `이벤트 없음 (발생 확률 판정 실패)`. 두 경우 모두 모달이 열리지 않습니다.
+4. `룬` 선택, 발생 확률 100%로 `이벤트 발생` → `이벤트 발생` 모달에 `룬 : 전투`/`룬 : 이벤트`/`룬 : 휴식` 중 하나가 보입니다. 창 바깥 클릭·`Cancel`(Esc)·`닫기`로 닫히고, 창 안 클릭이나 바깥에서 끌었다 놓기로는 닫히지 않습니다. 닫힌 뒤 포커스는 `이벤트 발생` 버튼으로 돌아옵니다.
+5. `Encounter Roll Play Check`를 실행하고 `ENCOUNTER_ROLL_CHECK: PASS all steps`를 확인합니다.
+6. Edit Mode 테스트는 클래스별로 `TxTRPG.Gameplay.Tests.EncounterRollerTests`, `TxTRPG.Gameplay.Tests.EncounterElementSelectionTests`, `TxTRPG.Application.Tests.EncounterResultFormatterTests`, `TxTRPG.Application.Tests.EncounterElementCatalogTests`, `TxTRPG.Application.Tests.EncounterRollControllerTests`, `TxTRPG.UI.Tests.EncounterElementToggleBarTests`, `TxTRPG.UI.Tests.EncounterDebugPanelTests`, `TxTRPG.UI.Tests.DevelopmentBuildOnlyTests`입니다. 모두 `AssetWriting`이 아니며 저장된 Prefab·설정 자산을 읽기만 합니다. 모달 회귀는 `TxTRPG.Application.Tests.InventoryEmptyStateTests`로 확인합니다.
+
+디버그 패널은 `DevelopmentBuildOnly`가 붙어 있어 Release Player(Development Build 끔)에서 `Awake`에 비활성화되어 보이지 않고 사용할 수 없습니다. Editor와 Development Build에서는 항상 보입니다. 판정 함수는 `DevelopmentBuildOnlyTests`로 검증하며, 실제 Release Player 빌드에서의 확인은 별도로 수행합니다.
 
 ## EnemyDisplayPanel을 씬에서 사용하기
 

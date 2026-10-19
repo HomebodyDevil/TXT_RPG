@@ -151,6 +151,8 @@ System 페이지는 기존 `GameWindowService`와 `ModalWindowHost` 경로를 �
 
 ## 표시 슬롯 기준의 빈 상태와 모달 바깥 입력
 
+`Candidate_MainScene`의 `EncounterResultModal.prefab`(`Assets/TxTRPG/UI/Prefabs/Encounters/`)도 `GameWindowService`·`ModalWindowHost`·`ModalContentContainer`·`MessageGameWindowPage`(PageId `encounter-result`)를 그대로 재사용하는 별도 모달 구성입니다. 기존 `ModalWindowHost.prefab`은 바꾸지 않았습니다. 이 모달은 결과 페이지의 `initialFocus`인 닫기 버튼에 `ModalCancelForwarder`를 두어, 선택된 버튼이 받은 `Cancel`을 호스트로 전달합니다. 자세한 구성은 [요소 토글과 이벤트 판정](encounter-roll.md)에 있습니다.
+
 Bag의 `EmptyState`는 `SetEntries`를 마친 `ActionGridPanel.VisibleCellCount == 0`일 때만 표시합니다. 빈 칸 채우기 슬롯, 현재 목록에서 스크롤로 가려진 슬롯과 미등록 아이템 대체 슬롯도 표시 슬롯에 포함합니다. 비활성 풀 셀이나 다른 카테고리의 슬롯은 포함하지 않습니다. 준비 시작 시에는 이전 문구를 숨기고, 준비 취소 후에는 데이터 바인딩과 이벤트 구독을 진행하지 않습니다. 빈 문구의 raycast는 꺼져 있으며 슬롯 설정과 저장 데이터는 변경하지 않습니다.
 
 `ModalWindowHost.windowRect`는 제목·본문·로딩·오류·스크롤바를 포함하는 `Window`를 명시적으로 참조합니다. 전체 화면 Host Image가 raycast 대상이고 Window Image가 내부 빈 공간을 받습니다. Host는 주 버튼의 Down과 정상 Up이 모두 자신의 배경에 적중하고 Window 밖일 때만 Click을 닫기 요청으로 보냅니다. 소속 컨텍스트 메뉴와 Overlay Graphic은 Window 밖에 펼쳐져 있어도 배경과 다른 raycast 대상이므로 닫기 입력이 아닙니다. 현재 ActionContextMenu에는 화면 전체를 가로채는 별도 blocker가 없으므로 메뉴와 Window 모두의 바깥에서는 Host 배경이 입력을 받습니다.

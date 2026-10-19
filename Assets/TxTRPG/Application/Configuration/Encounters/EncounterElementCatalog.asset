@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 211b30c83e6ad9f49af4ef13628f379a, type: 3}
+  m_Name: EncounterElementCatalog
+  m_EditorClassIdentifier: TxTRPG.Application::TxTRPG.Application.Encounters.EncounterElementCatalog
+  entries:
+  - id: rune
+    displayName: "\uB8EC"
