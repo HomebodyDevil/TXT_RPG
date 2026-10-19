@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a47dc0bb9dbb0184594f5c886c286c53, type: 3}
+  m_Name: DefaultScreenFrameProfile
+  m_EditorClassIdentifier: TxTRPG.UI::TxTRPG.UI.ScreenFrame.ScreenFrameProfile
+  referenceResolution: {x: 1920, y: 1080}
+  respectSafeArea: 1
+  letterboxPresentation: {fileID: 928156940847535813, guid: 94c33295ea93a8043a32216a88e043c7, type: 3}
+  fallbackLetterboxColor: {r: 0, g: 0, b: 0, a: 1}

@@ -29,7 +29,7 @@ namespace TxTRPG.UI.SlotMachine
         [SerializeField, Min(0f)] private float bottomMargin = 12f;
         [SerializeField, Min(0f), Tooltip("Maximum dock width, centered. 0 means no limit.")]
         private float maximumWidth = 1200f;
-        [SerializeField, Tooltip("Adds the bottom, left and right Screen.safeArea insets to the outer margins.")]
+        [SerializeField, Tooltip("Adds the part of the parent that lies outside Screen.safeArea (bottom, left, right) to the outer margins. Zero inside the screen frame.")]
         private bool respectSafeArea = true;
         [SerializeField, Tooltip("Shown state on Awake.")] private bool initiallyShown = true;
         [SerializeField, Tooltip("Optional MonoBehaviour implementing ISlotReelDockTransition. Empty switches immediately.")]
@@ -394,20 +394,41 @@ namespace TxTRPG.UI.SlotMachine
 
         private float Overhang(float reelHeight) => totalCard != null ? totalCard.CalculateOverhang(reelHeight) : 0f;
 
-        // (left, right, bottom, top) safe-area insets in parent units. The top inset only limits the card and drag range.
+        // (left, right, bottom, top) safe-area insets in parent units: only the part of the parent's screen rectangle that
+        // lies outside Screen.safeArea. A parent inside the screen frame is already inside the safe area, so they are zero.
+        // The top inset only limits the card and drag range.
         private Vector4 SafeInsets(RectTransform parent)
         {
             if (!respectSafeArea || Screen.width <= 0 || Screen.height <= 0) return Vector4.zero;
-            var safe = Screen.safeArea;
-            var canvas = parent.GetComponentInParent<Canvas>();
-            var reference = canvas != null ? (RectTransform)canvas.rootCanvas.transform : parent;
-            var scale = new Vector2(reference.rect.width / Screen.width, reference.rect.height / Screen.height);
-            if (scale.x <= 0f || scale.y <= 0f || float.IsNaN(scale.x) || float.IsNaN(scale.y)) return Vector4.zero;
+            var parentScreenRect = ScreenRect(parent);
+            var parentSize = parent.rect.size;
+            if (parentScreenRect.width <= 0f || parentScreenRect.height <= 0f) return Vector4.zero;
+            var pixelsToCanvas = new Vector2(parentSize.x / parentScreenRect.width, parentSize.y / parentScreenRect.height);
+            return CalculateSafeInsets(parentScreenRect, Screen.safeArea, pixelsToCanvas);
+        }
+
+        // (left, right, bottom, top) amounts by which parentScreenRect extends past safeArea, converted to parent units.
+        public static Vector4 CalculateSafeInsets(Rect parentScreenRect, Rect safeArea, Vector2 pixelsToCanvas)
+        {
+            if (!(pixelsToCanvas.x > 0f) || !(pixelsToCanvas.y > 0f) || float.IsInfinity(pixelsToCanvas.x) || float.IsInfinity(pixelsToCanvas.y))
+                return Vector4.zero;
             return new Vector4(
-                Mathf.Max(0f, safe.xMin) * scale.x,
-                Mathf.Max(0f, Screen.width - safe.xMax) * scale.x,
-                Mathf.Max(0f, safe.yMin) * scale.y,
-                Mathf.Max(0f, Screen.height - safe.yMax) * scale.y);
+                Mathf.Max(0f, safeArea.xMin - parentScreenRect.xMin) * pixelsToCanvas.x,
+                Mathf.Max(0f, parentScreenRect.xMax - safeArea.xMax) * pixelsToCanvas.x,
+                Mathf.Max(0f, safeArea.yMin - parentScreenRect.yMin) * pixelsToCanvas.y,
+                Mathf.Max(0f, parentScreenRect.yMax - safeArea.yMax) * pixelsToCanvas.y);
+        }
+
+        private static readonly Vector3[] CornerBuffer = new Vector3[4];
+
+        private static Rect ScreenRect(RectTransform rect)
+        {
+            var canvas = rect.GetComponentInParent<Canvas>();
+            var camera = canvas != null && canvas.rootCanvas.renderMode != RenderMode.ScreenSpaceOverlay ? canvas.rootCanvas.worldCamera : null;
+            rect.GetWorldCorners(CornerBuffer);
+            var min = RectTransformUtility.WorldToScreenPoint(camera, CornerBuffer[0]);
+            var max = RectTransformUtility.WorldToScreenPoint(camera, CornerBuffer[2]);
+            return Rect.MinMaxRect(Mathf.Min(min.x, max.x), Mathf.Min(min.y, max.y), Mathf.Max(min.x, max.x), Mathf.Max(min.y, max.y));
         }
 
         private static float ClampRange(float value, float min, float max) => max < min ? (min + max) * .5f : Mathf.Clamp(value, min, max);

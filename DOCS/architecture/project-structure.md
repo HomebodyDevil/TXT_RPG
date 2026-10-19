@@ -12,7 +12,7 @@
 | UI | uGUI와 TextMeshPro |
 | 테스트 | Unity Test Framework 1.6.0 |
 | 기본 빌드 씬 | `Assets/Scenes/AppScene.unity` |
-| 초기 콘텐츠 씬 | `Assets/Scenes/Candidate_MainScene.unity`(AppScene이 처음 로드, `MainArea`의 1:3:1 영역과 `OverlayLayer`의 하단 슬롯 Reel 독 `SlotReelDock`, `LeftArea/ContentLayer`의 룬 Grid `RuneGrid`, `MiddleArea/ContentLayer` 상단의 요소 토글 바 `EncounterElementToggleBar`와 `MiddleContentPlaceholder`, `OverlayLayer`의 디버그 패널 `EncounterDebugPanel`과 결과 모달 `EncounterResultModal`, Canvas 자식 `EncounterRollController`가 있음) |
+| 초기 콘텐츠 씬 | `Assets/Scenes/Candidate_MainScene.unity`(AppScene이 처음 로드. `Canvas`는 화면 프레임 계층([화면 프레임과 레터박스](screen-frame.md))이며 `Canvas/ScreenFrame` 아래에 `MainArea`의 1:3:1 영역과 `OverlayLayer`(하단 슬롯 Reel 독 `SlotReelDock`, 디버그 패널 `EncounterDebugPanel`), `LeftArea/ContentLayer`의 룬 Grid `RuneGrid`, `MiddleArea/ContentLayer` 상단의 요소 토글 바 `EncounterElementToggleBar`와 `MiddleContentPlaceholder`가 있고, `Canvas/LetterboxLayer`, `Canvas/ScreenOverlayLayer`의 결과 모달 `EncounterResultModal`, Canvas 자식 `EncounterRollController`가 있음) |
 | 게임 화면 씬 | `Assets/Scenes/TMP_MainScene.unity`(Story·Actions·Character·적·슬롯머신 등 게임 패널, Play 중 `Tools > TxT RPG > Application > Play Mode > Load TMP_MainScene`으로 전환) |
 
 `StoryTextPanel`은 특정 씬에 직접 연결되어 있지 않습니다. 필요한 씬의 Canvas 아래에 프리팹을 배치하여 사용합니다.
@@ -223,12 +223,15 @@ TxT-RPG/
 | `ActionGridPanel.prefab` | 아이템과 스킬을 표시하며 Scroll View 아래에 비상호작용 `OppositeScrollbarArea`를 포함하는 반응형 선택 그리드입니다. |
 | `FlexibleLayoutPanel.prefab` | Background, BackgroundContent, Content와 Foreground 계층을 제공하는 운영용 레이아웃 컨테이너입니다. |
 | `FlexibleLayoutPlaceholder.prefab` | 그래픽 없이 Weighted/Fixed 및 최소·최대 크기 계산에 참여하는 빈 항목입니다. |
+| `ScreenFrame/ScreenFrameCanvas.prefab` | 화면 프레임 정책을 따르는 새 Scene의 시작 Canvas입니다(`ScreenFrame/OverlayLayer`, `LetterboxLayer`, `ScreenOverlayLayer`). 개발자 소유 자산입니다. |
+| `ScreenFrame/DefaultLetterboxPresentation.prefab` | 기본 레터박스 표시(검은 막대 4개, `raycastTarget` 꺼짐)입니다. 설정 자산에서 다른 표시 Prefab으로 바꿀 수 있습니다. |
 
 ### `Assets/TxTRPG/UI/Styles`
 
 | 자산 | 역할 |
 | --- | --- |
 | `StoryTextPanelDefaultBackgroundStyle.asset` | StoryTextPanel 운영 Prefab이 별도 설정 없이 표시하는 기본 배경 Tint와 표현 정책입니다. |
+| `ScreenFrame/DefaultScreenFrameProfile.asset` | 화면 프레임 기본 설정(1920×1080, Safe Area 반영, 레터박스 표시 Prefab, 대체 색)입니다. |
 
 ### `Assets/TxTRPG/UI/DEMO`
 
@@ -337,6 +340,8 @@ flowchart TD
 `TxTRPG.UI`의 `ActionGridSingleRowSettings`, `ActionGridSurfaceLayout`, `ActionGridHeaderObserver`는 기존 ActionGridPanel의 단일 행 및 Header 표면 배치를 담당합니다. `TxTRPG.UI.Editor`의 `ActionGridSurfaceAuthoring`은 기존 자산에 필요한 참조만 연결합니다. `TxTRPG.Application.Editor`는 운영 Scene의 한정 적용 도구에서 이 작성 함수를 재사용하기 위해 `TxTRPG.UI.Editor`를 참조합니다. 런타임 어셈블리에는 Editor 의존성을 추가하지 않았습니다. 상세 내용은 [Action Grid Panel](action-grid-panel.md)을 참조합니다.
 
 탐험 기록 트리는 `UI/Runtime/Exploration`의 `ExplorationNodeTreePanel`, `ExplorationTreeSnapshot`, `ExplorationTreeLayout`, 노드·선 View와 `ExplorationTreeStyle`로 구성합니다. `Application/Runtime/Exploration/ExplorationTreeProjection.cs`가 도메인 전체 기록을 표시 스냅샷으로 변환하며 `ExplorationRunController`가 갱신 경계를 소유합니다. UI에서 Application으로의 역참조는 추가하지 않습니다. 상세 구조는 [탐험 기록 트리](exploration-history-tree.md)를 참고합니다.
+
+`UI/Runtime/ScreenFrame/`(네임스페이스 `TxTRPG.UI.ScreenFrame`)은 1920×1080 화면 프레임을 Safe Area 안에 맞추는 `ScreenFrameMath`·`ScreenFrameLayout`, 설정 자산 `ScreenFrameProfile`, Canvas 배율 `ScreenFrameCanvasScaler`, 프레임 배치·변경 감지 `ScreenFrameController`(입력 공급 `IScreenFrameInput`, 배율 변경 시 TMP 글자 다시 만들기 `ScreenFrameTextRegeneration`), 레터박스 `LetterboxView`·`ILetterboxPresentation`·기본 표시 `LetterboxBarsPresentation`, 화면 전체 레이어 안의 프레임 정렬 `ScreenFrameAlignedRect`를 포함합니다. 자산은 `UI/Styles/ScreenFrame/DefaultScreenFrameProfile.asset`, Prefab은 `UI/Prefabs/ScreenFrame/`(`DefaultLetterboxPresentation.prefab`, 새 Scene용 `ScreenFrameCanvas.prefab`)이며, 적용·확인 임시 메뉴는 `Application/Editor/TemporaryScreenFrameApply.cs`, `TemporaryScreenFrameVerification.cs`입니다. 프레임 정책을 따르는 Scene은 현재 `Candidate_MainScene`뿐입니다([화면 프레임과 레터박스](screen-frame.md), [해상도 대응과 화면 프레임 정책](../development/resolution-and-screen-frame.md)).
 
 `UI/Runtime/ResponsiveMainScreen.cs`와 `NestedScrollRectBridge.cs`는 좁은 화면에서 기존 메인 패널을 세로 페이지로 전환하고 중첩 스크롤을 연결합니다. `Canvas/MainScreenViewport`가 기존 Main_FlexibleLayoutPanel을 감싸며 공유 게임 규칙과 저장 데이터에는 관여하지 않습니다.
 

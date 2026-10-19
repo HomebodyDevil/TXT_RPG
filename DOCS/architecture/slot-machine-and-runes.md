@@ -505,12 +505,12 @@ Prefab의 기본 외형을 바꾼 뒤에는 Inspector 컴포넌트 메뉴 `기�
 
 ## SlotReelDock (Candidate_MainScene 하단 슬롯 Reel 독)
 
-`Candidate_MainScene`에서는 슬롯 영역이 레이아웃 항목이 아니라 `Canvas` 하단에 떠 있는 독립 영역입니다. Reel만 있고, 합계는 Reel 기계 위쪽 가장자리에 걸친 합계 카드로 표시합니다. 표시와 Editor 미리보기까지 구현되어 있으며 실제 전투·탐험 이벤트 연결은 아직 없습니다.
+`Candidate_MainScene`에서는 슬롯 영역이 레이아웃 항목이 아니라 화면 프레임(`Canvas/ScreenFrame`) 하단에 떠 있는 독립 영역입니다. Reel만 있고, 합계는 Reel 기계 위쪽 가장자리에 걸친 합계 카드로 표시합니다. 표시와 Editor 미리보기까지 구현되어 있으며 실제 전투·탐험 이벤트 연결은 아직 없습니다.
 
 ### 배치와 계층
 
 ```text
-Candidate_MainScene/Canvas
+Candidate_MainScene/Canvas/ScreenFrame      (1920×1080 화면 프레임, screen-frame.md)
 ├── MainArea                 (변경 없음)
 └── OverlayLayer             (RectTransform Stretch, Graphic 없음)
     └── SlotReelDock         (SlotReelDock.prefab 인스턴스, 루트 기본 재정의 외 재정의 없음)
@@ -548,7 +548,7 @@ SlotReelDock                 (배치 루트: 부모 아래 가운데 앵커, Can
 | `heightRatio`, `minimumHeight`, `maximumHeight` | 0.28, 140, 320 | Reel 기계 높이 = 부모 높이 × 비율을 최소·최대로 제한. 카드 돌출 높이는 포함하지 않습니다. 부모가 낮아 카드가 부모 위쪽을 넘으면 Reel 기계 높이를 최소값 아래로 줄입니다. |
 | `horizontalMargin`, `bottomMargin` | 16, 12 | 좌우·아래 바깥 여백 |
 | `maximumWidth` | 1200 (0이면 제한 없음) | 너비 제한, 가운데 정렬 |
-| `respectSafeArea` | 켜짐 | `Screen.safeArea`의 아래·좌·우 여백을 바깥 여백에 더하고, 위쪽 여백은 카드와 드래그 위치 제한에만 씁니다. 루트 Canvas 크기와 화면 크기의 비율로 Canvas 단위로 바꿉니다. |
+| `respectSafeArea` | 켜짐 | 부모 RectTransform의 화면 영역이 `Screen.safeArea` 밖과 겹치는 만큼(아래·좌·우)을 바깥 여백에 더하고, 위쪽 겹침은 카드와 드래그 위치 제한에만 씁니다. 부모 크기와 부모 화면 영역의 비율로 Canvas 단위로 바꿉니다(`SlotReelDock.CalculateSafeInsets`). 화면 프레임([화면 프레임과 레터박스](screen-frame.md)) 안에서는 부모가 이미 Safe Area 안에 있으므로 여백이 0이고, 화면 전체를 덮는 부모에서는 이전과 같은 화면 Safe Area 여백이 됩니다. |
 | `initiallyShown` | 켜짐 | Awake 시 표시 상태 |
 | `transitionBehaviour` | 없음 | `ISlotReelDockTransition`을 구현한 `MonoBehaviour`. 비어 있거나 구현하지 않으면(한 번 경고) 즉시 전환합니다. |
 

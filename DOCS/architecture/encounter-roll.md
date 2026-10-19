@@ -93,17 +93,19 @@ EncounterDebugPanel.prefab         Image, EncounterDebugPanel, DevelopmentBuildO
     └── ResultText
 
 EncounterResultModal.prefab        GameWindowService(pages = [EncounterResultPage])
-└── ModalWindowHost                ModalWindowHost, CanvasGroup, 반투명 배경 Image(바깥 클릭 대상)
-    └── WindowFrame                HorizontalLayoutGroup(여백 16, 가운데) — 그리지 않음
-        └── Window                 windowRect, UiShapeGraphic, LayoutElement(선호 560×240, 최소 0)
-            ├── Title              "이벤트 발생"
-            ├── CloseButton        "닫기", ModalCancelForwarder, 결과 페이지의 initialFocus
-            ├── Loading / ErrorStateRoot(Error, RetryButton)
-            ├── ContentContainer   ModalContentContainer → Pages/EncounterResultPage(MessageGameWindowPage, PageId "encounter-result")/Message
-            └── OverlayRoot
+└── ModalWindowHost                ModalWindowHost, CanvasGroup, 반투명 배경 Image(바깥 클릭 대상), 화면 전체
+    └── FrameArea                  ScreenFrameAlignedRect(그래픽 없음) — 화면 프레임 영역에 맞춤
+        └── WindowFrame            HorizontalLayoutGroup(여백 16, 가운데) — 그리지 않음
+            └── Window             windowRect, UiShapeGraphic, LayoutElement(선호 560×240, 최소 0)
+                ├── Title          "이벤트 발생"
+                ├── CloseButton    "닫기", ModalCancelForwarder, 결과 페이지의 initialFocus
+                ├── Loading / ErrorStateRoot(Error, RetryButton)
+                ├── ContentContainer   ModalContentContainer → Pages/EncounterResultPage(MessageGameWindowPage, PageId "encounter-result")/Message
+                └── OverlayRoot
 ```
 
-- `Window`는 `WindowFrame`의 레이아웃으로 `min(560, 화면 너비 − 32) × min(240, 화면 높이 − 32)` 크기를 받습니다.
+- `Window`는 `WindowFrame`의 레이아웃으로 `min(560, 프레임 너비 − 32) × min(240, 프레임 높이 − 32)` 크기를 받고 화면 프레임 가운데에 놓입니다. 배경은 레터박스를 포함한 화면 전체를 덮으므로 레터박스 영역을 눌러도 바깥 클릭으로 닫힙니다.
+- `FrameArea.controller`는 Prefab에서 비어 있고, `Candidate_MainScene` 인스턴스가 Scene의 `ScreenFrameController`를 Override로 저장합니다. 참조가 없으면 `FrameArea`는 화면 전체로 늘어나고 경고를 한 번 남깁니다([화면 프레임과 레터박스](screen-frame.md)).
 - 토글 버튼의 Toggle 상태 색 전환(강조·눌림·포커스)은 `Background`에 적용됩니다. 선택 여부는 색이 아니라 `Checkmark`와 `SelectedBorder`로 표시합니다.
 - 결과 모달은 기존 `ModalWindowHost`·`GameWindowService`·`MessageGameWindowPage`를 재사용합니다([퀵 아이템과 게임 창](quick-items-and-game-windows.md)). 바깥 클릭은 누른 위치와 뗀 위치가 모두 창 밖이고 드래그가 아닐 때만 닫습니다. `Cancel`은 선택된 `CloseButton`의 `ModalCancelForwarder`가 호스트로 전달합니다.
 
@@ -111,16 +113,21 @@ EncounterResultModal.prefab        GameWindowService(pages = [EncounterResultPag
 
 ```text
 Canvas
-├── MainArea/ContentLayer/MiddleArea      FlexibleLayoutPanel 인스턴스 Override: Fixed Axis = Vertical, Axis Policy = Fixed
-│   └── ContentLayer                      (패널이 축 설정을 ContentLayer의 FlexibleContentLayoutGroup에 동기화)
-│       ├── EncounterElementToggleBar     Prefab 인스턴스 + FlexibleLayoutItem(Fixed 64)
-│       └── MiddleContentPlaceholder      FlexibleLayoutPlaceholder.prefab 인스턴스(Weighted 1, 활성)
-├── OverlayLayer
-│   ├── SlotReelDock
-│   ├── EncounterDebugPanel               오른쪽 위 앵커, 여백 16, 폭 320
-│   └── EncounterResultModal              Stretch, 마지막 형제(열릴 때도 SetAsLastSibling)
-└── EncounterRollController               카탈로그·설정·토글 바·결과 모달(GameWindowService·페이지)·디버그 패널 참조
+├── ScreenFrame                               화면 프레임(1920×1080 Canvas 단위)
+│   ├── MainArea/ContentLayer/MiddleArea      FlexibleLayoutPanel 인스턴스 Override: Fixed Axis = Vertical, Axis Policy = Fixed
+│   │   └── ContentLayer                      (패널이 축 설정을 ContentLayer의 FlexibleContentLayoutGroup에 동기화)
+│   │       ├── EncounterElementToggleBar     Prefab 인스턴스 + FlexibleLayoutItem(Fixed 64)
+│   │       └── MiddleContentPlaceholder      FlexibleLayoutPlaceholder.prefab 인스턴스(Weighted 1, 활성)
+│   └── OverlayLayer
+│       ├── SlotReelDock
+│       └── EncounterDebugPanel               오른쪽 위 앵커, 여백 16, 폭 320
+├── LetterboxLayer
+├── ScreenOverlayLayer
+│   └── EncounterResultModal                  Stretch(화면 전체), 열릴 때 ScreenOverlayLayer 안에서 SetAsLastSibling
+└── EncounterRollController                   카탈로그·설정·토글 바·결과 모달(GameWindowService·페이지)·디버그 패널 참조
 ```
+
+결과 모달은 2026-10-19 화면 프레임 적용 때 `OverlayLayer`에서 `ScreenOverlayLayer`로 옮겼습니다. 같은 오브젝트를 옮겼으므로 `EncounterRollController`의 참조는 그대로입니다.
 
 - `MiddleArea`는 `MainArea`가 너비 720 미만에서 세로 배치로 바뀌어도 내부는 세로 고정이므로 토글 바가 항상 상단 64를 차지합니다.
 - 설정 자산은 `Assets/TxTRPG/Application/Configuration/Encounters/EncounterElementCatalog.asset`(`rune`/`룬`)과 `EncounterRollConfiguration.asset`(0.5, 0.5, 1·1·1)입니다.

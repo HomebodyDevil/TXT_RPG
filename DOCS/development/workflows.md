@@ -217,7 +217,7 @@ Player 빌드 전에 `Tools > TxT RPG > Application > Validate App Scene Configu
 
 ### Candidate_MainScene 초기 콘텐츠와 임시 적용·측정 메뉴
 
-`Candidate_MainScene`은 AppScene이 처음 로드하는 콘텐츠 Scene이며, 현재는 게임 패널 없이 `Canvas/MainArea`의 세 영역, `LeftArea`의 룬 Grid `RuneGrid`, `Canvas/OverlayLayer/SlotReelDock`(하단 슬롯 Reel 독)을 표시합니다(구성은 [FlexibleLayoutPanel](../architecture/flexible-layout-panel.md#candidate_mainscene-적용-예) 참고). Build Settings 순서는 `AppScene`, `Candidate_MainScene`, `TMP_MainScene`이며 모두 활성입니다. 게임 화면 검증은 Play 중 `Tools > TxT RPG > Application > Play Mode > Load TMP_MainScene`으로 `TMP_MainScene`에 전환한 뒤 수행합니다.
+`Candidate_MainScene`은 AppScene이 처음 로드하는 콘텐츠 Scene이며, 현재는 게임 패널 없이 `Canvas/ScreenFrame/MainArea`의 세 영역, `LeftArea`의 룬 Grid `RuneGrid`, `Canvas/ScreenFrame/OverlayLayer/SlotReelDock`(하단 슬롯 Reel 독)을 표시합니다(구성은 [FlexibleLayoutPanel](../architecture/flexible-layout-panel.md#candidate_mainscene-적용-예) 참고). Build Settings 순서는 `AppScene`, `Candidate_MainScene`, `TMP_MainScene`이며 모두 활성입니다. 게임 화면 검증은 Play 중 `Tools > TxT RPG > Application > Play Mode > Load TMP_MainScene`으로 `TMP_MainScene`에 전환한 뒤 수행합니다.
 
 다음 두 메뉴는 `candidate-main-scene-initial-content-and-layout` 작업용 임시 메뉴(`Assets/TxTRPG/Application/Editor/`)입니다. 적용은 2026-10-17에 운영 자산에 완료했으므로 다시 실행할 필요가 없으며, 필요하지 않게 되면 두 파일을 삭제할 수 있습니다.
 
@@ -285,6 +285,27 @@ Player 빌드 전에 `Tools > TxT RPG > Application > Validate App Scene Configu
 6. Edit Mode 테스트는 클래스별로 `TxTRPG.Gameplay.Tests.EncounterRollerTests`, `TxTRPG.Gameplay.Tests.EncounterElementSelectionTests`, `TxTRPG.Application.Tests.EncounterResultFormatterTests`, `TxTRPG.Application.Tests.EncounterElementCatalogTests`, `TxTRPG.Application.Tests.EncounterRollControllerTests`, `TxTRPG.UI.Tests.EncounterElementToggleBarTests`, `TxTRPG.UI.Tests.EncounterDebugPanelTests`, `TxTRPG.UI.Tests.DevelopmentBuildOnlyTests`입니다. 모두 `AssetWriting`이 아니며 저장된 Prefab·설정 자산을 읽기만 합니다. 모달 회귀는 `TxTRPG.Application.Tests.InventoryEmptyStateTests`로 확인합니다.
 
 디버그 패널은 `DevelopmentBuildOnly`가 붙어 있어 Release Player(Development Build 끔)에서 `Awake`에 비활성화되어 보이지 않고 사용할 수 없습니다. Editor와 Development Build에서는 항상 보입니다. 판정 함수는 `DevelopmentBuildOnlyTests`로 검증하며, 실제 Release Player 빌드에서의 확인은 별도로 수행합니다.
+
+### Candidate_MainScene 화면 프레임과 레터박스 적용·확인
+
+2026-10-19에 `Candidate_MainScene`을 화면 프레임 계층으로 바꿨습니다([화면 프레임과 레터박스](../architecture/screen-frame.md), [해상도 대응과 화면 프레임 정책](resolution-and-screen-frame.md)). 이 적용 뒤에는 `Canvas` 바로 아래에 `MainArea`·`OverlayLayer`가 있다고 가정하는 이전 임시 메뉴(`Apply Candidate Main Scene Initial Content`, `Apply Slot Reel Dock To Candidate Main Scene`, `Apply Candidate Rune Grid`, `Apply Candidate Encounter Toggles`, `Measure Candidate Main Scene Layout (Play Mode)`)를 다시 실행하지 않습니다. 특히 `Apply Slot Reel Dock To Candidate Main Scene`은 `Canvas/OverlayLayer`가 없다고 판단해 새로 만들 수 있습니다.
+
+| 메뉴 | 동작 |
+| --- | --- |
+| `Tools > TxT RPG > Application > Temporary > Apply Candidate Screen Frame` (`TemporaryScreenFrameApply`, 임시) | Play Mode·컴파일 중·Prefab Stage이거나 열린 Scene에 미저장 변경이 있거나, `Canvas`의 자식이 `MainArea`·`OverlayLayer`·`EncounterRollController`가 아니면 아무것도 바꾸지 않습니다. 없을 때만 `DefaultLetterboxPresentation.prefab`·`DefaultScreenFrameProfile.asset`·`ScreenFrameCanvas.prefab`을 만들고, `EncounterResultModal.prefab`의 `ModalWindowHost` 아래에 `FrameArea`가 없으면 `WindowFrame` 위에 넣습니다. `Canvas/ScreenFrame`이 없으면 Scene을 1.1절 계층으로 바꾸고(같은 오브젝트 이동, `CanvasScaler` → `ScreenFrameCanvasScaler`, `ScreenFrameController` 추가, 모달 `FrameArea.controller` Override) 저장합니다. 이어서 Player 설정(가로 두 방향만, 1280×720, 창 크기 조절 켬)을 메모리와 `ProjectSettings.asset`의 해당 키에만 씁니다. 이미 적용된 단계는 건너뛰므로 재실행해도 안전합니다. 결과는 `SCREEN_FRAME_APPLY` 로그입니다. 적용은 2026-10-19에 완료했으므로 다시 실행할 필요가 없으며, 사용자가 확인한 뒤 파일을 삭제할 수 있습니다. |
+| `Tools > TxT RPG > Application > Temporary > Capture Candidate Layout 1920x1080` (`TemporaryScreenFrameVerification`, 임시) | AppScene 경유 Play에서 실행합니다. Game View를 1920×1080으로 바꿔 세 영역·독·디버그 패널의 화면 Rect, 글자 크기와 조작 요소 크기를 기록하고 캡처한 뒤, 모든 TMP 메시를 다시 만들고 한 번 더 캡처합니다(`-text-refreshed`). 적용 전후 비교용이며, 배율 변경 뒤 글자 선명도 보정이 동작하면 두 캡처가 같습니다. |
+| `Tools > TxT RPG > Application > Temporary > Verify Candidate Screen Frame` (`TemporaryScreenFrameVerification`, 임시) | AppScene 경유 Play에서 실행합니다. 1920×1080, 1280×720, 2560×1080, 2400×1080, 1024×768, 2048×1536, 1080×1920과 Safe Area 모의(2400×1080, x 132·y 63·2268×1017, `ScreenFrameController.SetInput`)에서 배율·프레임 크기와 위치·Safe Area 안·레터박스 막대·독과 디버그 패널이 프레임 안인지, 같은 크기에서 다시 계산하지 않는지 확인합니다. 2560×1080에서 결과 모달을 열어 배경이 화면 전체, 창이 프레임 가운데인지 확인하고 왼쪽 레터박스를 포인터로 눌러 닫히는지 확인합니다. 1024×768에서는 체크 무늬 Sprite 레터박스로 `SetPresentation` 교체와 복원을 확인합니다. 결과는 `SCREEN_FRAME_VERIFY` 로그, 캡처와 `report.txt`는 `%TEMP%/TxTRPG-ScreenFrameVerification`(환경 변수 `TXTRPG_VERIFY_OUTPUT`로 변경)입니다. 임시 Game View 크기는 전체 인덱스로 제거하고 아무 자산도 저장하지 않습니다. |
+| `Tools > TxT RPG > Application > Temporary > Compile Player Scripts (Windows, Android)` (`TemporaryScreenFrameVerification`, 임시) | 설치된 모듈의 Windows 64비트·Android 대상 Player 스크립트를 임시 폴더로 컴파일합니다(빌드·자산 변경 없음). |
+
+Edit Mode 테스트는 클래스별로 `TxTRPG.UI.Tests.ScreenFrameMathTests`, `TxTRPG.UI.Tests.ScreenFrameControllerTests`(배율 변경 시 TMP 글자 다시 만들기 표시 포함), `TxTRPG.UI.Tests.LetterboxViewTests`(모두 `Assets/TxTRPG/UI/Tests/Editor/`, 어셈블리 `TxTRPG.UI.Tests.Editor`), `TxTRPG.UI.Tests.SlotReelDockTests`(Safe Area 여백 함수 포함), `TxTRPG.Application.Tests.EncounterRollControllerTests`입니다. 모두 `AssetWriting`이 아닙니다.
+
+확인 절차:
+
+1. 아무 Scene에서 Play를 시작하면 AppScene을 거쳐 `Candidate_MainScene`이 로드되고, 16:9 Game View에서는 레터박스 없이 적용 전과 같은 배치가 보입니다.
+2. Game View를 2560×1080으로 바꾸면 좌우에 검은 막대(각 320)가 생기고, 1024×768이면 위아래에 막대가 생깁니다. 프레임 안 UI는 같은 비율로 축소·확대됩니다.
+3. 디버그 패널에서 `룬` 선택, 발생 확률 100%로 `이벤트 발생` → 어두운 배경이 레터박스까지 덮고 창은 프레임 가운데에 있습니다. 레터박스를 클릭해도 닫힙니다.
+4. `Verify Candidate Screen Frame`을 실행하고 `SCREEN_FRAME_VERIFY: PASS all sizes`를 확인합니다.
+5. Device Simulator에서 노치가 있는 기기를 가로로 놓고 프레임이 Safe Area 안에 있는지 확인합니다(자동 확인 없음).
 
 ## EnemyDisplayPanel을 씬에서 사용하기
 

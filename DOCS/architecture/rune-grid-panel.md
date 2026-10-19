@@ -89,14 +89,14 @@ RuneGridCard                      셀(레이아웃이 크기·위치 제어), Ru
 ## `Candidate_MainScene` 배치
 
 ```text
-Canvas/MainArea/ContentLayer/LeftArea/ContentLayer
+Canvas/ScreenFrame/MainArea/ContentLayer/LeftArea/ContentLayer
 └── RuneGrid      RuneGridPanel.prefab 인스턴스
                   + FlexibleLayoutItem(Weighted 1, Minimum·Maximum 0)
                   + TemporaryRuneGridBinder(panel = 자신의 RuneGridPanel)
                   iconCatalog = TemporaryRuneIconCatalog(Override)
 ```
 
-`MainArea`가 너비 720 미만에서 세로 배치로 바뀌면 `LeftArea`가 넓고 낮아져 열 수가 늘고 세로 스크롤이 생길 수 있습니다.
+`MainArea`가 너비 720 미만에서 세로 배치로 바뀌면 `LeftArea`가 넓고 낮아져 열 수가 늘고 세로 스크롤이 생길 수 있습니다. 2026-10-19부터 `MainArea`는 항상 1920 단위 너비인 화면 프레임 안에 있으므로 이 Scene에서는 세로 배치가 나타나지 않습니다.
 
 ## 효과 적용 위치
 
