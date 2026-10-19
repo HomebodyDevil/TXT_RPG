@@ -283,5 +283,34 @@ namespace TxTRPG.UI.Tests
             var cell = window.height / 5f;
             Assert.That(card.yMin, Is.GreaterThanOrEqualTo(window.yMax - cell - .5f), "the card bottom stays within the topmost visible cell (+2)");
         }
+
+        [Test]
+        public void SafeInsets_ParentInsideSafeArea_AreZero()
+        {
+            // 2400x1080 phone with a 100 px left cutout: the screen frame (1920x1080 at scale 1) sits inside the safe area.
+            var safe = new Rect(100f, 0f, 2300f, 1080f);
+            var frame = new Rect(340f, 0f, 1920f, 1080f);
+            Assert.That(SlotReelDock.CalculateSafeInsets(frame, safe, Vector2.one), Is.EqualTo(Vector4.zero));
+        }
+
+        [Test]
+        public void SafeInsets_FullScreenParent_MatchScreenInsets()
+        {
+            // Same insets as the previous whole-screen calculation: (left, right, bottom, top) in parent units.
+            var screen = new Rect(0f, 0f, 2400f, 1080f);
+            var safe = new Rect(100f, 30f, 2250f, 1000f);
+            var insets = SlotReelDock.CalculateSafeInsets(screen, safe, new Vector2(.5f, .5f));
+            Assert.That(insets.x, Is.EqualTo(50f).Within(.001f));
+            Assert.That(insets.y, Is.EqualTo(25f).Within(.001f));
+            Assert.That(insets.z, Is.EqualTo(15f).Within(.001f));
+            Assert.That(insets.w, Is.EqualTo(25f).Within(.001f));
+        }
+
+        [Test]
+        public void SafeInsets_InvalidScale_AreZero()
+        {
+            var screen = new Rect(0f, 0f, 100f, 100f);
+            Assert.That(SlotReelDock.CalculateSafeInsets(screen, new Rect(10f, 0f, 90f, 100f), Vector2.zero), Is.EqualTo(Vector4.zero));
+        }
     }
 }

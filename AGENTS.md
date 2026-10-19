@@ -34,11 +34,16 @@ Treat this project as a single shared codebase that may ship to Steam on desktop
 
 ## Responsive UI and Resolution Support
 
+The project uses a fixed 16:9 screen frame: game UI is authored in 1920×1080 canvas units inside a frame that is scaled uniformly to fit the safe area, and the remaining screen area is filled by a customizable letterbox. The game runs in landscape only. `TMP_MainScene` is the only exception and keeps its legacy Constant Pixel Size layout. Read `DOCS/development/resolution-and-screen-frame.md` before adding, changing, or restructuring any UI element, Canvas, Scene, modal, popup, or tooltip, and follow its rules and verification sizes. The shared screen-frame components and Prefabs are introduced by `DOCS/instructions/screen-frame-letterbox-resolution-policy.md`; check the current-state section of the resolution document before assuming they exist, and do not build a different scaling policy in the meantime.
+
 - Build layouts with anchors, layout groups, flexible sizing, and content-driven constraints. Do not position essential UI with fixed pixel offsets alone.
-- Use an intentional `Canvas Scaler` policy and document the reference resolution and width/height matching behavior for each major UI surface.
-- Support common desktop, phone, tablet, ultrawide, and narrow aspect ratios. Do not assume 16:9.
-- Respect mobile safe areas, display cutouts, rounded corners, system gesture regions, and orientation changes.
-- Define whether gameplay content expands, crops, or uses letterboxing when aspect ratios differ. Do not let this behavior emerge accidentally from camera settings.
+- Express sizes, margins, font sizes, and breakpoints in 1920×1080 canvas units. Do not size UI from physical pixels or `Screen.width`/`Screen.height`; convert screen coordinates to canvas units when they are required.
+- Place game UI under the screen frame. Start new Scenes from the shared screen-frame Canvas Prefab and profile instead of assembling a separate Canvas Scaler policy. Only full-screen transition effects and modal dim backgrounds may cover the letterbox; modal, popup, and tooltip content must stay inside the frame.
+- Keep essential information and controls out of the letterbox, keep letterbox visuals non-interactive, and change letterbox presentation through the profile and presentation Prefab rather than code edits.
+- Support common desktop, phone, tablet, ultrawide, and narrow aspect ratios through the frame and letterbox. Verify at the screen sizes listed in the resolution document, including at least one notched device in the Device Simulator.
+- Respect mobile safe areas, display cutouts, rounded corners, and system gesture regions. The frame already excludes the safe-area insets, so elements inside it must not add them again.
+- When adding world-space, 2D, or 3D camera content, decide and document whether the camera view follows the 16:9 frame. Do not let this behavior emerge accidentally from camera settings.
+- Check readable text and touch-target sizes at phone scale using the conversion in the resolution document, and report elements that appear too small.
 - Keep critical controls, text, and status information visible at the smallest supported viewport and at enlarged accessibility text sizes.
 - Ensure text can expand for localization. Avoid fixed-size containers that only fit the current language, and do not encode meaningful text into raster images.
 - Validate scrolling, modal dialogs, tooltips, virtual keyboards, and focus behavior at constrained resolutions.
@@ -135,6 +140,17 @@ Read `DOCS/development/visual-effect-readiness.md` when creating or restructurin
 - When adding a test that calls a production builder or otherwise saves Scenes, Prefabs, or configuration assets outside a temporary folder it deletes afterwards, mark that test with `[Category("AssetWriting")]`. Add `[Explicit]` with a reason when the test is slow or leaves diffs in assets unrelated to its own builder.
 - Record the Git status before a test run. If a test run modifies files outside the current change, restore only the files that were unmodified before the run, and never discard pre-existing user changes.
 - If a test run does not finish within a reasonable time, or the Editor reports that it is busy in the Test Runner, do not keep waiting or start another run. Report the last test recorded in `Editor.log`, the observed state, and the files the run modified, then ask the user how to proceed.
+
+### Pushing to `main`
+
+When the user asks to push, integrate the work into `main` and push `main` directly. Do not push only a feature branch and leave the merge to a pull request. Use a pull request or another target branch only when the user explicitly asks for one.
+
+- Commit only when the user asks. A push request covers commits that already exist; ask before creating a new commit for uncommitted work.
+- If the work is on another branch, fetch `origin`, bring local `main` up to date with `origin/main`, and merge the work branch into `main`, fast-forwarding when possible. Resolve conflicts while preserving both sides' intent. If a resolution would change behavior, stop and ask the user.
+- Push `main` to `origin` without force. If the push is rejected, fetch and merge again rather than overwriting remote history.
+- Uncommitted pre-existing user changes stay in the working copy. Do not commit, stash, or discard them to make the merge or push possible. If they block the merge, report the conflicting files and ask how to proceed.
+- Keep the work branch locally and remotely unless the user asks to delete it.
+- After pushing, report the pushed commits and the resulting `main` commit.
 
 ### Project Subagents
 
