@@ -88,7 +88,7 @@ Payline은 가운데 줄 하나입니다. 여러 Payline이나 기호 조합 판
 | `Assets/TxTRPG/Application/Configuration/TemporarySlotMachineConfiguration.asset` (`TemporarySlotMachineConfiguration`) | Reel 목록(ID, 값 목록). 기본값은 `reel.1`·`reel.2`·`reel.3`이고 각 값은 `1, 2, 3, 4, 5, 6`입니다. |
 | `Assets/TxTRPG/Application/Configuration/TemporaryRuneConfiguration.asset` (`TemporaryRuneConfiguration`) | 정의 `rune.attack`(공격 룬, Attack), `rune.heal`(회복 룬, Heal). 보유 `rune.attack.1`, `rune.heal.1`. 줄 `line.1`(공격 룬 ×1), `line.2`(회복 룬 ×1). Inspector에서 바꿀 수 있는 임시값입니다. |
 | `TemporarySlotMachineState` | 세션 수명의 `SlotMachine` 복사본입니다. `Machine`의 변경 API를 쓰며 `Changed`를 전달합니다. |
-| `TemporaryRuneState` | 세션 수명의 `Catalog`·`Inventory`·`Loadout`입니다. 보유와 줄의 `Changed`를 합쳐 전달하고, `CanAllocate`와 `Allocate(total, policy)`를 제공합니다. |
+| `TemporaryRuneState` | 세션 수명의 `Catalog`·`Inventory`·`Loadout`입니다. 보유와 줄의 `Changed`를 합쳐 전달하고, `CanAllocate`와 `Allocate(total, policy)`를 제공합니다. `Candidate_MainScene` LeftArea의 [룬 Grid](rune-grid-panel.md)가 줄마다 카드 하나와 Weight 배지로 표시합니다(`TemporaryRuneGridBinder`). |
 | `Assets/TxTRPG/Application/Configuration/TemporaryFortuneCriticalConfiguration.asset`, `TemporaryFortuneCriticalState` | Fortune Critical 규칙의 설정 자산과 세션 상태입니다. [Fortune Critical](#fortune-critical)에서 설명합니다. |
 
 `PlayerSessionHost`(`AppRoot.prefab`)의 `temporarySlotMachineConfiguration`·`temporaryRuneConfiguration`이 두 자산을 참조합니다. Fortune Critical 설정은 별도 필드 `temporaryFortuneCriticalConfiguration`이 참조하며 같은 시점에 복사합니다. Awake와 `EnsureInitializedAsync`에서 한 번 복사하며, 원본 자산은 실행 중 바뀌지 않습니다.
@@ -629,7 +629,7 @@ Play Mode에서 측정한 값은 다음과 같습니다(2026-10-17, Candidate_Ma
 | 향후 기능 | 현재 구조 |
 | --- | --- |
 | 수동 분배 | `IRuneAllocationPolicy`의 다른 구현으로 추가합니다. 컨트롤러는 회전 수락(`AcceptSpin`)·연출·적용을 분리된 단계로 처리하므로, 수락과 적용 사이에 입력 대기를 넣을 수 있습니다. 패널의 `SummaryArea`에 입력 영역을 추가할 수 있습니다. |
-| 룬 장착·줄 편집 UI | `RuneLoadout`의 변경 API와 `TemporaryRuneState.Changed`를 씁니다. 패널은 이미 `Changed`로 갱신됩니다. |
+| 룬 장착·줄 편집 UI | `RuneLoadout`의 변경 API와 `TemporaryRuneState.Changed`를 씁니다. 패널과 [룬 Grid](rune-grid-panel.md)는 이미 `Changed`로 갱신됩니다. 룬 Grid는 현재 표시 전용입니다. |
 | 룬 조합 | 재료를 줄에서 빼고(`TryRemoveRuneFromLine`) 보유에서 제거한 뒤 새 정의의 인스턴스를 `TryAdd`합니다. 줄과 분배 코드에는 효과 종류가 하드코딩되어 있지 않습니다. 효과 → 전투 행동 매핑은 `RuneCombatActions` 한 곳에 있습니다. |
 | 룬 획득 | `RuneInventory.TryAdd`. 어느 줄에 둘지는 획득 기능이 정합니다. |
 | 저장 | ID는 안정적인 문자열입니다. 저장 형식은 아직 없습니다. |
