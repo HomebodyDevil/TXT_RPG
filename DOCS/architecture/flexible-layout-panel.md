@@ -147,7 +147,11 @@ Canvas                          Constant Pixel Size(TMP_MainScene과 동일, 이
     ├── BackgroundLayer/BackgroundVisualRoot/BackgroundA   흰색 α0.392
     └── ContentLayer
         ├── LeftArea            FlexibleLayoutPanel.prefab 인스턴스 + FlexibleLayoutItem(Weighted 1), 주황 α0.392
-        ├── MiddleArea          FlexibleLayoutPanel.prefab 인스턴스 + FlexibleLayoutItem(Weighted 3), 파랑 α0.392
+        │   └── ContentLayer/RuneGrid   RuneGridPanel.prefab 인스턴스 + FlexibleLayoutItem(Weighted 1)([룬 Grid 패널](rune-grid-panel.md))
+        ├── MiddleArea          FlexibleLayoutPanel.prefab 인스턴스 + FlexibleLayoutItem(Weighted 3), 파랑 α0.392, Fixed Axis = Vertical(Override)
+        │   └── ContentLayer
+        │       ├── EncounterElementToggleBar   EncounterElementToggleBar.prefab 인스턴스 + FlexibleLayoutItem(Fixed 64)
+        │       └── MiddleContentPlaceholder    FlexibleLayoutPlaceholder.prefab 인스턴스(Weighted 1)([요소 토글과 이벤트 판정](encounter-roll.md))
         └── RightArea           FlexibleLayoutPanel.prefab 인스턴스 + FlexibleLayoutItem(Weighted 1), 초록 α0.392
 ```
 
@@ -158,6 +162,8 @@ Canvas                          Constant Pixel Size(TMP_MainScene과 동일, 이
 | Spacing | 20 |
 | Override Content Margins / Content Margins | 켬 / 좌우 15, 상하 10(`TMP_MainScene`의 `Main_FlexibleLayoutPanel`과 같음) |
 | Overflow / Include Inactive Children / Clip Content | `ShrinkBelowMinimum` / 끔 / 끔 |
+
+`MiddleArea`는 인스턴스 Override로 `Fixed Axis = Vertical`, `Axis Policy = Fixed`를 사용합니다. 패널이 이 값을 `ContentLayer`의 `FlexibleContentLayoutGroup`에 동기화하므로, `MainArea`가 좁은 화면에서 세로로 바뀌어도 `MiddleArea` 안에서는 토글 바가 항상 위쪽 64를 차지하고 Placeholder가 나머지를 받습니다(2026-10-19 적용). `MainArea`·`LeftArea`·`RightArea` 설정은 바꾸지 않았습니다.
 
 영역 색상은 각 인스턴스의 `BackgroundA` Image 색상 Override이며, 영역을 구분하는 임시 표시입니다. 배경 Image는 Prefab 기본값대로 Raycast Target이 꺼져 있습니다. 레이아웃이 제어하는 Area 루트에는 효과를 붙이지 않고, 이후 효과는 각 Area의 `BackgroundVisualRoot` 또는 별도 `VisualRoot`에 적용합니다([시각 효과 준비](../development/visual-effect-readiness.md)).
 
