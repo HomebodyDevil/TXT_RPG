@@ -505,7 +505,7 @@ Prefab의 기본 외형을 바꾼 뒤에는 Inspector 컴포넌트 메뉴 `기�
 
 ## SlotReelDock (Candidate_MainScene 하단 슬롯 Reel 독)
 
-`Candidate_MainScene`에서는 슬롯 영역이 레이아웃 항목이 아니라 화면 프레임(`Canvas/ScreenFrame`) 하단에 떠 있는 독립 영역입니다. Reel만 있고, 합계는 Reel 기계 위쪽 가장자리에 걸친 합계 카드로 표시합니다. 표시와 Editor 미리보기까지 구현되어 있으며 실제 전투·탐험 이벤트 연결은 아직 없습니다.
+`Candidate_MainScene`에서는 슬롯 영역이 레이아웃 항목이 아니라 화면 프레임(`Canvas/ScreenFrame`) 하단에 떠 있는 독립 영역입니다. Reel만 있고, 합계는 Reel 기계 위쪽 가장자리에 걸친 합계 카드로 표시합니다. `SlotReelDockDebugController`가 독을 세션 슬롯머신(`PlayerSessionHost.TemporarySlotMachine`)의 Reel에 연결하고, 개발 빌드의 디버그 패널 슬롯 Tab에서 회전·화면 안/밖 이동을 실행합니다([슬롯 디버그 Tab](#슬롯-디버그-tab과-slotreeldockdebugcontroller)). 전투·탐험 이벤트의 슬롯 판정은 이 독이 아니라 `TMP_MainScene`의 `SlotMachinePanel`에 표시되며, 독과 전투·탐험 컨트롤러의 연결은 아직 없습니다.
 
 ### 배치와 계층
 
@@ -513,7 +513,9 @@ Prefab의 기본 외형을 바꾼 뒤에는 Inspector 컴포넌트 메뉴 `기�
 Candidate_MainScene/Canvas/ScreenFrame      (1920×1080 화면 프레임, screen-frame.md)
 ├── MainArea                 (변경 없음)
 └── OverlayLayer             (RectTransform Stretch, Graphic 없음)
-    └── SlotReelDock         (SlotReelDock.prefab 인스턴스, 루트 기본 재정의 외 재정의 없음)
+    ├── SlotReelDockClip     (RectTransform Stretch 여백 0, RectMask2D, Graphic 없음. EncounterDebugPanel보다 앞 형제)
+    │   └── SlotReelDock     (SlotReelDock.prefab 인스턴스, 루트 기본 재정의 외 재정의 없음)
+    └── EncounterDebugPanel
 ```
 
 ```text
@@ -550,7 +552,7 @@ SlotReelDock                 (배치 루트: 부모 아래 가운데 앵커, Can
 | `maximumWidth` | 1200 (0이면 제한 없음) | 너비 제한, 가운데 정렬 |
 | `respectSafeArea` | 켜짐 | 부모 RectTransform의 화면 영역이 `Screen.safeArea` 밖과 겹치는 만큼(아래·좌·우)을 바깥 여백에 더하고, 위쪽 겹침은 카드와 드래그 위치 제한에만 씁니다. 부모 크기와 부모 화면 영역의 비율로 Canvas 단위로 바꿉니다(`SlotReelDock.CalculateSafeInsets`). 화면 프레임([화면 프레임과 레터박스](screen-frame.md)) 안에서는 부모가 이미 Safe Area 안에 있으므로 여백이 0이고, 화면 전체를 덮는 부모에서는 이전과 같은 화면 Safe Area 여백이 됩니다. |
 | `initiallyShown` | 켜짐 | Awake 시 표시 상태 |
-| `transitionBehaviour` | 없음 | `ISlotReelDockTransition`을 구현한 `MonoBehaviour`. 비어 있거나 구현하지 않으면(한 번 경고) 즉시 전환합니다. |
+| `transitionBehaviour` | Prefab: 루트의 `SlotReelDockEasedTransition` | `ISlotReelDockTransition`을 구현한 `MonoBehaviour`. 비어 있거나 구현하지 않으면 Play Mode에서 한 번 경고하고 즉시 전환합니다. |
 
 배치(`RefreshLayout`)는 부모 크기, Safe Area, 화면 크기가 바뀌었을 때와 설정 변경·`SetDockedOffset` 때만 실행합니다. `LateUpdate`는 이 값들을 비교만 합니다. 배치 루트 높이는 Reel 기계 높이 + 카드 돌출 높이이며, `ReelMachine`은 위쪽을 돌출 높이만큼 비우고 카드는 그 위에 걸칩니다.
 
@@ -578,7 +580,27 @@ Play Mode에서 측정한 값은 다음과 같습니다(2026-10-17, Candidate_Ma
 | `ReduceMotion` | 전환 연출에 넘기는 값 |
 
 - 표시·숨김은 `PresentationRoot.anchoredPosition`만 바꿉니다. 배치 루트, Reel 레이아웃, 카드 배치는 바뀌지 않습니다. 숨김 상태에서는 `CanvasGroup.alpha`가 0입니다. GameObject를 끄지 않으므로 숨긴 동안에도 회전은 끝까지 진행되고 결과를 돌려줍니다.
-- `ISlotReelDockTransition.PlayAsync(RectTransform target, Vector2 from, Vector2 to, bool reduceMotion, CancellationToken cancellationToken) → Task`는 확장 지점이며 구현체는 없습니다. 상태가 다시 바뀌면 이전 전환의 토큰을 취소하고 현재 위치에서 다음 전환을 시작합니다. 전환이 예외로 끝나면 로그를 남기고 목표 위치로 옮깁니다. Edit Mode에서는 항상 즉시 전환합니다.
+- `ISlotReelDockTransition.PlayAsync(RectTransform target, Vector2 from, Vector2 to, bool showing, bool reduceMotion, CancellationToken cancellationToken) → Task`가 전환 계약입니다. `showing`은 화면 안으로 들어올 때 참이며 독이 `IsShown`을 넘깁니다(2026-10-21에 추가). 전환은 정확히 `to`에서 끝나야 합니다. 상태가 다시 바뀌면 이전 전환의 토큰을 취소하고 현재 위치에서 다음 전환을 시작합니다. 전환이 예외로 끝나면 로그를 남기고 목표 위치로 옮깁니다. Edit Mode에서는 즉시 전환합니다(테스트만 `SetTransitionForEditor(transition, true)`로 Edit Mode 전환을 켭니다).
+
+#### 전환 `SlotReelDockEasedTransition`
+
+`UI/Runtime/SlotMachine/SlotReelDockEasedTransition.cs`. `SlotReelDock.prefab` 루트에 있으며 독의 모든 `Show`/`Hide` 호출에 적용됩니다. 이동 시간은 디버그 패널과 무관하게 이 Prefab(또는 Scene 인스턴스 Override)의 Inspector에서 설정합니다.
+
+| 필드 | 기본값 | 의미 |
+| --- | --- | --- |
+| `showDuration` | 0.3 (최소 0) | 화면 안으로 들어오는 시간(초) |
+| `hideDuration` | 0.3 (최소 0) | 화면 밖으로 나가는 시간(초) |
+| `easing` | `InOutBack` | 위치 곡선(`SlotEasing`). 다른 값도 고를 수 있습니다. |
+
+- 위치는 `from + (to − from) × SlotEasing.Evaluate(easing, 경과 / 시간)`이며, InOutBack이 양 끝에서 반대 방향으로 넘어가는 구간은 자르지 않습니다. 마지막에는 정확히 `to`에 둡니다.
+- 경과 시간은 `Time.unscaledDeltaTime`을 누적합니다(게임 시간 배율과 무관). 프레임 대기는 Reel 회전과 같은 `Task.Yield`입니다.
+- `reduceMotion`이 참이거나 시간이 0이면 즉시 `to`에 둡니다. 독의 `ReduceMotion`은 `SlotReelDockDebugController`가 세션의 `TemporaryDicePreferences.ReduceMotion`으로 이동·회전 직전마다 맞춥니다.
+- 취소되면 `OperationCanceledException`으로 끝나고 위치는 그대로 둡니다. 도중에 방향이 바뀌어도 새 전환은 지정된 시간 전체를 씁니다.
+- `target.anchoredPosition` 외에는 바꾸지 않습니다. alpha는 독이 관리합니다(전환 중 1, 숨김이 끝나면 0).
+
+#### 프레임 경계 클리핑 `SlotReelDockClip`
+
+`OverlayLayer`와 같은 크기의 `RectMask2D` 컨테이너입니다. 독의 배치는 부모 크기로 계산하므로 독을 옮겨도 표시 위치·크기는 같습니다(1920×1080에서 화면 Rect (360, 12, 1200×387.07), 작업 전과 같음). 전환 중 독이 화면 프레임 아래쪽 가장자리를 넘는 부분(숨김 위치로 가는 구간, InOutBack이 아래로 넘어가는 구간)은 잘려 레터박스 위에 그려지지 않습니다. 표시 위치 근처에서 위로 넘어가는 구간은 프레임 안이므로 보입니다. 나중에 독에 glow·outline처럼 바깥으로 그리는 효과를 추가하면 프레임 가장자리에서 잘릴 수 있습니다.
 
 ### 합계 카드 `SlotTotalCardView`
 
@@ -613,6 +635,60 @@ Play Mode에서 측정한 값은 다음과 같습니다(2026-10-17, Candidate_Ma
 - `ShowError`는 `ReelMachine`과 합계 카드를 숨기고 `StatusText`에 사유를 표시합니다. `ClearError`는 되돌립니다.
 - 합계 카드의 `Fill` 참조가 비어 있으면 글자만 표시하고 한 번 경고합니다.
 
+## 슬롯 디버그 Tab과 SlotReelDockDebugController
+
+`Candidate_MainScene`의 디버그 패널(`EncounterDebugPanel.prefab`) `슬롯` Tab에서 세션 슬롯머신과 Fortune Critical 규칙을 조절하고, 회전과 독의 화면 안/밖 이동을 실행합니다. 패널 계층은 [요소 토글과 이벤트 판정](encounter-roll.md)에 있습니다. 구현 지침은 [candidate-main-scene-debug-panel-tabs-and-slot-debug.md](../instructions/candidate-main-scene-debug-panel-tabs-and-slot-debug.md)입니다.
+
+| 어셈블리 | 타입 | 책임 |
+| --- | --- | --- |
+| `TxTRPG.UI` | `SlotDebugTabView`, `SlotDebugReelEntry`(`ReelId`, `Label`, `Chance`), `SlotDebugReelRow` | 슬롯 Tab 표시. Gameplay·Application 타입을 쓰지 않고 표시 데이터와 이벤트만 주고받습니다. |
+| `TxTRPG.Application` | `SlotReelDockDebugController` (`Application/Runtime/SlotMachine/`) | 독을 세션 Reel에 연결하고 슬롯 Tab의 요청을 세션 상태의 `Try...` API로 처리합니다. Scene의 `Canvas/SlotReelDockDebugController`에 있습니다. |
+
+```mermaid
+flowchart LR
+    Tab[SlotDebugTabView] -- 요청 이벤트 --> Controller[SlotReelDockDebugController]
+    Controller -- TryAddReel / TryRemoveReel / TryReplaceAll --> Slots[TemporarySlotMachineState]
+    Controller -- TrySetReelChance / TrySetTotalChance / TryRemoveReelRule / TryReplaceAll --> Fortune[TemporaryFortuneCriticalState]
+    Slots -- Changed --> Controller
+    Fortune -- Changed --> Controller
+    Controller -- SetReels / SetSummary / PlaySpinAsync / Show / Hide --> Dock[SlotReelDock]
+    Dock -- ShownChanged --> Controller
+    Controller -- SetReels / SetTotalChance / SetShown / SetSpinning / ShowResult --> Tab
+```
+
+### SlotDebugTabView
+
+- 이벤트: `ReelCountChangeRequested(int)`(−1/+1), `ReelChanceChanged(string reelId, float chance)`, `TotalChanceChanged(float)`, `SpinRequested`, `ShowRequested`, `HideRequested`, `ResetRequested`. 슬라이더는 정수 0~100이며 이벤트 값은 `값 / 100`입니다. 끄는 동안 값이 바뀔 때마다 발생합니다.
+- 알림 없는 반영: `SetReels(entries, canRemove, canAdd)`, `SetTotalChance`, `SetShown`, `SetSpinning`, `SetSessionAvailable`, `ShowResult`. 값 텍스트는 `EncounterDebugPanel.FormatChance`(`5%`)를 씁니다. 1% 단위가 아닌 값은 반올림해 보여 주고, 사용자가 움직이기 전에는 세션 값을 바꾸지 않습니다.
+- Reel 행은 비활성 `ReelRowTemplate`을 복제해 만들고, 수가 줄면 남는 행을 비활성화해 다시 씁니다. 같은 ID 목록이면 값만 바꿉니다. 행 수가 바뀔 때만 Navigation을 다시 계산합니다. 포커스된 행이 사라지면 `−` 버튼으로 옮깁니다.
+- 페이지 높이(`SlotPage`의 `LayoutElement`)는 내용의 선호 높이이며, 패널 루트(`boundsRoot`)의 아래쪽 가장자리가 부모(`OverlayLayer`, 1920×1080 화면 프레임) 아래쪽에서 `bottomMargin`(16, 패널 위쪽 여백과 같음) 위에 오도록 남은 공간으로만 제한합니다(최소 `minimumPageHeight` 120). 세로 공간이 충분하면 설정 요소를 모두 보여 주고, 부족할 때만 세로로 스크롤합니다. 1920×1080 프레임에서는 Reel 10개(내용 664)도 스크롤 없이 모두 보입니다(남은 공간 928). 높이는 행 수가 바뀔 때, 페이지가 켜질 때, 부모 높이나 패널 위치가 바뀔 때만 다시 계산합니다(`LateUpdate`는 값만 비교). 2026-10-21 사용자 요청으로 지침서의 고정 상한 520을 이 규칙으로 바꿨습니다.
+- 사용 가능 규칙: `−`는 Reel 2개 이상, `+`는 최대 미만일 때. 회전 중에는 `회전`·`−`·`+`·`기본값으로`가 꺼지고 슬라이더와 이동 버튼은 쓸 수 있습니다. 표시 상태에서는 `화면 안으로`, 숨김 상태에서는 `화면 밖으로`가 꺼집니다. 세션이 없으면 이동 버튼만 쓸 수 있습니다.
+- Navigation(Explicit): 선택된 Tab 버튼 → `−`/`+` → Reel 행 → 합계 → `회전`/`기본값으로` → `화면 안으로`/`화면 밖으로`. 버튼은 최소 높이 48입니다. 포커스가 스크롤 영역 밖의 행으로 옮겨질 때 자동으로 스크롤하지는 않습니다.
+
+### SlotReelDockDebugController
+
+| 직렬화 필드 | 의미 |
+| --- | --- |
+| `dock` | `SlotReelDock` |
+| `slotTab` | `SlotDebugTabView`. Release Player에서 패널이 비활성이어도 참조는 유지합니다. |
+| `slotMachineConfiguration`, `fortuneCriticalConfiguration` | `기본값으로`가 읽는 설정 자산(`Application/Configuration/`). 컨트롤러는 자산을 바꾸지 않습니다. |
+| `maximumReelCount` | 기본 10, 최소 1 |
+
+- `Start`에서 `PlayerSessionHost.Instance`의 `WhenReady`를 기다린 뒤 `Connect(TemporarySlotMachine, TemporaryFortuneCritical, TemporaryDicePreferences)`를 호출합니다(`TemporaryRuneGridBinder`와 같은 방식). 독에 세션 Reel과 대기 요약(`—`)을 표시하고 두 상태의 `Changed`를 구독해 독과 Tab을 갱신합니다. 다른 기능이 세션을 바꿔도 따라갑니다.
+- Reel 수 `+1`: `reel.{n}`(현재 없는 가장 작은 n)에 마지막 Reel의 칸 구성을 복사해 `TryAddReel`. `−1`: 마지막 Reel을 `TryRemoveReel`하고, 그 Reel의 개별 Fortune 규칙이 있으면 `TryRemoveReelRule`로 함께 지워 같은 ID로 다시 추가된 Reel이 기본 규칙을 따르게 합니다.
+- 확률: `TrySetReelChance`(개별 규칙이 없으면 기본 규칙 복사본에 확률 적용), `TrySetTotalChance`. 실패하면 사유를 결과 문구로 보여 주고 Tab 값을 세션 값으로 되돌립니다.
+- 회전: `TemporarySlotMachineState.Spin`(회전용 난수) → `FortuneCriticalResolver.Resolve`(별도 시드의 Fortune 난수) → `TemporarySlotCombatController.CreateSpinDisplay(spin, fortune, 빈 룬 줄)` → `dock.PlaySpinAsync`. 끝나면(중단 포함) 결과 문구 `3, 5×2, 2 → 합계 ×3 = 45 (상한 ×30 적용)`을 표시합니다. 합계가 범위를 넘으면(`OverflowException`) 재생하지 않고 사유를 표시합니다. 결과는 룬 분배·전투·Story·기록에 전달하지 않습니다. 숨긴 상태에서도 회전합니다.
+- `기본값으로`: 세션 Reel을 설정 자산의 Reel로(`Machine.TryReplaceAll`), Fortune 규칙을 설정 자산으로 만든 규칙으로(`TryReplaceAll`) 되돌립니다. 독의 표시 상태는 그대로입니다.
+- 변경은 같은 세션의 전투·탐험 이벤트 슬롯 판정에도 적용되며, Play Mode가 끝나면 사라집니다. 저장 형식은 바뀌지 않습니다.
+
+| 상황 | 동작 |
+| --- | --- |
+| Release Player | `DevelopmentBuildOnly`가 패널을 끄므로 요청이 없고, 독은 세션 Reel만 따라갑니다. |
+| 세션 없음(AppScene을 거치지 않은 Play) | 경고 1회, 결과 문구 `세션이 없습니다. AppScene에서 Play를 시작하세요.`, 이동 버튼만 사용 가능 |
+| `dock` 누락 | 오류 1회, 컨트롤러만 동작하지 않음 |
+| `slotTab` 누락 | 경고 1회, 독 연결은 계속 동작 |
+| Fortune 상태가 `Disabled` | 확률 변경은 `Try...` 결과대로 처리하고, 회전은 배수 1로 표시 |
+
 ## 주사위 보류
 
 | 대상 | TMP_MainScene 상태 |
@@ -641,7 +717,7 @@ Play Mode에서 측정한 값은 다음과 같습니다(2026-10-17, Candidate_Ma
 | 입체 Reel | `SlotReelViewBase`를 구현하는 다른 Reel Prefab을 `reelPrefab`·`reelViews`에 연결합니다. 스킨이 필요하면 `ApplySkin`을 재정의합니다. |
 | 플레이어 스킨 선택 | System 설정 모달에 `Slot 스킨` 항목을 추가하고 카탈로그 `Skins` 순서대로 `DisplayName`·`PreviewSprite`를 보여 줍니다. 고른 ID는 `ExplorationCardPlayerPreferences`처럼 PlayerPrefs에 저장하고(세이브 형식은 바꾸지 않음), Application의 연결 컴포넌트가 `TrySetSkin`을 호출합니다. 실패하면 개발자 선택으로 돌아가고 저장값을 지웁니다. 패널은 `Awake`에서 아직 스킨이 정해지지 않았을 때만 카탈로그 선택을 쓰므로, 플레이어 선택을 먼저 적용하면 그것이 우선합니다. `SkinChanged`로 미리보기를 갱신합니다. |
 | 컨트롤러와 `SlotReelDock` 연결 | Unity는 인터페이스 필드를 직렬화하지 않으므로 `ExplorationRunController.combatControllerBehaviour`와 같은 방식을 씁니다. `TemporarySlotCombatController`·`ExplorationEventController`의 `slotPanel`을 `MonoBehaviour` 필드로 바꾸고 `[FormerlySerializedAs("slotPanel")]`로 기존 참조를 유지한 뒤, 사용 시 `ISlotMachinePresenter`인지 검사합니다. 룬 표가 없는 독에서는 룬 정보를 다른 화면에 보여 줄지 정해야 합니다. |
-| 독 등장 전환 연출 | `ISlotReelDockTransition`을 구현한 `MonoBehaviour`를 `SlotReelDock.transitionBehaviour`에 연결합니다. `PresentationRoot`만 움직이며 Reduce Motion 값을 받습니다. |
+| 독 등장 전환 연출 변경 | 기본은 `SlotReelDockEasedTransition`입니다. 다른 연출은 `ISlotReelDockTransition`을 구현한 `MonoBehaviour`로 `transitionBehaviour`를 바꿉니다. `PresentationRoot`만 움직이며 방향과 Reduce Motion 값을 받습니다. |
 | 독 드래그 위치 설정 | 드래그 입력 컴포넌트가 `SetDockedOffset`을 호출합니다. 결과 위치는 Safe Area 안으로 제한됩니다. 현재 독은 입력을 받지 않으므로 드래그 핸들에만 `raycastTarget`을 켜야 합니다. |
 | 세 Area의 가려지는 공간 | `ReservedOverhang`과 독 루트 높이로 `MainArea`의 아래쪽 여백을 계산하는 연결이 필요합니다. |
 | 합계 카드 스킨 | 카드 Graphic은 아직 스킨 대상이 아닙니다. `SlotMachinePanelSkin`에 카드 항목을 추가하고 `SlotTotalCardAppearance`의 색과 함께 적용 순서를 정해야 합니다. |

@@ -1,6 +1,9 @@
 using System.Collections.Generic;
 using NUnit.Framework;
+using TMPro;
+using TxTRPG.UI.DebugPanels;
 using TxTRPG.UI.Encounters;
+using TxTRPG.UI.SlotMachine;
 using UnityEditor;
 using UnityEngine;
 
@@ -93,6 +96,31 @@ namespace TxTRPG.UI.Tests
             Assert.That(panel.Body.activeSelf, Is.False);
             panel.CollapseButton.onClick.Invoke();
             Assert.That(panel.IsExpanded, Is.True);
+        }
+            [Test]
+        public void SavedPrefab_HasEncounterAndSlotTabs()
+        {
+            var tabs = panel.GetComponent<DebugPanelTabGroup>();
+            Assert.That(tabs, Is.Not.Null);
+            Assert.That(tabs.IsValid(out var missing), Is.True, missing);
+            Assert.That(tabs.TabCount, Is.EqualTo(2));
+            Assert.That(tabs.Tabs[0].Label.text, Is.EqualTo("이벤트 판정"));
+            Assert.That(tabs.Tabs[1].Label.text, Is.EqualTo("슬롯"));
+            Assert.That(tabs.SelectedIndex, Is.Zero, "the encounter tab is selected first");
+            Assert.That(tabs.Tabs[0].Page.activeSelf, Is.True);
+            Assert.That(tabs.Tabs[1].Page.activeSelf, Is.False);
+            Assert.That(tabs.Tabs[1].Page.GetComponent<SlotDebugTabView>(), Is.Not.Null);
+            foreach (var tab in tabs.Tabs)
+            {
+                var rect = (RectTransform)tab.Button.transform;
+                Assert.That(UnityEngine.UI.LayoutUtility.GetMinHeight(rect), Is.GreaterThanOrEqualTo(48f), rect.name);
+                Assert.That(UnityEngine.UI.LayoutUtility.GetMinWidth(rect), Is.GreaterThanOrEqualTo(96f), rect.name);
+                Assert.That(tab.Page.transform.IsChildOf(panel.Body.transform), Is.True, "collapsing hides the pages");
+                Assert.That(tab.Button.transform.IsChildOf(panel.Body.transform), Is.True, "collapsing hides the tab bar");
+            }
+            Assert.That(panel.OccurrenceSlider.transform.IsChildOf(tabs.Tabs[0].Page.transform), Is.True, "the encounter controls moved to its page");
+            Assert.That(panel.ResultText.transform.IsChildOf(tabs.Tabs[0].Page.transform), Is.True);
+            Assert.That(panel.transform.Find("Header/Title").GetComponent<TMP_Text>().text, Is.EqualTo("DEBUG"));
         }
     }
 }

@@ -76,7 +76,7 @@ Canvas                          Canvas(Screen Space - Overlay), ScreenFrameCanva
 Canvas                          ScreenFrameCanvasScaler(DefaultScreenFrameProfile), ScreenFrameController
 ├── ScreenFrame
 │   ├── MainArea                FlexibleLayoutPanel.prefab 인스턴스(Stretch)
-│   └── OverlayLayer            SlotReelDock, EncounterDebugPanel
+│   └── OverlayLayer            SlotReelDockClip(RectMask2D) > SlotReelDock, EncounterDebugPanel
 ├── LetterboxLayer              LetterboxView(DefaultScreenFrameProfile)
 ├── ScreenOverlayLayer
 │   └── EncounterResultModal    ModalWindowHost(화면 전체 배경) / FrameArea(ScreenFrameAlignedRect) / WindowFrame / Window

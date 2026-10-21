@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using NUnit.Framework;
 using TxTRPG.UI.Shapes;
 using TxTRPG.UI.SlotMachine;
@@ -311,6 +313,79 @@ namespace TxTRPG.UI.Tests
         {
             var screen = new Rect(0f, 0f, 100f, 100f);
             Assert.That(SlotReelDock.CalculateSafeInsets(screen, new Rect(10f, 0f, 90f, 100f), Vector2.zero), Is.EqualTo(Vector4.zero));
+        }
+            [Test]
+        public void Prefab_UsesTheEasedTransition()
+        {
+            var transition = dock.TransitionBehaviourForEditor as SlotReelDockEasedTransition;
+            Assert.That(transition, Is.Not.Null, "SlotReelDock.prefab assigns SlotReelDockEasedTransition");
+            Assert.That(transition.gameObject, Is.EqualTo(dock.gameObject));
+            Assert.That(transition.ShowDuration, Is.EqualTo(SlotReelDockEasedTransition.DefaultDuration));
+            Assert.That(transition.HideDuration, Is.EqualTo(SlotReelDockEasedTransition.DefaultDuration));
+            Assert.That(transition.Easing, Is.EqualTo(SlotEasingKind.InOutBack));
+        }
+
+        [Test]
+        public void Transition_ReceivesTheDirection_AndIsCancelledByTheNextChange()
+        {
+            // Without a synchronization context the dock's continuation runs inside Complete.
+            var previousContext = SynchronizationContext.Current;
+            SynchronizationContext.SetSynchronizationContext(null);
+            try { TransitionScenario(); }
+            finally { SynchronizationContext.SetSynchronizationContext(previousContext); }
+        }
+
+        private void TransitionScenario()
+        {
+            var fake = dock.gameObject.AddComponent<RecordingDockTransition>();
+            dock.SetTransitionForEditor(fake, true);
+            dock.ReduceMotion = true;
+
+            dock.Hide();
+            Assert.That(fake.Calls.Count, Is.EqualTo(1));
+            Assert.That(fake.Calls[0].Showing, Is.False);
+            Assert.That(fake.Calls[0].ReduceMotion, Is.True);
+            Assert.That(fake.Calls[0].To, Is.EqualTo(dock.HiddenOffset));
+            Assert.That(dock.CanvasGroup.alpha, Is.EqualTo(1f), "visible while the transition runs");
+            Assert.That(dock.IsTransitionRunningForEditor, Is.True);
+
+            dock.PresentationRoot.anchoredPosition = new Vector2(0f, -40f);
+            dock.Show();
+            Assert.That(fake.Calls[0].Token.IsCancellationRequested, Is.True, "the running hide is cancelled");
+            Assert.That(fake.Calls.Count, Is.EqualTo(2));
+            Assert.That(fake.Calls[1].Showing, Is.True);
+            Assert.That(fake.Calls[1].From, Is.EqualTo(new Vector2(0f, -40f)), "starts from the current position");
+
+            fake.Complete(1);
+            Assert.That(dock.IsTransitionRunningForEditor, Is.False);
+            Assert.That(dock.PresentationRoot.anchoredPosition, Is.EqualTo(dock.ShownPosition));
+            Assert.That(dock.CanvasGroup.alpha, Is.EqualTo(1f));
+        }
+
+        private sealed class RecordingDockTransition : MonoBehaviour, ISlotReelDockTransition
+        {
+            public readonly struct Call
+            {
+                public Call(Vector2 from, Vector2 to, bool showing, bool reduceMotion, CancellationToken token, TaskCompletionSource<bool> completion)
+                { From = from; To = to; Showing = showing; ReduceMotion = reduceMotion; Token = token; Completion = completion; }
+                public Vector2 From { get; }
+                public Vector2 To { get; }
+                public bool Showing { get; }
+                public bool ReduceMotion { get; }
+                public CancellationToken Token { get; }
+                public TaskCompletionSource<bool> Completion { get; }
+            }
+
+            public readonly List<Call> Calls = new();
+
+            public Task PlayAsync(RectTransform target, Vector2 from, Vector2 to, bool showing, bool reduceMotion, CancellationToken cancellationToken)
+            {
+                var completion = new TaskCompletionSource<bool>();
+                Calls.Add(new Call(from, to, showing, reduceMotion, cancellationToken, completion));
+                return completion.Task;
+            }
+
+            public void Complete(int index) => Calls[index].Completion.SetResult(true);
         }
     }
 }

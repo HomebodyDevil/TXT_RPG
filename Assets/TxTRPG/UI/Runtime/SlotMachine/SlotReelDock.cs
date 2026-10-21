@@ -79,6 +79,8 @@ namespace TxTRPG.UI.SlotMachine
         private bool warnedSkinCatalog;
         private bool warnedTransition;
         private bool initialized;
+        // Edit Mode tests only: runs the transition outside Play Mode.
+        private bool transitionsInEditMode;
         private CancellationTokenSource transitionCancellation;
         private Vector2 dockedOffset;
 
@@ -270,21 +272,21 @@ namespace TxTRPG.UI.SlotMachine
             if (presentationRoot == null) return;
             var target = IsShown ? shownPosition : hiddenPosition;
             var transition = ResolveTransition();
-            if (transition == null || !UnityEngine.Application.isPlaying)
+            if (transition == null || !(UnityEngine.Application.isPlaying || transitionsInEditMode))
             {
                 SnapToState();
                 return;
             }
             if (IsShown) SetAlpha(1f);
             transitionCancellation = new CancellationTokenSource();
-            RunTransition(transition, presentationRoot.anchoredPosition, target, transitionCancellation);
+            RunTransition(transition, presentationRoot.anchoredPosition, target, IsShown, transitionCancellation);
         }
 
-        private async void RunTransition(ISlotReelDockTransition transition, Vector2 from, Vector2 to, CancellationTokenSource cancellation)
+        private async void RunTransition(ISlotReelDockTransition transition, Vector2 from, Vector2 to, bool showing, CancellationTokenSource cancellation)
         {
             try
             {
-                await transition.PlayAsync(presentationRoot, from, to, ReduceMotion, cancellation.Token);
+                await transition.PlayAsync(presentationRoot, from, to, showing, ReduceMotion, cancellation.Token);
             }
             catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
             {
@@ -327,7 +329,15 @@ namespace TxTRPG.UI.SlotMachine
 
         private ISlotReelDockTransition ResolveTransition()
         {
-            if (transitionBehaviour == null) return null;
+            if (transitionBehaviour == null)
+            {
+                if (!warnedTransition && UnityEngine.Application.isPlaying)
+                {
+                    warnedTransition = true;
+                    Debug.LogWarning($"{name}: no ISlotReelDockTransition is assigned; the dock switches immediately.", this);
+                }
+                return null;
+            }
             if (transitionBehaviour is ISlotReelDockTransition transition) return transition;
             if (!warnedTransition)
             {
@@ -569,6 +579,17 @@ namespace TxTRPG.UI.SlotMachine
             respectSafeArea = value;
             hasLayout = false;
         }
+
+        // Verification only: replaces the transition and lets it run in Edit Mode (tests drive its time themselves).
+        public void SetTransitionForEditor(MonoBehaviour transition, bool runInEditMode)
+        {
+            transitionBehaviour = transition;
+            transitionsInEditMode = runInEditMode;
+            warnedTransition = false;
+        }
+
+        public MonoBehaviour TransitionBehaviourForEditor => transitionBehaviour;
+        public bool IsTransitionRunningForEditor => transitionCancellation != null;
 
         public void SetSpinRandomSeedForEditor(int seed) => Machine.SetRandomSeed(seed);
         public void UpdatePaylineFrameForEditor() => Machine.UpdatePaylineFrame();
