@@ -572,6 +572,7 @@ GameObject:
   - component: {fileID: 8337895369629041794}
   - component: {fileID: 4975087653364009141}
   - component: {fileID: 6050725005502204348}
+  - component: {fileID: 2610749576252857066}
   m_Layer: 5
   m_Name: SlotReelDock
   m_TagString: Untagged
@@ -631,7 +632,7 @@ MonoBehaviour:
   maximumWidth: 1200
   respectSafeArea: 1
   initiallyShown: 1
-  transitionBehaviour: {fileID: 0}
+  transitionBehaviour: {fileID: 2610749576252857066}
   canvasGroup: {fileID: 4975087653364009141}
   presentationRoot: {fileID: 726006865624704562}
   reelMachine: {fileID: 1534402903791878242}
@@ -689,6 +690,21 @@ MonoBehaviour:
     defaultColor: {r: 0.6392157, g: 0.9490196, b: 0.07450981, a: 1}
     defaultType: 0
     defaultPixelsPerUnitMultiplier: 1
+--- !u!114 &2610749576252857066
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3682516300143737145}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 63b8056a7d34f2149b8170ac0c682e8f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TxTRPG.UI::TxTRPG.UI.SlotMachine.SlotReelDockEasedTransition
+  showDuration: 0.3
+  hideDuration: 0.3
+  easing: 8
 --- !u!1 &3724256410608649623
 GameObject:
   m_ObjectHideFlags: 0

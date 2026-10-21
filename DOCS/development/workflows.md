@@ -217,7 +217,7 @@ Player 빌드 전에 `Tools > TxT RPG > Application > Validate App Scene Configu
 
 ### Candidate_MainScene 초기 콘텐츠와 임시 적용·측정 메뉴
 
-`Candidate_MainScene`은 AppScene이 처음 로드하는 콘텐츠 Scene이며, 현재는 게임 패널 없이 `Canvas/ScreenFrame/MainArea`의 세 영역, `LeftArea`의 룬 Grid `RuneGrid`, `Canvas/ScreenFrame/OverlayLayer/SlotReelDock`(하단 슬롯 Reel 독)을 표시합니다(구성은 [FlexibleLayoutPanel](../architecture/flexible-layout-panel.md#candidate_mainscene-적용-예) 참고). Build Settings 순서는 `AppScene`, `Candidate_MainScene`, `TMP_MainScene`이며 모두 활성입니다. 게임 화면 검증은 Play 중 `Tools > TxT RPG > Application > Play Mode > Load TMP_MainScene`으로 `TMP_MainScene`에 전환한 뒤 수행합니다.
+`Candidate_MainScene`은 AppScene이 처음 로드하는 콘텐츠 Scene이며, 현재는 게임 패널 없이 `Canvas/ScreenFrame/MainArea`의 세 영역, `LeftArea`의 룬 Grid `RuneGrid`, `Canvas/ScreenFrame/OverlayLayer/SlotReelDockClip/SlotReelDock`(하단 슬롯 Reel 독)을 표시합니다(구성은 [FlexibleLayoutPanel](../architecture/flexible-layout-panel.md#candidate_mainscene-적용-예) 참고). Build Settings 순서는 `AppScene`, `Candidate_MainScene`, `TMP_MainScene`이며 모두 활성입니다. 게임 화면 검증은 Play 중 `Tools > TxT RPG > Application > Play Mode > Load TMP_MainScene`으로 `TMP_MainScene`에 전환한 뒤 수행합니다.
 
 다음 두 메뉴는 `candidate-main-scene-initial-content-and-layout` 작업용 임시 메뉴(`Assets/TxTRPG/Application/Editor/`)입니다. 적용은 2026-10-17에 운영 자산에 완료했으므로 다시 실행할 필요가 없으며, 필요하지 않게 되면 두 파일을 삭제할 수 있습니다.
 
@@ -232,7 +232,7 @@ Player 빌드 전에 `Tools > TxT RPG > Application > Validate App Scene Configu
 
 | 메뉴 | 동작 |
 | --- | --- |
-| `Tools > TxT RPG > Application > Temporary > Apply Slot Reel Dock To Candidate Main Scene` (`TemporarySlotReelDockApply`, 임시) | Play Mode·컴파일 중·Prefab Stage이거나 열린 Scene에 미저장 변경이 있으면 아무것도 바꾸지 않습니다. `SlotReelDock.prefab`이 없으면 `SlotMachinePanel.prefab`의 Reel 기계 외형과 합계 글자를 독립 객체로 복제하고 `SlotReel.prefab` 인스턴스 3개를 넣어 만듭니다. 이미 있으면 다시 만들지 않고 검증만 하며, Reel·구분대 형제 순서가 어긋난 경우에만 그 순서를 고쳐 저장합니다. `Candidate_MainScene`에 독이 없으면 `Canvas/OverlayLayer`와 Prefab 인스턴스를 추가하고 저장합니다. 이미 목표 상태이면 파일을 쓰지 않고 `kept` 로그만 남기므로 재실행해도 안전합니다. 결과는 `SLOT_REEL_DOCK_APPLY` 로그로 남습니다. `SlotMachinePanel.prefab`, `SlotReel.prefab`, `TMP_MainScene`은 읽기만 합니다. 적용은 2026-10-17에 완료했으므로 다시 실행할 필요가 없으며, 사용자가 독을 확인한 뒤 파일을 삭제할 수 있습니다. 검증 실패 시 `SlotReelDock.prefab`을 지우고 다시 실행하면 새로 만들지만, Scene 인스턴스의 GUID 참조가 끊기므로 Scene의 `OverlayLayer/SlotReelDock`도 함께 지워야 합니다. |
+| `Tools > TxT RPG > Application > Temporary > Apply Slot Reel Dock To Candidate Main Scene` (`TemporarySlotReelDockApply`, 임시) | Play Mode·컴파일 중·Prefab Stage이거나 열린 Scene에 미저장 변경이 있으면 아무것도 바꾸지 않습니다. `SlotReelDock.prefab`이 없으면 `SlotMachinePanel.prefab`의 Reel 기계 외형과 합계 글자를 독립 객체로 복제하고 `SlotReel.prefab` 인스턴스 3개를 넣어 만듭니다. 이미 있으면 다시 만들지 않고 검증만 하며, Reel·구분대 형제 순서가 어긋난 경우에만 그 순서를 고쳐 저장합니다. `Candidate_MainScene`에 독이 없으면 `Canvas/OverlayLayer`와 Prefab 인스턴스를 추가하고 저장합니다. 이미 목표 상태이면 파일을 쓰지 않고 `kept` 로그만 남기므로 재실행해도 안전합니다. 결과는 `SLOT_REEL_DOCK_APPLY` 로그로 남습니다. `SlotMachinePanel.prefab`, `SlotReel.prefab`, `TMP_MainScene`은 읽기만 합니다. 적용은 2026-10-17에 완료했으므로 다시 실행할 필요가 없으며, 사용자가 독을 확인한 뒤 파일을 삭제할 수 있습니다. 검증 실패 시 `SlotReelDock.prefab`을 지우고 다시 실행하면 새로 만들지만, Scene 인스턴스의 GUID 참조가 끊기므로 Scene의 독 인스턴스(2026-10-21부터 `OverlayLayer/SlotReelDockClip/SlotReelDock`)도 함께 지워야 합니다. 이 메뉴는 `Canvas/OverlayLayer`를 찾는 이전 구조를 전제로 하므로 화면 프레임·클리핑 적용 뒤의 Scene에는 쓰지 않습니다. |
 | `Tools > TxT RPG > Application > Preview > Slot Reel Dock > Spin` (`SlotReelDockPreviewMenu`, 영구) | Play Mode에서 로드된 Scene의 활성 `SlotReelDock` 하나를 찾아(없거나 둘 이상이면 경고만 남김) 세션 슬롯머신의 Reel(세션이 없으면 `TemporarySlotMachineConfiguration.asset`)과 미리보기 전용 난수 정지 위치로 `PlaySpinAsync`를 재생합니다. 합계는 Payline 값의 합이며 세션·룬·Fortune Critical 상태는 바뀌지 않습니다. 회전 중에 다시 실행하면 이전 회전을 `StopAtResult`로 끝내고 새로 시작합니다. Reduce Motion은 `PlayerSessionHost.TemporaryDicePreferences.ReduceMotion`(세션이 없으면 꺼짐)을 따릅니다. |
 | `... > Spin With Total Multiplier` | 위와 같고 합계를 2배로 표시하며 합계 배수 `×2`를 보여 줍니다. |
 | `... > Add Reel`, `... > Remove Reel` | 미리보기가 표시하는 Reel 구성의 끝에 Reel을 하나 더하거나 빼고(최소 1개) `SetReels`를 호출합니다. 이후 `Spin`은 이 구성을 씁니다. Play Mode를 다시 시작하면 세션 구성으로 돌아갑니다. |
@@ -245,7 +245,7 @@ Player 빌드 전에 `Tools > TxT RPG > Application > Validate App Scene Configu
 
 1. 아무 Scene에서 Play를 시작하면 AppScene을 거쳐 `Candidate_MainScene`이 로드되고, 화면 하단에 Reel 3개의 독과 흰색 직사각형 합계 카드가 Reel 기계 위쪽 가장자리 가운데에 걸쳐 보입니다.
 2. `Preview > Slot Reel Dock`의 각 메뉴를 실행하고 Console의 `SLOT_REEL_DOCK_PREVIEW` 로그와 화면을 확인합니다.
-3. Inspector에서 `OverlayLayer/SlotReelDock/PresentationRoot/TotalCard`의 `Appearance > Shape`를 `RoundedRectangle`로, `Corner Radius`를 0, 0.2, 0.5로 바꿔 둥근 정도를 확인합니다. Play Mode에서 바꾼 값은 종료 후 저장되지 않습니다.
+3. Inspector에서 `OverlayLayer/SlotReelDockClip/SlotReelDock/PresentationRoot/TotalCard`의 `Appearance > Shape`를 `RoundedRectangle`로, `Corner Radius`를 0, 0.2, 0.5로 바꿔 둥근 정도를 확인합니다. Play Mode에서 바꾼 값은 종료 후 저장되지 않습니다.
 4. Edit Mode 테스트는 `TxTRPG.UI.Tests.SlotReelDockTests`이며, Reel 처리 회귀는 `SlotMachinePanelTests`, `SlotMachinePanelSkinTests`, `SlotMachineCombatTests`, `SlotFortuneCriticalCombatTests`, `ExplorationEventControllerTests`로 확인합니다.
 
 ### Candidate_MainScene 룬 Grid 적용과 Play Mode 확인
@@ -277,7 +277,7 @@ Player 빌드 전에 `Tools > TxT RPG > Application > Validate App Scene Configu
 
 확인 절차:
 
-1. 아무 Scene에서 Play를 시작하면 AppScene을 거쳐 `Candidate_MainScene`이 로드되고, `MiddleArea` 상단에 `룬` 버튼 하나가 미선택 상태로, 오른쪽 위에 `DEBUG · 이벤트 판정` 패널이 보입니다.
+1. 아무 Scene에서 Play를 시작하면 AppScene을 거쳐 `Candidate_MainScene`이 로드되고, `MiddleArea` 상단에 `룬` 버튼 하나가 미선택 상태로, 오른쪽 위에 `DEBUG` 패널(`이벤트 판정` Tab 선택)이 보입니다. 2026-10-21 Tab 구성 전에는 제목이 `DEBUG · 이벤트 판정`이었습니다.
 2. `룬`을 클릭하면 Checkmark와 노란 테두리가 함께 보이고, 다시 클릭하면 사라집니다.
 3. 선택 없이 `이벤트 발생` → 패널에 `선택된 요소가 없습니다`. 발생 확률 0% → `이벤트 없음 (발생 확률 판정 실패)`. 두 경우 모두 모달이 열리지 않습니다.
 4. `룬` 선택, 발생 확률 100%로 `이벤트 발생` → `이벤트 발생` 모달에 `룬 : 전투`/`룬 : 이벤트`/`룬 : 휴식` 중 하나가 보입니다. 창 바깥 클릭·`Cancel`(Esc)·`닫기`로 닫히고, 창 안 클릭이나 바깥에서 끌었다 놓기로는 닫히지 않습니다. 닫힌 뒤 포커스는 `이벤트 발생` 버튼으로 돌아옵니다.
@@ -285,6 +285,26 @@ Player 빌드 전에 `Tools > TxT RPG > Application > Validate App Scene Configu
 6. Edit Mode 테스트는 클래스별로 `TxTRPG.Gameplay.Tests.EncounterRollerTests`, `TxTRPG.Gameplay.Tests.EncounterElementSelectionTests`, `TxTRPG.Application.Tests.EncounterResultFormatterTests`, `TxTRPG.Application.Tests.EncounterElementCatalogTests`, `TxTRPG.Application.Tests.EncounterRollControllerTests`, `TxTRPG.UI.Tests.EncounterElementToggleBarTests`, `TxTRPG.UI.Tests.EncounterDebugPanelTests`, `TxTRPG.UI.Tests.DevelopmentBuildOnlyTests`입니다. 모두 `AssetWriting`이 아니며 저장된 Prefab·설정 자산을 읽기만 합니다. 모달 회귀는 `TxTRPG.Application.Tests.InventoryEmptyStateTests`로 확인합니다.
 
 디버그 패널은 `DevelopmentBuildOnly`가 붙어 있어 Release Player(Development Build 끔)에서 `Awake`에 비활성화되어 보이지 않고 사용할 수 없습니다. Editor와 Development Build에서는 항상 보입니다. 판정 함수는 `DevelopmentBuildOnlyTests`로 검증하며, 실제 Release Player 빌드에서의 확인은 별도로 수행합니다.
+
+### Candidate_MainScene 디버그 패널 Tab과 슬롯 Tab
+
+구조는 [요소 토글과 이벤트 판정](../architecture/encounter-roll.md)(패널 Tab·Prefab 계층)과 [슬롯머신과 룬](../architecture/slot-machine-and-runes.md#슬롯-디버그-tab과-slotreeldockdebugcontroller)(슬롯 Tab·컨트롤러·독 전환)에 있습니다. 두 메뉴는 `candidate-main-scene-debug-panel-tabs-and-slot-debug` 작업용 임시 메뉴(`Assets/TxTRPG/Application/Editor/`)입니다.
+
+| 메뉴 | 동작 |
+| --- | --- |
+| `Tools > TxT RPG > Application > Temporary > Apply Candidate Debug Panel Tabs` (`TemporaryDebugPanelTabsApply`, 임시) | Play Mode·컴파일 중·Prefab Stage이거나 열린 Scene에 미저장 변경이 있으면 아무것도 바꾸지 않습니다. 저장된 자산을 그대로 수정합니다: `EncounterDebugPanel.prefab`(제목 `DEBUG`, `Body/TabBar`, 기존 `Body` 자식을 옮긴 `Body/Pages/EncounterPage`, `Body/Pages/SlotPage`, 루트의 `DebugPanelTabGroup`), `SlotReelDock.prefab`(`SlotReelDockEasedTransition` 추가와 `transitionBehaviour` 연결), `Candidate_MainScene`(`OverlayLayer/SlotReelDockClip` 추가와 기존 독 인스턴스 이동, `Canvas/SlotReelDockDebugController` 추가·참조 연결). 이미 목표 상태인 단계는 파일을 쓰지 않고 `kept` 로그만 남기므로 재실행해도 안전합니다. 결과는 `DEBUG_PANEL_TABS_APPLY` 로그입니다. 적용은 2026-10-21에 완료했으므로 다시 실행할 필요가 없으며, 사용자가 확인한 뒤 파일을 삭제할 수 있습니다. |
+| `Tools > TxT RPG > Application > Temporary > Slot Debug Tab Play Check` (`TemporarySlotDebugTabPlayCheck`, 임시) | AppScene 경유 Play에서 `Candidate_MainScene`이 표시된 상태로 실행합니다. 슬롯 Tab의 버튼·슬라이더를 사용자처럼 눌러 (0) `SlotReelDockClip` 크기 = `OverlayLayer` 크기, (1) 시작 시 `이벤트 판정` Tab·제목 `DEBUG`, (2) Reel 행 = 세션 Reel·확률, (3) `+`로 10개(Strip 복사, 페이지 높이 = 내용 높이이거나 남은 공간에 맞춘 높이, 패널 아래 여백 ≥ 16. 1920×1080에서는 모든 요소가 스크롤 없이 보임)·`−`로 1개, (4) Reel 1·합계 100%에서 배수와 독 합계 카드, 0%에서 배수 없음, (5) `화면 밖으로`/`화면 안으로`의 이동 시간(설정 시간 이상, 2프레임 이내 초과)·InOutBack 넘침·방향 전환, (6) Reduce Motion 즉시 이동, (7) 절반쯤 숨긴 독의 Graphic이 프레임 아래 가장자리에서 잘리는지, (8) `기본값으로`, (9) Play 시작 상태(Reel·규칙·독 표시 상태·선택 Tab·이벤트 판정 값) 복원을 확인합니다. 결과는 `SLOT_DEBUG_TAB_CHECK` 로그이고, Game View 캡처 2장(`slot-tab-10-reels-*.png`, `dock-halfway-hidden-*.png`)을 `%TEMP%/TxTRPG-SlotDebugTabCheck`에 남깁니다. 세션 상태만 잠시 바꾸고 아무 자산도 저장하지 않습니다. |
+
+확인 절차:
+
+1. 아무 Scene에서 Play를 시작해 AppScene을 거쳐 `Candidate_MainScene`이 로드되면, 오른쪽 위 `DEBUG` 패널에 `이벤트 판정` Tab이 선택되어 있고 기존 슬라이더 5개·`이벤트 발생`·`기본값으로`·결과 문구가 보입니다([요소 토글과 디버그 이벤트 판정](#candidate_mainscene-요소-토글과-디버그-이벤트-판정)의 3~5).
+2. `슬롯` Tab을 누르면 Reel 수와 Reel별·합계 Critical 확률, `회전`·`기본값으로`·`화면 안으로`·`화면 밖으로`가 보입니다. `+`/`−`로 Reel 수가 1~10에서 바뀌고 독의 Reel 수도 따라갑니다. 페이지는 화면 프레임 아래쪽(여백 16)까지 늘어나므로 1920×1080 프레임에서는 Reel 10개에서도 모든 설정 요소가 스크롤 없이 보이고, 공간이 부족할 때만 세로로 스크롤됩니다.
+3. `회전`을 누르면 독이 회전하고 결과 문구(예: `3, 5×2, 2 → 합계 ×3 = 45`)와 합계 카드의 최종 합계·배수가 표시됩니다.
+4. `화면 밖으로`/`화면 안으로`로 독이 easeInOutBack으로 움직이고, 프레임 아래쪽 밖(레터박스)에는 그려지지 않습니다. 이동 시간은 `SlotReelDock.prefab`(또는 Scene 인스턴스)의 `SlotReelDockEasedTransition`에서 `Show Duration`·`Hide Duration`으로 바꿉니다(기본 0.3초).
+5. `Slot Debug Tab Play Check`를 실행하고 `SLOT_DEBUG_TAB_CHECK: PASS all steps`를 확인합니다.
+6. Edit Mode 테스트는 클래스별로 `TxTRPG.UI.Tests.DebugPanelTabGroupTests`, `TxTRPG.UI.Tests.SlotDebugTabViewTests`, `TxTRPG.UI.Tests.SlotReelDockEasedTransitionTests`, `TxTRPG.UI.Tests.SlotReelDockTests`, `TxTRPG.UI.Tests.EncounterDebugPanelTests`, `TxTRPG.Application.Tests.SlotReelDockDebugControllerTests`이며, 회귀 확인은 `TxTRPG.Application.Tests.EncounterRollControllerTests`, `TxTRPG.Application.Tests.SlotFortuneCriticalCombatTests`, `TxTRPG.UI.Tests.SlotMachinePanelTests`입니다. 모두 `AssetWriting`이 아니며 저장된 Prefab·설정 자산을 읽기만 합니다.
+
+슬롯 Tab의 변경은 세션 상태(`TemporarySlotMachineState`, `TemporaryFortuneCriticalState`)에만 적용되어 같은 세션의 전투·탐험 이벤트 슬롯 판정도 같은 값을 쓰고, Play Mode가 끝나면 사라집니다. 설정 자산은 바뀌지 않습니다.
 
 ### Candidate_MainScene 화면 프레임과 레터박스 적용·확인
 
