@@ -75,7 +75,8 @@ namespace TxTRPG.Application.SlotMachine
         public IReadOnlyList<TemporaryCombatEvent> Events { get; }
     }
 
-    // The one place where rune effects become combat actions. Unsupported effects are rejected, never guessed.
+    // The one place where rune effects become combat actions. Unsupported effects are rejected, never guessed. Test runes
+    // receive no allocation, so they never reach this point; they are rejected like any effect without an action.
     public static class RuneCombatActions
     {
         public static PlayerCombatActionKind ToActionKind(RuneEffectKind effect) => effect switch
@@ -128,6 +129,7 @@ namespace TxTRPG.Application.SlotMachine
         {
             RuneEffectKind.Attack => "공격",
             RuneEffectKind.Heal => "회복",
+            RuneEffectKind.Test => "테스트",
             _ => "알 수 없는 효과"
         };
 

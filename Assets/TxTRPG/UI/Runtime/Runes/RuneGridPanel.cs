@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using TMPro;
+using TxTRPG.UI.Tooltips;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -20,6 +21,10 @@ namespace TxTRPG.UI.Runes
         [SerializeField] private TMP_Text messageText;
         [SerializeField, Tooltip("Optional. Without it, or when it fails validation, every card shows the rune name.")]
         private RuneIconCatalog iconCatalog;
+        [SerializeField, Tooltip("Optional. Shows the rune tooltips (TooltipLayer of the Scene). Without it, or without the tooltip catalog, cards show no tooltip.")]
+        private TooltipPresenter tooltipPresenter;
+        [SerializeField, Tooltip("Optional. Rune definition ID → tooltip content; a rune without an entry shows its name and \"설명이 없습니다.\".")]
+        private RuneTooltipCatalog tooltipCatalog;
 
         private readonly List<RuneGridCardView> cards = new();
         private readonly List<RuneGridEntryDisplay> entries = new();
@@ -27,6 +32,8 @@ namespace TxTRPG.UI.Runes
         private bool catalogChecked;
         private bool catalogUsable;
         private bool showingMessage;
+        private bool tooltipChecked;
+        private bool tooltipUsable;
 
         public ScrollRect ScrollRect => scrollRect;
         public RectTransform Viewport => viewport;
@@ -34,6 +41,8 @@ namespace TxTRPG.UI.Runes
         public RuneGridLayoutGroup LayoutGroup => layoutGroup;
         public TMP_Text MessageText => messageText;
         public RuneIconCatalog IconCatalog => iconCatalog;
+        public TooltipPresenter TooltipPresenter => tooltipPresenter;
+        public RuneTooltipCatalog TooltipCatalog => tooltipCatalog;
         public IReadOnlyList<RuneGridCardView> Cards => cards;
         public int ActiveCardCount { get; private set; }
         public bool IsShowingMessage => showingMessage;
@@ -55,6 +64,14 @@ namespace TxTRPG.UI.Runes
         {
             iconCatalog = catalog;
             catalogChecked = false;
+            if (!showingMessage && ActiveCardCount > 0) Rebind();
+        }
+
+        public void SetTooltips(TooltipPresenter presenter, RuneTooltipCatalog catalog)
+        {
+            tooltipPresenter = presenter;
+            tooltipCatalog = catalog;
+            tooltipChecked = false;
             if (!showingMessage && ActiveCardCount > 0) Rebind();
         }
 
@@ -84,6 +101,7 @@ namespace TxTRPG.UI.Runes
         private void Rebind()
         {
             var useCatalog = CatalogUsable();
+            var useTooltips = TooltipsUsable();
             var settings = layoutGroup.Settings;
             for (var i = 0; i < entries.Count; i++)
             {
@@ -93,6 +111,10 @@ namespace TxTRPG.UI.Runes
                 Sprite icon = null;
                 if (useCatalog) iconCatalog.TryGetIcon(entries[i].DefinitionId, out icon);
                 card.Bind(entries[i], icon);
+                var trigger = card.TooltipTrigger;
+                if (trigger == null) continue;
+                if (useTooltips) trigger.Bind(tooltipPresenter, tooltipCatalog, entries[i]);
+                else trigger.Unbind();
             }
             for (var i = entries.Count; i < ActiveCardCount; i++) Release(cards[i]);
             ActiveCardCount = entries.Count;
@@ -109,6 +131,7 @@ namespace TxTRPG.UI.Runes
 
         private static void Release(RuneGridCardView card)
         {
+            if (card.TooltipTrigger != null) card.TooltipTrigger.Unbind();
             card.Clear();
             card.gameObject.SetActive(false);
         }
@@ -124,6 +147,19 @@ namespace TxTRPG.UI.Runes
                 Debug.LogWarning($"RuneIconCatalog '{iconCatalog.name}' is invalid ({reason}); rune cards show their names.", this);
             else catalogUsable = true;
             return catalogUsable;
+        }
+
+        private bool TooltipsUsable()
+        {
+            if (tooltipChecked) return tooltipUsable;
+            tooltipChecked = true;
+            tooltipUsable = false;
+            if (tooltipPresenter == null || tooltipCatalog == null)
+                Debug.LogWarning($"RuneGridPanel has no {(tooltipPresenter == null ? "TooltipPresenter" : "RuneTooltipCatalog")}; rune cards show no tooltip.", this);
+            else if (!tooltipCatalog.Validate(out var reason))
+                Debug.LogWarning($"RuneTooltipCatalog '{tooltipCatalog.name}' is invalid ({reason}); rune cards show no tooltip.", this);
+            else tooltipUsable = true;
+            return tooltipUsable;
         }
 
         private bool EnsureValid()
@@ -143,6 +179,7 @@ namespace TxTRPG.UI.Runes
         private void OnValidate()
         {
             catalogChecked = false;
+            tooltipChecked = false;
             if (!UnityEngine.Application.isPlaying) return;
             UnityEditor.EditorApplication.delayCall += () =>
             {

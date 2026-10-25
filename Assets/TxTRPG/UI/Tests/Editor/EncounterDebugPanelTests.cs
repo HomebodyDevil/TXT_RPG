@@ -98,14 +98,21 @@ namespace TxTRPG.UI.Tests
             Assert.That(panel.IsExpanded, Is.True);
         }
             [Test]
-        public void SavedPrefab_HasEncounterAndSlotTabs()
+        public void SavedPrefab_HasEncounterSlotAndRuneTabs()
         {
             var tabs = panel.GetComponent<DebugPanelTabGroup>();
             Assert.That(tabs, Is.Not.Null);
             Assert.That(tabs.IsValid(out var missing), Is.True, missing);
-            Assert.That(tabs.TabCount, Is.EqualTo(2));
+            Assert.That(tabs.TabCount, Is.EqualTo(3));
             Assert.That(tabs.Tabs[0].Label.text, Is.EqualTo("이벤트 판정"));
             Assert.That(tabs.Tabs[1].Label.text, Is.EqualTo("슬롯"));
+            Assert.That(tabs.Tabs[2].Label.text, Is.EqualTo("룬"));
+            Assert.That(tabs.Tabs[2].Page.activeSelf, Is.False);
+            var runeTab = tabs.Tabs[2].Page.GetComponent<TxTRPG.UI.Runes.RuneDebugTabView>();
+            Assert.That(runeTab, Is.Not.Null);
+            Assert.That(runeTab.IsValid(out missing), Is.True, missing);
+            Assert.That(tabs.Tabs[2].FirstControl, Is.SameAs(runeTab.RemoveAllButton));
+            Assert.That(runeTab.HeightReference, Is.SameAs(tabs.Tabs[0].Page.transform), "never shorter than the encounter page");
             Assert.That(tabs.SelectedIndex, Is.Zero, "the encounter tab is selected first");
             Assert.That(tabs.Tabs[0].Page.activeSelf, Is.True);
             Assert.That(tabs.Tabs[1].Page.activeSelf, Is.False);

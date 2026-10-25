@@ -141,8 +141,14 @@ namespace TxTRPG.UI.Tests
         public void CardGraphics_AreNotInputTargets()
         {
             panel.SetEntries(new[] { Attack("a", 1), Heal("b", 1) });
-            var raycast = panel.Content.GetComponentsInChildren<Graphic>(true).Where(graphic => graphic.raycastTarget).Select(graphic => graphic.name);
-            Assert.That(raycast, Is.Empty);
+            // Only the transparent HitArea of CardArea and BadgeArea (tooltip trigger input) receive the pointer.
+            var raycast = panel.Content.GetComponentsInChildren<Graphic>(true).Where(graphic => graphic.raycastTarget).ToArray();
+            Assert.That(raycast.Select(graphic => graphic.name).Distinct(), Is.EqualTo(new[] { "HitArea" }));
+            Assert.That(raycast.Length, Is.EqualTo(4), "two hit areas per card");
+            Assert.That(raycast.All(graphic => graphic.color.a == 0f && graphic.transform.parent.name is "CardArea" or "BadgeArea"), Is.True);
+            Assert.That(panel.Cards[0].TooltipTrigger, Is.Not.Null);
+            Assert.That(panel.Cards[0].GetComponent<UnityEngine.EventSystems.IDragHandler>(), Is.Null, "drag reaches the ScrollRect");
+            Assert.That(panel.Cards[0].GetComponent<UnityEngine.EventSystems.IScrollHandler>(), Is.Null, "the wheel reaches the ScrollRect");
             Assert.That(panel.MessageText.raycastTarget, Is.False);
         }
 

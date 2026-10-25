@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aeb119d6ad1fc0742b5fe3d101841540, type: 3}
+  m_Name: TestKeywordGamma
+  m_EditorClassIdentifier: TxTRPG.UI::TxTRPG.UI.Tooltips.TooltipKeywordDefinition
+  id: keyword.test.gamma
+  displayName: "\uAC10\uB9C8"
+  icon: {fileID: 0}
+  blocks:
+  - kind: 2
+    text: "\uD14C\uC2A4\uD2B8\uC6A9 \uC138 \uBC88\uC9F8 \uD0A4\uC6CC\uB4DC\uC785\uB2C8\uB2E4.
+      {kw:keyword.test.alpha}\uB294 \uC774\uBBF8 \uC5F4\uB824 \uC788\uC73C\uBBC0\uB85C
+      \uB2E4\uC2DC \uC5F4\uB9AC\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4."
+    sprite: {fileID: 0}
+    imageHeight: 96
+  - kind: 3
+    text: 
+    sprite: {fileID: 21300000, guid: f68e12d54fc874346951b3e43b0e3cad, type: 3}
+    imageHeight: 64
+  relatedEntries:
+  - category: 1
+    subjectId: rune.test.tooltip

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,6 +28,8 @@ namespace TxTRPG.Application.Players
         [SerializeField] private TemporaryDiceConfiguration temporaryDiceConfiguration;
         [SerializeField] private TemporarySlotMachineConfiguration temporarySlotMachineConfiguration;
         [SerializeField] private TemporaryRuneConfiguration temporaryRuneConfiguration;
+        [SerializeField, Tooltip("Optional development runes merged into the session rune catalog (added by the DEBUG panel only). An invalid one is left out and never blocks the regular runes.")]
+        private TemporaryTestRuneConfiguration temporaryTestRuneConfiguration;
         [SerializeField, Tooltip("Optional. Without it (or with an invalid one) the slot machine runs without Fortune Critical.")]
         private TemporaryFortuneCriticalConfiguration temporaryFortuneCriticalConfiguration;
 
@@ -72,6 +75,9 @@ namespace TxTRPG.Application.Players
         public bool IsTemporaryCombatActionPending => pendingTemporaryDiceAction != 0;
         public TemporarySlotMachineState TemporarySlotMachine => temporarySlotMachine;
         public TemporaryRuneState TemporaryRunes => temporaryRunes;
+        // Test rune definition IDs in the session catalog (empty without rune state or a usable test configuration).
+        public IReadOnlyList<string> TemporaryTestRuneDefinitionIds =>
+            temporaryRunes != null ? temporaryRunes.TestDefinitionIds : Array.Empty<string>();
         // Session Fortune Critical rules; never null after initialization (disabled when not configured).
         public TemporaryFortuneCriticalState TemporaryFortuneCritical => temporaryFortuneCritical;
         // Why the slot machine or runes could not be created (empty when both exist). The game still starts.
@@ -284,8 +290,10 @@ namespace TxTRPG.Application.Players
             var reasons = string.Empty;
             if (!TemporarySlotMachineState.TryCreate(temporarySlotMachineConfiguration, out var machine, out var machineReason))
                 reasons = $"Slot machine: {machineReason}";
-            if (!TemporaryRuneState.TryCreate(temporaryRuneConfiguration, out var runes, out var runeReason))
+            if (!TemporaryRuneState.TryCreate(temporaryRuneConfiguration, temporaryTestRuneConfiguration, out var runes, out var runeReason, out var testRuneReason))
                 reasons += (reasons.Length > 0 ? " " : string.Empty) + $"Runes: {runeReason}";
+            else if (testRuneReason.Length > 0)
+                Debug.LogError($"Test runes are left out of the session. {testRuneReason}", this);
             if (reasons.Length > 0)
             {
                 temporarySlotCombatError = "슬롯머신 또는 룬 설정이 올바르지 않습니다.";
@@ -370,6 +378,12 @@ namespace TxTRPG.Application.Players
             temporaryRuneConfiguration = runes;
         }
 
+        public void ConfigureTemporaryTestRunes(TemporaryTestRuneConfiguration configuration)
+        {
+            if (temporarySlotCombatCreated) throw new InvalidOperationException("Temporary slot combat is already initialized.");
+            temporaryTestRuneConfiguration = configuration;
+        }
+
         public void ConfigureTemporaryFortuneCritical(TemporaryFortuneCriticalConfiguration configuration)
         {
             if (temporarySlotCombatCreated) throw new InvalidOperationException("Temporary slot combat is already initialized.");
@@ -382,6 +396,7 @@ namespace TxTRPG.Application.Players
         public void UseSessionForEditorTests(PlayerSession testSession) => session = testSession ?? throw new ArgumentNullException(nameof(testSession));
         public TemporarySlotMachineConfiguration TemporarySlotMachineConfigurationForEditor => temporarySlotMachineConfiguration;
         public TemporaryRuneConfiguration TemporaryRuneConfigurationForEditor => temporaryRuneConfiguration;
+        public TemporaryTestRuneConfiguration TemporaryTestRuneConfigurationForEditor => temporaryTestRuneConfiguration;
         public TemporaryFortuneCriticalConfiguration TemporaryFortuneCriticalConfigurationForEditor => temporaryFortuneCriticalConfiguration;
 
         // Play Mode verification only: starts over with the given exploration (no combat, no event in progress). The

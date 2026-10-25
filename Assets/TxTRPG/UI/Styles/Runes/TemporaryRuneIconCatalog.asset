@@ -17,3 +17,7 @@ MonoBehaviour:
     icon: {fileID: 21300000, guid: 99fbd5eb51147a143adbef7db2d506f6, type: 3}
   - definitionId: rune.heal
     icon: {fileID: 21300000, guid: 9f42a90ebad370c43bb73c48d6707ac6, type: 3}
+  - definitionId: rune.test.tooltip
+    icon: {fileID: 21300000, guid: f68e12d54fc874346951b3e43b0e3cad, type: 3}
+  - definitionId: rune.test.long
+    icon: {fileID: 21300000, guid: f68e12d54fc874346951b3e43b0e3cad, type: 3}

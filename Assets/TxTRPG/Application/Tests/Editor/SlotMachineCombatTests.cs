@@ -383,6 +383,32 @@ namespace TxTRPG.Application.Tests
             Assert.Throws<InvalidOperationException>(() => RuneCombatActions.ToActionKind(RuneEffectKind.Unknown));
         }
 
+        [Test]
+        public void TestRuneLines_AreLeftOutOfTheRuneTableAllocationAndStory()
+        {
+            var runes = Track(ScriptableObject.CreateInstance<TemporaryRuneConfiguration>());
+            var tests = Track(ScriptableObject.CreateInstance<TemporaryTestRuneConfiguration>());
+            Assert.That(TemporaryRuneState.TryCreate(runes, out var plain, out var reason), Is.True, reason);
+            Assert.That(TemporaryRuneState.TryCreate(runes, tests, out var tested, out reason, out var testReason), Is.True, reason);
+            Assert.That(testReason, Is.Empty);
+            Assert.That(tested.Inventory.TryAdd(new OwnedRune("t.1", TemporaryTestRuneConfiguration.TooltipRuneId), out reason), Is.True, reason);
+            Assert.That(tested.Loadout.TryInsertLine(0, new RuneLoadoutLine("line.test.tooltip", new[] { "t.1" }), out reason), Is.True, reason);
+
+            Assert.That(TemporarySlotCombatController.WeightLines(tested).Select(l => (l.EffectText, l.ValueText)),
+                Is.EqualTo(TemporarySlotCombatController.WeightLines(plain).Select(l => (l.EffectText, l.ValueText))));
+            var spin = new TxTRPG.Gameplay.SlotMachine.SlotMachine(new[] { SlotReel.FromValues("reel.1", new[] { 7 }) }).Spin(new SystemRandomIndexProvider(1));
+            string[] Story(TemporaryRuneState state)
+            {
+                var allocation = state.Allocate(7);
+                var combat = new TemporaryCombatState(30, 30, 40, 5, 3);
+                return SlotCombatStoryFormatter.Turn(new TemporarySlotTurnRecord("run", "node", spin, allocation,
+                    combat.ExecuteTurn(RuneCombatActions.FromAllocation(allocation))), "슬라임").ToArray();
+            }
+            Assert.That(Story(tested), Is.EqualTo(Story(plain)));
+            Assert.That(SlotCombatStoryFormatter.EffectName(RuneEffectKind.Test), Is.EqualTo("테스트"));
+            Assert.Throws<InvalidOperationException>(() => RuneCombatActions.ToActionKind(RuneEffectKind.Test));
+        }
+
         // ---------- Helpers ----------
 
         private IEnumerator SetUpCombat()

@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a59bddc06cd0ece40be12b9afabd57b3, type: 3}
+  m_Name: TooltipKeywordCatalog
+  m_EditorClassIdentifier: TxTRPG.UI::TxTRPG.UI.Tooltips.TooltipKeywordCatalog
+  keywords:
+  - {fileID: 11400000, guid: 196b66620b17f0e48b5bbae759346f73, type: 2}
+  - {fileID: 11400000, guid: f68232bd6c887a14aac0043ad1f42ece, type: 2}
+  - {fileID: 11400000, guid: c7eae08fb8663644ab802227ee9685f0, type: 2}

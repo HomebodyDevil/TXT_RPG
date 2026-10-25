@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6bcf8676e8566f742bc3822495e1cbed, type: 3}
+  m_Name: TemporaryAttackRuneTooltip
+  m_EditorClassIdentifier: TxTRPG.UI::TxTRPG.UI.Tooltips.TooltipContent
+  blocks:
+  - kind: 1
+    text: "\uACF5\uACA9 \uB8EC"
+    sprite: {fileID: 0}
+    imageHeight: 96
+  - kind: 2
+    text: "\uC2AC\uB86F \uCD1D\uD569\uC5D0\uC11C \uBC1B\uC740 \uBAAB\uB9CC\uD07C
+      \uC801\uC5D0\uAC8C \uD53C\uD574\uB97C \uC90D\uB2C8\uB2E4. (\uC784\uC2DC \uBB38\uAD6C)"
+    sprite: {fileID: 0}
+    imageHeight: 96
