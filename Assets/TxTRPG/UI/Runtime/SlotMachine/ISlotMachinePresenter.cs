@@ -18,7 +18,8 @@ namespace TxTRPG.UI.SlotMachine
         // Every string comes from the display data. An implementation may show only part of the summary.
         void SetSummary(SlotSummaryDisplay summary);
 
-        // Presents an already accepted spin. False when it was interrupted or the reels cannot be shown.
+        // Presents an already accepted spin: the spinning summary, the running total as reels stop (when the display has
+        // progress summaries) and the result summary. False when it was interrupted or the reels cannot be shown.
         Task<bool> PlaySpinAsync(SlotSpinDisplay result, bool reduceMotion, CancellationToken cancellationToken);
 
         // Puts every reel at rest on the accepted result immediately and invalidates a running presentation.

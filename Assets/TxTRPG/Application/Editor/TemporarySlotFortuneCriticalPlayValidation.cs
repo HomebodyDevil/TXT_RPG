@@ -71,6 +71,8 @@ namespace TxTRPG.Application.Editor
                 await TemporarySlotMachinePlayValidation.Frames(2);
                 Require(refs.Panel.IsSpinning, "the reels spin");
                 Require(ReelTexts(refs.Panel) == ",," && refs.Panel.TotalMultiplierText.Length == 0, $"no multiplier while spinning ({ReelTexts(refs.Panel)})");
+                Require(refs.Panel.TotalValueText == SlotCombatStoryFormatter.TotalValue(0), $"the spinning total starts at 0 ({refs.Panel.TotalValueText})");
+                await CheckTotalStep(refs, accepted, log);
                 await TemporarySlotMachinePlayValidation.WaitWhile(() => host.IsTemporaryCombatActionPending, 10d);
                 CheckShown(refs, host, accepted, log, "submit");
 
@@ -124,6 +126,29 @@ namespace TxTRPG.Application.Editor
             var combat = refs.Controller.Combat;
             if (combat != null && !combat.IsComplete && combat.EnemyHealth.Current > 25) return;
             refs.Controller.BeginCombat(combat != null && !combat.PlayerHealth.IsDefeated ? combat.PlayerHealth : new HealthState(30, 30));
+        }
+
+        // With the total forced to trigger, the last running total (no total multiplier) stays for the profile's wait
+        // before the total multiplier and the final total replace it.
+        private static async Task CheckTotalStep(TemporarySlotMachinePlayValidation.References refs, TemporarySlotAcceptedAction accepted,
+            StringBuilder log)
+        {
+            var expected = TemporarySlotCombatController.CreateSpinDisplay(accepted.Spin, accepted.Fortune, accepted.Allocation);
+            Require(expected.HasTotalStep, "the forced total Fortune Critical makes a total step");
+            var lastRunning = expected.ProgressSummaries[expected.ProgressSummaries.Count - 1].TotalValue;
+            await TemporarySlotMachinePlayValidation.WaitWhile(() => refs.Panel.IsSpinning && refs.Panel.TotalValueText != lastRunning, 10d);
+            var waitStart = EditorApplication.timeSinceStartup;
+            Require(refs.Panel.IsSpinning && refs.Panel.TotalValueText == lastRunning && refs.Panel.TotalMultiplierText.Length == 0,
+                $"the last running total {lastRunning} is shown without the total multiplier ({refs.Panel.TotalValueText} '{refs.Panel.TotalMultiplierText}')");
+            await TemporarySlotMachinePlayValidation.WaitWhile(() => refs.Panel.TotalMultiplierText.Length == 0, 5d);
+            var waited = EditorApplication.timeSinceStartup - waitStart;
+            var profile = refs.Panel.SpinProfileForEditor;
+            var delay = (profile != null ? profile.Settings : SlotReelSpinSettings.Default).TotalCriticalRevealDelaySeconds;
+            Require(refs.Panel.TotalMultiplierText == SlotCombatStoryFormatter.MultiplierText(accepted.Fortune.TotalMultiplier),
+                $"the total multiplier appears after the wait ('{refs.Panel.TotalMultiplierText}')");
+            Require(waited >= delay * .75d, $"the total step waited {waited:F2}s (profile {delay:F2}s)");
+            log.AppendLine($" total step: running {string.Join(" → ", expected.ProgressSummaries.Select(s => s.TotalValue))}, " +
+                $"then {refs.Panel.TotalMultiplierText} {refs.Panel.TotalValueText} after {waited:F2}s (profile {delay:F2}s).");
         }
 
         private static string ReelTexts(SlotMachinePanel panel) =>
@@ -238,7 +263,8 @@ namespace TxTRPG.Application.Editor
             var box = TemporarySlotMachinePlayValidation.WorldRect((RectTransform)value.transform.parent);
             var summary = TemporarySlotMachinePlayValidation.WorldRect((RectTransform)value.transform.parent.parent);
             Require(!total.Overlaps(GlyphRect(value)), $"{label}: the total multiplier {total} covers the total value {GlyphRect(value)}");
-            Require(!total.Overlaps(GlyphRect(totalLabel)), $"{label}: the total multiplier covers the total label");
+            // The total shows its value only; an (empty) inactive label has no glyphs to cover.
+            Require(!totalLabel.gameObject.activeSelf || !total.Overlaps(GlyphRect(totalLabel)), $"{label}: the total multiplier covers the total label");
             Require(total.xMin >= box.xMin - 1f && total.xMax <= box.xMax + 1f && total.yMin >= box.yMin - 1f && total.yMax <= summary.yMax + 1f,
                 $"{label}: the total multiplier {total} stays over TotalBox {box} within the summary area");
             Require(!button.Overlaps(total), $"{label}: the action button covers the total multiplier");

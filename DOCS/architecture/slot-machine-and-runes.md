@@ -159,6 +159,8 @@ Fortune Critical(행운 치명)은 회전 결과에 일정 확률로 정수 배�
 
 상한이 적용되지 않으면 `F = t × Σ(vᵢ × rᵢ)`입니다. 예를 들어 `v = (3, 5, 2)`, 2번 Reel ×10, 합계 ×5, `C = 30`이면 `e = (5, 30, 5)`이고 `F = 175`입니다. 최종 값은 `long`과 `checked`로 계산하며, `F`가 `int`를 넘으면 `OverflowException`을 던집니다.
 
+회전 중 합계 칸은 `0`에서 시작해 Reel `i`가 멈출 때마다 `vᵢ × min(C, rᵢ)`을 더합니다(합계 배수 제외). `min(C, rᵢ) ≤ eᵢ`이므로 중간값은 `F` 이하이고, 합계 배수가 없으면(`t = 1`) 마지막 누적값이 `F`와 같습니다. 합계 배수가 있으면 마지막 누적값을 잠시 보여 준 뒤 `F`와 `×t`로 바꿉니다([표시 상태](#표시-상태)). 위 예에서는 `3 → 53 → 55`, 대기 후 `175 ×5`입니다.
+
 판정 순서는 Reel 결과 순서대로 각 Reel, 그다음 합계입니다. 난수는 `IRandomIndexProvider` 하나로 뽑으며 해상도는 백만분율(`FortuneCriticalLimits.ProbabilityResolution`)입니다.
 
 - 발생: 임계값 `k = round(p × 1,000,000)`. `NextIndex(1,000,000) < k`이면 발생합니다. `k = 0`이면 난수를 뽑지 않고 발생하지 않으며, `k = 1,000,000`이면 난수를 뽑지 않고 발생합니다.
@@ -254,7 +256,7 @@ Fortune Critical(행운 치명)은 회전 결과에 일정 확률로 정수 배�
 | 합계 배수 | `TotalBox/TotalMultiplier`(배치 루트) > `VisualRoot` > `Text` | `TotalMultiplier`입니다. `TotalBox`의 `SlotTotalMultiplierLayout`이 합계 값의 실제 글자 영역을 측정해, 공간이 있으면 오른쪽에 위첨자처럼(글자 크기 = 합계 글자 × 0.5, [12, 36]), 없으면 글자 위에 오른쪽 정렬로 둡니다. 아주 낮은 합계 상자에서는 값을 가리지 않도록 상자 위쪽 여백으로 넘어갑니다(1024×768, 390×844). `TotalLabel`·`TotalValue`의 앵커와 크기는 바꾸지 않습니다. `TotalBox` 크기 변경과 `SetSummary` 때만 계산합니다. |
 
 - `SlotReelViewBase.ShowFortuneMultiplier(string)`은 기본 구현이 비어 있는 가상 메서드입니다. 패널은 회전이 시작되면 각 Reel의 배수를 지우고, Reel이 결과 칸에 멈춘 뒤(`PlaySpinAsync` 완료, Reduce Motion 포함) 또는 `StopAtResult`에서 표시합니다. 중단된 Reel은 표시하지 않으며 컨트롤러의 `StopAtResult`가 결과 상태를 보여 줍니다.
-- 합계 배수는 `SetSummary`가 적용합니다. 회전 중 요약에서는 지워지고 정지 후 요약에서 나타납니다.
+- 합계 배수는 `SetSummary`가 적용합니다. 회전 시작·진행 요약에서는 지워지고 결과 요약에서만 나타납니다. 합계 Critical이 있으면 마지막 Reel이 반영된 뒤 `totalCriticalRevealDelaySeconds`만큼 기다렸다가 나타납니다(Reduce Motion에서는 바로).
 - 구성 변경으로 Strip이 바뀐 Reel은 배수를 지웁니다. ID와 Strip이 같은 Reel은 결과와 함께 배수도 유지합니다. 스킨 교체는 표시를 바꾸지 않습니다.
 - 스킨의 `fortuneTextColor`가 재정의되면 두 표시의 색을 바꾸고, 아니면 기록된 Prefab 색을 씁니다.
 
@@ -284,14 +286,14 @@ Reel 처리는 [Reel 처리 공용 구성 요소](#reel-처리-공용-구성-요
 
 패널 안의 `Content`는 `SlotMachineContentLayout`이 배치합니다. `Content`의 너비/높이 비율이 `stackBelowAspectRatio`(1.3) 이상이면 Reel 기계와 요약 영역을 좌우로 둡니다(가중치 0.62 : 간격 0.04 : 0.31, 합으로 정규화). 1.3 미만이면 Reel 기계를 위에, 요약 영역을 아래에 쌓습니다(0.62 : 0.04 : 0.34). 경계 근처에서 반복 전환하지 않도록 이력값 0.05를 둡니다. 좌우 배치에서 벗어나려면 비율이 1.25 미만이어야 하고, 상하 배치에서 돌아오려면 1.35 이상이어야 합니다. 같은 컴포넌트가 배치 상태에 맞춰 요약 영역 안의 `TotalBox`와 `RuneTableArea` 앵커를 바꿉니다. 상하 배치에서는 합계 상자가 왼쪽 약 35%, 룬 표가 오른쪽에 놓입니다. 이 계산은 `LayoutGroup`의 표준 갱신(크기·자식 변경)에서만 실행됩니다. 비율, 간격, 전환값, 앵커 사각형은 모두 직렬화 설정입니다. `Arrangement`와 `ArrangementChanged`로 현재 배치를 알 수 있습니다.
 
-Play Mode 검증에서 측정한 패널 크기와 배치는 다음과 같습니다(2026-10-13, TMP_MainScene 인스턴스 기준).
+Play Mode 검증에서 측정한 패널 크기와 배치는 다음과 같습니다(2026-10-25, TMP_MainScene 인스턴스 기준). 합계 상자는 라벨 없이 값만 표시하며, 값 글자는 세 자리 합계 `999`가 들어가는 크기입니다(Canvas 단위).
 
-| 화면 | 패널 크기 | 비율 | 배치 | Reel 창 | 합계 상자 | 합계 글자(라벨/값) |
+| 화면 | 패널 크기 | 비율 | 배치 | Reel 창 | 합계 상자 | 합계 값 글자 |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1920×1080 | 968×413 | 2.35 | 좌우 | 173×306 | 261×75 | 41.2 / 41.2 |
-| 21:9 | 1302×413 | 3.15 | 좌우 | 234×306 | 353×75 | 41.2 / 41.2 |
-| 1024×768 | 470×332 | 1.42 | 좌우 | 83×244 | 123×60 | 28.5 / 32.8 |
-| 390×844 | 332×274 | 1.21 | 상하 | 89×123 | 95×70 | 22.0 / 35.5 |
+| 1920×1080 | 968×413 | 2.35 | 좌우 | 173×306 | 261×75 | 41.2 |
+| 21:9 | 1302×413 | 3.15 | 좌우 | 234×306 | 353×75 | 41.2 |
+| 1024×768 | 470×332 | 1.42 | 좌우 | 83×244 | 123×60 | 32.8 |
+| 390×844 | 332×274 | 1.21 | 상하 | 89×123 | 95×70 | 38.5 |
 
 `CombatActionBoundary`의 `PanelBoundaryPlacement.secondPanel`은 `SlotMachinePanel`입니다. 행동 버튼(72×72)은 패널 위쪽 가운데를 일부 덮습니다. `SlotMachinePanel.prefab`의 `Content` 위쪽 여백은 44px이지만, TMP_MainScene 인스턴스는 `SlotMachineContentLayout`의 `m_Padding.m_Top`을 8로 재정의합니다. 이 재정의는 `Content`의 레이아웃 컴포넌트를 바꾼 커밋 `bd70aa3`에서 남은 것입니다. 그래서 실제 화면에서 버튼은 패널 위쪽 30px까지 내려옵니다. 좌우 배치에서는 Reel 창 위쪽 여유(1024×768에서 약 44px) 덕분에 겹치지 않지만, 390×844 상하 배치에서는 가운데 Reel 창의 위쪽 가장자리를 약 4px 덮습니다. 사용자 확정(2026-10-13)에 따라 배치는 바꾸지 않고 이 겹침을 허용합니다. 버튼은 어느 화면에서도 Payline 칸, 합계 값, 룬 표 행을 가리지 않아야 하며, Play Mode 검증이 이 기준을 확인합니다. 재정의를 지우면 모든 배치의 위쪽 여백이 44px이 되어 겹침이 사라지는 대신 Reel 창 높이가 약 36px 줄어듭니다. `ExplorationNodePanel`의 `CoveredPanelInteractionBlocker`는 노드 선택 중 `SlotMachinePanel`의 `CanvasGroup`을 막습니다.
 
@@ -320,7 +322,8 @@ SlotMachinePanel            (RectTransform, CanvasGroup, FlexibleLayoutItem, Slo
 │  │     └─ SkinImage       (Image, 기본 꺼짐, 루트에 스킨 paylineOutset을 더한 크기)
 │  └─ SummaryArea           (레이아웃 전용)
 │     ├─ Background         (#D9D9D9 시각 루트)
-│     ├─ TotalBox (SlotTotalMultiplierLayout) > Background(#757575), TotalLabel, TotalValue,
+│     ├─ TotalBox (SlotTotalMultiplierLayout) > Background(#757575), TotalLabel (빈 라벨이면 비활성),
+│     │             TotalValue (앵커 x 0.05~0.95·y 0~1, 가운데 정렬),
 │     │             TotalMultiplier (배치 루트, 기본 비활성) > VisualRoot > Text
 │     └─ RuneTableArea
 │        ├─ RuneTable > Background(#757575), Rows (SlotRuneTableView)
@@ -337,7 +340,7 @@ SlotMachinePanel            (RectTransform, CanvasGroup, FlexibleLayoutItem, Slo
 - `PaylineFrame`(배치 루트)은 첫 Reel 창 왼쪽부터 마지막 Reel 창 오른쪽까지 Payline 칸 높이로 놓입니다. 바깥 확장은 자식이 맡습니다. `ProceduralBorder`는 루트에 앵커를 늘려 붙고 테두리 두께(기준 4, 화면 픽셀 최소 2)만큼 음수 offset으로 넓어져 테두리 안쪽 가장자리가 칸 경계와 맞습니다. `SkinImage`는 스킨의 `paylineOutset`만큼 넓어집니다. 자식 offset은 확장 값이 바뀔 때(스킨 교체, 캔버스 배율 변경)만 다시 씁니다. `PaylineFrameRect`는 배치 루트(칸 범위), `PaylineVisibleRect`는 지금 보이는 표시(테두리 또는 이미지)를 돌려줍니다. 위치는 `SlotReelAreaLayout.LayoutApplied`(Reel 영역 레이아웃 갱신 직후)와 Reel 수 변경 때만 다시 계산합니다. 각 Reel은 `SlotReelViewBase.GetPaylineWorldCorners`로 Payline 칸 모서리를 알려 줍니다.
 - Payline은 색만으로 구분하지 않습니다. 테두리 모양과 가운데 칸의 가장 높은 밝기(알파 1)로 함께 구분합니다. 테두리는 전용 Graphic이므로 바깥 외곽선 Graphic을 나중에 덧붙일 수 있습니다.
 - 칸 위치별 글자 알파는 `distanceAlpha` = `[1, 0.8, 0.4]`(Payline, ±1칸, ±2칸), 크기 배율은 `distanceFontScale` = `[1, 1, 1]`입니다. 회전 중에는 실제 화면 위치로 보간하므로 칸이 넘어갈 때 밝기가 튀지 않습니다. `boldPayline`(기본 꺼짐)을 켜면 정지 상태의 Payline 칸을 굵게 표시합니다.
-- 숫자 크기는 TMP Auto Size 대신 칸 높이·너비 중 작은 값 × `paylineFontRatio`(0.62)를 `[16, 64]`로 제한해 정합니다. 요약 영역의 글자는 `SlotHeightScaledText`가 자기 높이 × 비율을 최소·최대값으로 제한합니다(합계 0.55·14~72, 열 제목 0.8·10~36, 행 0.6·10~48). `fitWidth`를 켠 글자는 너비 기준 문자열(`widthSample`, 비어 있으면 현재 글자)이 자기 너비(여백 제외, 2% 여유)에 들어가는 크기로도 제한하고 둘 중 작은 값을 씁니다. `TotalLabel`(현재 글자 `합계`)과 `TotalValue`(`88`, 두 자리 합계)가 이 설정을 켜서, 좁은 합계 상자에서는 잘리는 대신 글자가 작아집니다. 세 자리 이상 합계는 여전히 잘릴 수 있습니다. 모두 크기가 바뀔 때만 다시 계산합니다.
+- 숫자 크기는 TMP Auto Size 대신 칸 높이·너비 중 작은 값 × `paylineFontRatio`(0.62)를 `[16, 64]`로 제한해 정합니다. 요약 영역의 글자는 `SlotHeightScaledText`가 자기 높이 × 비율을 최소·최대값으로 제한합니다(합계 0.55·14~72, 열 제목 0.8·10~36, 행 0.6·10~48). `fitWidth`를 켠 글자는 너비 기준 문자열(`widthSample`, 비어 있으면 현재 글자)이 자기 너비(여백 제외, 2% 여유)에 들어가는 크기로도 제한하고 둘 중 작은 값을 씁니다. `TotalLabel`과 `TotalValue`(`88`, 두 자리 합계)가 이 설정을 켜서, 좁은 합계 상자에서는 잘리는 대신 글자가 작아집니다. 값이 라벨 자리까지 합친 글자 영역(x 0.05~0.95)을 쓰므로 위 측정 화면에서는 세 자리 합계도 들어갑니다. 네 자리 이상 합계는 잘릴 수 있습니다. 모두 크기가 바뀔 때만 다시 계산합니다.
 - 요약 영역 글자는 굵게(TMP Bold) 표시합니다. 한국어 대체 글꼴 `NotoSansKR-Fallback`이 가변 글꼴의 얇은 기본 굵기로 만들어져 회색 상자 위에서 흐리게 보이기 때문입니다.
 - `SlotReelView`의 `visibleCellCount`(홀수, 기본 5)에 따라 `cells`·`cellVisualRoots`·`cellTexts`·`cellIcons`·`cellAfterimages`는 `visibleCellCount + 2`개여야 합니다. 길이가 맞지 않으면 배치를 건너뛰고 한 번 경고합니다. Payline 칸은 `SymbolCell_{visibleCellCount / 2 + 1}`(기본 `SymbolCell_3`)입니다. 검증 API `ValueAt`·`TextAt`은 ±2칸까지 지원합니다.
 - `SymbolCell`은 `SlotReelView.symbolSprites`에 값에 맞는 Sprite가 있으면 Icon을, 없으면 숫자를 표시합니다. 현재 매핑은 비어 있습니다.
@@ -352,10 +355,11 @@ UI 어셈블리는 Gameplay·Application 타입을 모릅니다. 사용자에게
 | --- | --- |
 | `SlotRuneLineDisplay` | `EffectText`(`공격`), `ValueText`(`×2` 또는 `×2 → 6`) |
 | `SlotReelStopDisplay` | `ReelId`, `StopIndex`, Strip 값, `MultiplierText`(`×3`, 없으면 빈 문자열) |
-| `SlotSummaryDisplay` | `TotalLabel`(`합계`), `TotalValue`(`—`, `…`, `13`), `TotalMultiplierText`(`×2`, 없으면 빈 문자열), `RuneColumnTitle`(`룬`), `ValueColumnTitle`(`쌓임 → 분배`), `Lines`, `EmptyText`(`장착된 룬이 없습니다`), `OverflowFormat`(`외 {0}줄`) |
-| `SlotSpinDisplay` | `Reels`, `PaylineTotal`, `SpinningSummary`, `ResultSummary` |
+| `SlotSummaryDisplay` | `TotalLabel`(빈 문자열. 비어 있으면 두 화면 모두 `TotalLabel` GameObject를 숨기고 값만 표시), `TotalValue`(`0`, `13`), `TotalMultiplierText`(`×2`, 없으면 빈 문자열), `RuneColumnTitle`(`룬`), `ValueColumnTitle`(`쌓임 → 분배`), `Lines`, `EmptyText`(`장착된 룬이 없습니다`), `OverflowFormat`(`외 {0}줄`) |
+| `SlotSpinDisplay` | `Reels`, `PaylineTotal`, `SpinningSummary`, `ProgressSummaries`(비어 있거나 Reel마다 하나: 결과 순서로 0~k번 Reel이 멈춘 뒤의 요약), `HasProgressSummaries`, `HasTotalStep`(마지막 진행 요약과 결과 요약 사이에 합계 Critical 대기가 필요함), `ResultSummary`. 기존 4인자 생성자는 진행 요약이 없는 표시 데이터를 만들며, 진행 요약 길이가 Reel 수와 다르거나 항목이 `null`이면 `ArgumentException`입니다. |
+| `SlotSpinProgress` | 한 회전의 누적 표시 계산. `ReelStopped(i)`는 첫 Reel부터 연속해서 멈춘 Reel 수가 늘었을 때만 해당 진행 요약을 돌려줍니다(뒤쪽 Reel이 먼저 멈추면 앞 Reel이 멈출 때 함께 반영). |
 
-`SlotMachinePanel.SetSummary(SlotSummaryDisplay)`가 합계 상자와 룬 표를 갱신합니다. 검증용 읽기 속성은 `TotalLabelText`, `TotalValueText`, `TotalMultiplierText`, `RuneColumnTitleText`, `ValueColumnTitleText`, `RuneLineTexts`(행별 효과·값)와 `SlotReelView.FortuneMultiplierText`입니다. `TemporarySlotCombatController.CreateSummary`가 문구를 묶고, `CreateSpinDisplay(spin, fortune, allocation)`이 회전 중(`×N`)과 정지 후(`×N → 분배`, 합계는 `FinalTotal`) 요약을 만듭니다. 기존 `CreateSpinDisplay(spin, allocation)`은 `FortuneCriticalResult.None`으로 위임합니다. 분배 0인 줄도 행으로 표시합니다(`×1 → 0`).
+`SlotMachinePanel.SetSummary(SlotSummaryDisplay)`가 합계 상자와 룬 표를 갱신합니다. 검증용 읽기 속성은 `TotalLabelText`, `TotalValueText`, `TotalMultiplierText`, `RuneColumnTitleText`, `ValueColumnTitleText`, `RuneLineTexts`(행별 효과·값)와 `SlotReelView.FortuneMultiplierText`입니다. `TemporarySlotCombatController.CreateSummary`가 문구를 묶고, `CreateSpinDisplay(spin, fortune, allocation)`이 회전 시작(합계 `0`, 룬 표 `×N`), Reel별 진행(합계 `Σ(j ≤ k) vⱼ × min(C, rⱼ)`, 배수 텍스트 없음, 룬 표 `×N`), 정지 후(`×N → 분배`, 합계는 `FinalTotal`과 합계 배수) 요약을 만들고 `fortune.IsTotalCritical`일 때만 `HasTotalStep`을 켭니다. 중간값은 `long`·`checked`로 계산합니다. 탐험 이벤트용 `CreateSpinDisplay(spin, fortune, weightLines)`도 같은 진행 요약을 만듭니다. 기존 `CreateSpinDisplay(spin, allocation)`은 `FortuneCriticalResult.None`으로 위임합니다. 분배 0인 줄도 행으로 표시합니다(`×1 → 0`).
 
 `SlotRuneTableView`(`Rows`)는 줄마다 행 하나를 템플릿에서 만들고 재사용합니다. 행 높이는 표 높이의 22%를 넘지 않고, 줄이 많으면 최소 18까지 줄어듭니다. 그래도 모자라면 앞 줄들을 표시하고 마지막 행에 `외 N줄`을 표시합니다. 줄이 없으면 한 행 너비로 `장착된 룬이 없습니다`를 표시합니다. 쓰지 않는 칸은 GameObject를 끄지 않고 빈 문자열로 둡니다. 크기 변경은 레이아웃 재구성 중에 들어오므로 다음 `LateUpdate`에서 한 번 반영합니다. 크기 변경이 없는 프레임에는 아무것도 하지 않습니다.
 
@@ -363,8 +367,9 @@ UI 어셈블리는 Gameplay·Application 타입을 모릅니다. 사용자에게
 
 | 상태 | Reel | 합계 값 | 룬 표 |
 | --- | --- | --- | --- |
-| 전투 없음·첫 회전 전 | 각 Strip 첫 칸이 Payline | `—` | 줄마다 효과 이름과 `×1` |
-| 회전 중 | 3구간 연출 | `…` | 쌓인 수 유지(`×1`) |
+| 전투 없음·첫 회전 전 | 각 Strip 첫 칸이 Payline | `0`(`SlotCombatStoryFormatter.IdleTotalValue`, 두 Prefab의 `TotalValue` 기본 글자도 `0`) | 줄마다 효과 이름과 `×1` |
+| 회전 중 | 3구간 연출, 멈춘 Reel에 배수 텍스트 | `0`에서 시작해 첫 Reel부터 연속해서 멈춘 Reel의 누적값(`vᵢ × min(C, rᵢ)`), 합계 배수 없음 | 쌓인 수 유지(`×1`) |
+| 합계 Critical 대기 | 모든 Reel 정지 | 마지막 누적값, 합계 배수 없음. `totalCriticalRevealDelaySeconds`(기본 0.4초) 동안 유지하며 Reduce Motion에서는 생략합니다. `IsSpinning`은 계속 `true`입니다. | 쌓인 수 유지 |
 | 정지 후 | 결과 칸이 Payline, 발생한 Reel에 배수 텍스트 | 최종 합계, 합계 배수가 있으면 배수 텍스트 | `×1 → 6`처럼 쌓인 수와 분배 |
 | 장착된 룬 줄 없음 | 이전 상태 | 이전 값 | `장착된 룬이 없습니다` 한 행 |
 | 구성 오류 | `Content` 숨김 | — | `StatusText`에 사유 |
@@ -374,6 +379,8 @@ UI 어셈블리는 Gameplay·Application 타입을 모릅니다. 사용자에게
 ### 회전 연출
 
 `SlotMachinePanel.PlaySpinAsync(SlotSpinDisplay, reduceMotion, token) → Task<bool>`은 이미 정해진 결과를 보여 주기만 합니다. 패널은 `SlotReelSpinPlanner.Create`로 Reel마다 `SlotReelSpinPlan`을 먼저 만들고, 모든 Reel의 `SlotReelViewBase.PlaySpinAsync(reel, stopIndex, plan, token)`을 동시에 시작합니다. 각 Reel은 자신의 시작 지연을 기다리는 동안 이전 정지 상태를 보여 주고, 중단 조건도 확인합니다. Reel 구현은 패널이나 설정 자산을 참조하지 않습니다.
+
+요약 적용 순서(`SlotReelMachineCore.PlaySpinAsync`, `SlotMachinePanel`·`SlotReelDock` 공용): 회전 시작 시 `SpinningSummary`, 각 Reel이 정지해 배수 배지를 표시한 직후 `SlotSpinProgress`가 돌려준 진행 요약(같은 누적값은 다시 적용하지 않음, 세대가 바뀌었거나 소유자가 비활성이면 적용하지 않음), 모든 Reel 완료 후 `ResultSummary`입니다. `HasTotalStep`이면 Reduce Motion이 아니고 대기 시간이 0보다 클 때 `Time.unscaledTime` 기준으로 기다린 뒤 결과 요약을 적용합니다. 대기 중 취소·비활성·새 회전·`StopAtResult`가 일어나면 결과 요약 없이 `false`를 돌려주고, 호출자의 `StopAtResult`가 최종 합계와 합계 배수를 즉시 표시합니다. 진행 요약이 없는 표시 데이터는 예전처럼 회전 시작 요약과 결과 요약만 적용합니다. 요약 갱신은 회전마다 최대 Reel 수 + 2회입니다.
 
 #### 설정 자산 `SlotReelSpinProfile`
 
@@ -397,6 +404,7 @@ UI 어셈블리는 Gameplay·Application 타입을 모릅니다. 사용자에게
 |  | `afterimageSpacing`, `afterimageAlpha` | 0.18, 0.35 | 잔상 간격(칸 높이 비율), 첫 잔상 최대 알파 |
 |  | `maximumVerticalStretch`, `cruiseTextAlpha` | 1.25, 0.85 | 효과 강도 1의 `VisualRoot` 세로 배율, 글자 알파 배율 |
 | Reduce Motion | `reducedMotionSecondsPerReel` | 0.15 | Reel i는 `(i + 1) × 값` 뒤에 결과를 보여 줍니다. |
+| Fortune Critical | `totalCriticalRevealDelaySeconds` | 0.4 | 모든 Reel이 합계에 반영된 뒤 합계 Critical 배수와 최종 합계를 표시하기까지 기다리는 시간(`Time.unscaledTime`). 표시 데이터의 `HasTotalStep`이 켜졌을 때만 기다리며 Reduce Motion에서는 기다리지 않습니다. `SlotReelSpinSettings`의 마지막 선택 인자(생략 시 0)이고 `Default` 0.4, `Instant` 0입니다. `SlotReelSpinPlanner.GetMaximumPresentationSeconds`는 이 값을 항상 더하므로 컨트롤러 시간 초과가 대기 때문에 연출을 끊지 않습니다. 기존 `DefaultSlotReelSpinProfile.asset`에는 필드가 저장되어 있지 않아 초기값 0.4를 읽습니다. |
 
 `OnValidate`는 이 자산의 값만 보정합니다. 런타임도 `SlotReelSpinSettings` 생성자에서 같은 제한을 적용합니다.
 
@@ -530,8 +538,8 @@ SlotReelDock                 (배치 루트: 부모 아래 가운데 앵커, Can
 │  ├─ TotalCard              (배치 루트, SlotTotalCardView. ReelMachine보다 뒤 형제)
 │  │  ├─ VisualRoot          (효과 대상) > Fill (UiShapeGraphic Fill), Border (UiShapeGraphic InnerBorder, 기본 비활성)
 │  │  └─ ContentRoot         (모양별 안쪽 글자 영역, SlotTotalMultiplierLayout)
-│  │     ├─ TotalLabel       (TMP, SlotHeightScaledText 0.8, 위 35%)
-│  │     ├─ TotalValue       (TMP, SlotHeightScaledText 0.9, fitWidth "999", 아래 65%)
+│  │     ├─ TotalLabel       (TMP, SlotHeightScaledText 0.8, 위 35%, 빈 라벨이면 비활성)
+│  │     ├─ TotalValue       (TMP, SlotHeightScaledText 0.9, fitWidth "999", ContentRoot 전체, 가운데 정렬)
 │  │     └─ TotalMultiplier  (배치 루트, 기본 비활성) > VisualRoot > Text (#B45309)
 │  ├─ StatusText             (구성 오류, 평소 비활성)
 │  └─ EffectRoot             (독 단위 효과)
@@ -551,20 +559,31 @@ SlotReelDock                 (배치 루트: 부모 아래 가운데 앵커, Can
 | `horizontalMargin`, `bottomMargin` | 16, 12 | 좌우·아래 바깥 여백 |
 | `maximumWidth` | 1200 (0이면 제한 없음) | 너비 제한, 가운데 정렬 |
 | `respectSafeArea` | 켜짐 | 부모 RectTransform의 화면 영역이 `Screen.safeArea` 밖과 겹치는 만큼(아래·좌·우)을 바깥 여백에 더하고, 위쪽 겹침은 카드와 드래그 위치 제한에만 씁니다. 부모 크기와 부모 화면 영역의 비율로 Canvas 단위로 바꿉니다(`SlotReelDock.CalculateSafeInsets`). 화면 프레임([화면 프레임과 레터박스](screen-frame.md)) 안에서는 부모가 이미 Safe Area 안에 있으므로 여백이 0이고, 화면 전체를 덮는 부모에서는 이전과 같은 화면 Safe Area 여백이 됩니다. |
-| `initiallyShown` | 켜짐 | Awake 시 표시 상태 |
+| `initiallyShown` | 꺼짐 | Play Mode Awake 시 표시 상태. 꺼져 있으면 독은 Play 시작(테스트 실행 포함) 시 화면 아래 숨김 위치에서 시작하고 `Show`(DEBUG 패널 `화면 안으로`)로 들어옵니다. Edit Mode에서는 상태를 정하지 않아 저장된 모습(화면 안)을 그대로 보여 주므로 편집할 수 있습니다. |
 | `transitionBehaviour` | Prefab: 루트의 `SlotReelDockEasedTransition` | `ISlotReelDockTransition`을 구현한 `MonoBehaviour`. 비어 있거나 구현하지 않으면 Play Mode에서 한 번 경고하고 즉시 전환합니다. |
 
 배치(`RefreshLayout`)는 부모 크기, Safe Area, 화면 크기가 바뀌었을 때와 설정 변경·`SetDockedOffset` 때만 실행합니다. `LateUpdate`는 이 값들을 비교만 합니다. 배치 루트 높이는 Reel 기계 높이 + 카드 돌출 높이이며, `ReelMachine`은 위쪽을 돌출 높이만큼 비우고 카드는 그 위에 걸칩니다.
 
-Play Mode에서 측정한 값은 다음과 같습니다(2026-10-17, Candidate_MainScene, Safe Area 없음).
+Play Mode에서 측정한 값은 다음과 같습니다(2026-10-17, Candidate_MainScene, Safe Area 없음). 당시 카드는 기본 `Rectangle` 모양, `overhangRatio` 0.7, `합계` 라벨이 있던 배치이므로 카드 위치와 글자 열은 현재와 다릅니다.
 
-| 화면 | Reel 기계 | 카드 | 카드 위쪽 / 화면 높이 | 카드 글자(라벨/값) |
+| 화면 | Reel 기계 | 카드 | 카드 위쪽 / 화면 높이 | 카드 글자(라벨/값, 당시) |
 | --- | --- | --- | --- | --- |
 | 1920×1080 | 1200×302 | 229×127 | 378 / 1080 | 29.9 / 62.4 |
 | 2560×1080 | 1200×302 | 229×127 | 378 / 1080 | 29.9 / 62.4 |
 | 1280×720 | 1200×202 | 152×85 | 256 / 720 | 19.9 / 41.6 |
 | 1080×1920 | 1048×320 | 242×134 | 399 / 1920 | 31.6 / 66 |
 | 750×1334 | 718×320 | 242×134 | 399 / 1334 | 31.6 / 66 |
+
+현재 Prefab(카드 `Circle` 모양, `heightRatio` 0.4, `overhangRatio` 0.5, 값만 표시)에서 `999`와 `×30`을 함께 표시해 측정한 값입니다(2026-10-25, `Probe Slot Total Value Only (Play Mode)`). 네 화면 모두 카드 중심이 Reel 기계 위쪽 가장자리와 `Frame` 위쪽 경계선에 놓였고(차이 0.00), 카드 아래쪽은 Payline 칸 위쪽보다 67.4 위에 있습니다. 화면 프레임이 균일하게 축소되므로 Canvas 단위 값은 화면마다 같습니다.
+
+| 화면 | Canvas 배율 | 카드 / ContentRoot | 값 `999` 글자(Canvas / 화면 px) | `×30` |
+| --- | --- | --- | --- | --- |
+| 1920×1080 | 1.000 | 121×121 / 85.5×85.5 | 46.2 / 46.2 | 12(최소), 값 위, 카드 안, 값을 가리지 않음 |
+| 2520×1080 | 1.000 | 121×121 / 85.5×85.5 | 46.2 / 46.2 | 같음 |
+| 1024×768 | 0.533 | 121×121 / 85.5×85.5 | 46.2 / 24.6 | 같음 |
+| 390×844 | 0.203 | 121×121 / 85.5×85.5 | 46.2 / 9.4 | 같음(화면 약 2.4px) |
+
+값 글자는 `fitWidth` 표본 `999`의 너비로 정해져(높이 기준 상한 96에 닿지 않음) 라벨이 있던 때보다 커지지 않았습니다. 390×844에서는 화면 프레임 축소 때문에 값과 배수 글자가 매우 작습니다. 이는 화면 프레임 정책의 결과이며 이번 배치 변경으로 생긴 문제는 아닙니다.
 
 독이 세 Area의 아래쪽을 가립니다. 현재 세 Area에는 콘텐츠가 없으므로 공간을 비워 두지 않습니다.
 
@@ -620,7 +639,7 @@ Play Mode에서 측정한 값은 다음과 같습니다(2026-10-17, Candidate_Ma
 | `heightRatio`, `minimumHeight`, `maximumHeight` | 0.42, 56, 140 | 카드 높이 = Reel 기계 높이 × 비율 |
 | `aspectRatio` | 1.8 | 카드 너비 = 높이 × 비율(`Circle`은 1), Reel 기계 너비의 90% 이하 |
 | `horizontalPosition` | 0.5 | Reel 기계 너비 기준 카드 중심. 카드는 Reel 기계 밖으로 나가지 않습니다. |
-| `overhangRatio` | 0.5 | 카드 높이 중 Reel 기계 위쪽 가장자리 위로 나오는 비율 |
+| `overhangRatio` | 0.5 | 카드 높이 중 Reel 기계 위쪽 가장자리 위로 나오는 비율. `SlotReelDock.prefab`도 0.5(2026-10-25 이전 0.7)라 카드 중심이 Reel 기계 위쪽 가장자리(`Frame` 위쪽 경계선)에 놓입니다. |
 
 - 크기와 위치는 `ReelMachine`의 효과 적용 전 RectTransform을 기준으로 계산하며, `SlotReelDock`의 배치 뒤(`Refresh`)와 모양 변경 때만 다시 계산합니다. 기본값에서 카드 아래쪽 가장자리는 가장 위의 보이는 칸 범위 안에 있고 Payline 칸을 가리지 않습니다. `heightRatio`를 키우거나 `overhangRatio`를 줄이면 위쪽 칸과 Payline을 가릴 수 있으며 Inspector Tooltip에 적혀 있습니다.
 - 글자 영역(`ContentRoot`)은 `Rectangle`·`RoundedRectangle`에서 카드 사각형에서 짧은 변 × 0.08(둥근 직사각형은 반지름 × 0.3 추가)을 뺀 영역, `Ellipse`는 가로·세로 × 0.707, `Circle`은 짧은 변 × 0.707 정사각형입니다. 글자 크기는 `SlotHeightScaledText`가, 배수 위치는 `SlotTotalMultiplierLayout`이 정합니다.
@@ -629,6 +648,7 @@ Play Mode에서 측정한 값은 다음과 같습니다(2026-10-17, Candidate_Ma
 ### 표시 데이터와 실패 동작
 
 - `SetSummary`는 `SlotSummaryDisplay`의 `TotalLabel`, `TotalValue`, `TotalMultiplierText`만 표시하고 룬 항목·열 제목·빈 문구·넘침 형식은 무시합니다.
+- `TotalLabel`이 빈 문자열이면(현재 Application이 넘기는 값) `SlotTotalCardView.SetTotal`이 `TotalLabel` GameObject를 비활성화하고, 값이 있으면 다시 활성화합니다. `SlotMachinePanel.SetSummary`도 같은 규칙입니다. 값 영역은 라벨 유무와 관계없이 Prefab에 저장된 전체 영역이므로, 나중에 비어 있지 않은 라벨을 넘기면 라벨이 값과 겹칠 수 있습니다. 그 배치는 아직 정하지 않았습니다. 스크린 리더용 `합계` 대체 텍스트는 없습니다.
 - Reel 수는 받은 표시 데이터를 따르며 1개부터 동작합니다. 가로 스크롤은 없고, 최소 너비보다 좁아지는 경우의 동작은 `SlotMachinePanel`과 같습니다.
 - 회전 설정이 없으면 기본값으로 대체하고 한 번 경고합니다. 스킨 카탈로그가 없거나 선택 스킨이 없으면 Prefab 기본 외형을 쓰고 한 번 경고합니다. Reel Prefab이나 Reel 영역이 없어 Reel을 만들 수 없으면 `PlaySpinAsync`는 `false`를 돌려줍니다.
 - 스킨은 Reel 대상(Reel 기계 틀, 가장자리 띠, 구분대, Payline, 각 Reel)에만 적용합니다. 기본값은 컴포넌트 메뉴 `기본 외형 다시 기록`으로 다시 기록합니다.
@@ -676,10 +696,10 @@ flowchart LR
 | `slotMachineConfiguration`, `fortuneCriticalConfiguration` | `기본값으로`가 읽는 설정 자산(`Application/Configuration/`). 컨트롤러는 자산을 바꾸지 않습니다. |
 | `maximumReelCount` | 기본 10, 최소 1 |
 
-- `Start`에서 `PlayerSessionHost.Instance`의 `WhenReady`를 기다린 뒤 `Connect(TemporarySlotMachine, TemporaryFortuneCritical, TemporaryDicePreferences)`를 호출합니다(`TemporaryRuneGridBinder`와 같은 방식). 독에 세션 Reel과 대기 요약(`—`)을 표시하고 두 상태의 `Changed`를 구독해 독과 Tab을 갱신합니다. 다른 기능이 세션을 바꿔도 따라갑니다.
+- `Start`에서 `PlayerSessionHost.Instance`의 `WhenReady`를 기다린 뒤 `Connect(TemporarySlotMachine, TemporaryFortuneCritical, TemporaryDicePreferences)`를 호출합니다(`TemporaryRuneGridBinder`와 같은 방식). 독에 세션 Reel과 대기 요약(`0`)을 표시하고 두 상태의 `Changed`를 구독해 독과 Tab을 갱신합니다. 다른 기능이 세션을 바꿔도 따라갑니다.
 - Reel 수 `+1`: `reel.{n}`(현재 없는 가장 작은 n)에 마지막 Reel의 칸 구성을 복사해 `TryAddReel`. `−1`: 마지막 Reel을 `TryRemoveReel`하고, 그 Reel의 개별 Fortune 규칙이 있으면 `TryRemoveReelRule`로 함께 지워 같은 ID로 다시 추가된 Reel이 기본 규칙을 따르게 합니다.
 - 확률: `TrySetReelChance`(개별 규칙이 없으면 기본 규칙 복사본에 확률 적용), `TrySetTotalChance`. 실패하면 사유를 결과 문구로 보여 주고 Tab 값을 세션 값으로 되돌립니다.
-- 회전: `TemporarySlotMachineState.Spin`(회전용 난수) → `FortuneCriticalResolver.Resolve`(별도 시드의 Fortune 난수) → `TemporarySlotCombatController.CreateSpinDisplay(spin, fortune, 빈 룬 줄)` → `dock.PlaySpinAsync`. 끝나면(중단 포함) 결과 문구 `3, 5×2, 2 → 합계 ×3 = 45 (상한 ×30 적용)`을 표시합니다. 합계가 범위를 넘으면(`OverflowException`) 재생하지 않고 사유를 표시합니다. 결과는 룬 분배·전투·Story·기록에 전달하지 않습니다. 숨긴 상태에서도 회전합니다.
+- 회전: `TemporarySlotMachineState.Spin`(회전용 난수) → `FortuneCriticalResolver.Resolve`(별도 시드의 Fortune 난수) → `TemporarySlotCombatController.CreateSpinDisplay(spin, fortune, 빈 룬 줄)` → `dock.PlaySpinAsync`. 합계 카드는 `0`에서 시작해 Reel이 멈출 때마다 누적값을 표시하고, 합계 Critical이 발생하면 대기 후 `×N`과 최종 합계를 표시합니다. 끝나면(중단 포함) 결과 문구 `3, 5×2, 2 → 합계 ×3 = 45 (상한 ×30 적용)`을 표시합니다. 합계가 범위를 넘으면(`OverflowException`) 재생하지 않고 사유를 표시합니다. 결과는 룬 분배·전투·Story·기록에 전달하지 않습니다. 숨긴 상태에서도 회전합니다.
 - `기본값으로`: 세션 Reel을 설정 자산의 Reel로(`Machine.TryReplaceAll`), Fortune 규칙을 설정 자산으로 만든 규칙으로(`TryReplaceAll`) 되돌립니다. 독의 표시 상태는 그대로입니다.
 - 변경은 같은 세션의 전투·탐험 이벤트 슬롯 판정에도 적용되며, Play Mode가 끝나면 사라집니다. 저장 형식은 바뀌지 않습니다.
 

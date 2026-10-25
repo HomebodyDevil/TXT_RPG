@@ -91,16 +91,20 @@ namespace TxTRPG.Application.Editor
             }
             var reels = Reels(dock);
             var stops = new SlotReelStopDisplay[reels.Count];
+            var progress = new SlotSummaryDisplay[reels.Count];
             var total = 0;
             for (var i = 0; i < stops.Length; i++)
             {
                 var stop = PreviewRandom.Next(reels[i].Values.Count);
                 total += reels[i].Values[stop];
                 stops[i] = new SlotReelStopDisplay(reels[i].ReelId, stop, reels[i].Values);
+                // The running total adds each payline value as its reel stops, like the real spin display.
+                progress[i] = TemporarySlotCombatController.CreateSummary(SlotCombatStoryFormatter.TotalValue(total), Array.Empty<SlotRuneLineDisplay>());
             }
             var multiplier = totalMultiplier ? 2 : 1;
             var spin = new SlotSpinDisplay(stops, total,
-                TemporarySlotCombatController.CreateSummary(SlotCombatStoryFormatter.SpinningTotalValue, Array.Empty<SlotRuneLineDisplay>()),
+                TemporarySlotCombatController.CreateSummary(SlotCombatStoryFormatter.TotalValue(0), Array.Empty<SlotRuneLineDisplay>()),
+                progress, totalMultiplier,
                 TemporarySlotCombatController.CreateSummary(SlotCombatStoryFormatter.TotalValue(total * multiplier), Array.Empty<SlotRuneLineDisplay>(),
                     SlotCombatStoryFormatter.MultiplierText(multiplier)));
             lastSpin = spin;
@@ -112,7 +116,7 @@ namespace TxTRPG.Application.Editor
             {
                 var done = await dock.PlaySpinAsync(spin, reduceMotion, CancellationToken.None);
                 if (dock == null) return;
-                Debug.Log($"{Prefix}: spin {(done ? "completed" : "interrupted")}; card '{dock.TotalLabelText}' '{dock.TotalValueText}' " +
+                Debug.Log($"{Prefix}: spin {(done ? "completed" : "interrupted")}; card label '{dock.TotalLabelText}' value '{dock.TotalValueText}' " +
                     $"multiplier '{dock.TotalMultiplierText}', reels {dock.ReelCount}, dividers {dock.ActiveDividerCount}.");
             }
             catch (Exception exception)

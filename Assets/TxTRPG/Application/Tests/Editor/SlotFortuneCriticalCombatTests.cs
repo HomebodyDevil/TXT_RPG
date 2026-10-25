@@ -345,6 +345,89 @@ namespace TxTRPG.Application.Tests
                 "the two-argument overload shows no multiplier");
         }
 
+        // ---------- Running total ----------
+
+        private static SlotSpinResult ThreeReelSpin() => new SlotMachineModel(new[]
+        {
+            SlotReel.FromValues("reel.1", new[] { 3 }), SlotReel.FromValues("reel.2", new[] { 5 }), SlotReel.FromValues("reel.3", new[] { 2 })
+        }).Spin(new SystemRandomIndexProvider(1));
+
+        private static string[] ProgressTotals(SlotSpinDisplay display) => display.ProgressSummaries.Select(s => s.TotalValue).ToArray();
+
+        [Test]
+        public void SpinDisplay_StartsAtZeroAndAddsEachReelBeforeTheTotalMultiplier()
+        {
+            var spin = ThreeReelSpin();
+            var off = FixedRule(0d, 2);
+            var both = Resolve(spin, off, FixedRule(1d, 10), FixedRule(1d, 5), 30);
+            var display = TemporarySlotCombatController.CreateSpinDisplay(spin, both, AllocationOf(both.FinalTotal));
+            Assert.That(display.SpinningSummary.TotalValue, Is.EqualTo(SlotCombatStoryFormatter.TotalValue(0)));
+            Assert.That(display.SpinningSummary.TotalMultiplierText, Is.Empty);
+            Assert.That(ProgressTotals(display), Is.EqualTo(new[] { "3", "53", "55" }), "v × min(C, r) per stopped reel, without the total multiplier");
+            Assert.That(display.HasTotalStep, Is.True);
+            Assert.That(display.ResultSummary.TotalValue, Is.EqualTo("175"));
+            Assert.That(display.ResultSummary.TotalMultiplierText, Is.EqualTo("×5"));
+            foreach (var progress in display.ProgressSummaries)
+            {
+                Assert.That(progress.TotalMultiplierText, Is.Empty, "no total multiplier before the result");
+                Assert.That(progress.Lines.Select(l => l.ValueText), Is.EqualTo(display.SpinningSummary.Lines.Select(l => l.ValueText)),
+                    "the rune table keeps the stacked weights until the result");
+                Assert.That(progress.Lines.Any(l => l.ValueText.Contains("→")), Is.False, "no allocation before the result");
+            }
+            Assert.That(display.ResultSummary.Lines.All(l => l.ValueText.Contains("→")), Is.True, "the allocation appears with the result");
+        }
+
+        [Test]
+        public void SpinDisplay_CapsTheReelMultiplierAndEndsOnTheFinalTotalWithoutATotalCritical()
+        {
+            var spin = ThreeReelSpin();
+            var off = FixedRule(0d, 2);
+            // r = 40 is above C = 30, so the running total adds 5 × 30.
+            var capped = Resolve(spin, off, FixedRule(1d, 40), off, 30);
+            var display = TemporarySlotCombatController.CreateSpinDisplay(spin, capped, AllocationOf(capped.FinalTotal));
+            Assert.That(ProgressTotals(display), Is.EqualTo(new[] { "3", "153", "155" }));
+            Assert.That(display.HasTotalStep, Is.False);
+            Assert.That(ProgressTotals(display).Last(), Is.EqualTo(SlotCombatStoryFormatter.TotalValue(capped.FinalTotal)),
+                "without a total Fortune Critical the last running total is the final total");
+            Assert.That(display.ResultSummary.TotalMultiplierText, Is.Empty);
+
+            var cappedWithTotal = Resolve(spin, off, FixedRule(1d, 40), FixedRule(1d, 2), 30);
+            var withTotal = TemporarySlotCombatController.CreateSpinDisplay(spin, cappedWithTotal, AllocationOf(cappedWithTotal.FinalTotal));
+            Assert.That(ProgressTotals(withTotal), Is.EqualTo(new[] { "3", "153", "155" }), "the running total never applies the total multiplier");
+            Assert.That(withTotal.ResultSummary.TotalValue, Is.EqualTo("160"), "3×2 + 5×min(30, 80) + 2×2");
+            Assert.That(withTotal.HasTotalStep, Is.True);
+
+            // Random reel and total rules: the last running total equals the final total exactly when there is no total step.
+            var rnd = new System.Random(7);
+            for (var i = 0; i < 50; i++)
+            {
+                var reel = FixedRule(1d, rnd.Next(2, 60));
+                var total = rnd.Next(2) == 0 ? off : FixedRule(1d, rnd.Next(2, 10));
+                var fortune = Resolve(spin, reel, null, total, 30);
+                var shown = TemporarySlotCombatController.CreateSpinDisplay(spin, fortune, AllocationOf(fortune.FinalTotal));
+                Assert.That(shown.HasTotalStep, Is.EqualTo(fortune.IsTotalCritical));
+                var last = int.Parse(ProgressTotals(shown).Last());
+                if (fortune.IsTotalCritical) Assert.That(last, Is.LessThanOrEqualTo(fortune.FinalTotal));
+                else Assert.That(last, Is.EqualTo(fortune.FinalTotal));
+            }
+        }
+
+        [Test]
+        public void SpinDisplay_WithoutFortuneCriticalAddsThePaylineValues()
+        {
+            var spin = ThreeReelSpin();
+            var plain = TemporarySlotCombatController.CreateSpinDisplay(spin, AllocationOf(10));
+            Assert.That(plain.SpinningSummary.TotalValue, Is.EqualTo("0"));
+            Assert.That(ProgressTotals(plain), Is.EqualTo(new[] { "3", "8", "10" }));
+            Assert.That(plain.HasTotalStep, Is.False);
+            var lines = new[] { new SlotRuneLineDisplay("공격", "×2") };
+            var weighted = TemporarySlotCombatController.CreateSpinDisplay(spin, FortuneCriticalResult.None(spin), lines);
+            Assert.That(weighted.SpinningSummary.TotalValue, Is.EqualTo("0"));
+            Assert.That(ProgressTotals(weighted), Is.EqualTo(new[] { "3", "8", "10" }));
+            Assert.That(weighted.HasTotalStep, Is.False);
+            Assert.That(weighted.ProgressSummaries.All(s => s.Lines.Single().ValueText == "×2"), Is.True);
+        }
+
         // ---------- Helpers ----------
 
         private static FortuneCriticalRule FixedRule(double chance, int multiplier)

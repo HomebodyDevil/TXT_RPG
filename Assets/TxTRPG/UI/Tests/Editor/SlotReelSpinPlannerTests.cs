@@ -75,7 +75,26 @@ namespace TxTRPG.UI.Tests
                     }
                 }
             }
-            Assert.That(SlotReelSpinPlanner.GetMaximumPresentationSeconds(settings, 3), Is.InRange(2.4f, 2.8f));
+            Assert.That(SlotReelSpinPlanner.GetMaximumPresentationSeconds(settings, 3), Is.InRange(2.8f, 3.2f));
+        }
+
+        [Test]
+        public void MaximumPresentation_IncludesTheTotalCriticalWait()
+        {
+            Assert.That(SlotReelSpinSettings.Default.TotalCriticalRevealDelaySeconds, Is.EqualTo(.4f).Within(1e-6f));
+            Assert.That(SlotReelSpinSettings.Instant.TotalCriticalRevealDelaySeconds, Is.EqualTo(0f));
+            var without = Settings(0f);
+            var with = Settings(.4f);
+            foreach (var reels in new[] { 1, 3, 10 })
+            {
+                Assert.That(SlotReelSpinPlanner.GetMaximumPresentationSeconds(with, reels),
+                    Is.EqualTo(SlotReelSpinPlanner.GetMaximumPresentationSeconds(without, reels) + .4f).Within(1e-5f), $"{reels} reels");
+            }
+            Assert.That(Settings(-1f).TotalCriticalRevealDelaySeconds, Is.EqualTo(0f), "a negative wait is clamped");
+            Assert.That(SlotReelSpinPlanner.GetMaximumPresentationSeconds(SlotReelSpinSettings.Instant, 3), Is.EqualTo(0f));
+
+            static SlotReelSpinSettings Settings(float wait) => new(SlotEasingKind.Linear, .08f, .2f, .1f, .4f, .6f, .6f,
+                .02f, .05f, .1f, .08f, 18f, 8f, true, .1f, .1f, 2, .2f, .3f, 1.2f, .8f, .15f, wait);
         }
 
         [Test]

@@ -12,7 +12,7 @@ namespace TxTRPG.UI.SlotMachine
     // across the reel machine's top edge. It receives display data only and never decides results. Reel, divider,
     // payline and spin handling is SlotReelMachineCore, shared with SlotMachinePanel, with the same SlotReel.prefab, spin
     // profile and skin catalog (the skin applies to the reel targets only).
-    // Of SlotSummaryDisplay it shows TotalLabel, TotalValue and TotalMultiplierText; the rune lines, column titles, empty
+    // Of SlotSummaryDisplay it shows TotalLabel (hidden while empty), TotalValue and TotalMultiplierText; the rune lines, column titles, empty
     // text and overflow format are ignored because the dock has no rune table.
     // It takes no input and never blocks the screen behind it: every graphic has raycastTarget off and the CanvasGroup
     // neither blocks raycasts nor is interactable. Show/Hide move PresentationRoot only; the layout root, the reel layout
@@ -31,7 +31,8 @@ namespace TxTRPG.UI.SlotMachine
         private float maximumWidth = 1200f;
         [SerializeField, Tooltip("Adds the part of the parent that lies outside Screen.safeArea (bottom, left, right) to the outer margins. Zero inside the screen frame.")]
         private bool respectSafeArea = true;
-        [SerializeField, Tooltip("Shown state on Awake.")] private bool initiallyShown = true;
+        [SerializeField, Tooltip("Shown state on Awake (Play Mode). Off: the dock starts below the screen until Show is called. " +
+            "Edit Mode keeps the saved look so the dock can be edited.")] private bool initiallyShown;
         [SerializeField, Tooltip("Optional MonoBehaviour implementing ISlotReelDockTransition. Empty switches immediately.")]
         private MonoBehaviour transitionBehaviour;
 
@@ -214,7 +215,9 @@ namespace TxTRPG.UI.SlotMachine
             if (totalCard != null) totalCard.SetTotal(summary.TotalLabel, summary.TotalValue, summary.TotalMultiplierText);
         }
 
-        // A hidden dock still plays the presentation and returns its result; it is only invisible.
+        // Same order as SlotMachinePanel.PlaySpinAsync: spinning summary, running totals, then the result summary (after the
+        // total Fortune Critical wait when result.HasTotalStep). A hidden dock still plays the presentation and returns its
+        // result; it is only invisible.
         public Task<bool> PlaySpinAsync(SlotSpinDisplay result, bool reduceMotion, CancellationToken cancellationToken) =>
             Machine.PlaySpinAsync(result, reduceMotion, cancellationToken);
 

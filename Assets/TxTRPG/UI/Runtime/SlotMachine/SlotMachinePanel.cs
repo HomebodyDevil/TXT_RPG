@@ -244,7 +244,7 @@ namespace TxTRPG.UI.SlotMachine
         public void SetSummary(SlotSummaryDisplay summary)
         {
             if (summary == null) throw new ArgumentNullException(nameof(summary));
-            SetText(totalLabelText, summary.TotalLabel);
+            SetLabel(totalLabelText, summary.TotalLabel);
             SetText(totalValueText, summary.TotalValue);
             SetTotalMultiplier(summary.TotalMultiplierText);
             SetText(runeColumnTitleText, summary.RuneColumnTitle);
@@ -265,7 +265,9 @@ namespace TxTRPG.UI.SlotMachine
             SetStatus(string.Empty);
         }
 
-        // Shows result.SpinningSummary, plays every reel and shows result.ResultSummary once all reels completed.
+        // Shows result.SpinningSummary, plays every reel with the running total from result.ProgressSummaries (when
+        // present) and shows result.ResultSummary once all reels completed, after the total Fortune Critical wait when
+        // result.HasTotalStep (SlotReelMachineCore.PlaySpinAsync).
         public Task<bool> PlaySpinAsync(SlotSpinDisplay result, bool reduceMotion, CancellationToken cancellationToken) =>
             Machine.PlaySpinAsync(result, reduceMotion, cancellationToken);
 
@@ -289,6 +291,16 @@ namespace TxTRPG.UI.SlotMachine
                 totalMultiplierRoot.gameObject.SetActive(value.Length > 0);
             // The value text was set just before, so the placement follows the current value glyphs.
             if (value.Length > 0 && totalMultiplierLayout != null) totalMultiplierLayout.Refresh();
+        }
+
+        // An empty label hides TotalLabel; TotalValue keeps its stored area (the whole TotalBox text area) either way, so
+        // a non-empty label may overlap the value.
+        private static void SetLabel(TMP_Text text, string value)
+        {
+            SetText(text, value);
+            if (text == null) return;
+            var shown = !string.IsNullOrEmpty(value);
+            if (text.gameObject.activeSelf != shown) text.gameObject.SetActive(shown);
         }
 
         private static void SetText(TMP_Text text, string value)

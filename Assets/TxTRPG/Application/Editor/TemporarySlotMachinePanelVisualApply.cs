@@ -370,8 +370,12 @@ namespace TxTRPG.Application.Editor
             var totalBackground = Child("Background", totalBox, 0);
             Stretch(totalBackground);
             SetImage(totalBackground, null, PanelGray);
+            // The box shows the value only: TotalLabel stays (empty and inactive) for the display contract, and the value
+            // takes the whole text area, centered.
             var totalLabel = EnsureText(totalBox, "TotalLabel", 1, new Vector2(.05f, 0f), new Vector2(.5f, 1f), SlotCombatStoryFormatter.TotalLabel, font, Color.white, .55f, 14f, 72f);
-            var totalValue = EnsureText(totalBox, "TotalValue", 2, new Vector2(.5f, 0f), new Vector2(.95f, 1f), SlotCombatStoryFormatter.IdleTotalValue, font, Color.white, .55f, 14f, 72f);
+            totalLabel.gameObject.SetActive(!string.IsNullOrEmpty(SlotCombatStoryFormatter.TotalLabel));
+            var totalValue = EnsureText(totalBox, "TotalValue", 2, new Vector2(.05f, 0f), new Vector2(.95f, 1f), SlotCombatStoryFormatter.IdleTotalValue, font, Color.white, .55f, 14f, 72f);
+            totalValue.alignment = TextAlignmentOptions.Center;
 
             var tableArea = Child("RuneTableArea", summaryArea, 2);
             var table = Child("RuneTable", tableArea, 0);

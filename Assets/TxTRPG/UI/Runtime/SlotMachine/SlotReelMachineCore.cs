@@ -118,6 +118,10 @@ namespace TxTRPG.UI.SlotMachine
             }
         }
 
+        // Shows the spinning summary, then (with progress summaries) the running total each time the reels from the first
+        // one have stopped, and finally the result summary. With a total step the result waits
+        // TotalCriticalRevealDelaySeconds after the last running total, except with Reduce Motion; IsSpinning stays true
+        // during that wait. Returns false without the result summary when interrupted; the caller then calls StopAtResult.
         public async Task<bool> PlaySpinAsync(SlotSpinDisplay result, bool reduceMotion, CancellationToken cancellationToken)
         {
             if (result == null) throw new ArgumentNullException(nameof(result));
@@ -130,15 +134,27 @@ namespace TxTRPG.UI.SlotMachine
             {
                 // Every reel gets its plan first, then all start together and each waits for its own start delay.
                 spinRandom ??= new System.Random();
-                var plans = SlotReelSpinPlanner.Create(host.SpinSettings, result.Reels.Count, reduceMotion, spinRandom);
+                var settings = host.SpinSettings;
+                var plans = SlotReelSpinPlanner.Create(settings, result.Reels.Count, reduceMotion, spinRandom);
+                var progress = new SlotSpinProgress(result);
                 var views = host.ReelViews;
                 var tasks = new Task<bool>[result.Reels.Count];
                 for (var i = 0; i < tasks.Length; i++)
-                    tasks[i] = PlayReelAsync(views[i], result.Reels[i], plans[i], token, cancellationToken);
+                    tasks[i] = PlayReelAsync(views[i], result.Reels[i], i, progress, plans[i], token, cancellationToken);
                 var completed = await Task.WhenAll(tasks);
                 if (owner == null || token != generation) return false;
                 foreach (var done in completed)
                     if (!done) return false;
+                var delay = settings.TotalCriticalRevealDelaySeconds;
+                if (result.HasProgressSummaries && result.HasTotalStep && !reduceMotion && delay > 0f)
+                {
+                    var start = Time.unscaledTime;
+                    while (Time.unscaledTime - start < delay)
+                    {
+                        await Task.Yield();
+                        if (Interrupted(owner, token, cancellationToken)) return false;
+                    }
+                }
                 host.SetSummary(result.ResultSummary);
                 return true;
             }
@@ -148,15 +164,23 @@ namespace TxTRPG.UI.SlotMachine
             }
         }
 
-        // The reel clears its multiplier when its spin starts and shows it once it is at rest on the result.
-        private async Task<bool> PlayReelAsync(SlotReelViewBase view, SlotReelStopDisplay stop, SlotReelSpinPlan plan, int token,
-            CancellationToken cancellationToken)
+        // The reel clears its multiplier when its spin starts and shows it once it is at rest on the result, followed by
+        // the running total when it completes the run of stopped reels from the first one.
+        private async Task<bool> PlayReelAsync(SlotReelViewBase view, SlotReelStopDisplay stop, int reelIndex, SlotSpinProgress progress,
+            SlotReelSpinPlan plan, int token, CancellationToken cancellationToken)
         {
             view.ShowFortuneMultiplier(string.Empty);
             var done = await view.PlaySpinAsync(stop.Reel, stop.StopIndex, plan, cancellationToken);
-            if (done && host.Owner != null && view != null && token == generation) view.ShowFortuneMultiplier(stop.MultiplierText);
-            return done;
+            var owner = host.Owner;
+            if (!done || owner == null || view == null || token != generation) return done;
+            view.ShowFortuneMultiplier(stop.MultiplierText);
+            var summary = progress.ReelStopped(reelIndex);
+            if (summary != null && owner.isActiveAndEnabled) host.SetSummary(summary);
+            return true;
         }
+
+        private bool Interrupted(MonoBehaviour owner, int token, CancellationToken cancellationToken) =>
+            owner == null || token != generation || cancellationToken.IsCancellationRequested || !owner.isActiveAndEnabled;
 
         // Puts every reel at rest on the accepted result immediately (timeout, cancellation or a restored result).
         public void StopAtResult(SlotSpinDisplay result)

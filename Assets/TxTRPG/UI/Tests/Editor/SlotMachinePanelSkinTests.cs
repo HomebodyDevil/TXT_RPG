@@ -63,6 +63,22 @@ namespace TxTRPG.UI.Tests
         }
 
         [Test]
+        public void HiddenTotalLabel_StillGetsTheSkinAndRecordsDefaults()
+        {
+            var label = panel.PanelTextTargetsForEditor[0];
+            Assert.That(label.Text.name, Is.EqualTo("TotalLabel"));
+            Assert.That(label.Text.gameObject.activeSelf, Is.False, "the empty summary label hides TotalLabel");
+            Assert.That(label.HasDefaults, Is.True);
+            var dark = new Color(.8f, .2f, .1f, 1f);
+            panel.SetSkin(Skin("test.dark", s => SetColor(s, "darkSurfaceTextColor", dark)));
+            Assert.That(label.Text.color, Is.EqualTo(dark), "the inactive label is recolored with the total value");
+            Assert.That(panel.PanelTextTargetsForEditor[1].Text.color, Is.EqualTo(dark));
+            Assert.That(label.Record(label.Text, true), Is.True, "defaults can be recorded while the label is inactive");
+            panel.SetSkin(null);
+            Assert.That(label.Text.color, Is.EqualTo(label.DefaultColor));
+        }
+
+        [Test]
         public void PaylineSprite_ShowsTheImageExpandedByTheOutset()
         {
             var sprite = Sprite();
@@ -368,7 +384,7 @@ namespace TxTRPG.UI.Tests
             Enumerable.Range(1, count).Select(i => new SlotReelDisplay($"reel.{i}", OneToSix)).ToArray();
 
         private static SlotSummaryDisplay Summary(int lines) =>
-            new("합계", "—", "룬", "쌓임 → 분배", Enumerable.Range(1, lines).Select(i => new SlotRuneLineDisplay("공격", $"×{i}")).ToArray(),
+            new(string.Empty, "—", "룬", "쌓임 → 분배", Enumerable.Range(1, lines).Select(i => new SlotRuneLineDisplay("공격", $"×{i}")).ToArray(),
                 "장착된 룬이 없습니다", "외 {0}줄");
 
         private static SlotSpinDisplay Spin(params int[] stops) => new(

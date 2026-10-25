@@ -245,7 +245,7 @@ namespace TxTRPG.UI.SlotMachine
 
         public void SetTotal(string label, string value, string multiplier)
         {
-            SetText(totalLabelText, label);
+            SetLabel(totalLabelText, label);
             SetText(totalValueText, value);
             multiplier ??= string.Empty;
             SetText(totalMultiplierText, multiplier);
@@ -314,6 +314,16 @@ namespace TxTRPG.UI.SlotMachine
             if (text == null) return;
             value ??= string.Empty;
             if (text.text != value) text.text = value;
+        }
+
+        // An empty label hides TotalLabel; TotalValue keeps its stored area (the whole ContentRoot) either way, so a
+        // non-empty label may overlap the value.
+        private static void SetLabel(TMP_Text text, string value)
+        {
+            SetText(text, value);
+            if (text == null) return;
+            var shown = !string.IsNullOrEmpty(value);
+            if (text.gameObject.activeSelf != shown) text.gameObject.SetActive(shown);
         }
 
 #if UNITY_EDITOR
