@@ -29,6 +29,7 @@ namespace TxTRPG.Application.Editor
         public const string MenuPath = "Tools/TxT RPG/Application/Temporary/Apply Candidate Rune Grid";
         public const string ScenePath = "Assets/Scenes/Candidate_MainScene.unity";
         public const string IconFolder = "Assets/TxTRPG/UI/Icons/TemporaryRunes";
+        public const string HitAreaName = "HitArea";
         public const string AttackIconPath = IconFolder + "/attack.png";
         public const string HealIconPath = IconFolder + "/heal.png";
         public const string CatalogPath = "Assets/TxTRPG/UI/Styles/Runes/TemporaryRuneIconCatalog.asset";
@@ -115,7 +116,8 @@ namespace TxTRPG.Application.Editor
             var cardPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(CardPrefabPath);
             var card = cardPrefab != null ? cardPrefab.GetComponent<RuneGridCardView>() : null;
             if (card == null || !card.IsValid(out missing)) { error = "RuneGridCard.prefab is missing references"; return false; }
-            var raycast = cardPrefab.GetComponentsInChildren<Graphic>(true).FirstOrDefault(graphic => graphic.raycastTarget);
+            // The transparent HitArea images (rune tooltip trigger) are the only input targets of a card.
+            var raycast = cardPrefab.GetComponentsInChildren<Graphic>(true).FirstOrDefault(graphic => graphic.raycastTarget && graphic.name != HitAreaName);
             if (raycast != null) { error = $"card graphic '{raycast.name}' has raycastTarget on"; return false; }
             error = string.Empty;
             return true;
@@ -153,7 +155,7 @@ namespace TxTRPG.Application.Editor
         }
 
         // 128×128 white-on-transparent coverage with 4×4 supersampling, tinted once; same import settings as the menu icons.
-        private static void WriteIcon(string path, Color color, Func<float, float, bool> contains)
+        internal static void WriteIcon(string path, Color color, Func<float, float, bool> contains)
         {
             const int size = 128, samples = 4;
             var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);

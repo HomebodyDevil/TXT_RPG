@@ -7,7 +7,8 @@ namespace TxTRPG.UI.Runes
 {
     // One display-only rune card. The root RectTransform belongs to the grid layout; effects go on VisualRoot, CardArea or
     // BadgeArea. CardArea and BadgeArea are placed with anchor ratios inside the cell (card bottom right, badge top left),
-    // so they follow any cell size without pixel offsets. Shows the icon when there is one, otherwise the name.
+    // so they follow any cell size without pixel offsets. Shows the icon when there is one, otherwise the name. The only
+    // input targets are the transparent HitArea children of CardArea and BadgeArea (used by the tooltip trigger).
     [DisallowMultipleComponent]
     public sealed class RuneGridCardView : MonoBehaviour
     {
@@ -19,6 +20,8 @@ namespace TxTRPG.UI.Runes
         [SerializeField] private Image icon;
         [SerializeField] private TMP_Text fallbackLabel;
         [SerializeField] private TMP_Text countText;
+        [SerializeField, Tooltip("Optional. Opens the rune tooltip; without it the card shows no tooltip.")]
+        private RuneGridCardTooltipTrigger tooltipTrigger;
 
         public RectTransform VisualRoot => visualRoot;
         public RectTransform CardArea => cardArea;
@@ -26,6 +29,7 @@ namespace TxTRPG.UI.Runes
         public Image Icon => icon;
         public TMP_Text FallbackLabel => fallbackLabel;
         public TMP_Text CountText => countText;
+        public RuneGridCardTooltipTrigger TooltipTrigger => tooltipTrigger;
         public string Key { get; private set; } = string.Empty;
         public bool HasIcon => icon != null && icon.gameObject.activeSelf && icon.sprite != null;
 
@@ -82,6 +86,10 @@ namespace TxTRPG.UI.Runes
             }
             if (countText != null) countText.text = string.Empty;
         }
+
+#if UNITY_EDITOR
+        public void SetTooltipTriggerForEditor(RuneGridCardTooltipTrigger trigger) => tooltipTrigger = trigger;
+#endif
 
         private static void SetAnchors(RectTransform target, Vector2 min, Vector2 max)
         {

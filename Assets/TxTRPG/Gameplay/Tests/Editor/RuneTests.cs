@@ -46,6 +46,54 @@ namespace TxTRPG.Gameplay.Tests
             Assert.That((int)RuneEffectKind.Unknown, Is.Zero);
             Assert.That((int)RuneEffectKind.Attack, Is.EqualTo(1));
             Assert.That((int)RuneEffectKind.Heal, Is.EqualTo(2));
+            Assert.That((int)RuneEffectKind.Test, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void EffectKinds_TestIsSupportedButReceivesNoAllocation()
+        {
+            Assert.That(RuneEffectKinds.IsSupported(RuneEffectKind.Test), Is.True);
+            Assert.That(RuneEffectKinds.ReceivesAllocation(RuneEffectKind.Attack), Is.True);
+            Assert.That(RuneEffectKinds.ReceivesAllocation(RuneEffectKind.Heal), Is.True);
+            Assert.That(RuneEffectKinds.ReceivesAllocation(RuneEffectKind.Test), Is.False);
+            Assert.That(RuneEffectKinds.ReceivesAllocation(RuneEffectKind.Unknown), Is.False);
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        [TestCase(2)]
+        public void Allocation_IgnoresTestLinesAnywhereInTheLoadout(int testLineIndex)
+        {
+            var withTest = new RuneDefinitionCatalog(catalog.Definitions.Concat(new[] { new RuneDefinition("rune.test.a", "테스트", RuneEffectKind.Test) }));
+            var testInventory = new RuneInventory(withTest);
+            foreach (var id in new[] { "a1", "a2", "a3" }) testInventory.TryAdd(new OwnedRune(id, "rune.attack"), out _);
+            foreach (var id in new[] { "h1", "h2" }) testInventory.TryAdd(new OwnedRune(id, "rune.heal"), out _);
+            foreach (var id in new[] { "t1", "t2", "t3", "t4" }) testInventory.TryAdd(new OwnedRune(id, "rune.test.a"), out _);
+            var regular = new[] { new RuneLoadoutLine("line.1", new[] { "h1", "h2" }), new RuneLoadoutLine("line.2", new[] { "a1", "a2", "a3" }) }.ToList();
+            var withTestLine = regular.ToList();
+            withTestLine.Insert(testLineIndex, new RuneLoadoutLine("line.test", new[] { "t1", "t2", "t3", "t4" }));
+            var plain = Loadout(("line.1", new[] { "h1", "h2" }), ("line.2", new[] { "a1", "a2", "a3" }));
+            var tested = new RuneLoadout(testInventory, withTestLine);
+            Assert.That(tested.TotalWeight, Is.EqualTo(9), "TotalWeight still counts every line");
+            Assert.That(tested.AllocatableWeight(withTest), Is.EqualTo(5));
+            for (var total = 0; total <= 40; total++)
+            {
+                var expected = WeightedRuneAllocationPolicy.Instance.Allocate(total, plain, catalog).Lines;
+                var actual = WeightedRuneAllocationPolicy.Instance.Allocate(total, tested, withTest).Lines;
+                Assert.That(actual.Select(l => (l.Order, l.LineId, l.Amount, l.Weight, l.EffectKind)),
+                    Is.EqualTo(expected.Select(l => (l.Order, l.LineId, l.Amount, l.Weight, l.EffectKind))), $"total {total}");
+            }
+        }
+
+        [Test]
+        public void Allocation_OnlyTestLinesThrows()
+        {
+            var withTest = new RuneDefinitionCatalog(new[] { new RuneDefinition("rune.test.a", "테스트", RuneEffectKind.Test) });
+            var testInventory = new RuneInventory(withTest);
+            testInventory.TryAdd(new OwnedRune("t1", "rune.test.a"), out _);
+            var loadout = new RuneLoadout(testInventory, new[] { new RuneLoadoutLine("line.test", new[] { "t1" }) });
+            Assert.That(loadout.AllocatableWeight(withTest), Is.Zero);
+            Assert.Throws<InvalidOperationException>(() => WeightedRuneAllocationPolicy.Instance.Allocate(5, loadout, withTest));
         }
 
         [Test]

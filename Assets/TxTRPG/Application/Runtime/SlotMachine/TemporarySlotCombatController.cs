@@ -426,19 +426,20 @@ namespace TxTRPG.Application.SlotMachine
             sessionHost.TemporaryExploration.RunId == runId &&
             sessionHost.TemporaryExploration.ActiveNodeId == nodeId;
 
-        // Rune line rows before a spin: effect name and stacked weight ("×1").
+        // Rune line rows before a spin: effect name and stacked weight ("×1"). Lines that receive no allocation (test runes)
+        // are left out, so the rows match the allocation lines and their order.
         public static SlotRuneLineDisplay[] WeightLines(TemporaryRuneState runes)
         {
-            var lines = new SlotRuneLineDisplay[runes.Loadout.LineCount];
-            var index = 0;
+            var lines = new List<SlotRuneLineDisplay>(runes.Loadout.LineCount);
             foreach (var line in runes.Loadout.Lines)
             {
+                if (!runes.Loadout.ReceivesAllocation(line, runes.Catalog)) continue;
                 var effect = runes.Catalog.TryGet(runes.Loadout.DefinitionIdOf(line), out var definition)
                     ? definition.EffectKind : RuneEffectKind.Unknown;
-                lines[index++] = new SlotRuneLineDisplay(SlotCombatStoryFormatter.EffectName(effect),
-                    SlotCombatStoryFormatter.LineWeight(line.Weight));
+                lines.Add(new SlotRuneLineDisplay(SlotCombatStoryFormatter.EffectName(effect),
+                    SlotCombatStoryFormatter.LineWeight(line.Weight)));
             }
-            return lines;
+            return lines.ToArray();
         }
 
         // A spin applied by a controller of the previous Scene finished: refresh this Scene's presentation and button.

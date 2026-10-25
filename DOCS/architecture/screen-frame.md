@@ -76,12 +76,14 @@ Canvas                          Canvas(Screen Space - Overlay), ScreenFrameCanva
 Canvas                          ScreenFrameCanvasScaler(DefaultScreenFrameProfile), ScreenFrameController
 ├── ScreenFrame
 │   ├── MainArea                FlexibleLayoutPanel.prefab 인스턴스(Stretch)
-│   └── OverlayLayer            SlotReelDockClip(RectMask2D) > SlotReelDock, EncounterDebugPanel
+│   └── OverlayLayer            SlotReelDockClip(RectMask2D) > SlotReelDock, EncounterDebugPanel, TooltipLayer(TooltipPresenter, 마지막 자식)
 ├── LetterboxLayer              LetterboxView(DefaultScreenFrameProfile)
 ├── ScreenOverlayLayer
 │   └── EncounterResultModal    ModalWindowHost(화면 전체 배경) / FrameArea(ScreenFrameAlignedRect) / WindowFrame / Window
 └── EncounterRollController
 ```
+
+`TooltipLayer`(2026-10-25)는 `ScreenFrame` 안에 있으므로 툴팁은 레터박스 위에 그려지지 않습니다. `TooltipPresenter`는 `ScreenFrame` RectTransform을 직렬화 참조로 받아 `TooltipLayer` 로컬 좌표의 프레임 사각형을 구하고, 툴팁 상자를 그 안(여백 8)에 놓습니다. 툴팁은 독·디버그 패널 위, 결과 모달(`ScreenOverlayLayer`) 아래에 그려집니다. 프레임 배율이나 크기가 바뀌면 열린 툴팁을 닫습니다([툴팁](tooltips.md)).
 
 `EncounterResultModal` 인스턴스의 `FrameArea.controller`는 Scene의 `ScreenFrameController`를 가리키는 인스턴스 Override입니다. 모달이 열릴 때의 `SetAsLastSibling`은 `ScreenOverlayLayer` 안에서만 순서를 바꿉니다.
 

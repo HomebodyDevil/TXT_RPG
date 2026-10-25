@@ -235,7 +235,7 @@ namespace TxTRPG.Application.Editor
         }
 
         // Root (layout, Button) > HitArea (input) and VisualRoot (effect target) > Background, SelectedIndicator, Label.
-        private static Button NewTab(Transform parent, string name, string labelText, out TMP_Text label, out GameObject indicator)
+        internal static Button NewTab(Transform parent, string name, string labelText, out TMP_Text label, out GameObject indicator)
         {
             var rect = NewUi(name, parent);
             var layout = rect.gameObject.AddComponent<LayoutElement>();
@@ -364,7 +364,7 @@ namespace TxTRPG.Application.Editor
 
         // ── UI helpers (same look as TemporaryEncounterTogglesApply) ──
 
-        private static RectTransform SliderRow(Transform parent, string name, string labelText, out TMP_Text label, out Slider slider, out TMP_Text value)
+        internal static RectTransform SliderRow(Transform parent, string name, string labelText, out TMP_Text label, out Slider slider, out TMP_Text value)
         {
             var row = NewUi(name, parent);
             Row(row.gameObject, 36f);
@@ -387,7 +387,7 @@ namespace TxTRPG.Application.Editor
             return row;
         }
 
-        private static Button NewButton(Transform parent, string name, string labelText, float width)
+        internal static Button NewButton(Transform parent, string name, string labelText, float width)
         {
             var rect = NewUi(name, parent);
             var shape = rect.gameObject.AddComponent<UiShapeGraphic>();
@@ -408,7 +408,7 @@ namespace TxTRPG.Application.Editor
             return button;
         }
 
-        private static void Column(GameObject target, int padding, float spacing)
+        internal static void Column(GameObject target, int padding, float spacing)
         {
             var column = target.AddComponent<VerticalLayoutGroup>();
             column.padding = new RectOffset(padding, padding, padding, padding);
@@ -417,7 +417,7 @@ namespace TxTRPG.Application.Editor
             column.childForceExpandWidth = true; column.childForceExpandHeight = false;
         }
 
-        private static void Row(GameObject target, float height)
+        internal static void Row(GameObject target, float height)
         {
             var row = target.AddComponent<HorizontalLayoutGroup>();
             row.spacing = 6f;
@@ -428,20 +428,20 @@ namespace TxTRPG.Application.Editor
             layout.minHeight = height; layout.preferredHeight = height;
         }
 
-        private static LayoutElement Flexible(GameObject target, float flexible)
+        internal static LayoutElement Flexible(GameObject target, float flexible)
         {
             var layout = target.GetComponent<LayoutElement>() ?? target.AddComponent<LayoutElement>();
             layout.flexibleWidth = flexible;
             return layout;
         }
 
-        private static void Fixed(GameObject target, float width)
+        internal static void Fixed(GameObject target, float width)
         {
             var layout = target.GetComponent<LayoutElement>() ?? target.AddComponent<LayoutElement>();
             layout.minWidth = width; layout.preferredWidth = width; layout.flexibleWidth = 0f;
         }
 
-        private static RectTransform NewUi(string name, Transform parent)
+        internal static RectTransform NewUi(string name, Transform parent)
         {
             var gameObject = new GameObject(name, typeof(RectTransform)) { layer = LayerMask.NameToLayer("UI") };
             var rect = (RectTransform)gameObject.transform;
@@ -449,7 +449,7 @@ namespace TxTRPG.Application.Editor
             return rect;
         }
 
-        private static RectTransform Stretch(RectTransform rect)
+        internal static RectTransform Stretch(RectTransform rect)
         {
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.one;
@@ -457,7 +457,7 @@ namespace TxTRPG.Application.Editor
             return rect;
         }
 
-        private static TextMeshProUGUI Text(RectTransform rect, string value, float minimumSize, float maximumSize)
+        internal static TextMeshProUGUI Text(RectTransform rect, string value, float minimumSize, float maximumSize)
         {
             var text = rect.gameObject.AddComponent<TextMeshProUGUI>();
             if (TMP_Settings.defaultFontAsset != null) text.font = TMP_Settings.defaultFontAsset;

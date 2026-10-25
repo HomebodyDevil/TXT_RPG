@@ -46,11 +46,12 @@ Payline은 가운데 줄 하나입니다. 여러 Payline이나 기호 조합 판
 
 | 타입 | 책임 |
 | --- | --- |
-| `RuneEffectKind` | `Unknown=0`, `Attack=1`, `Heal=2`로 값이 고정돼 있습니다. `Unknown`과 지원하지 않는 값은 거부합니다. |
+| `RuneEffectKind` | `Unknown=0`, `Attack=1`, `Heal=2`, `Test=3`으로 값이 고정돼 있습니다. `Unknown`과 지원하지 않는 값은 거부합니다. `Test`는 분배와 전투 행동을 받지 않는 개발용 효과입니다(2026-10-25 추가). |
+| `RuneEffectKinds` | `IsSupported`(Attack·Heal·Test), `ReceivesAllocation`(Attack·Heal만 참). 이후 보유하지만 분배받지 않는 정식 효과(예: 지속 효과)가 생기면 `ReceivesAllocation`이 확장 지점입니다. |
 | `RuneDefinition`, `RuneDefinitionCatalog` | 룬 종류의 불변 정의(ID, 표시 이름, 효과)와 ID 조회 목록입니다. 카탈로그는 중복 ID를 거부합니다. |
 | `OwnedRune`, `RuneInventory` | 보유 룬 한 개(`InstanceId`, `DefinitionId`)와 보유 목록입니다. 목록은 `TryAdd`·`TryRemove`·`Snapshot`·`Changed`를 제공합니다. 줄에 놓인 룬은 제거를 거부합니다. 보상 기능은 이후 `TryAdd`를 호출합니다. |
 | `RuneLoadoutLine`, `RuneLoadout` | 룬 줄(`LineId`, 쌓인 룬 인스턴스 ID 목록, `Weight` = 룬 개수)과 줄 목록입니다. 줄 추가·삽입·제거, 룬 겹치기·빼기, 전체 교체를 원자적으로 검증하고 `Changed`를 발생시킵니다. 마지막 룬을 빼면 그 줄도 제거됩니다. 인벤토리 하나에는 Loadout 하나만 연결됩니다. |
-| `RuneAllocation`, `RuneAllocationLine` | 분배 결과의 불변 스냅샷입니다. 줄 순서대로 순번, `LineId`, 정의 ID·이름, 효과, 가중치, 분배 수치를 가지며 합계가 총합과 같은지 생성 시 검사합니다. |
+| `RuneAllocation`, `RuneAllocationLine` | 분배 결과의 불변 스냅샷입니다. 분배 대상 줄만 Loadout 순서대로 순번(`Order`), `LineId`, 정의 ID·이름, 효과, 가중치, 분배 수치를 가지며 합계가 총합과 같은지 생성 시 검사합니다. `Order`는 분배 대상 줄 사이의 순번(1부터)입니다. |
 
 줄 규칙은 다음과 같습니다.
 
@@ -62,12 +63,14 @@ Payline은 가운데 줄 하나입니다. 여러 Payline이나 기호 조합 판
 
 ### 가중치 자동 분배
 
-`IRuneAllocationPolicy.Allocate(total, loadout, catalog)`가 변형 지점이며, 현재 구현은 `WeightedRuneAllocationPolicy`뿐입니다. 이 정책은 최대 나머지 방식을 씁니다.
+`IRuneAllocationPolicy.Allocate(total, loadout, catalog)`가 변형 지점이며, 현재 구현은 `WeightedRuneAllocationPolicy`뿐입니다. 이 정책은 정의의 효과가 분배를 받는 줄(`RuneLoadout.ReceivesAllocation`, 정의가 카탈로그에 없는 줄은 포함해 오류로 드러냄)만 대상으로 최대 나머지 방식을 씁니다. `W`는 분배 대상 줄의 Weight 합(`RuneLoadout.AllocatableWeight(catalog)`)입니다. `RuneLoadout.TotalWeight`는 계속 모든 줄의 Weight 합입니다.
 
 1. 각 줄의 기본 몫은 `floor(total × weight / W)`입니다(`long` 계산).
 2. 남은 값은 나머지(`total × weight mod W`)가 큰 줄부터 1씩 받고, 나머지가 같으면 앞선 줄이 먼저 받습니다.
 
-분배 합계는 항상 총합과 같고, 같은 입력이면 결과도 같습니다. 줄이 없거나 가중치 합이 0이면 `InvalidOperationException`을 던집니다. 컨트롤러는 이 상태에서 행동을 실행 불가로 둡니다.
+분배 합계는 항상 총합과 같고, 같은 입력이면 결과도 같습니다. 분배 대상 줄이 없거나 그 가중치 합이 0이면 `InvalidOperationException`을 던집니다. 컨트롤러는 이 상태에서 행동을 실행 불가로 둡니다.
+
+테스트 룬 줄(`Test`)은 결과에 넣지 않으므로, Loadout 앞·중간·끝 어디에 있어도 공격·회복 줄의 순번·분배 수치·Story 문구가 테스트 룬이 없을 때와 같습니다. 룬 Grid는 모든 줄을 표시하므로 Grid의 카드 위치와 Story의 `N번 줄` 번호는 테스트 줄이 있을 때 서로 다를 수 있습니다.
 
 ### 전투 입력
 
@@ -88,10 +91,11 @@ Payline은 가운데 줄 하나입니다. 여러 Payline이나 기호 조합 판
 | `Assets/TxTRPG/Application/Configuration/TemporarySlotMachineConfiguration.asset` (`TemporarySlotMachineConfiguration`) | Reel 목록(ID, 값 목록). 기본값은 `reel.1`·`reel.2`·`reel.3`이고 각 값은 `1, 2, 3, 4, 5, 6`입니다. |
 | `Assets/TxTRPG/Application/Configuration/TemporaryRuneConfiguration.asset` (`TemporaryRuneConfiguration`) | 정의 `rune.attack`(공격 룬, Attack), `rune.heal`(회복 룬, Heal). 보유 `rune.attack.1`, `rune.heal.1`. 줄 `line.1`(공격 룬 ×1), `line.2`(회복 룬 ×1). Inspector에서 바꿀 수 있는 임시값입니다. |
 | `TemporarySlotMachineState` | 세션 수명의 `SlotMachine` 복사본입니다. `Machine`의 변경 API를 쓰며 `Changed`를 전달합니다. |
-| `TemporaryRuneState` | 세션 수명의 `Catalog`·`Inventory`·`Loadout`입니다. 보유와 줄의 `Changed`를 합쳐 전달하고, `CanAllocate`와 `Allocate(total, policy)`를 제공합니다. `Candidate_MainScene` LeftArea의 [룬 Grid](rune-grid-panel.md)가 줄마다 카드 하나와 Weight 배지로 표시합니다(`TemporaryRuneGridBinder`). |
+| `Assets/TxTRPG/Application/Configuration/TemporaryTestRuneConfiguration.asset` (`TemporaryTestRuneConfiguration`) | 개발용 테스트 룬 정의 `rune.test.tooltip`(테스트 룬), `rune.test.long`(긴 테스트 룬), `rune.test.missing`(내용 없는 테스트 룬). 모두 효과 `Test`이며 시작 보유·줄은 없습니다. `Validate`는 빈 ID·중복 ID·`rune.test.`로 시작하지 않는 ID·`Test`가 아닌 효과를 거부합니다. |
+| `TemporaryRuneState` | 세션 수명의 `Catalog`·`Inventory`·`Loadout`입니다. 보유와 줄의 `Changed`를 합쳐 전달하고, `CanAllocate`(분배 대상 Weight > 0)와 `Allocate(total, policy)`, 병합된 테스트 정의 ID 목록 `TestDefinitionIds`를 제공합니다. 테스트 줄만 있으면 `CanAllocate`가 거짓입니다. `Candidate_MainScene` LeftArea의 [룬 Grid](rune-grid-panel.md)가 줄마다 카드 하나와 Weight 배지로 표시합니다(`TemporaryRuneGridBinder`). |
 | `Assets/TxTRPG/Application/Configuration/TemporaryFortuneCriticalConfiguration.asset`, `TemporaryFortuneCriticalState` | Fortune Critical 규칙의 설정 자산과 세션 상태입니다. [Fortune Critical](#fortune-critical)에서 설명합니다. |
 
-`PlayerSessionHost`(`AppRoot.prefab`)의 `temporarySlotMachineConfiguration`·`temporaryRuneConfiguration`이 두 자산을 참조합니다. Fortune Critical 설정은 별도 필드 `temporaryFortuneCriticalConfiguration`이 참조하며 같은 시점에 복사합니다. Awake와 `EnsureInitializedAsync`에서 한 번 복사하며, 원본 자산은 실행 중 바뀌지 않습니다.
+`PlayerSessionHost`(`AppRoot.prefab`)의 `temporarySlotMachineConfiguration`·`temporaryRuneConfiguration`이 두 자산을 참조합니다. `temporaryTestRuneConfiguration`(선택)은 테스트 룬 설정을 참조하며 `TemporaryRuneState.TryCreate(configuration, testConfiguration, ...)`가 테스트 정의를 카탈로그에 병합합니다. 테스트 설정이 비면 경고 없이 테스트 정의 없이 시작하고, 검증에 실패하거나 ID가 일반 정의와 겹치면 `Debug.LogError` 후 테스트 정의만 빼고 세션 룬을 만듭니다(`TemporarySlotCombatError`는 설정하지 않음). `PlayerSessionHost.TemporaryTestRuneDefinitionIds`가 병합된 ID를 돌려줍니다. 테스트 정의는 Release Player에서도 카탈로그에 있지만, 보유·줄에 없고 효과가 `Test`이므로 게임에 영향이 없습니다. Fortune Critical 설정은 별도 필드 `temporaryFortuneCriticalConfiguration`이 참조하며 같은 시점에 복사합니다. Awake와 `EnsureInitializedAsync`에서 한 번 복사하며, 원본 자산은 실행 중 바뀌지 않습니다.
 
 설정이 비었거나 잘못돼도 게임 시작은 막지 않습니다. 이때 상태를 만들지 않고 `TemporarySlotCombatError`에 사유를 남기며, 잘못된 경우에는 `Debug.LogError`도 기록합니다. 컨트롤러는 행동을 실행 불가로 두고, 패널 `StatusText`에 사유를 보여 줍니다.
 
@@ -140,7 +144,7 @@ Payline은 가운데 줄 하나입니다. 여러 Payline이나 기호 조합 판
 [적 행동] 공격 5. 플레이어가 받은 피해 5. 체력 25/30.
 ```
 
-Fortune Critical이 발생하면 `[슬롯]` 줄이 배수를 표시하고 `[행운 치명]` 줄이 뒤따릅니다([Fortune Critical의 Story 문구](#story-문구)). 각 줄의 전투 결과는 이벤트 순서가 아니라 `SourceId`로 그 줄에 연결합니다. 분배 0인 줄은 `[룬] 2번 줄 회복 룬 ×1: 0 (실행하지 않음)`으로 기록합니다. 슬롯머신 경로에는 결과 창이 없으며, 결과는 StoryTextPanel에만 기록합니다.
+Fortune Critical이 발생하면 `[슬롯]` 줄이 배수를 표시하고 `[행운 치명]` 줄이 뒤따릅니다([Fortune Critical의 Story 문구](#story-문구)). 각 줄의 전투 결과는 이벤트 순서가 아니라 `SourceId`로 그 줄에 연결합니다. 분배 0인 줄은 `[룬] 2번 줄 회복 룬 ×1: 0 (실행하지 않음)`으로 기록합니다. `N번 줄`은 `RuneAllocationLine.Order`(분배 대상 줄 사이의 순번)입니다. `EffectName(Test)`는 `테스트`이고, `RuneCombatActions.ToActionKind(Test)`는 행동이 없으므로 예외를 던집니다(테스트 줄은 분배 결과에 나타나지 않아 정상 경로에서 호출되지 않음). `TemporarySlotCombatController.WeightLines`는 분배를 받지 않는 줄을 슬롯 룬 표에서 빼므로, 룬 표와 분배 결과의 줄 순서가 같습니다. 슬롯머신 경로에는 결과 창이 없으며, 결과는 StoryTextPanel에만 기록합니다.
 
 ## Fortune Critical
 
@@ -710,6 +714,17 @@ flowchart LR
 | `dock` 누락 | 오류 1회, 컨트롤러만 동작하지 않음 |
 | `slotTab` 누락 | 경고 1회, 독 연결은 계속 동작 |
 | Fortune 상태가 `Disabled` | 확률 변경은 `Try...` 결과대로 처리하고, 회전은 배수 1로 표시 |
+
+## 테스트 룬과 DEBUG `룬` Tab
+
+`Candidate_MainScene`의 `EncounterDebugPanel` 세 번째 Tab `룬`(`Body/Pages/RunePage`, `RuneDebugTabView`)과 Scene의 `Canvas/TemporaryTestRuneDebugController`(`TxTRPG.Application.Runes`)가 테스트 룬을 세션에 추가·제거합니다. 2026-10-25 [룬 툴팁·키워드 툴팁과 테스트 룬](../instructions/rune-tooltip-and-test-runes.md)으로 추가했습니다.
+
+| 구성 요소 | 책임 |
+| --- | --- |
+| `RuneDebugTabView`, `RuneDebugRow` (`TxTRPG.UI.Runes`) | `모두 제거`, 테스트 룬마다 행(이름, 정의 ID, 개수, `−`·`+`), 결과 문구. 표시 데이터(`RuneDebugEntryDisplay`)만 받고 `AddRequested(id)`·`RemoveRequested(id)`·`RemoveAllRequested`를 알립니다. 행은 비활성 템플릿에서 만들어 재사용합니다. Navigation은 Tab 버튼 → `모두 제거` → 각 행(`−` ↔ `+`) 순서입니다. 페이지 최소 높이는 `이벤트 판정` 페이지 높이입니다. |
+| `TemporaryTestRuneDebugController` | `PlayerSessionHost.WhenReady` 후 `TemporaryRunes`와 `TemporaryTestRuneDefinitionIds`만 씁니다. 추가: 인스턴스 ID `<정의 ID>.debug.<순번>`으로 `Inventory.TryAdd` 후 같은 정의의 줄이 있으면 `TryAddRuneToLine`, 없으면 `TryAddLine`으로 맨 끝에 `line.test.<정의 ID 끝부분>`(이미 있으면 `.2`부터 붙임) 줄을 만듭니다. 줄 추가가 실패하면 인벤토리 추가를 되돌립니다. 제거: 그 정의의 가장 최근 디버그 인스턴스를 줄에서 빼고(마지막이면 줄도 제거) 인벤토리에서 제거합니다. `모두 제거`: 테스트 정의의 디버그 인스턴스만 모두 제거합니다. 실패는 결과 문구에 사유를 표시하고 상태를 바꾸지 않습니다. `Changed`를 구독해 개수를 갱신하며, 설정 자산을 바꾸거나 저장하지 않습니다. |
+
+테스트 룬은 실제 `Inventory`·`Loadout`·`Changed` 경로를 거치므로 룬 Grid·툴팁·슬롯 분배가 일반 룬과 같은 방식으로 받습니다. Release Player에서는 패널이 `DevelopmentBuildOnly`로 꺼지므로 테스트 룬을 추가할 수 없습니다. 세션이 없으면 `세션이 없습니다. AppScene에서 Play를 시작하세요.`, 테스트 정의가 없으면 `테스트 룬 정의가 없습니다`를 표시합니다. 테스트 룬 종류를 추가·삭제하는 절차는 [workflows.md](../development/workflows.md#테스트-룬-추가삭제)에 있습니다.
 
 ## 주사위 보류
 

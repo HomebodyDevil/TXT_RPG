@@ -6,6 +6,7 @@
     "TxTRPG.UI.Editor",
     "Unity.TextMeshPro",
     "Unity.ugui",
+    "Unity.InputSystem",
     "Unity.Addressables",
     "Unity.ResourceManager",
     "Unity.Addressables.Editor"

@@ -104,14 +104,24 @@ namespace TxTRPG.Application.Runes
         public RuneInventory Inventory { get; }
         public RuneLoadout Loadout { get; }
         public event Action Changed;
-        public bool CanAllocate => Loadout.LineCount > 0 && Loadout.TotalWeight > 0;
+        // Only lines that receive allocation count: a loadout of test rune lines alone cannot take an action.
+        public bool CanAllocate => Loadout.LineCount > 0 && Loadout.AllocatableWeight(Catalog) > 0;
+        // Definition IDs merged from the test rune configuration, in configuration order (empty without one).
+        public IReadOnlyList<string> TestDefinitionIds { get; private set; } = Array.Empty<string>();
 
         public RuneAllocation Allocate(int total, IRuneAllocationPolicy policy = null) =>
             (policy ?? WeightedRuneAllocationPolicy.Instance).Allocate(total, Loadout, Catalog);
 
-        public static bool TryCreate(TemporaryRuneConfiguration configuration, out TemporaryRuneState state, out string reason)
+        public static bool TryCreate(TemporaryRuneConfiguration configuration, out TemporaryRuneState state, out string reason) =>
+            TryCreate(configuration, null, out state, out reason, out _);
+
+        // Merges the test rune definitions into the catalog. A test configuration that fails validation or whose IDs
+        // collide with the regular definitions is left out (testReason says why) and never fails the regular runes.
+        public static bool TryCreate(TemporaryRuneConfiguration configuration, TemporaryTestRuneConfiguration testConfiguration,
+            out TemporaryRuneState state, out string reason, out string testReason)
         {
             state = null;
+            testReason = string.Empty;
             if (configuration == null) { reason = "No rune configuration is assigned."; return false; }
             try
             {
@@ -121,6 +131,7 @@ namespace TxTRPG.Application.Runes
                     if (entry == null) throw new ArgumentException("A rune definition entry is empty.");
                     definitions.Add(new RuneDefinition(entry.Id, entry.DisplayName, entry.EffectKind));
                 }
+                var testIds = MergeTestDefinitions(definitions, testConfiguration, out testReason);
                 var catalog = new RuneDefinitionCatalog(definitions);
                 var inventory = new RuneInventory(catalog);
                 foreach (var entry in configuration.StartingRunes)
@@ -136,7 +147,7 @@ namespace TxTRPG.Application.Runes
                     lines.Add(new RuneLoadoutLine(entry.LineId, entry.RuneInstanceIds));
                 }
                 var loadout = new RuneLoadout(inventory, lines);
-                state = new TemporaryRuneState(catalog, inventory, loadout);
+                state = new TemporaryRuneState(catalog, inventory, loadout) { TestDefinitionIds = testIds };
                 reason = string.Empty;
                 return true;
             }
@@ -145,6 +156,26 @@ namespace TxTRPG.Application.Runes
                 reason = exception.Message;
                 return false;
             }
+        }
+
+        private static IReadOnlyList<string> MergeTestDefinitions(List<RuneDefinition> definitions,
+            TemporaryTestRuneConfiguration testConfiguration, out string testReason)
+        {
+            testReason = string.Empty;
+            if (testConfiguration == null || testConfiguration.Definitions.Count == 0) return Array.Empty<string>();
+            if (!testConfiguration.Validate(out testReason)) return Array.Empty<string>();
+            var regular = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var definition in definitions) regular.Add(definition.Id);
+            var tests = new List<RuneDefinition>();
+            foreach (var entry in testConfiguration.Definitions)
+            {
+                if (regular.Contains(entry.Id)) { testReason = $"Test rune id '{entry.Id}' is also a regular rune definition."; return Array.Empty<string>(); }
+                try { tests.Add(new RuneDefinition(entry.Id, entry.DisplayName, entry.EffectKind)); }
+                catch (ArgumentException exception) { testReason = exception.Message; return Array.Empty<string>(); }
+            }
+            var ids = new string[tests.Count];
+            for (var i = 0; i < tests.Count; i++) { definitions.Add(tests[i]); ids[i] = tests[i].Id; }
+            return Array.AsReadOnly(ids);
         }
     }
 }

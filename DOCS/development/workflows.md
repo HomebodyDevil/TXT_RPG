@@ -309,6 +309,46 @@ Player 빌드 전에 `Tools > TxT RPG > Application > Validate App Scene Configu
 
 슬롯 Tab의 변경은 세션 상태(`TemporarySlotMachineState`, `TemporaryFortuneCriticalState`)에만 적용되어 같은 세션의 전투·탐험 이벤트 슬롯 판정도 같은 값을 쓰고, Play Mode가 끝나면 사라집니다. 설정 자산은 바뀌지 않습니다.
 
+### 룬 툴팁·키워드 툴팁과 테스트 룬
+
+구조는 [툴팁](../architecture/tooltips.md), [룬 Grid 패널](../architecture/rune-grid-panel.md), [슬롯머신과 룬의 테스트 룬과 DEBUG 룬 Tab](../architecture/slot-machine-and-runes.md#테스트-룬과-debug-룬-tab)에 있습니다. 아래 메뉴는 [rune-tooltip-and-test-runes.md](../instructions/rune-tooltip-and-test-runes.md) 작업용 임시 메뉴(`Assets/TxTRPG/Application/Editor/`)입니다.
+
+| 메뉴 | 동작 |
+| --- | --- |
+| `Tools > TxT RPG > Application > Temporary > Apply Rune Tooltip And Test Runes` (`TemporaryRuneTooltipApply`, 임시) | Play Mode·컴파일 중·Prefab Stage이거나 열린 Scene에 미저장 변경이 있으면 아무것도 바꾸지 않습니다. 없는 것만 만듭니다: `UI/Icons/TemporaryRunes/test.png`(플라스크), `TemporaryRuneIconCatalog.asset`의 `rune.test.tooltip`·`rune.test.long` 항목, `UI/Tooltips/` 아래 키워드 3개·`TooltipKeywordCatalog.asset`·룬 툴팁 내용 4개·`TemporaryRuneTooltipCatalog.asset`, `Application/Configuration/TemporaryTestRuneConfiguration.asset`, `UI/Prefabs/Tooltips/TooltipView.prefab`. 기존 자산을 그대로 수정합니다: `RuneGridCard.prefab`(`CardArea/HitArea`, `BadgeArea/HitArea`, `RuneGridCardTooltipTrigger`), `EncounterDebugPanel.prefab`(`TabBar/RuneTab`, `Pages/RunePage`, 세 번째 Tab), `AppRoot.prefab`(`PlayerSessionHost.temporaryTestRuneConfiguration`), `Candidate_MainScene`(`OverlayLayer/TooltipLayer`, `RuneGrid`의 `tooltipPresenter`·`tooltipCatalog` Override, `Canvas/TemporaryTestRuneDebugController`). 이미 있는 자산·오브젝트와 채워진 필드는 `kept`로 건너뛰므로 재실행해도 안전하며 사용자의 Override·배치를 덮어쓰지 않습니다. 결과는 `RUNE_TOOLTIP_APPLY` 로그입니다. 2026-10-25에 이 작업 사본에 적용했으므로 다시 실행할 필요가 없습니다. |
+| `Tools > TxT RPG > Application > Temporary > Probe Rune Tooltips` (`TemporaryRuneTooltipPlayProbe`, 임시) | AppScene 경유 Play에서 `Candidate_MainScene`이 표시된 상태로 실행합니다. DEBUG 컨트롤러 API로 테스트 룬 3개를 추가해 카드 수 증가, 카드마다 세 진입 지점의 포인터 진입 주입으로 툴팁 위치가 같고 왼쪽 위가 `CardArea` 오른쪽 위인지(뒤집기 없을 때), 상자가 프레임(여백 8) 안인지, `rune.test.long`의 아래쪽 뒤집기·밀어 넣기, 카드 → 상자 유지와 사슬 밖 닫힘, 키워드 사슬 `alpha → beta → gamma`(깊이 3, 순환 차단), 테스트 줄을 맨 앞에 둔 상태에서 총합 0~30의 분배 결과(줄 ID·Order·수치)가 테스트 룬이 없을 때와 같은지 확인합니다. 이어서 1920×1080, 1280×720, 2560×1080, 2400×1080, 1024×768, 2048×1536에서 같은 배치 검사를 반복하고 `Temp/rune-tooltip-<크기>.png`를 남깁니다. 임시 Game View 크기는 전체 인덱스로 지웁니다. 끝나면 테스트 룬을 모두 제거합니다. 결과는 `RUNE_TOOLTIP_PROBE ... PASS`입니다. |
+| `Tools > TxT RPG > Application > Temporary > Probe Rune Tooltips With Input System Mouse` (`TemporaryRuneTooltipMouseProbe`, 임시) | 같은 조건에서 실행합니다. Input System 마우스 상태 이벤트(Game View 픽셀)를 넣어 EventSystem Raycast → `HitArea` → 트리거, 상자, 키워드 링크 감지의 실제 포인터 경로를 거칩니다. DEBUG `룬` Tab 선택, 첫 행 `+` 두 번·`−` 한 번·`모두 제거` 클릭과 개수·카드 수 반영, 원래 Tab 복귀, 카드 호버로 열림, 카드 → 배지·카드 → 상자 유지, 키워드 호버로 키워드 툴팁, 키워드 → 키워드 상자 유지, 바깥 이동 닫힘, 룬 Grid가 스크롤 가능할 때 카드 위 휠 스크롤을 확인합니다. 결과는 `RUNE_TOOLTIP_MOUSE_PROBE ... PASS`입니다. 물리 마우스 확인을 대신하지는 않습니다. |
+
+세 메뉴는 기능을 사용자가 확인한 뒤 삭제할 수 있습니다(`Probe` 두 개는 자산을 저장하지 않으며 새 Play 세션에서 재실행해도 안전합니다). `TemporaryRuneGridApply`의 Prefab 검증은 2026-10-25부터 카드의 `HitArea`를 입력 대상으로 허용합니다.
+
+확인 절차:
+
+1. 아무 Scene에서 Play를 시작해 AppScene을 거쳐 `Candidate_MainScene`이 로드되면, 왼쪽 룬 Grid의 공격·회복 카드에 마우스를 올립니다. 카드 오른쪽 위 모서리에 붙은 툴팁(제목과 임시 설명)이 열리고, 카드의 어느 지점에서 올려도 위치가 같습니다.
+2. DEBUG 패널 `룬` Tab에서 `테스트 룬`·`긴 테스트 룬`·`내용 없는 테스트 룬`의 `+`를 누르면 Grid 맨 끝에 카드가 생기고 개수가 표시됩니다. `−`, `모두 제거`가 바로 반영되고, 다른 Tab의 동작은 바뀌지 않습니다.
+3. `테스트 룬` 카드 툴팁에서 `알파`에 마우스를 올리면 키워드 툴팁이 열리고, 그 안의 `베타` → `감마`까지 열립니다. `감마` 툴팁의 `알파`는 이미 열려 있으므로 다시 열리지 않습니다. 카드 → 툴팁 → 키워드 툴팁으로 이동하는 동안 유지되고, 사슬 밖으로 나가면 모두 닫힙니다.
+4. `긴 테스트 룬` 툴팁은 화면 프레임 높이(여백 8)로 잘리고 프레임 안에 있습니다. `내용 없는 테스트 룬`은 이름 카드이고 툴팁은 `설명이 없습니다.`입니다.
+5. 룬 Grid가 스크롤될 만큼 카드가 많으면 카드 위에서 휠로 스크롤되고, 스크롤하면 툴팁이 닫힙니다.
+6. `Probe Rune Tooltips`와 `Probe Rune Tooltips With Input System Mouse`를 실행해 PASS를 확인합니다.
+7. Edit Mode 테스트는 클래스별로 `TxTRPG.Gameplay.Tests.RuneTests`, `TxTRPG.Application.Tests.TemporaryTestRuneConfigurationTests`, `TxTRPG.Application.Tests.TemporaryTestRuneDebugControllerTests`, `TxTRPG.Application.Tests.TooltipContentAssetValidationTests`, `TxTRPG.Application.Tests.SlotMachineCombatTests`, `TxTRPG.UI.Tests.TooltipMarkupTests`, `TxTRPG.UI.Tests.TooltipPlacementTests`, `TxTRPG.UI.Tests.TooltipPresenterTests`, `TxTRPG.UI.Tests.RuneTooltipCatalogTests`, `TxTRPG.UI.Tests.TooltipKeywordCatalogTests`, `TxTRPG.UI.Tests.RuneGridPanelTests`, `TxTRPG.UI.Tests.EncounterDebugPanelTests`이며, 회귀 확인은 `SlotFortuneCriticalCombatTests`, `TemporaryRuneGridBinderTests`, `RuneIconCatalogTests`, `ExplorationEventEffectTests`, `ExplorationEventControllerTests`, `DebugPanelTabGroupTests`, `SlotDebugTabViewTests`, `SlotReelDockDebugControllerTests`, `EncounterRollControllerTests`입니다. 모두 `AssetWriting`이 아니며 저장된 자산을 읽기만 합니다. 분배 정책 회귀는 `TMP_MainScene`에서 `Validate Slot Machine Combat (Play Mode)`로도 확인합니다.
+
+#### 테스트 룬 추가·삭제
+
+테스트 룬 종류는 코드를 바꾸지 않고 자산만 고쳐 추가합니다.
+
+1. `Assets/TxTRPG/Application/Configuration/TemporaryTestRuneConfiguration.asset`의 `Definitions`에 항목을 추가합니다. ID는 `rune.test.`로 시작하고 효과는 `Test`여야 합니다(`Validate`가 거부하면 Play 시작 시 `Debug.LogError` 후 테스트 정의 전체가 빠집니다).
+2. (선택) `Assets/TxTRPG/UI/Styles/Runes/TemporaryRuneIconCatalog.asset`에 같은 정의 ID로 아이콘을 등록합니다. 없으면 이름 카드입니다.
+3. (선택) `Assets > Create > TxT RPG > UI > Tooltip Content`로 내용을 만들어 `Assets/TxTRPG/UI/Tooltips/Runes/TemporaryRuneTooltipCatalog.asset`에 같은 정의 ID로 등록합니다. 없으면 대체 툴팁입니다.
+4. Play에서 DEBUG `룬` Tab에 새 행이 나타납니다.
+
+삭제는 위 항목을 지우는 것입니다. 카탈로그에 남은 정의 없는 ID는 `TooltipContentAssetValidationTests.CatalogEntriesWithoutDefinition_AreReported`가 경고로 보고합니다(테스트는 통과).
+
+#### 툴팁 내용과 키워드 작성
+
+1. `Assets > Create > TxT RPG > UI > Tooltip Keyword`로 키워드를 만들고 `Id`(예: `keyword.burn`, 출시 후 변경 금지), `Display Name`, 선택 `Icon`, 설명 `Blocks`, `Related Entries`(룬·아이템·스킬 ID)를 채웁니다. `Assets/TxTRPG/UI/Tooltips/TooltipKeywordCatalog.asset`의 `Keywords`에 추가합니다.
+2. 내용(`Tooltip Content`)이나 키워드의 Text 블록에 `{kw:keyword.burn}` 또는 `{kw:keyword.burn|화상 피해}`를 씁니다. 중괄호 문자는 `{{`·`}}`로 씁니다. Title·Text·Image·Separator 블록을 순서대로 쌓습니다.
+3. 키워드 Inspector에서 `사용처 새로고침`으로 사용처와 연관 항목의 차이를 확인합니다.
+4. `TooltipContentAssetValidationTests`를 실행해 모든 `{kw:}` ID가 카탈로그에 있고 닫히지 않은 표기가 없는지 확인합니다.
+
 ### Candidate_MainScene 화면 프레임과 레터박스 적용·확인
 
 2026-10-19에 `Candidate_MainScene`을 화면 프레임 계층으로 바꿨습니다([화면 프레임과 레터박스](../architecture/screen-frame.md), [해상도 대응과 화면 프레임 정책](resolution-and-screen-frame.md)). 이 적용 뒤에는 `Canvas` 바로 아래에 `MainArea`·`OverlayLayer`가 있다고 가정하는 이전 임시 메뉴(`Apply Candidate Main Scene Initial Content`, `Apply Slot Reel Dock To Candidate Main Scene`, `Apply Candidate Rune Grid`, `Apply Candidate Encounter Toggles`, `Measure Candidate Main Scene Layout (Play Mode)`)를 다시 실행하지 않습니다. 특히 `Apply Slot Reel Dock To Candidate Main Scene`은 `Canvas/OverlayLayer`가 없다고 판단해 새로 만들 수 있습니다.

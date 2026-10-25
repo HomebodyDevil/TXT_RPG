@@ -8,12 +8,20 @@ namespace TxTRPG.Gameplay.Runes
     {
         Unknown = 0,
         Attack = 1,
-        Heal = 2
+        Heal = 2,
+        // Development-only effect: its lines are shown and owned like any rune, but receive no allocation and take no
+        // combat action.
+        Test = 3
     }
 
     public static class RuneEffectKinds
     {
-        public static bool IsSupported(RuneEffectKind kind) => kind == RuneEffectKind.Attack || kind == RuneEffectKind.Heal;
+        public static bool IsSupported(RuneEffectKind kind) =>
+            kind == RuneEffectKind.Attack || kind == RuneEffectKind.Heal || kind == RuneEffectKind.Test;
+
+        // Whether lines of this effect take part in the slot total allocation. Extension point for later effects that
+        // are owned but not allocated (for example lasting effects).
+        public static bool ReceivesAllocation(RuneEffectKind kind) => kind == RuneEffectKind.Attack || kind == RuneEffectKind.Heal;
     }
 
     public sealed class RuneDefinition
@@ -176,6 +184,7 @@ namespace TxTRPG.Gameplay.Runes
         public int LineCount => lines.Count;
         public event Action Changed;
 
+        // Weight of every line, including lines that receive no allocation.
         public int TotalWeight
         {
             get
@@ -185,6 +194,21 @@ namespace TxTRPG.Gameplay.Runes
                 return total;
             }
         }
+
+        // Weight of the lines whose effect receives allocation (see RuneEffectKinds.ReceivesAllocation). A line whose
+        // definition is not in the catalog counts, so the allocation still reports it instead of silently skipping it.
+        public int AllocatableWeight(RuneDefinitionCatalog catalog)
+        {
+            if (catalog == null) throw new ArgumentNullException(nameof(catalog));
+            var total = 0;
+            foreach (var line in lines)
+                if (ReceivesAllocation(line, catalog)) total += line.Weight;
+            return total;
+        }
+
+        public bool ReceivesAllocation(RuneLoadoutLine line, RuneDefinitionCatalog catalog) =>
+            line != null && catalog != null &&
+            (!catalog.TryGet(DefinitionIdOf(line), out var definition) || RuneEffectKinds.ReceivesAllocation(definition.EffectKind));
 
         public string DefinitionIdOf(RuneLoadoutLine line)
         {
@@ -313,7 +337,7 @@ namespace TxTRPG.Gameplay.Runes
             Amount = amount;
         }
 
-        // 1-based position in the loadout at allocation time.
+        // 1-based position among the allocated lines (lines that receive no allocation are skipped), in loadout order.
         public int Order { get; }
         public string LineId { get; }
         public string DefinitionId { get; }
@@ -349,7 +373,9 @@ namespace TxTRPG.Gameplay.Runes
     }
 
     // Largest remainder: floor(total * weight / W) per line, then the remaining units go one each to the lines with the
-    // largest remainder (total * weight mod W), earlier lines first on ties. Deterministic and sum-preserving.
+    // largest remainder (total * weight mod W), earlier lines first on ties. Deterministic and sum-preserving. Only lines
+    // whose effect receives allocation take part (W is their weight); the others are left out of the result, so a test
+    // rune line anywhere in the loadout changes no order, amount or Story text.
     public sealed class WeightedRuneAllocationPolicy : IRuneAllocationPolicy
     {
         public static readonly WeightedRuneAllocationPolicy Instance = new();
@@ -359,7 +385,9 @@ namespace TxTRPG.Gameplay.Runes
             if (total < 0) throw new ArgumentOutOfRangeException(nameof(total), "The total to allocate cannot be negative.");
             if (loadout == null) throw new ArgumentNullException(nameof(loadout));
             if (catalog == null) throw new ArgumentNullException(nameof(catalog));
-            var source = loadout.Lines;
+            var source = new List<RuneLoadoutLine>();
+            foreach (var line in loadout.Lines)
+                if (loadout.ReceivesAllocation(line, catalog)) source.Add(line);
             long weightTotal = 0;
             foreach (var line in source) weightTotal += line.Weight;
             if (source.Count == 0 || weightTotal == 0)

@@ -18,7 +18,7 @@
 | | `EncounterRollController`(MonoBehaviour) | Scene 수명 소유자. 선택 상태와 실행 중 설정을 보유하고 판정·모달·결과 이벤트를 담당 |
 | `TxTRPG.UI` `UI/Runtime/Encounters/` | `EncounterElementToggleBar`, `EncounterElementToggleView`, `EncounterElementToggleEntry` | 토글 버튼 줄 표시. 선택 상태는 표시만 하고 사용자 변경은 `SelectionChanged`로 알림 |
 | | `EncounterDebugPanel`, `EncounterDebugValues` | 이벤트 판정 Tab: 슬라이더 5개·값 텍스트·`이벤트 발생`·`기본값으로`·결과 문구·접기 버튼 |
-| | `DebugPanelTabGroup`, `DebugPanelTab` | 디버그 패널의 Tab(`이벤트 판정`, `슬롯`)과 페이지 전환. 페이지 내용은 알지 못함 |
+| | `DebugPanelTabGroup`, `DebugPanelTab` | 디버그 패널의 Tab(`이벤트 판정`, `슬롯`, `룬`)과 페이지 전환. 페이지 내용은 알지 못함 |
 | `TxTRPG.UI` `UI/Runtime/` | `DevelopmentBuildOnly` | Release Player(`Debug.isDebugBuild == false`)에서 `Awake`에 GameObject를 비활성화. Editor·Development Build에서는 아무것도 하지 않음 |
 | `TxTRPG.UI` `UI/Runtime/Windows/` | `ModalCancelForwarder` | 선택된 컨트롤(결과 모달의 닫기 버튼)이 받은 `Cancel`을 `ModalWindowHost.OnCancel`로 전달 |
 
@@ -90,7 +90,8 @@ EncounterDebugPanel.prefab         Image, EncounterDebugPanel, DevelopmentBuildO
 └── Body                           EncounterDebugPanel.body (접으면 Tab 줄과 페이지가 함께 비활성)
     ├── TabBar                     HorizontalLayoutGroup
     │   ├── EncounterTab           Button(최소 96×48), HitArea(UiShapeHitArea, 입력 대상), VisualRoot > Background, SelectedIndicator(아래 막대), Label "이벤트 판정"
-    │   └── SlotTab                같은 구조, Label "슬롯"
+    │   ├── SlotTab                같은 구조, Label "슬롯"
+    │   └── RuneTab                같은 구조, Label "룬" (2026-10-25)
     └── Pages
         ├── EncounterPage          이벤트 판정 Tab(기존 Body의 자식을 그대로 옮김)
         │   ├── OccurrenceRow / InclusionRow                    Label · Slider(0~100 정수 = 0~100%) · Value("50%")
@@ -105,6 +106,10 @@ EncounterDebugPanel.prefab         Image, EncounterDebugPanel, DevelopmentBuildO
                     ├── TotalChanceRow   Label "합계 Critical" · Slider(0~100) · Value
                     ├── Buttons          SpinRow(SpinButton "회전", ResetButton "기본값으로"), MoveRow(ShowButton "화면 안으로", HideButton "화면 밖으로")
                     └── ResultText
+        └── RunePage               룬 Tab: VerticalLayoutGroup, LayoutElement, RuneDebugTabView (Play 시작 시 비활성)
+            ├── RemoveAllButton    "모두 제거" (Tab의 firstControl)
+            ├── Rows               RowTemplate(비활성, RuneDebugRow): Labels(Name · Id) · MinusButton "−" · CountText · PlusButton "+"
+            └── ResultText
 
 EncounterResultModal.prefab        GameWindowService(pages = [EncounterResultPage])
 └── ModalWindowHost                ModalWindowHost, CanvasGroup, 반투명 배경 Image(바깥 클릭 대상), 화면 전체
@@ -120,7 +125,7 @@ EncounterResultModal.prefab        GameWindowService(pages = [EncounterResultPag
 
 - `Window`는 `WindowFrame`의 레이아웃으로 `min(560, 프레임 너비 − 32) × min(240, 프레임 높이 − 32)` 크기를 받고 화면 프레임 가운데에 놓입니다. 배경은 레터박스를 포함한 화면 전체를 덮으므로 레터박스 영역을 눌러도 바깥 클릭으로 닫힙니다.
 - `FrameArea.controller`는 Prefab에서 비어 있고, `Candidate_MainScene` 인스턴스가 Scene의 `ScreenFrameController`를 Override로 저장합니다. 참조가 없으면 `FrameArea`는 화면 전체로 늘어나고 경고를 한 번 남깁니다([화면 프레임과 레터박스](screen-frame.md)).
-- 디버그 패널의 Tab은 `DebugPanelTabGroup`(`UI/Runtime/DebugPanels/`, `TxTRPG.UI.DebugPanels`)이 관리합니다. 선택된 Tab의 페이지만 활성화하고(숨은 페이지의 컨트롤은 Navigation·Raycast에서 빠짐), 선택 Tab은 `SelectedIndicator`와 굵은 라벨로 표시합니다. Play 시작 시 `이벤트 판정` Tab이 선택되며 선택은 Scene 수명 동안만 유지합니다. Tab 버튼의 Navigation은 Explicit(좌우 = 이웃 Tab, 아래 = 선택된 페이지의 첫 컨트롤)이고, 패널은 스스로 포커스를 가져가지 않습니다. `EncounterDebugPanel`은 Tab 그룹을 알지 못하며 공개 API·직렬화 참조는 Tab 구성 전과 같습니다. 슬롯 Tab의 동작은 [슬롯머신과 룬](slot-machine-and-runes.md#슬롯-디버그-tab과-slotreeldockdebugcontroller)에 있습니다.
+- 디버그 패널의 Tab은 `DebugPanelTabGroup`(`UI/Runtime/DebugPanels/`, `TxTRPG.UI.DebugPanels`)이 관리합니다. 선택된 Tab의 페이지만 활성화하고(숨은 페이지의 컨트롤은 Navigation·Raycast에서 빠짐), 선택 Tab은 `SelectedIndicator`와 굵은 라벨로 표시합니다. Play 시작 시 `이벤트 판정` Tab이 선택되며 선택은 Scene 수명 동안만 유지합니다. Tab 버튼의 Navigation은 Explicit(좌우 = 이웃 Tab, 아래 = 선택된 페이지의 첫 컨트롤)이고, 패널은 스스로 포커스를 가져가지 않습니다. `EncounterDebugPanel`은 Tab 그룹을 알지 못하며 공개 API·직렬화 참조는 Tab 구성 전과 같습니다. 슬롯 Tab의 동작은 [슬롯머신과 룬](slot-machine-and-runes.md#슬롯-디버그-tab과-slotreeldockdebugcontroller)에, 룬 Tab의 동작은 [테스트 룬과 DEBUG 룬 Tab](slot-machine-and-runes.md#테스트-룬과-debug-룬-tab)에 있습니다. 룬 페이지는 스크롤하지 않으므로 테스트 룬 종류가 많아지면 패널이 길어집니다.
 - 토글 버튼의 Toggle 상태 색 전환(강조·눌림·포커스)은 `Background`에 적용됩니다. 선택 여부는 색이 아니라 `Checkmark`와 `SelectedBorder`로 표시합니다.
 - 결과 모달은 기존 `ModalWindowHost`·`GameWindowService`·`MessageGameWindowPage`를 재사용합니다([퀵 아이템과 게임 창](quick-items-and-game-windows.md)). 바깥 클릭은 누른 위치와 뗀 위치가 모두 창 밖이고 드래그가 아닐 때만 닫습니다. `Cancel`은 선택된 `CloseButton`의 `ModalCancelForwarder`가 호스트로 전달합니다.
 
@@ -136,13 +141,17 @@ Canvas
 │   └── OverlayLayer
 │       ├── SlotReelDockClip                  Stretch(여백 0), RectMask2D — 독을 프레임 경계에서 자름
 │       │   └── SlotReelDock
-│       └── EncounterDebugPanel               오른쪽 위 앵커, 여백 16, 폭 320
+│       ├── EncounterDebugPanel               오른쪽 위 앵커, 여백 16, 폭 320
+│       └── TooltipLayer                      Stretch(여백 0), Graphic 없음, TooltipPresenter — OverlayLayer의 마지막 자식([툴팁](tooltips.md))
 ├── LetterboxLayer
 ├── ScreenOverlayLayer
 │   └── EncounterResultModal                  Stretch(화면 전체), 열릴 때 ScreenOverlayLayer 안에서 SetAsLastSibling
 ├── EncounterRollController                   카탈로그·설정·토글 바·결과 모달(GameWindowService·페이지)·디버그 패널 참조
-└── SlotReelDockDebugController               독·슬롯 Tab(SlotPage의 SlotDebugTabView)·슬롯머신/Fortune 설정 자산 참조
+├── SlotReelDockDebugController               독·슬롯 Tab(SlotPage의 SlotDebugTabView)·슬롯머신/Fortune 설정 자산 참조
+└── TemporaryTestRuneDebugController          룬 Tab(RunePage의 RuneDebugTabView) 참조
 ```
+
+`TooltipLayer`와 `TemporaryTestRuneDebugController`는 2026-10-25 [룬 툴팁·키워드 툴팁과 테스트 룬](../instructions/rune-tooltip-and-test-runes.md) 적용 때 추가했습니다. 룬 Tab의 동작은 [슬롯머신과 룬](slot-machine-and-runes.md#테스트-룬과-debug-룬-tab)에 있습니다.
 
 `SlotReelDockClip`과 `SlotReelDockDebugController`는 2026-10-21 디버그 패널 Tab 적용 때 추가했고, 기존 `SlotReelDock` 인스턴스를 지우지 않고 `SlotReelDockClip` 아래로 옮겼습니다. 결과 모달은 2026-10-19 화면 프레임 적용 때 `OverlayLayer`에서 `ScreenOverlayLayer`로 옮겼습니다. 같은 오브젝트를 옮겼으므로 `EncounterRollController`의 참조는 그대로입니다.
 
