@@ -21,7 +21,8 @@ namespace TxTRPG.Application.Editor
     // 1. EncounterDebugPanel.prefab: title "DEBUG", Body/TabBar (이벤트 판정, 슬롯), Body/Pages/EncounterPage holding the
     //    existing Body children (moved, not recreated, so every serialized reference and Scene override stays) and
     //    Body/Pages/SlotPage (ScrollRect, SlotDebugTabView whose height grows down to the parent's bottom edge minus 16),
-    //    plus DebugPanelTabGroup on the root. An already restructured Prefab only gets missing page height bounds.
+    //    plus DebugPanelTabGroup on the root. An already restructured Prefab only gets missing page height bounds and
+    //    the missing SlotPage height reference (Pages/EncounterPage; slot-debug-tab-page-height-fix).
     // 2. SlotReelDock.prefab: adds SlotReelDockEasedTransition (0.3 s / 0.3 s, InOutBack) and assigns transitionBehaviour.
     // 3. Candidate_MainScene: OverlayLayer/SlotReelDockClip (stretch, RectMask2D) before the debug panel, the existing
     //    SlotReelDock instance moved into it, and Canvas/SlotReelDockDebugController with its references.
@@ -94,17 +95,29 @@ namespace TxTRPG.Application.Editor
                 var panel = root.GetComponent<EncounterDebugPanel>() ?? throw new InvalidOperationException("EncounterDebugPanel is missing.");
                 if (root.GetComponent<DebugPanelTabGroup>() != null && panel.Body != null && panel.Body.transform.Find("Pages/SlotPage") != null)
                 {
-                    // Page height bounds (added after the first application): the page grows down to the parent's bottom.
+                    // Added after the first application: page height bounds (the page grows down to the parent's bottom)
+                    // and the height reference (the slot page is never shorter than the encounter page).
                     var existingView = panel.Body.transform.Find("Pages/SlotPage").GetComponent<SlotDebugTabView>();
-                    if (existingView == null || existingView.BoundsRoot == (RectTransform)root.transform)
+                    var encounter = panel.Body.transform.Find("Pages/EncounterPage") as RectTransform;
+                    var updates = new List<string>();
+                    if (existingView != null && existingView.BoundsRoot != (RectTransform)root.transform)
+                    {
+                        existingView.SetPageBoundsForEditor((RectTransform)root.transform, DebugPanelMargin, SlotDebugTabView.DefaultMinimumPageHeight);
+                        updates.Add($"height bounds: panel root, bottom margin {DebugPanelMargin}");
+                    }
+                    if (existingView != null && encounter != null && existingView.HeightReference != encounter)
+                    {
+                        existingView.SetHeightReferenceForEditor(encounter);
+                        updates.Add("height reference: Pages/EncounterPage");
+                    }
+                    if (updates.Count == 0)
                     {
                         summary.AppendLine($" kept {DebugPanelPrefabPath}");
                         return;
                     }
-                    existingView.SetPageBoundsForEditor((RectTransform)root.transform, DebugPanelMargin, SlotDebugTabView.DefaultMinimumPageHeight);
                     PrefabUtility.SaveAsPrefabAsset(root, DebugPanelPrefabPath, out var boundsSaved);
                     if (!boundsSaved) throw new InvalidOperationException($"Could not save {DebugPanelPrefabPath}.");
-                    summary.AppendLine($" updated {DebugPanelPrefabPath} (SlotPage height bounds: panel root, bottom margin {DebugPanelMargin})");
+                    summary.AppendLine($" updated {DebugPanelPrefabPath} (SlotPage {string.Join(", ", updates)})");
                     return;
                 }
                 if (!panel.IsValid(out var missing)) throw new InvalidOperationException($"EncounterDebugPanel is incomplete: {missing}.");
@@ -130,6 +143,7 @@ namespace TxTRPG.Application.Editor
 
                 var slotView = BuildSlotPage(pages, slotTabButton);
                 slotView.SetPageBoundsForEditor((RectTransform)root.transform, DebugPanelMargin, SlotDebugTabView.DefaultMinimumPageHeight);
+                slotView.SetHeightReferenceForEditor(encounterPage);
                 slotView.gameObject.SetActive(false);
 
                 var group = root.AddComponent<DebugPanelTabGroup>();

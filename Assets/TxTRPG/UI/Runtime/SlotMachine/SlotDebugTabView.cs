@@ -64,6 +64,8 @@ namespace TxTRPG.UI.SlotMachine
         private float bottomMargin = DefaultBottomMargin;
         [SerializeField, Min(0f), Tooltip("The page never becomes shorter than this (or its content) when the parent is very short; it then scrolls.")]
         private float minimumPageHeight = DefaultMinimumPageHeight;
+        [SerializeField, Tooltip("Optional sibling page (the encounter page) whose last laid-out height is this page's minimum height, so this tab is never shorter than that one. Empty or never laid out: no minimum.")]
+        private RectTransform heightReference;
         [SerializeField, Tooltip("Up navigation target of the first row (the selected tab button).")]
         private Selectable navigationUp;
 
@@ -79,6 +81,10 @@ namespace TxTRPG.UI.SlotMachine
         // Bounds the page height was last calculated for; LateUpdate only compares them.
         private float laidOutParentHeight = -1f;
         private Vector2 laidOutBoundsPosition;
+        private float laidOutReferenceHeight = -1f;
+        // Set while the page is hidden or just shown: its layout is only valid once every child is enabled.
+        private bool pageHeightPending = true;
+        private Canvas.WillRenderCanvases beforeCanvasRender;
 
         public event Action<int> ReelCountChangeRequested;
         public event Action<string, float> ReelChanceChanged;
@@ -103,6 +109,7 @@ namespace TxTRPG.UI.SlotMachine
         public int ActiveRowCount => activeRowCount;
         public RectTransform BoundsRoot => boundsRoot;
         public float BottomMargin => bottomMargin;
+        public RectTransform HeightReference => heightReference;
         public bool IsSpinning => spinning;
         public bool IsSessionAvailable => sessionAvailable;
 
@@ -122,18 +129,37 @@ namespace TxTRPG.UI.SlotMachine
 
         private void Awake() => Listen();
 
-        // An inactive page has no layout, so the height set while it was hidden is recalculated when it is shown.
+        // Unity enables this page before its children, so their layout is not available yet: the height is calculated
+        // later in this frame, before the canvases are laid out and drawn. LateUpdate alone is not enough because Unity
+        // skips it on the first activation until Start has run, which would draw one frame at the stale height.
         private void OnEnable()
         {
-            if (listening) RefreshPageHeight();
+            pageHeightPending = true;
+            beforeCanvasRender ??= RefreshPendingPageHeight;
+            Canvas.preWillRenderCanvases += beforeCanvasRender;
         }
 
-        // The page height follows the space below it; it is recalculated only when the parent height or the panel
-        // position changed (for example a different screen frame or a moved panel).
+        private void OnDisable()
+        {
+            if (beforeCanvasRender != null) Canvas.preWillRenderCanvases -= beforeCanvasRender;
+        }
+
+        // Outside the canvas layout loop, so the page's LayoutElement may still change and is laid out in this frame.
+        private void RefreshPendingPageHeight()
+        {
+            if (pageHeightPending) RefreshPageHeight();
+        }
+
+        // The page height follows the space below it; it is recalculated only when it is pending (shown, or changed while
+        // hidden) or when the parent height, the panel position or the reference height changed.
         private void LateUpdate()
         {
-            if (boundsRoot == null || !(boundsRoot.parent is RectTransform parent)) return;
-            if (Mathf.Approximately(parent.rect.height, laidOutParentHeight) && boundsRoot.anchoredPosition == laidOutBoundsPosition) return;
+            if (!pageHeightPending)
+            {
+                if (boundsRoot == null || !(boundsRoot.parent is RectTransform parent)) return;
+                if (Mathf.Approximately(parent.rect.height, laidOutParentHeight) && boundsRoot.anchoredPosition == laidOutBoundsPosition &&
+                    Mathf.Approximately(ReferenceHeight(), laidOutReferenceHeight)) return;
+            }
             RefreshPageHeight();
         }
 
@@ -216,19 +242,26 @@ namespace TxTRPG.UI.SlotMachine
         }
 
         // Recalculates the page height: the content's preferred height, limited to the space below the page so the panel's
-        // bottom edge stays bottomMargin above its parent's bottom edge (never below minimumPageHeight). With enough
-        // vertical space every control is shown; otherwise the page scrolls. Runs when the row count changes, when the
-        // page is shown and when the parent height or panel position changed.
+        // bottom edge stays bottomMargin above its parent's bottom edge (never below minimumPageHeight), and never shorter
+        // than the reference page (that minimum wins over the bottom margin). With enough vertical space every control is
+        // shown and a shorter content leaves empty space below it; otherwise the page scrolls. Runs when the row count
+        // changes, when the page is shown and when the parent height, panel position or reference height changed. A
+        // hidden page has no layout: its height is kept and only marked for recalculation.
         public void RefreshPageHeight()
         {
             if (pageLayout == null || content == null) return;
+            if (!gameObject.activeInHierarchy) { pageHeightPending = true; return; }
             // The panel is laid out first so the content has its final width (text heights depend on it).
-            if (boundsRoot != null && gameObject.activeInHierarchy) LayoutRebuilder.ForceRebuildLayoutImmediate(boundsRoot);
+            if (boundsRoot != null) LayoutRebuilder.ForceRebuildLayoutImmediate(boundsRoot);
             LayoutRebuilder.ForceRebuildLayoutImmediate(content);
             var preferred = LayoutUtility.GetPreferredHeight(content);
-            var height = Mathf.Max(Mathf.Min(preferred, AvailablePageHeight()), Mathf.Min(preferred, minimumPageHeight));
+            var limited = Mathf.Max(Mathf.Min(preferred, AvailablePageHeight()), Mathf.Min(preferred, minimumPageHeight));
+            var reference = ReferenceHeight();
+            var height = Mathf.Max(limited, reference);
             if (!Mathf.Approximately(pageLayout.preferredHeight, height)) pageLayout.preferredHeight = height;
             if (!Mathf.Approximately(pageLayout.minHeight, height)) pageLayout.minHeight = height;
+            pageHeightPending = false;
+            laidOutReferenceHeight = reference;
             if (boundsRoot != null && boundsRoot.parent is RectTransform parent)
             {
                 laidOutParentHeight = parent.rect.height;
@@ -247,6 +280,15 @@ namespace TxTRPG.UI.SlotMachine
             var panelBounds = BoundsIn(parent, boundsRoot);
             var below = pageBounds.yMin - panelBounds.yMin;
             return Mathf.Max(0f, pageBounds.yMax - (parent.rect.yMin + bottomMargin) - below);
+        }
+
+        // Last laid-out height of the reference page (a hidden RectTransform keeps its last size). Layout-driven sizes are
+        // not saved, so a reference that was never laid out reads 0, which means "unknown" and adds no minimum.
+        public float ReferenceHeight()
+        {
+            if (heightReference == null || heightReference == transform) return 0f;
+            var height = heightReference.rect.height;
+            return float.IsNaN(height) || height < 0f ? 0f : height;
         }
 
         private static readonly Vector3[] CornerBuffer = new Vector3[4];
@@ -401,6 +443,12 @@ namespace TxTRPG.UI.SlotMachine
             bottomMargin = Mathf.Max(0f, margin);
             minimumPageHeight = Mathf.Max(0f, minimumHeight);
             laidOutParentHeight = -1f;
+        }
+
+        public void SetHeightReferenceForEditor(RectTransform reference)
+        {
+            heightReference = reference;
+            laidOutReferenceHeight = -1f;
         }
 #endif
     }

@@ -71,6 +71,7 @@ namespace TxTRPG.UI.Tests
             Assert.That(view.ReelRowTemplate.gameObject.activeSelf, Is.False, "the row template is inactive");
             Assert.That(view.BoundsRoot, Is.EqualTo(panelRoot), "the page grows with the panel root");
             Assert.That(view.BottomMargin, Is.EqualTo(16f), "same margin as the panel's top-right placement");
+            Assert.That(view.HeightReference, Is.EqualTo(panelRoot.Find("Body/Pages/EncounterPage")), "never shorter than the encounter page");
             var scroll = view.GetComponent<ScrollRect>();
             Assert.That(scroll != null && scroll.vertical && !scroll.horizontal, Is.True, "vertical scroll only");
             Assert.That(scroll.movementType, Is.EqualTo(ScrollRect.MovementType.Clamped));
@@ -205,9 +206,98 @@ namespace TxTRPG.UI.Tests
             return Rect.MinMaxRect(min.x, min.y, max.x, max.y);
         }
 
+        // A sibling RectTransform outside the panel's layout with a fixed height, used as the height reference.
+        private RectTransform Reference(float height)
+        {
+            var reference = new GameObject("Reference", typeof(RectTransform)).GetComponent<RectTransform>();
+            reference.SetParent(host, false);
+            reference.sizeDelta = new Vector2(100f, height);
+            view.SetHeightReferenceForEditor(reference);
+            return reference;
+        }
+
+        private float ContentPreferredHeight() => LayoutUtility.GetPreferredHeight(view.GetComponent<ScrollRect>().content);
+
+        [Test]
+        public void ReelsSetWhileHidden_KeepTheHeight_AndAreLaidOutWhenShown()
+        {
+            view.SetHeightReferenceForEditor(null);
+            var tabs = panelRoot.GetComponent<TxTRPG.UI.DebugPanels.DebugPanelTabGroup>();
+            tabs.Select(0);
+            var before = view.PageLayout.preferredHeight;
+            view.SetReels(Entries(.05f, .05f, .05f), true, true);
+            Assert.That(view.PageLayout.preferredHeight, Is.EqualTo(before), "a hidden page has no layout and keeps its height");
+            Assert.That(view.PageLayout.minHeight, Is.GreaterThan(0f));
+
+            tabs.Select(1);
+            view.RefreshPageHeight();
+            Assert.That(view.PageLayout.preferredHeight, Is.GreaterThan(0f));
+            Assert.That(view.PageLayout.preferredHeight, Is.EqualTo(ContentPreferredHeight()).Within(.5f), "the shown page fits its content");
+        }
+
+        [Test]
+        public void TallerReference_SetsTheHeight_AndLeavesTheContentAtTheTop()
+        {
+            view.SetReels(Entries(.05f), false, true);
+            var content = ContentPreferredHeight();
+            var reference = Reference(content + 200f);
+            view.RefreshPageHeight();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(panelRoot);
+            Canvas.ForceUpdateCanvases();
+            Assert.That(view.PageLayout.preferredHeight, Is.EqualTo(reference.rect.height).Within(.01f));
+            var scroll = view.GetComponent<ScrollRect>();
+            Assert.That(scroll.content.rect.height, Is.LessThan(scroll.viewport.rect.height - 1f), "nothing to scroll");
+            Assert.That(BoundsIn(host, scroll.content).yMax, Is.EqualTo(BoundsIn(host, scroll.viewport).yMax).Within(.5f), "the content stays at the top");
+            Assert.That(PanelBottomMargin(), Is.GreaterThanOrEqualTo(16f - .5f));
+        }
+
+        [Test]
+        public void ShorterReference_KeepsTheContentRule()
+        {
+            view.SetReels(Entries(Enumerable.Repeat(.05f, 10).ToArray()), true, false);
+            Reference(50f);
+            view.RefreshPageHeight();
+            Assert.That(view.PageLayout.preferredHeight, Is.EqualTo(ContentPreferredHeight()).Within(.5f));
+
+            host.sizeDelta = new Vector2(1920f, 600f);
+            view.RefreshPageHeight();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(panelRoot);
+            Assert.That(view.PageLayout.preferredHeight, Is.LessThan(ContentPreferredHeight() - 1f), "the page still scrolls");
+            Assert.That(PanelBottomMargin(), Is.EqualTo(16f).Within(.5f));
+        }
+
+        [Test]
+        public void Reference_WinsOverTheBottomMargin()
+        {
+            view.SetReels(Entries(Enumerable.Repeat(.05f, 10).ToArray()), true, false);
+            Reference(300f);
+            host.sizeDelta = new Vector2(1920f, 150f);
+            view.RefreshPageHeight();
+            Assert.That(view.PageLayout.preferredHeight, Is.EqualTo(300f).Within(.01f), "same height as the reference tab");
+        }
+
+        [Test]
+        public void LaidOutEncounterPage_IsTheMinimumHeight()
+        {
+            var tabs = panelRoot.GetComponent<TxTRPG.UI.DebugPanels.DebugPanelTabGroup>();
+            var encounter = (RectTransform)tabs.Tabs[0].Page.transform;
+            tabs.Select(0);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(panelRoot);
+            var encounterHeight = encounter.rect.height;
+            var encounterPanel = panelRoot.rect.height;
+            Assert.That(encounterHeight, Is.GreaterThan(0f));
+            tabs.Select(1);
+            Assert.That(encounter.rect.height, Is.EqualTo(encounterHeight), "a hidden page keeps its last size");
+            view.SetReels(Entries(.05f), false, true);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(panelRoot);
+            Assert.That(view.PageLayout.preferredHeight, Is.GreaterThanOrEqualTo(encounterHeight - .01f));
+            Assert.That(panelRoot.rect.height, Is.GreaterThanOrEqualTo(encounterPanel - .5f), "the panel is at least as tall as on the encounter tab");
+        }
+
         [Test]
         public void TallParent_ShowsEveryControlWithoutScrolling()
         {
+            view.SetHeightReferenceForEditor(null);
             view.SetReels(Entries(Enumerable.Repeat(.05f, 10).ToArray()), true, false);
             LayoutRebuilder.ForceRebuildLayoutImmediate(panelRoot);
             var content = view.GetComponent<ScrollRect>().content;
@@ -220,6 +310,7 @@ namespace TxTRPG.UI.Tests
         [Test]
         public void ShortParent_LimitsThePageToTheSpaceBelow_AndScrolls()
         {
+            view.SetHeightReferenceForEditor(null);
             view.SetReels(Entries(Enumerable.Repeat(.05f, 10).ToArray()), true, false);
             host.sizeDelta = new Vector2(1920f, 600f);
             view.RefreshPageHeight();

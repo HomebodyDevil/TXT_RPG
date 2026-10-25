@@ -2246,6 +2246,7 @@ MonoBehaviour:
   boundsRoot: {fileID: 5992034383463043425}
   bottomMargin: 16
   minimumPageHeight: 120
+  heightReference: {fileID: 6710329066583397810}
   navigationUp: {fileID: 6586402225500501708}
 --- !u!1 &2094279249443926593
 GameObject:

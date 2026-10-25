@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using TxTRPG.Application.Players;
@@ -21,10 +22,16 @@ namespace TxTRPG.Application.Editor
     // Candidate_MainScene is the content scene, then run the menu. It presses the slot tab's buttons and sliders like a
     // user (onClick / Slider.value) and changes only session state (reels, Fortune rules, the dice ReduceMotion preference,
     // the dock's shown state and the selected tab), which it restores to the Play-start state at the end. Nothing is saved;
-    // safe to rerun. Results use the SLOT_DEBUG_TAB_CHECK prefix; two Game View captures go to %TEMP%/TxTRPG-SlotDebugTabCheck. Retire it with TemporaryDebugPanelTabsApply.
+    // safe to rerun. Results use the SLOT_DEBUG_TAB_CHECK prefix; three Game View captures go to %TEMP%/TxTRPG-SlotDebugTabCheck.
+    // Steps 2 and 3 also check the slot page right after each tab switch (slot-debug-tab-page-height-fix): never drawn at
+    // height 0, at least as tall as the encounter page, with 10 reels and with 1 reel and across repeated switches.
+    // "Slot Debug Tab Size Sweep" repeats the switch check at 1920x1080, 2560x1080, 2400x1080 and 2400x1080 with a
+    // simulated notch and checks that the panel stays inside the screen frame (captures "size-*").
+    // Retire it with TemporaryDebugPanelTabsApply.
     public static class TemporarySlotDebugTabPlayCheck
     {
         public const string MenuPath = "Tools/TxT RPG/Application/Temporary/Slot Debug Tab Play Check";
+        public const string SizeSweepMenuPath = "Tools/TxT RPG/Application/Temporary/Slot Debug Tab Size Sweep";
         private const string Tag = "SLOT_DEBUG_TAB_CHECK";
         private const float FrameTimeout = 15f;
         private static bool running;
@@ -74,11 +81,12 @@ namespace TxTRPG.Application.Editor
                 passed &= Report(1, tabs.SelectedIndex == 0 && tabs.Tabs[0].Page.activeInHierarchy && !tabs.Tabs[1].Page.activeSelf && title == "DEBUG" &&
                     panel.IsValid(out _), $"selected {tabs.SelectedIndex}, title '{title}', encounter values {encounterValues}, result '{encounterResult}'");
 
-                // 2. Slot tab rows follow the session.
-                tabs.Tabs[1].Button.onClick.Invoke();
-                await NextFrame();
+                // 2. Slot tab rows follow the session; right after the switch the page is laid out (never drawn at height 0)
+                // and at least as tall as the encounter tab.
+                var panelRect = (RectTransform)panel.transform;
+                var firstSwitch = await SwitchToSlot(tabs, view, panelRect);
                 var rowsMatch = RowsMatch(view, slots, fortune, out var rows);
-                passed &= Report(2, tabs.SelectedIndex == 1 && !tabs.Tabs[0].Page.activeSelf && rowsMatch, rows);
+                passed &= Report(2, tabs.SelectedIndex == 1 && !tabs.Tabs[0].Page.activeSelf && rowsMatch && firstSwitch.Ok, $"{rows}; {firstSwitch.Detail}");
 
                 // 3. + up to the maximum, − down to one.
                 var stripsCopied = true;
@@ -92,28 +100,20 @@ namespace TxTRPG.Application.Editor
                 var atMaximum = $"session {slots.ReelCount}, dock {dock.ReelCount}, rows {view.ActiveRowCount}, + {view.PlusButton.interactable}, page {view.PageLayout.preferredHeight:0.#}";
                 var maximumOk = slots.ReelCount == controller.MaximumReelCount && dock.ReelCount == controller.MaximumReelCount && !view.PlusButton.interactable &&
                     stripsCopied;
-                // The page shows as much as fits: content height, limited so the panel ends 16 above the frame bottom.
-                var scroll = view.GetComponent<ScrollRect>();
-                Canvas.ForceUpdateCanvases();
-                var contentHeight = scroll != null ? scroll.content.rect.height : 0f;
-                var viewportHeight = scroll != null ? scroll.viewport.rect.height : 0f;
-                var available = view.AvailablePageHeight();
-                var panelRect = (RectTransform)panel.transform;
-                var panelParent = (RectTransform)panelRect.parent;
-                var panelBottom = WorldRect(panelRect).yMin;
-                var parentBottom = WorldRect(panelParent).yMin;
-                var marginInUnits = (panelBottom - parentBottom) / panelParent.lossyScale.y;
-                var fits = contentHeight <= available + .5f;
-                var heightOk = fits
-                    ? Mathf.Abs(viewportHeight - contentHeight) <= .5f
-                    : Mathf.Abs(viewportHeight - available) <= .5f && marginInUnits >= view.BottomMargin - .5f;
-                var sizing = $"content {contentHeight:0.#}, viewport {viewportHeight:0.#}, available {available:0.#}, panel bottom margin {marginInUnits:0.#}, " +
-                    (fits ? "all controls visible" : "scrolls");
+                // The page shows as much as fits (content height, limited so the panel ends 16 above the frame bottom) and is
+                // never shorter than the encounter page; the same rules with 10 reels and with 1 reel, across tab switches.
+                var sizing = Sizing(view, panelRect, out var heightOk, out var marginInUnits);
                 await Capture("slot-tab-10-reels");
+                var switchesAtMaximum = await RepeatSwitches(tabs, view, panelRect);
                 for (var i = 0; i < 20 && view.MinusButton.interactable; i++) view.MinusButton.onClick.Invoke();
-                await NextFrame();
-                passed &= Report(3, maximumOk && heightOk && marginInUnits >= view.BottomMargin - .5f && slots.ReelCount == 1 && dock.ReelCount == 1 && !view.MinusButton.interactable,
-                    $"{atMaximum}, strips copied {stripsCopied}, {sizing}; after − session {slots.ReelCount}, − {view.MinusButton.interactable}");
+                await NextRenderedFrame();
+                var oneReelSizing = Sizing(view, panelRect, out var oneReelHeightOk, out _);
+                await Capture("slot-tab-1-reel");
+                var switchesAtOne = await RepeatSwitches(tabs, view, panelRect);
+                passed &= Report(3, maximumOk && heightOk && marginInUnits >= view.BottomMargin - .5f && slots.ReelCount == 1 && dock.ReelCount == 1 && !view.MinusButton.interactable &&
+                    oneReelHeightOk && switchesAtMaximum.Ok && switchesAtOne.Ok,
+                    $"{atMaximum}, strips copied {stripsCopied}, {sizing}; switches at 10 reels: {switchesAtMaximum.Detail}; " +
+                    $"after − session {slots.ReelCount}, − {view.MinusButton.interactable}, {oneReelSizing}; switches at 1 reel: {switchesAtOne.Detail}");
 
                 // 4. Reel 1 and the total at 100 %: both multiply; others at 0 % do not.
                 view.PlusButton.onClick.Invoke();
@@ -250,6 +250,81 @@ namespace TxTRPG.Application.Editor
             return new Motion(Time.unscaledTime - begin, lastFrame, maximum);
         }
 
+        private readonly struct Check
+        {
+            public Check(bool ok, string detail, float firstDrawn = 0f) { Ok = ok; Detail = detail; FirstDrawn = firstDrawn; }
+            public bool Ok { get; }
+            public string Detail { get; }
+            public float FirstDrawn { get; }
+        }
+
+        // Selects the encounter tab (if needed), measures it, then clicks the slot tab like a user and records the page
+        // height of the first drawn frame (after the canvas layout of that frame).
+        private static async Task<Check> SwitchToSlot(DebugPanelTabGroup tabs, SlotDebugTabView view, RectTransform panelRect)
+        {
+            if (tabs.SelectedIndex != 0) { tabs.Tabs[0].Button.onClick.Invoke(); await NextRenderedFrame(); }
+            // Click from the player loop's Update like the EventSystem does (the menu itself runs in an Editor update).
+            await NextFrame();
+            var encounter = (RectTransform)tabs.Tabs[0].Page.transform;
+            var encounterHeight = encounter.rect.height;
+            var encounterPanel = panelRect.rect.height;
+            var page = (RectTransform)view.transform;
+            var firstDrawn = -1f;
+            Canvas.WillRenderCanvases record = () => { if (firstDrawn < 0f) firstDrawn = page.rect.height; };
+            Canvas.willRenderCanvases += record;
+            try
+            {
+                tabs.Tabs[1].Button.onClick.Invoke();
+                await NextRenderedFrame();
+            }
+            finally { Canvas.willRenderCanvases -= record; }
+            var margin = BottomMarginInUnits(panelRect);
+            // The first drawn frame already has the final height (no frame at height 0 or at a stale height).
+            var ok = tabs.SelectedIndex == 1 && encounterHeight > 0f && Mathf.Abs(firstDrawn - page.rect.height) <= .5f && page.rect.height >= encounterHeight - .5f &&
+                panelRect.rect.height >= encounterPanel - .5f && margin >= view.BottomMargin - .5f;
+            return new Check(ok, $"encounter page {encounterHeight:0.#} panel {encounterPanel:0.#} → slot page first drawn {firstDrawn:0.#}, " +
+                $"after a frame {page.rect.height:0.#} (layout {view.PageLayout.preferredHeight:0.#}) panel {panelRect.rect.height:0.#}, bottom margin {margin:0.#}", firstDrawn);
+        }
+
+        private static async Task<Check> RepeatSwitches(DebugPanelTabGroup tabs, SlotDebugTabView view, RectTransform panelRect)
+        {
+            var ok = true;
+            var heights = new List<string>();
+            for (var i = 0; i < 3; i++)
+            {
+                var check = await SwitchToSlot(tabs, view, panelRect);
+                ok &= check.Ok;
+                heights.Add(check.Ok ? $"{((RectTransform)view.transform).rect.height:0.#} (first drawn {check.FirstDrawn:0.#})" : $"FAIL({check.Detail})");
+            }
+            return new Check(ok, $"slot page after 3 switches [{string.Join(", ", heights)}]");
+        }
+
+        // Expected page height: the content if it fits below the page, otherwise the space below (it scrolls), and never
+        // shorter than the reference page (the encounter page's last size).
+        private static string Sizing(SlotDebugTabView view, RectTransform panelRect, out bool heightOk, out float marginInUnits)
+        {
+            var scroll = view.GetComponent<ScrollRect>();
+            Canvas.ForceUpdateCanvases();
+            var contentHeight = scroll != null ? scroll.content.rect.height : 0f;
+            var viewportHeight = scroll != null ? scroll.viewport.rect.height : 0f;
+            var available = view.AvailablePageHeight();
+            var reference = view.ReferenceHeight();
+            marginInUnits = BottomMarginInUnits(panelRect);
+            var fits = contentHeight <= available + .5f;
+            var expected = Mathf.Max(fits ? contentHeight : available, reference);
+            var contentAtTop = scroll == null || viewportHeight < contentHeight - .5f ||
+                Mathf.Abs(WorldRect(scroll.content).yMax - WorldRect(scroll.viewport).yMax) <= .5f * scroll.content.lossyScale.y;
+            heightOk = Mathf.Abs(viewportHeight - expected) <= .5f && marginInUnits >= view.BottomMargin - .5f && contentAtTop;
+            return $"content {contentHeight:0.#}, viewport {viewportHeight:0.#}, available {available:0.#}, reference {reference:0.#}, panel bottom margin {marginInUnits:0.#}, " +
+                (viewportHeight < contentHeight - .5f ? "scrolls" : contentHeight < viewportHeight - .5f ? $"all controls visible, empty space below, content at top {contentAtTop}" : "all controls visible");
+        }
+
+        private static float BottomMarginInUnits(RectTransform panelRect)
+        {
+            var panelParent = (RectTransform)panelRect.parent;
+            return (WorldRect(panelRect).yMin - WorldRect(panelParent).yMin) / panelParent.lossyScale.y;
+        }
+
         private static bool RowsMatch(SlotDebugTabView view, TemporarySlotMachineState slots, TemporaryFortuneCriticalState fortune, out string detail)
         {
             var builder = new StringBuilder($"rows {view.ActiveRowCount}/session {slots.ReelCount}:");
@@ -279,7 +354,110 @@ namespace TxTRPG.Application.Editor
         private static int[] Values(SlotReel reel) => reel.Strip.Select(symbol => symbol.Value).ToArray();
         private static string Signature(SlotReel reel) => $"{reel.Id}:{string.Join(",", Values(reel))}";
 
-        private static bool Report(int step, bool ok, string detail)
+        private sealed class FakeInput : IScreenFrameInput
+        {
+            public Rect Safe;
+            public Vector2 ScreenSize => new Vector2(Screen.width, Screen.height);
+            public Rect SafeArea => Safe;
+        }
+
+        private static readonly (string Name, int Width, int Height, Rect? Safe)[] SweepSizes =
+        {
+            ("1920x1080", 1920, 1080, null),
+            ("2560x1080", 2560, 1080, null),
+            ("2400x1080", 2400, 1080, null),
+            // Same simulated notch safe area as TemporaryScreenFrameVerification.
+            ("2400x1080-notch", 2400, 1080, new Rect(132f, 63f, 2268f, 1017f)),
+        };
+
+        // Size sweep (slot-debug-tab-page-height-fix): for each size, switches encounter → slot like step 2 and checks
+        // that the panel stays inside the screen frame. Game View sizes are added temporarily and removed by total index
+        // (built-in count + custom index); the previous size, the frame input and the tab are restored. Nothing is saved.
+        [MenuItem(SizeSweepMenuPath, false, 3004)]
+        public static async void RunSizeSweep()
+        {
+            if (running) { Debug.LogWarning($"{Tag}: already running."); return; }
+            if (!EditorApplication.isPlaying) { Debug.LogError($"{Tag}: FAIL enter Play Mode through AppScene first."); return; }
+            var scene = SceneManager.GetSceneByPath(TemporaryDebugPanelTabsApply.ScenePath);
+            if (!scene.isLoaded) { Debug.LogError($"{Tag}: FAIL Candidate_MainScene is not the loaded content scene."); return; }
+            var panel = Find<EncounterDebugPanel>(scene);
+            var tabs = panel != null ? panel.GetComponent<DebugPanelTabGroup>() : null;
+            var view = panel != null ? panel.GetComponentInChildren<SlotDebugTabView>(true) : null;
+            var frame = Find<ScreenFrameController>(scene);
+            if (tabs == null || view == null || frame == null || frame.FrameRoot == null)
+            { Debug.LogError($"{Tag}: FAIL missing debug panel, tab group, slot tab or screen frame."); return; }
+
+            running = true;
+            var panelRect = (RectTransform)panel.transform;
+            var originalTab = tabs.SelectedIndex;
+            var assembly = typeof(EditorWindow).Assembly;
+            var gameViewType = assembly.GetType("UnityEditor.GameView");
+            var gameView = EditorWindow.GetWindow(gameViewType);
+            var selectedSize = gameViewType.GetProperty("selectedSizeIndex", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            var previousSize = (int)selectedSize.GetValue(gameView);
+            var sizesType = assembly.GetType("UnityEditor.GameViewSizes");
+            var sizes = typeof(ScriptableSingleton<>).MakeGenericType(sizesType).GetProperty("instance").GetValue(null);
+            var group = sizesType.GetMethod("GetGroup").Invoke(sizes, new[] { Enum.Parse(assembly.GetType("UnityEditor.GameViewSizeGroupType"), "Standalone") });
+            int Count(string method) => (int)group.GetType().GetMethod(method).Invoke(group, null);
+            var customBefore = Count("GetCustomCount");
+            var added = -1;
+            void RemoveAdded()
+            {
+                if (added < 0) return;
+                selectedSize.SetValue(gameView, previousSize);
+                group.GetType().GetMethod("RemoveCustomSize").Invoke(group, new object[] { Count("GetBuiltinCount") + added });
+                added = -1;
+                gameView.Repaint();
+            }
+            var passed = true;
+            try
+            {
+                foreach (var entry in SweepSizes)
+                {
+                    added = Count("GetCustomCount");
+                    var size = Activator.CreateInstance(assembly.GetType("UnityEditor.GameViewSize"),
+                        Enum.Parse(assembly.GetType("UnityEditor.GameViewSizeType"), "FixedResolution"), entry.Width, entry.Height, "Slot debug tab check");
+                    group.GetType().GetMethod("AddCustomSize").Invoke(group, new[] { size });
+                    selectedSize.SetValue(gameView, Count("GetBuiltinCount") + added);
+                    gameView.Repaint();
+                    frame.SetInput(entry.Safe.HasValue ? new FakeInput { Safe = entry.Safe.Value } : null);
+                    await WaitSeconds(1.5f);
+                    var check = await SwitchToSlot(tabs, view, panelRect);
+                    var frameRect = WorldRect(frame.FrameRoot);
+                    var panelWorld = WorldRect(panelRect);
+                    var inside = panelWorld.xMin >= frameRect.xMin - .5f && panelWorld.xMax <= frameRect.xMax + .5f &&
+                                 panelWorld.yMin >= frameRect.yMin - .5f && panelWorld.yMax <= frameRect.yMax + .5f;
+                    var sizeOk = Screen.width == entry.Width && Screen.height == entry.Height;
+                    await Capture($"size-{entry.Name}");
+                    passed &= Report($"size {entry.Name}", sizeOk && check.Ok && inside,
+                        $"screen {Screen.width}x{Screen.height}, frame {frameRect}, panel {panelWorld} inside {inside}; {check.Detail}");
+                    RemoveAdded();
+                }
+            }
+            catch (Exception exception)
+            {
+                passed = false;
+                Debug.LogError($"{Tag}: FAIL {exception}");
+            }
+            finally
+            {
+                try { RemoveAdded(); } catch (Exception exception) { Debug.LogError($"{Tag}: could not remove the temporary Game View size: {exception.Message}"); }
+                frame.SetInput(null);
+                tabs.Select(originalTab);
+                var restored = Count("GetCustomCount") == customBefore && tabs.SelectedIndex == originalTab;
+                passed &= Report("size restore", restored, $"custom Game View sizes {customBefore} → {Count("GetCustomCount")}, tab {tabs.SelectedIndex}");
+                Debug.Log(passed ? $"{Tag}: PASS size sweep" : $"{Tag}: FAIL size sweep, see the steps above");
+                running = false;
+            }
+        }
+
+        private static async Task WaitSeconds(float seconds)
+        {
+            var begin = Time.realtimeSinceStartup;
+            while (Time.realtimeSinceStartup - begin < seconds) await Task.Yield();
+        }
+
+        private static bool Report(object step, bool ok, string detail)
         {
             var message = $"{Tag}: step {step} {(ok ? "PASS" : "FAIL")} {detail}";
             if (ok) Debug.Log(message); else Debug.LogError(message);
@@ -287,6 +465,21 @@ namespace TxTRPG.Application.Editor
         }
 
         private static async Task NextFrame() => await Task.Yield();
+
+        // Waits until the canvases were rendered once (after that frame's LateUpdate and canvas layout). Counting renders
+        // instead of Time.frameCount also works when the menu itself runs outside the player loop.
+        private static async Task NextRenderedFrame()
+        {
+            var rendered = false;
+            Canvas.WillRenderCanvases onRender = () => rendered = true;
+            Canvas.willRenderCanvases += onRender;
+            try
+            {
+                var begin = Time.realtimeSinceStartup;
+                while (!rendered && Time.realtimeSinceStartup - begin < FrameTimeout) await Task.Yield();
+            }
+            finally { Canvas.willRenderCanvases -= onRender; }
+        }
 
         // Game View captures for a visual check, outside Assets (%TEMP%/TxTRPG-SlotDebugTabCheck).
         private static async Task Capture(string name)
