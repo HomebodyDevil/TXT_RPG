@@ -279,7 +279,8 @@ namespace TxTRPG.Application.SlotMachine
         public static SlotSpinDisplay CreateSpinDisplay(SlotSpinResult spin, RuneAllocation allocation) =>
             CreateSpinDisplay(spin, FortuneCriticalResult.None(spin), allocation);
 
-        // Each reel shows its own Fortune Critical multiplier; the total box shows the final total and the total multiplier.
+        // Each reel shows its own Fortune Critical multiplier. The total box starts at 0, adds each reel as it stops
+        // (v_i × min(C, r_i)) and ends with the final total and the total multiplier; the allocation appears only there.
         public static SlotSpinDisplay CreateSpinDisplay(SlotSpinResult spin, FortuneCriticalResult fortune, RuneAllocation allocation)
         {
             if (fortune == null) throw new ArgumentNullException(nameof(fortune));
@@ -303,7 +304,8 @@ namespace TxTRPG.Application.SlotMachine
                 result[i] = new SlotRuneLineDisplay(effect, SlotCombatStoryFormatter.LineAllocation(line.Weight, line.Amount));
             }
             return new SlotSpinDisplay(reels, spin.PaylineTotal,
-                CreateSummary(SlotCombatStoryFormatter.SpinningTotalValue, spinning),
+                CreateSummary(SlotCombatStoryFormatter.TotalValue(0), spinning),
+                ProgressSummaries(spin, fortune, spinning), fortune.IsTotalCritical,
                 CreateSummary(SlotCombatStoryFormatter.TotalValue(fortune.FinalTotal), result,
                     SlotCombatStoryFormatter.MultiplierText(fortune.TotalMultiplier)));
         }
@@ -324,9 +326,32 @@ namespace TxTRPG.Application.SlotMachine
                 reels[i] = new SlotReelStopDisplay(stop.ReelId, stop.StopIndex, values, SlotCombatStoryFormatter.MultiplierText(multiplier));
             }
             return new SlotSpinDisplay(reels, spin.PaylineTotal,
-                CreateSummary(SlotCombatStoryFormatter.SpinningTotalValue, weightLines),
+                CreateSummary(SlotCombatStoryFormatter.TotalValue(0), weightLines),
+                ProgressSummaries(spin, fortune, weightLines), fortune.IsTotalCritical,
                 CreateSummary(SlotCombatStoryFormatter.TotalValue(fortune.FinalTotal), weightLines,
                     SlotCombatStoryFormatter.MultiplierText(fortune.TotalMultiplier)));
+        }
+
+        // Running totals while the reels stop: entry k is Σ(j ≤ k) v_j × min(C, r_j), without the total multiplier. As
+        // min(C, r_j) ≤ min(C, r_j × t), every entry is at most FinalTotal, and the last equals it when t = 1.
+        private static SlotSummaryDisplay[] ProgressSummaries(SlotSpinResult spin, FortuneCriticalResult fortune,
+            IReadOnlyList<SlotRuneLineDisplay> lines)
+        {
+            var summaries = new SlotSummaryDisplay[spin.Reels.Count];
+            long running = 0;
+            for (var i = 0; i < summaries.Length; i++)
+            {
+                long added;
+                if (i < fortune.Reels.Count)
+                {
+                    var reel = fortune.Reels[i];
+                    added = checked((long)reel.BaseValue * Math.Min(fortune.MaximumEffectiveMultiplier, reel.ReelMultiplier));
+                }
+                else added = spin.Reels[i].PaylineValue;
+                running = checked(running + added);
+                summaries[i] = CreateSummary(SlotCombatStoryFormatter.TotalValue(checked((int)running)), lines);
+            }
+            return summaries;
         }
 
         public static SlotSummaryDisplay CreateSummary(string totalValue, IReadOnlyList<SlotRuneLineDisplay> lines) =>

@@ -1,9 +1,11 @@
+using System.Collections;
 using System.Linq;
 using System.Threading;
 using NUnit.Framework;
 using TxTRPG.UI.SlotMachine;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.TestTools;
 using UnityEngine.UI;
 
 namespace TxTRPG.UI.Tests
@@ -34,7 +36,7 @@ namespace TxTRPG.UI.Tests
             Enumerable.Range(1, count).Select(i => new SlotReelDisplay($"reel.{i}", OneToSix)).ToArray();
 
         private static SlotSummaryDisplay Summary(string total, params (string Effect, string Value)[] lines) =>
-            new("합계", total, "룬", "쌓임 → 분배", lines.Select(l => new SlotRuneLineDisplay(l.Effect, l.Value)).ToArray(),
+            new(string.Empty, total, "룬", "쌓임 → 분배", lines.Select(l => new SlotRuneLineDisplay(l.Effect, l.Value)).ToArray(),
                 "장착된 룬이 없습니다", "외 {0}줄");
 
         private static SlotSpinDisplay Spin(params int[] stops) => new(
@@ -62,6 +64,7 @@ namespace TxTRPG.UI.Tests
                 "the panel takes no input");
             Assert.That(panel.GetComponent<CanvasGroup>(), Is.Not.Null);
             Assert.That(panel.SpinProfileForEditor, Is.Not.Null, "DefaultSlotReelSpinProfile is assigned");
+            Assert.That(panel.TotalValueText, Is.EqualTo("0"), "the total shows 0 before any summary");
             var reel = (SlotReelView)panel.ReelViews[0];
             Assert.That(reel.VisibleCellCount, Is.EqualTo(5));
             Assert.That(reel.transform.Find("Window/Strip/SymbolCell_6/VisualRoot/Afterimage_3"), Is.Not.Null);
@@ -117,7 +120,7 @@ namespace TxTRPG.UI.Tests
             Assert.That(task.IsCompleted, Is.True);
             Assert.That(task.Result, Is.True);
             AssertResult(new[] { 3, 1, 6 });
-            Assert.That(panel.TotalLabelText, Is.EqualTo("합계"));
+            Assert.That(panel.TotalLabelText, Is.Empty);
             Assert.That(panel.TotalValueText, Is.EqualTo("10"));
             Assert.That(panel.RuneLineTexts, Is.EqualTo(new[] { ("공격", "×1 → 5"), ("회복", "×1 → 5") }));
             Assert.That(panel.IsSpinning, Is.False);
@@ -211,20 +214,39 @@ namespace TxTRPG.UI.Tests
         [TestCase(968f, 413f)]
         [TestCase(470f, 332f)]
         [TestCase(332f, 274f)]
-        public void TotalBox_LabelAndTwoDigitTotalFitTheirWidth(float width, float height)
+        public void TotalBox_ValueOnlyFillsTheTextAreaAndThreeDigitTotalFits(float width, float height)
         {
             Arrange(new Vector2(width, height));
-            panel.SetSummary(Summary("88", ("공격", "×1"), ("회복", "×1")));
-            foreach (var name in new[] { "TotalLabel", "TotalValue" })
-            {
-                var text = panel.transform.Find($"Content/SummaryArea/TotalBox/{name}").GetComponent<TMPro.TMP_Text>();
-                text.GetComponent<SlotHeightScaledText>().Apply();
-                text.ForceMeshUpdate();
-                var rect = text.rectTransform.rect;
-                Assert.That(text.GetPreferredValues(text.text).x, Is.LessThanOrEqualTo(rect.width + .5f), $"{name} '{text.text}' fits {rect.size} at {text.fontSize}");
-                Assert.That(text.isTextTruncated, Is.False, $"{name} is not truncated");
-                Assert.That(text.fontSize, Is.LessThanOrEqualTo(rect.height * .55f + .01f), $"{name} stays within its height-based size");
-            }
+            panel.SetSummary(Summary("999", ("공격", "×1"), ("회복", "×1")));
+            var box = (RectTransform)panel.transform.Find("Content/SummaryArea/TotalBox");
+            Assert.That(box.Find("TotalLabel").gameObject.activeSelf, Is.False, "an empty label hides TotalLabel");
+            var text = box.Find("TotalValue").GetComponent<TMPro.TMP_Text>();
+            Assert.That(text.rectTransform.anchorMin, Is.EqualTo(new Vector2(.05f, 0f)));
+            Assert.That(text.rectTransform.anchorMax, Is.EqualTo(new Vector2(.95f, 1f)));
+            Assert.That(text.rectTransform.offsetMin, Is.EqualTo(Vector2.zero));
+            Assert.That(text.rectTransform.offsetMax, Is.EqualTo(Vector2.zero));
+            Assert.That(text.alignment, Is.EqualTo(TMPro.TextAlignmentOptions.Center));
+            text.GetComponent<SlotHeightScaledText>().Apply();
+            text.ForceMeshUpdate();
+            var rect = text.rectTransform.rect;
+            Assert.That(text.GetPreferredValues(text.text).x, Is.LessThanOrEqualTo(rect.width + .5f), $"'{text.text}' fits {rect.size} at {text.fontSize}");
+            Assert.That(text.isTextTruncated, Is.False, "the value is not truncated");
+            Assert.That(text.fontSize, Is.LessThanOrEqualTo(rect.height * .55f + .01f), "the value stays within its height-based size");
+            var bounds = text.textBounds;
+            Assert.That(bounds.center.x, Is.EqualTo(rect.center.x).Within(2f), "glyphs centered horizontally");
+        }
+
+        [Test]
+        public void TotalBox_LabelIsActiveOnlyWhileTheSummaryHasOne()
+        {
+            var label = panel.transform.Find("Content/SummaryArea/TotalBox/TotalLabel").gameObject;
+            panel.SetSummary(new SlotSummaryDisplay("합계", "5", "룬", "쌓임 → 분배", System.Array.Empty<SlotRuneLineDisplay>(), "없음", "외 {0}줄"));
+            Assert.That(label.activeSelf, Is.True);
+            Assert.That(panel.TotalLabelText, Is.EqualTo("합계"));
+            panel.SetSummary(Summary("5"));
+            Assert.That(label.activeSelf, Is.False);
+            Assert.That(panel.TotalLabelText, Is.Empty);
+            Assert.That(panel.TotalValueText, Is.EqualTo("5"));
         }
 
         [Test]
@@ -342,6 +364,143 @@ namespace TxTRPG.UI.Tests
             changed[1] = new SlotReelDisplay("reel.2", new[] { 9, 9 });
             panel.SetReels(changed);
             Assert.That(ReelMultiplierTexts, Is.EqualTo(new[] { "×5", "", "" }), "a changed reel no longer shows the old result");
+        }
+
+        // ---------- Running total ----------
+
+        // Reel i's constant-speed phase lasts i × stopInterval seconds: reel 0 stops in the call, later reels keep spinning
+        // because Edit Mode time does not advance. wait is the total Fortune Critical wait.
+        private static SlotReelSpinSettings Timed(float stopInterval, float wait) => new(SlotEasingKind.Linear,
+            0f, stopInterval, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 18f, 8f, false, 0f, 0f, 0, 0f, 0f, 1f, 1f, 0f, wait);
+
+        // Starts at 0, adds each payline value as its reel stops and ends on "20" (×2 when totalStep).
+        private static SlotSpinDisplay ProgressSpin(bool totalStep, params int[] stops)
+        {
+            var running = 0;
+            var progress = stops.Select(stop => Summary((running += OneToSix[stop]).ToString(), ("공격", "×1"))).ToArray();
+            return new SlotSpinDisplay(
+                stops.Select((stop, i) => new SlotReelStopDisplay($"reel.{i + 1}", stop, OneToSix, i == 1 ? "×3" : string.Empty)).ToArray(),
+                running, Summary("0", ("공격", "×1")), progress, totalStep,
+                new SlotSummaryDisplay("합계", "20", "룬", "쌓임 → 분배", new[] { new SlotRuneLineDisplay("공격", "×1 → 20") },
+                    "장착된 룬이 없습니다", "외 {0}줄", totalStep ? "×2" : string.Empty));
+        }
+
+        [Test]
+        public void SpinDisplay_RejectsProgressSummariesThatDoNotMatchTheReels()
+        {
+            var stops = new[] { new SlotReelStopDisplay("reel.1", 0, OneToSix), new SlotReelStopDisplay("reel.2", 0, OneToSix) };
+            Assert.Throws<System.ArgumentException>(() => new SlotSpinDisplay(stops, 2, Summary("0"), new[] { Summary("1") }, false, Summary("2")));
+            Assert.Throws<System.ArgumentException>(() => new SlotSpinDisplay(stops, 2, Summary("0"), new[] { Summary("1"), null }, false, Summary("2")));
+            var legacy = new SlotSpinDisplay(stops, 2, Summary("…"), Summary("2"));
+            Assert.That(legacy.HasProgressSummaries || legacy.HasTotalStep, Is.False, "the old constructor has no running total");
+            var ignored = new SlotSpinDisplay(stops, 2, Summary("0"), null, true, Summary("2"));
+            Assert.That(ignored.HasTotalStep, Is.False, "a total step needs progress summaries");
+        }
+
+        [Test]
+        public void SpinProgress_ShowsOnlyTheRunOfStoppedReelsFromTheFirst()
+        {
+            var spin = ProgressSpin(false, 2, 4, 1);
+            var progress = new SlotSpinProgress(spin);
+            Assert.That(progress.ReelStopped(1), Is.Null, "a later reel that stops first waits for reel 1");
+            Assert.That(progress.ReelStopped(1), Is.Null, "a repeated report changes nothing");
+            Assert.That(progress.ReelStopped(0)?.TotalValue, Is.EqualTo("8"), "reels 1 and 2 are added together");
+            Assert.That(progress.StoppedCount, Is.EqualTo(2));
+            Assert.That(progress.ReelStopped(0), Is.Null, "the same total is not applied twice");
+            Assert.That(progress.ReelStopped(2)?.TotalValue, Is.EqualTo("10"));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => progress.ReelStopped(3));
+            var legacy = new SlotSpinProgress(Spin(1, 1));
+            Assert.That(legacy.ReelStopped(0), Is.Null, "a display without progress summaries has no running total");
+            Assert.That(legacy.StoppedCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void RunningTotal_FollowsTheStoppedReelsUntilStopAtResult()
+        {
+            panel.SetReels(Reels(3));
+            panel.SetSpinSettingsForEditor(Timed(10f, .4f));
+            var spin = ProgressSpin(true, 2, 4, 1);
+            var running = panel.PlaySpinAsync(spin, false, CancellationToken.None);
+            Assert.That(running.IsCompleted, Is.False);
+            Assert.That(panel.TotalValueText, Is.EqualTo("3"), "the first reel stopped and was added to 0");
+            Assert.That(panel.TotalMultiplierText, Is.Empty);
+            Assert.That(ReelMultiplierTexts, Is.EqualTo(new[] { "", "", "" }), "the second reel's multiplier waits for it to stop");
+
+            panel.StopAtResult(spin);
+            Assert.That(panel.TotalValueText, Is.EqualTo("20"), "an interrupted spin shows the result, not a running total");
+            Assert.That(panel.TotalMultiplierText, Is.EqualTo("×2"));
+            Assert.That(panel.IsSpinning, Is.False);
+        }
+
+        [Test]
+        public void TotalStep_WaitsWithTheLastRunningTotalAndKeepsSpinning()
+        {
+            panel.SetReels(Reels(3));
+            panel.SetSpinSettingsForEditor(Timed(0f, .4f));
+            var spin = ProgressSpin(true, 2, 4, 1);
+            var running = panel.PlaySpinAsync(spin, false, CancellationToken.None);
+            Assert.That(ReelMultiplierTexts, Is.EqualTo(new[] { "", "×3", "" }), "every reel is at rest");
+            Assert.That(panel.TotalValueText, Is.EqualTo("10"), "the last running total is shown during the wait");
+            Assert.That(panel.TotalMultiplierText, Is.Empty, "the total multiplier waits");
+            Assert.That(running.IsCompleted, Is.False);
+            Assert.That(panel.IsSpinning, Is.True, "the wait is part of the spin");
+
+            panel.SetReels(Reels(4));
+            Assert.That(panel.ReelCount, Is.EqualTo(3), "a reel change during the wait is deferred");
+            panel.StopAtResult(spin);
+            Assert.That(panel.TotalValueText, Is.EqualTo("20"));
+            Assert.That(panel.TotalMultiplierText, Is.EqualTo("×2"));
+            Assert.That(panel.ReelCount, Is.EqualTo(4), "the deferred reels apply when the spin ends");
+        }
+
+        // Edit Mode time does not advance, so the wait only ends by an interruption; frames still run the continuations.
+        [UnityTest]
+        public IEnumerator TotalStep_CancellationOrDeactivationDuringTheWaitReturnsFalseWithoutTheResult()
+        {
+            panel.SetReels(Reels(3));
+            panel.SetSpinSettingsForEditor(Timed(0f, .4f));
+            var spin = ProgressSpin(true, 2, 4, 1);
+            using (var cancellation = new CancellationTokenSource())
+            {
+                var cancelled = panel.PlaySpinAsync(spin, false, cancellation.Token);
+                cancellation.Cancel();
+                for (var i = 0; i < 10 && !cancelled.IsCompleted; i++) yield return null;
+                Assert.That(cancelled.IsCompleted && !cancelled.Result, Is.True, "a cancelled wait returns false");
+            }
+            Assert.That(panel.TotalValueText, Is.EqualTo("10"));
+            Assert.That(panel.TotalMultiplierText, Is.Empty, "the result is left to the caller's StopAtResult");
+            Assert.That(panel.IsSpinning, Is.False);
+
+            var deactivated = panel.PlaySpinAsync(spin, false, CancellationToken.None);
+            Assert.That(panel.TotalValueText, Is.EqualTo("10"));
+            panel.gameObject.SetActive(false);
+            for (var i = 0; i < 10 && !deactivated.IsCompleted; i++) yield return null;
+            Assert.That(deactivated.IsCompleted && !deactivated.Result, Is.True, "an inactive panel ends the wait with false");
+            Assert.That(panel.TotalMultiplierText, Is.Empty);
+            panel.gameObject.SetActive(true);
+            panel.StopAtResult(spin);
+            Assert.That(panel.TotalValueText, Is.EqualTo("20"));
+            Assert.That(panel.TotalMultiplierText, Is.EqualTo("×2"));
+        }
+
+        [Test]
+        public void TotalStep_IsShownAtOnceWithReduceMotionOrWithoutATotalCritical()
+        {
+            panel.SetReels(Reels(3));
+            panel.SetSpinSettingsForEditor(Timed(0f, .4f));
+            var reduced = panel.PlaySpinAsync(ProgressSpin(true, 2, 4, 1), true, CancellationToken.None);
+            Assert.That(reduced.IsCompleted && reduced.Result, Is.True, "Reduce Motion does not wait");
+            Assert.That(panel.TotalValueText, Is.EqualTo("20"));
+            Assert.That(panel.TotalMultiplierText, Is.EqualTo("×2"));
+
+            var plain = panel.PlaySpinAsync(ProgressSpin(false, 1, 1, 1), false, CancellationToken.None);
+            Assert.That(plain.IsCompleted && plain.Result, Is.True, "no total step, no wait");
+            Assert.That(panel.TotalMultiplierText, Is.Empty);
+
+            panel.SetSpinSettingsForEditor(SlotReelSpinSettings.Instant);
+            var noWait = panel.PlaySpinAsync(ProgressSpin(true, 2, 4, 1), false, CancellationToken.None);
+            Assert.That(noWait.IsCompleted && noWait.Result, Is.True, "a zero wait shows the result at once");
+            Assert.That(panel.TotalMultiplierText, Is.EqualTo("×2"));
         }
 
         // Edit Mode has no canvas update loop: the panel root has no layout controller, so Content and the reel area

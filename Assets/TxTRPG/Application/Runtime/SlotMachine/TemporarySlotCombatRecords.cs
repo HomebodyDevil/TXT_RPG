@@ -103,10 +103,10 @@ namespace TxTRPG.Application.SlotMachine
     // like DiceRollStoryFormatter.
     public static class SlotCombatStoryFormatter
     {
-        // Slot machine panel summary texts.
-        public const string TotalLabel = "합계";
-        public const string IdleTotalValue = "—";
-        public const string SpinningTotalValue = "…";
+        // Slot machine panel summary texts. The total shows only its value, so the label is empty and the views hide
+        // their TotalLabel; Story and result texts spell "합계" themselves.
+        public const string TotalLabel = "";
+        public const string IdleTotalValue = "0";
         public const string RuneColumnTitle = "룬";
         public const string ValueColumnTitle = "쌓임 → 분배";
         public const string NoRuneLines = "장착된 룬이 없습니다";
@@ -114,6 +114,7 @@ namespace TxTRPG.Application.SlotMachine
         // System name in Story lines.
         public const string FortuneCriticalName = "행운 치명";
 
+        // The total box value: 0 when a spin starts, then the running total and the final total.
         public static string TotalValue(int total) => total.ToString();
 
         // Fortune Critical multiplier next to a reel's payline cell or the total ("×3"); empty when it did not happen.

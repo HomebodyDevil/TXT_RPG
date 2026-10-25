@@ -78,6 +78,7 @@ namespace TxTRPG.UI.SlotMachine
             OverflowFormat = overflowFormat ?? string.Empty;
         }
 
+        // Empty hides the views' TotalLabel; the value keeps its whole area either way.
         public string TotalLabel { get; }
         public string TotalValue { get; }
         public string TotalMultiplierText { get; }
@@ -92,8 +93,16 @@ namespace TxTRPG.UI.SlotMachine
     // and after the reels stop.
     public sealed class SlotSpinDisplay
     {
+        // Without progress summaries the result summary appears once every reel has stopped.
         public SlotSpinDisplay(IReadOnlyList<SlotReelStopDisplay> reels, int paylineTotal,
             SlotSummaryDisplay spinningSummary, SlotSummaryDisplay resultSummary)
+            : this(reels, paylineTotal, spinningSummary, null, false, resultSummary) { }
+
+        // progressSummaries[k] is shown once reels 0..k (result order) have stopped; it needs one entry per reel.
+        // hasTotalStep tells the reel machine to wait before replacing the last progress summary with the result summary
+        // (a total Fortune Critical). Ignored without progress summaries.
+        public SlotSpinDisplay(IReadOnlyList<SlotReelStopDisplay> reels, int paylineTotal, SlotSummaryDisplay spinningSummary,
+            IReadOnlyList<SlotSummaryDisplay> progressSummaries, bool hasTotalStep, SlotSummaryDisplay resultSummary)
         {
             if (reels == null || reels.Count == 0) throw new ArgumentException("A spin display requires at least one reel.", nameof(reels));
             var copy = new SlotReelStopDisplay[reels.Count];
@@ -102,11 +111,28 @@ namespace TxTRPG.UI.SlotMachine
             PaylineTotal = paylineTotal;
             SpinningSummary = spinningSummary ?? throw new ArgumentNullException(nameof(spinningSummary));
             ResultSummary = resultSummary ?? throw new ArgumentNullException(nameof(resultSummary));
+            if (progressSummaries == null)
+            {
+                ProgressSummaries = Array.AsReadOnly(Array.Empty<SlotSummaryDisplay>());
+                return;
+            }
+            if (progressSummaries.Count != copy.Length)
+                throw new ArgumentException("Progress summaries need one entry per reel.", nameof(progressSummaries));
+            var progress = new SlotSummaryDisplay[progressSummaries.Count];
+            for (var i = 0; i < progress.Length; i++)
+                progress[i] = progressSummaries[i] ?? throw new ArgumentException("Progress summaries cannot be null.", nameof(progressSummaries));
+            ProgressSummaries = Array.AsReadOnly(progress);
+            HasTotalStep = hasTotalStep;
         }
 
         public IReadOnlyList<SlotReelStopDisplay> Reels { get; }
         public int PaylineTotal { get; }
         public SlotSummaryDisplay SpinningSummary { get; }
+        // Empty, or one summary per reel: the total after reels 0..k have stopped.
+        public IReadOnlyList<SlotSummaryDisplay> ProgressSummaries { get; }
+        public bool HasProgressSummaries => ProgressSummaries.Count > 0;
+        // True when the result summary differs from the last progress summary by a total Fortune Critical.
+        public bool HasTotalStep { get; }
         public SlotSummaryDisplay ResultSummary { get; }
     }
 }

@@ -16,7 +16,7 @@ namespace TxTRPG.UI.SlotMachine
             float cruiseCellsPerSecond, float minimumCruiseCellsPerSecond,
             bool motionEffectsEnabled, float effectFadeInSeconds, float effectFadeOutSeconds,
             int afterimageCount, float afterimageSpacing, float afterimageAlpha, float maximumVerticalStretch, float cruiseTextAlpha,
-            float reducedMotionSecondsPerReel)
+            float reducedMotionSecondsPerReel, float totalCriticalRevealDelaySeconds = 0f)
         {
             Easing = easing;
             StartIntervalSeconds = Positive(startIntervalSeconds);
@@ -40,6 +40,7 @@ namespace TxTRPG.UI.SlotMachine
             MaximumVerticalStretch = Mathf.Clamp(maximumVerticalStretch, 1f, 3f);
             CruiseTextAlpha = Mathf.Clamp01(cruiseTextAlpha);
             ReducedMotionSecondsPerReel = Positive(reducedMotionSecondsPerReel);
+            TotalCriticalRevealDelaySeconds = Positive(totalCriticalRevealDelaySeconds);
         }
 
         public SlotEasingKind Easing { get; }
@@ -64,6 +65,8 @@ namespace TxTRPG.UI.SlotMachine
         public float MaximumVerticalStretch { get; }
         public float CruiseTextAlpha { get; }
         public float ReducedMotionSecondsPerReel { get; }
+        // Wait between the last reel's running total and the total Fortune Critical result; skipped with Reduce Motion.
+        public float TotalCriticalRevealDelaySeconds { get; }
 
         // Same values as a new SlotReelSpinProfile asset.
         public static SlotReelSpinSettings Default => new(SlotEasingKind.InOutElastic,
@@ -73,18 +76,18 @@ namespace TxTRPG.UI.SlotMachine
             18f, 8f,
             true, .12f, .15f,
             2, .18f, .35f, 1.25f, .85f,
-            .15f);
+            .15f, .4f);
 
         // Verification only: every reel lands on its result in the same call, without waiting for frames.
         public static SlotReelSpinSettings Instant => new(SlotEasingKind.Linear,
-            0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 18f, 8f, false, 0f, 0f, 0, 0f, 0f, 1f, 1f, 0f);
+            0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 18f, 8f, false, 0f, 0f, 0, 0f, 0f, 1f, 1f, 0f, 0f);
 
         private static float Positive(float value) => float.IsNaN(value) ? 0f : Mathf.Max(0f, value);
         private static float Jitter(float value, float baseValue) => Mathf.Min(Positive(value), baseValue * MaximumJitterRatio);
     }
 
     // Developer-tunable reel spin presentation. The default asset is
-    // Assets/TxTRPG/UI/Styles/SlotMachine/DefaultSlotReelSpinProfile.asset, referenced by SlotMachinePanel.prefab.
+    // Assets/TxTRPG/UI/Styles/SlotMachine/DefaultSlotReelSpinProfile.asset, referenced by SlotMachinePanel.prefab and SlotReelDock.prefab.
     // Only the presentation changes; results, rune allocation and combat never read it.
     [CreateAssetMenu(menuName = "TxT RPG/Slot Machine/Reel Spin Profile", fileName = "SlotReelSpinProfile")]
     public sealed class SlotReelSpinProfile : ScriptableObject
@@ -144,6 +147,11 @@ namespace TxTRPG.UI.SlotMachine
         [SerializeField, Min(0f), Tooltip("With Reduce Motion, reel i shows its result after (i + 1) × this many seconds, without effects.")]
         private float reducedMotionSecondsPerReel = .15f;
 
+        [Header("Fortune Critical")]
+        [SerializeField, Min(0f), Tooltip("Seconds to wait after every reel is added to the total before the total Fortune Critical " +
+            "multiplier and the final total are shown. Not used with Reduce Motion.")]
+        private float totalCriticalRevealDelaySeconds = .4f;
+
         public SlotReelSpinSettings Settings => new(easing,
             startIntervalSeconds, stopIntervalSeconds, minimumStopGapSeconds,
             accelerationSeconds, cruiseSeconds, decelerationSeconds,
@@ -151,7 +159,7 @@ namespace TxTRPG.UI.SlotMachine
             cruiseCellsPerSecond, minimumCruiseCellsPerSecond,
             motionEffectsEnabled, effectFadeInSeconds, effectFadeOutSeconds,
             afterimageCount, afterimageSpacing, afterimageAlpha, maximumVerticalStretch, cruiseTextAlpha,
-            reducedMotionSecondsPerReel);
+            reducedMotionSecondsPerReel, totalCriticalRevealDelaySeconds);
 
         // Only clamps this asset's own values; never touches other assets or Scenes.
         private void OnValidate()

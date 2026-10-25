@@ -70,14 +70,14 @@ namespace TxTRPG.Application.Editor
                 var diceController = Object.FindAnyObjectByType<TemporaryDiceRollMenuController>(FindObjectsInactive.Include);
                 Require(diceController == null || !diceController.enabled && !diceController.IsReady, "the reserved dice controller takes no part");
                 Require(refs.Panel.ReelCount == 3, $"three reels ({refs.Panel.ReelCount})");
-                Require(refs.Panel.TotalLabelText == SlotCombatStoryFormatter.TotalLabel &&
-                    refs.Panel.TotalValueText == SlotCombatStoryFormatter.IdleTotalValue, $"idle total ({refs.Panel.TotalValueText})");
+                Require(refs.Panel.TotalLabelText == string.Empty && !Text(refs, "TotalLabel").gameObject.activeSelf &&
+                    refs.Panel.TotalValueText == SlotCombatStoryFormatter.IdleTotalValue, $"idle total, value only ({refs.Panel.TotalValueText})");
                 Require(Rows(refs.Panel) == "공격|×1;회복|×1", $"weights shown ({Rows(refs.Panel)})");
                 Require(refs.Panel.RuneColumnTitleText == SlotCombatStoryFormatter.RuneColumnTitle &&
                     refs.Panel.ValueColumnTitleText == SlotCombatStoryFormatter.ValueColumnTitle, "rune table column titles");
                 Require(!refs.Action.IsShown, "the action button is hidden while choosing a node");
                 Require(!refs.Panel.GetComponent<CanvasGroup>().interactable, "node selection blocks the slot machine panel");
-                log.AppendLine(" before combat: dice hidden, 3 reels, '합계 —', rows '×1', panel blocked by node selection.");
+                log.AppendLine(" before combat: dice hidden, 3 reels, total '0' without label, rows '×1', panel blocked by node selection.");
                 var catalog = refs.Panel.SkinCatalog;
                 var selectedSkinId = catalog != null ? catalog.SelectedSkinId : string.Empty;
                 Require(catalog != null && refs.Panel.ActiveSkinId == selectedSkinId, $"the catalog selection is applied ('{refs.Panel.ActiveSkinId}' vs '{selectedSkinId}')");
@@ -107,7 +107,22 @@ namespace TxTRPG.Application.Editor
                 await Frames(2);
                 Require(refs.Panel.IsSpinning, "the reels spin");
                 Require(refs.Action.IsShown && !refs.Action.IsInteractable, "the button is visible but disabled while spinning");
-                Require(refs.Panel.TotalValueText == SlotCombatStoryFormatter.SpinningTotalValue, $"spinning text ({refs.Panel.TotalValueText})");
+                // The total starts at 0 and only moves forward through the running totals of the stopped reels.
+                var expectedDisplay = TemporarySlotCombatController.CreateSpinDisplay(accepted.Spin, accepted.Fortune, accepted.Allocation);
+                var runningTotals = new[] { expectedDisplay.SpinningSummary.TotalValue }
+                    .Concat(expectedDisplay.ProgressSummaries.Select(summary => summary.TotalValue)).ToArray();
+                var runningIndex = 0;
+                var runningOrderOk = true;
+                void CheckRunningTotal()
+                {
+                    if (!refs.Panel.IsSpinning) return;
+                    var index = Array.IndexOf(runningTotals, refs.Panel.TotalValueText, runningIndex);
+                    if (index < 0 || refs.Panel.TotalMultiplierText.Length > 0) runningOrderOk = false;
+                    else runningIndex = index;
+                }
+                Require(refs.Panel.TotalValueText == SlotCombatStoryFormatter.TotalValue(0) || runningTotals.Skip(1).Contains(refs.Panel.TotalValueText),
+                    $"spinning total starts at 0 ({refs.Panel.TotalValueText})");
+                CheckRunningTotal();
                 // Skins swapped back and forth mid-spin must not change the result, timing or positions.
                 Require(refs.Panel.TrySetSkin(selectedSkinId, out skinReason), skinReason);
                 await Frames(2);
@@ -127,10 +142,12 @@ namespace TxTRPG.Application.Editor
                 await WaitWhile(() =>
                 {
                     effectSeen |= refs.Panel.ReelViews.OfType<SlotReelView>().Any(v => v.AnyAfterimageVisible && v.MaximumVisualScaleY > 1.01f);
+                    CheckRunningTotal();
                     return host.IsTemporaryCombatActionPending;
                 }, 10d);
                 watch.Stop();
                 Require(effectSeen, "afterimages and the vertical stretch appear during the high-speed phase");
+                Require(runningOrderOk, $"the spinning total followed the running totals {string.Join(" → ", runningTotals)} without a total multiplier");
                 Require(stories == 1, $"two Submits and a window during the spin applied exactly one turn ({stories})");
                 CheckResult(refs, host, accepted, log, "submit");
                 var attack = accepted.Allocation.Lines.Where(l => l.EffectKind == TxTRPG.Gameplay.Runes.RuneEffectKind.Attack).Sum(l => l.Amount);
@@ -336,7 +353,7 @@ namespace TxTRPG.Application.Editor
                     // Within the hysteresis band either arrangement is valid.
                     Require(layout.Arrangement == expected || Mathf.Abs(ratio - layout.StackBelowAspectRatio) < .06f,
                         $"{name}: arrangement {layout.Arrangement} for ratio {ratio:F2}");
-                    log.AppendLine($" {name}: panel {panelSize.x:F0}x{panelSize.y:F0} (ratio {ratio:F2}, {layout.Arrangement}), reel window {WindowOf(refs.Panel.ReelViews[0]).rect.size.x:F0}x{WindowOf(refs.Panel.ReelViews[0]).rect.size.y:F0}, button clear of payline cells, total and rune rows, total label and '88' fit (font {Text(refs, "TotalLabel").fontSize:F1}/{Text(refs, "TotalValue").fontSize:F1}){ButtonReelNote(refs)}.");
+                    log.AppendLine($" {name}: panel {panelSize.x:F0}x{panelSize.y:F0} (ratio {ratio:F2}, {layout.Arrangement}), reel window {WindowOf(refs.Panel.ReelViews[0]).rect.size.x:F0}x{WindowOf(refs.Panel.ReelViews[0]).rect.size.y:F0}, button clear of payline cells, total and rune rows, label hidden, '999' fits centered (value font {Text(refs, "TotalValue").fontSize:F1}){ButtonReelNote(refs)}.");
                 }
             }
             finally
@@ -357,12 +374,13 @@ namespace TxTRPG.Application.Editor
             var texts = refs.Panel.GetComponentsInChildren<TMP_Text>(true);
             var total = texts.First(t => t.name == "TotalValue");
             Require(!button.Overlaps(WorldRect(total.rectTransform)), $"{label}: the action button does not cover the total");
+            // The total shows its value only: the label is hidden and the value takes the whole text area, centered.
             var totalLabel = texts.First(t => t.name == "TotalLabel");
-            totalLabel.ForceMeshUpdate();
-            Require(!totalLabel.isTextTruncated && totalLabel.GetPreferredValues(totalLabel.text).x <= totalLabel.rectTransform.rect.width + .5f,
-                $"{label}: the total label '{totalLabel.text}' fits ({totalLabel.GetPreferredValues(totalLabel.text).x:F1} in {totalLabel.rectTransform.rect.width:F1}, font {totalLabel.fontSize:F1})");
-            Require(total.GetPreferredValues("88").x <= total.rectTransform.rect.width + .5f,
-                $"{label}: a two-digit total fits ({total.GetPreferredValues("88").x:F1} in {total.rectTransform.rect.width:F1}, font {total.fontSize:F1})");
+            Require(!totalLabel.gameObject.activeSelf, $"{label}: the total label is hidden");
+            Require(total.alignment == TextAlignmentOptions.Center && Mathf.Approximately(total.rectTransform.anchorMin.x, .05f) &&
+                Mathf.Approximately(total.rectTransform.anchorMax.x, .95f), $"{label}: the total value fills the TotalBox text area, centered");
+            Require(total.GetPreferredValues("999").x <= total.rectTransform.rect.width + .5f,
+                $"{label}: a three-digit total fits ({total.GetPreferredValues("999").x:F1} in {total.rectTransform.rect.width:F1}, font {total.fontSize:F1})");
             foreach (var row in refs.Panel.GetComponentsInChildren<SlotRuneLineRow>(false))
                 Require(!button.Overlaps(WorldRect((RectTransform)row.transform)), $"{label}: the action button does not cover {row.name}");
             Require(refs.Panel.ActiveDividerCount == refs.Panel.ReelCount - 1, $"{label}: one divider between neighbouring reels ({refs.Panel.ActiveDividerCount})");

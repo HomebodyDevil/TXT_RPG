@@ -67,7 +67,8 @@ namespace TxTRPG.UI.SlotMachine
             return plans;
         }
 
-        // Worst case over every jitter and the stop-gap correction; the controller's timeout is based on it.
+        // Worst case over every jitter and the stop-gap correction, plus the total Fortune Critical wait (always added,
+        // whether or not the spin has a total step); the controller's timeout is based on it.
         public static float GetMaximumPresentationSeconds(SlotReelSpinSettings settings, int reelCount)
         {
             reelCount = Mathf.Max(1, reelCount);
@@ -80,7 +81,7 @@ namespace TxTRPG.UI.SlotMachine
                     settings.CruiseSeconds + i * settings.StopIntervalSeconds + settings.CruiseJitterSeconds + deceleration;
                 end = i == 0 ? raw : Mathf.Max(raw, end + settings.MinimumStopGapSeconds);
             }
-            return Mathf.Max(end, reelCount * settings.ReducedMotionSecondsPerReel);
+            return Mathf.Max(end, reelCount * settings.ReducedMotionSecondsPerReel) + settings.TotalCriticalRevealDelaySeconds;
         }
 
         // Eased phases keep a small minimum so the easing is visible; a zero base (Instant) stays zero.

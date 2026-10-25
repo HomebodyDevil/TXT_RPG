@@ -229,10 +229,13 @@ namespace TxTRPG.Application.Editor
             border.raycastTarget = false;
             var content = CreateRect("ContentRoot", cardRect);
 
+            // The card shows the value only: TotalLabel stays (empty and inactive) for the display contract, and the value
+            // fills ContentRoot, centered.
             var label = CopyText(sourceLabel, content, "TotalLabel", new Vector2(0f, .65f), Vector2.one, .8f, 10f, 40f, false, string.Empty);
-            label.text = "합계";
-            var value = CopyText(sourceValue, content, "TotalValue", Vector2.zero, new Vector2(1f, .65f), .9f, 14f, 96f, true, "999");
-            value.text = "—";
+            label.text = string.Empty;
+            label.gameObject.SetActive(false);
+            var value = CopyText(sourceValue, content, "TotalValue", Vector2.zero, Vector2.one, .9f, 14f, 96f, true, "999");
+            value.text = TxTRPG.Application.SlotMachine.SlotCombatStoryFormatter.IdleTotalValue;
 
             var multiplier = (RectTransform)UnityEngine.Object.Instantiate(sourceMultiplier.gameObject, content, false).transform;
             multiplier.name = "TotalMultiplier";

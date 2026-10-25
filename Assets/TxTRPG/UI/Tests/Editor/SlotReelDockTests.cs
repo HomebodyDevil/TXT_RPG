@@ -51,7 +51,7 @@ namespace TxTRPG.UI.Tests
             Enumerable.Range(1, count).Select(i => new SlotReelDisplay($"reel.{i}", OneToSix)).ToArray();
 
         private static SlotSummaryDisplay Summary(string total, string multiplier = "") =>
-            new("합계", total, "룬", "쌓임 → 분배", new[] { new SlotRuneLineDisplay("공격", "×1 → 5") }, "장착된 룬이 없습니다", "외 {0}줄", multiplier);
+            new(string.Empty, total, "룬", "쌓임 → 분배", new[] { new SlotRuneLineDisplay("공격", "×1 → 5") }, "장착된 룬이 없습니다", "외 {0}줄", multiplier);
 
         private static SlotSpinDisplay Spin(string totalMultiplier, params int[] stops) => new(
             stops.Select((stop, i) => new SlotReelStopDisplay($"reel.{i + 1}", stop, OneToSix, i == 1 ? "×3" : string.Empty)).ToArray(),
@@ -73,6 +73,7 @@ namespace TxTRPG.UI.Tests
             Assert.That(dock.PresentationRoot.parent, Is.EqualTo(dock.transform));
             Assert.That(dock.ReelMachine.parent, Is.EqualTo(dock.PresentationRoot));
             Assert.That(dock.TotalCard, Is.Not.Null);
+            Assert.That(dock.TotalValueText, Is.EqualTo("0"), "the total shows 0 before any summary");
             Assert.That(dock.TotalCard.transform.parent, Is.EqualTo(dock.PresentationRoot));
             Assert.That(dock.TotalCard.transform.GetSiblingIndex(), Is.GreaterThan(dock.ReelMachine.GetSiblingIndex()), "the card draws above the reels");
             Assert.That(dock.TotalCard.VisualRoot, Is.Not.Null);
@@ -92,8 +93,62 @@ namespace TxTRPG.UI.Tests
             Assert.That(dock.SpinProfileForEditor, Is.Not.Null);
             Assert.That(dock.SkinCatalogForEditor, Is.Not.Null);
             Assert.That(dock.SkinTargetsForEditor.All(target => target.HasDefaults), Is.True, "every reel skin target has recorded defaults");
-            Assert.That(dock.TotalLabelText, Is.EqualTo("합계"));
+            Assert.That(dock.TotalLabelText, Is.Empty);
             Assert.That(dock.TotalMultiplierText, Is.Empty);
+        }
+
+        private TMPro.TMP_Text CardText(string name) =>
+            dock.TotalCard.ContentRoot.GetComponentsInChildren<TMPro.TMP_Text>(true).Single(t => t.name == name);
+
+        [Test]
+        public void Card_ShowsOnlyTheValueCenteredInTheWholeContentRoot()
+        {
+            var label = CardText("TotalLabel");
+            var value = CardText("TotalValue");
+            Assert.That(label.gameObject.activeSelf, Is.False, "the Prefab stores the label hidden");
+            Assert.That(value.rectTransform.anchorMin, Is.EqualTo(Vector2.zero));
+            Assert.That(value.rectTransform.anchorMax, Is.EqualTo(Vector2.one));
+            Assert.That(value.rectTransform.offsetMin, Is.EqualTo(Vector2.zero));
+            Assert.That(value.rectTransform.offsetMax, Is.EqualTo(Vector2.zero));
+            Assert.That(value.alignment, Is.EqualTo(TMPro.TextAlignmentOptions.Center));
+
+            dock.SetSummary(Summary("999", "×30"));
+            Canvas.ForceUpdateCanvases();
+            Assert.That(label.gameObject.activeSelf, Is.False);
+            Assert.That(value.alignment, Is.EqualTo(TMPro.TextAlignmentOptions.Center), "font sizing and the multiplier keep the alignment");
+            var content = WorldRect(dock.TotalCard.ContentRoot);
+            var valueRect = WorldRect(value.rectTransform);
+            Assert.That(valueRect.center.x, Is.EqualTo(content.center.x).Within(.5f));
+            Assert.That(valueRect.center.y, Is.EqualTo(content.center.y).Within(.5f));
+            Assert.That(valueRect.size.x, Is.EqualTo(content.size.x).Within(.5f));
+            Assert.That(valueRect.size.y, Is.EqualTo(content.size.y).Within(.5f));
+        }
+
+        [Test]
+        public void Card_LabelIsActiveOnlyWhileTheSummaryHasOne()
+        {
+            var label = CardText("TotalLabel");
+            dock.TotalCard.SetTotal("합계", "5", string.Empty);
+            Assert.That(label.gameObject.activeSelf, Is.True);
+            Assert.That(dock.TotalLabelText, Is.EqualTo("합계"));
+            dock.TotalCard.SetTotal(string.Empty, "5", string.Empty);
+            Assert.That(label.gameObject.activeSelf, Is.False);
+            Assert.That(dock.TotalLabelText, Is.Empty);
+            dock.TotalCard.SetTotal(null, "6", string.Empty);
+            Assert.That(label.gameObject.activeSelf, Is.False);
+            Assert.That(dock.TotalValueText, Is.EqualTo("6"));
+        }
+
+        [Test]
+        public void Card_PrefabOverhangCentersTheCardOnTheReelMachineTopEdge()
+        {
+            Assert.That(dock.TotalCard.OverhangRatio, Is.EqualTo(.5f));
+            dock.TotalCard.Refresh(true);
+            var machine = WorldRect(dock.ReelMachine);
+            var card = WorldRect((RectTransform)dock.TotalCard.transform);
+            Assert.That(card.center.y, Is.EqualTo(machine.yMax).Within(.5f), "the card center lies on the reel machine's top edge");
+            var payline = WorldRect(dock.PaylineFrameRect);
+            Assert.That(card.yMin, Is.GreaterThanOrEqualTo(payline.yMax), "the card does not cover the payline cell");
         }
 
         [TestCase(1)]
@@ -125,7 +180,7 @@ namespace TxTRPG.UI.Tests
             Assert.That(task.IsCompleted && task.Result, Is.True);
             var spun = dock.ReelViews.Select(v => v.PaylineValue).ToArray();
             Assert.That(spun, Is.EqualTo(new[] { 3, 1, 6 }));
-            Assert.That(dock.TotalLabelText, Is.EqualTo("합계"));
+            Assert.That(dock.TotalLabelText, Is.Empty);
             Assert.That(dock.TotalValueText, Is.EqualTo("20"));
             Assert.That(dock.TotalMultiplierText, Is.EqualTo("×2"));
             Assert.That(((SlotReelView)dock.ReelViews[1]).FortuneMultiplierText, Is.EqualTo("×3"));
@@ -142,6 +197,48 @@ namespace TxTRPG.UI.Tests
             Assert.That(dock.TotalMultiplierText, Is.Empty, "an empty multiplier hides it");
         }
 
+        // Starts at 0, adds each payline value as its reel stops and ends on "40" ×2 after the total step.
+        private static SlotSpinDisplay ProgressSpin(params int[] stops)
+        {
+            var running = 0;
+            var progress = stops.Select(stop => Summary((running += OneToSix[stop]).ToString())).ToArray();
+            return new SlotSpinDisplay(
+                stops.Select((stop, i) => new SlotReelStopDisplay($"reel.{i + 1}", stop, OneToSix)).ToArray(),
+                running, Summary("0"), progress, true, Summary("40", "×2"));
+        }
+
+        [Test]
+        public void RunningTotal_ReachesTheCardAndTheTotalStepWaitsUnlessReduceMotion()
+        {
+            dock.SetReels(Reels(3));
+            // Reel i's constant-speed phase lasts i × 10 s: reel 0 stops in the call and Edit Mode time does not advance.
+            dock.SetSpinSettingsForEditor(new SlotReelSpinSettings(SlotEasingKind.Linear,
+                0f, 10f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 18f, 8f, false, 0f, 0f, 0, 0f, 0f, 1f, 1f, 0f, .4f));
+            var spin = ProgressSpin(2, 0, 5);
+            var running = dock.PlaySpinAsync(spin, false, CancellationToken.None);
+            Assert.That(running.IsCompleted, Is.False);
+            Assert.That(dock.TotalValueText, Is.EqualTo("3"));
+            Assert.That(dock.TotalMultiplierText, Is.Empty);
+            dock.StopAtResult(spin);
+            Assert.That(dock.TotalValueText, Is.EqualTo("40"));
+            Assert.That(dock.TotalMultiplierText, Is.EqualTo("×2"));
+
+            // Every reel at rest in the call: the last running total stays during the wait.
+            dock.SetSpinSettingsForEditor(new SlotReelSpinSettings(SlotEasingKind.Linear,
+                0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 18f, 8f, false, 0f, 0f, 0, 0f, 0f, 1f, 1f, 0f, .4f));
+            running = dock.PlaySpinAsync(spin, false, CancellationToken.None);
+            Assert.That(dock.TotalValueText, Is.EqualTo("10"));
+            Assert.That(dock.TotalMultiplierText, Is.Empty);
+            Assert.That(dock.IsSpinning && !running.IsCompleted, Is.True);
+            dock.StopAtResult(spin);
+            Assert.That(dock.IsSpinning, Is.False);
+
+            var reduced = dock.PlaySpinAsync(spin, true, CancellationToken.None);
+            Assert.That(reduced.IsCompleted && reduced.Result, Is.True, "Reduce Motion does not wait");
+            Assert.That(dock.TotalValueText, Is.EqualTo("40"));
+            Assert.That(dock.TotalMultiplierText, Is.EqualTo("×2"));
+        }
+
         [Test]
         public void ShowAndHide_MovePresentationRootOnly()
         {
@@ -151,12 +248,19 @@ namespace TxTRPG.UI.Tests
             var rootPosition = ((RectTransform)dock.transform).anchoredPosition;
             var areaSize = dock.ReelArea.rect.size;
             var cardPosition = ((RectTransform)dock.TotalCard.transform).anchoredPosition;
-            dock.Show();
+            // The Prefab starts below the screen (initiallyShown off) until Show is called.
+            dock.Hide();
             Assert.That(shown, Is.Zero, "the same state raises nothing");
+            Assert.That(dock.IsShown, Is.False, "the dock starts hidden");
+            Assert.That(WorldRect(dock.PresentationRoot).yMax, Is.LessThanOrEqualTo(WorldRect(host).yMin + .5f), "the initial state is below the parent");
+
+            dock.Show();
+            Assert.That(shown, Is.EqualTo(1));
             Assert.That(dock.IsShown, Is.True);
+            Assert.That(dock.PresentationRoot.anchoredPosition, Is.EqualTo(dock.ShownPosition));
 
             dock.Hide();
-            Assert.That(shown, Is.EqualTo(1));
+            Assert.That(shown, Is.EqualTo(2));
             Assert.That(dock.IsShown, Is.False);
             Assert.That(dock.CanvasGroup.alpha, Is.Zero);
             Assert.That(dock.gameObject.activeSelf, Is.True, "the dock stays active so a running spin continues");
@@ -166,13 +270,13 @@ namespace TxTRPG.UI.Tests
             Assert.That(dock.ReelArea.rect.size, Is.EqualTo(areaSize));
             Assert.That(((RectTransform)dock.TotalCard.transform).anchoredPosition, Is.EqualTo(cardPosition));
             dock.Hide();
-            Assert.That(shown, Is.EqualTo(1));
+            Assert.That(shown, Is.EqualTo(2));
 
             var hiddenSpin = dock.PlaySpinAsync(Spin(string.Empty, 1, 1, 1), true, CancellationToken.None);
             Assert.That(hiddenSpin.IsCompleted && hiddenSpin.Result, Is.True, "a hidden dock still presents the spin");
 
             dock.Show();
-            Assert.That(shown, Is.EqualTo(2));
+            Assert.That(shown, Is.EqualTo(3));
             Assert.That(dock.CanvasGroup.alpha, Is.EqualTo(1f));
             Assert.That(dock.PresentationRoot.anchoredPosition, Is.EqualTo(dock.ShownPosition));
         }
@@ -341,25 +445,27 @@ namespace TxTRPG.UI.Tests
             dock.SetTransitionForEditor(fake, true);
             dock.ReduceMotion = true;
 
-            dock.Hide();
+            // The dock starts hidden (initiallyShown off), so the first change shows it.
+            dock.Show();
             Assert.That(fake.Calls.Count, Is.EqualTo(1));
-            Assert.That(fake.Calls[0].Showing, Is.False);
+            Assert.That(fake.Calls[0].Showing, Is.True);
             Assert.That(fake.Calls[0].ReduceMotion, Is.True);
-            Assert.That(fake.Calls[0].To, Is.EqualTo(dock.HiddenOffset));
+            Assert.That(fake.Calls[0].To, Is.EqualTo(dock.ShownPosition));
             Assert.That(dock.CanvasGroup.alpha, Is.EqualTo(1f), "visible while the transition runs");
             Assert.That(dock.IsTransitionRunningForEditor, Is.True);
 
             dock.PresentationRoot.anchoredPosition = new Vector2(0f, -40f);
-            dock.Show();
-            Assert.That(fake.Calls[0].Token.IsCancellationRequested, Is.True, "the running hide is cancelled");
+            dock.Hide();
+            Assert.That(fake.Calls[0].Token.IsCancellationRequested, Is.True, "the running show is cancelled");
             Assert.That(fake.Calls.Count, Is.EqualTo(2));
-            Assert.That(fake.Calls[1].Showing, Is.True);
+            Assert.That(fake.Calls[1].Showing, Is.False);
             Assert.That(fake.Calls[1].From, Is.EqualTo(new Vector2(0f, -40f)), "starts from the current position");
+            Assert.That(fake.Calls[1].To, Is.EqualTo(dock.HiddenOffset));
 
             fake.Complete(1);
             Assert.That(dock.IsTransitionRunningForEditor, Is.False);
-            Assert.That(dock.PresentationRoot.anchoredPosition, Is.EqualTo(dock.ShownPosition));
-            Assert.That(dock.CanvasGroup.alpha, Is.EqualTo(1f));
+            Assert.That(dock.PresentationRoot.anchoredPosition, Is.EqualTo(dock.HiddenOffset));
+            Assert.That(dock.CanvasGroup.alpha, Is.Zero);
         }
 
         private sealed class RecordingDockTransition : MonoBehaviour, ISlotReelDockTransition

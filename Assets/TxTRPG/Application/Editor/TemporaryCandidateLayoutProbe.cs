@@ -3,6 +3,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using TxTRPG.UI;
+using TxTRPG.UI.Runes;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -121,6 +122,16 @@ namespace TxTRPG.Application.Editor
                 area.GetWorldCorners(corners);
                 var min = main.InverseTransformPoint(corners[0]);
                 builder.Append($" | {areaName} x={min.x:0.#} y={min.y:0.#} w={area.rect.width:0.#} h={area.rect.height:0.#}");
+            }
+            var runeGrid = main.GetComponentInChildren<RuneGridPanel>(true);
+            if (runeGrid != null && runeGrid.LayoutGroup != null)
+            {
+                var grid = runeGrid.LayoutGroup.CurrentLayout;
+                var contentWidth = runeGrid.Content.rect.width;
+                var viewportWidth = runeGrid.Viewport.rect.width;
+                builder.Append($" | RuneGrid cols={grid.Columns} card={grid.CardSize:0.#} cell={grid.CellSize:0.#} used={grid.UsedWidth:0.#}/{runeGrid.LayoutGroup.AvailableWidth:0.#}" +
+                    $" content={contentWidth:0.#}x{runeGrid.Content.rect.height:0.#} viewport={viewportWidth:0.#}x{runeGrid.Viewport.rect.height:0.#}" +
+                    $" horizontalOverflow={(contentWidth > viewportWidth + .01f || grid.UsedWidth > runeGrid.LayoutGroup.AvailableWidth + .01f ? "YES" : "no")}");
             }
             return builder.ToString();
         }

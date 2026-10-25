@@ -253,7 +253,7 @@ namespace TxTRPG.Application.Tests
             var controller = CreateController(panel);
             yield return Wait(controller.InitializeAsync(default, CancellationToken.None));
             controller.BeginCombat(new HealthState(30, 30));
-            Assert.That(panel.TotalLabelText, Is.EqualTo("합계"));
+            Assert.That(panel.TotalLabelText, Is.Empty, "the total shows its value only");
             Assert.That(panel.TotalValueText, Is.EqualTo(SlotCombatStoryFormatter.IdleTotalValue));
             Assert.That(panel.RuneColumnTitleText, Is.EqualTo("룬"));
             Assert.That(panel.ValueColumnTitleText, Is.EqualTo("쌓임 → 분배"));
@@ -275,7 +275,7 @@ namespace TxTRPG.Application.Tests
             Assert.That(panel.SpinProfileForEditor, Is.Not.Null, "the Prefab references DefaultSlotReelSpinProfile");
             var longest = panel.GetMaximumPresentationSeconds(3);
             Assert.That(longest, Is.EqualTo(SlotReelSpinPlanner.GetMaximumPresentationSeconds(SlotReelSpinSettings.Default, 3)).Within(.001f));
-            Assert.That(longest, Is.InRange(2.4f, 2.8f), "about 2.6 s for three reels with the default profile");
+            Assert.That(longest, Is.InRange(2.8f, 3.2f), "about 2.6 s for three reels plus the 0.4 s total Fortune Critical wait with the default profile");
             var timeout = TemporaryCombatPresentationTimeout.Resolve(3f, longest, 1f);
             Assert.That(timeout, Is.GreaterThanOrEqualTo(longest + 1f).And.LessThanOrEqualTo(TemporaryCombatPresentationTimeout.MaximumSeconds));
         }
@@ -286,7 +286,7 @@ namespace TxTRPG.Application.Tests
             Assert.That(SlotCombatStoryFormatter.LineWeight(2), Is.EqualTo("×2"));
             Assert.That(SlotCombatStoryFormatter.LineAllocation(1, 0), Is.EqualTo("×1 → 0"), "a line that received nothing is still a row");
             var summary = TemporarySlotCombatController.CreateSummary("13", new[] { new SlotRuneLineDisplay("공격", "×2 → 6") });
-            Assert.That(summary.TotalLabel, Is.EqualTo("합계"));
+            Assert.That(summary.TotalLabel, Is.Empty, "the total shows its value only");
             Assert.That(summary.EmptyText, Is.EqualTo("장착된 룬이 없습니다"));
             Assert.That(string.Format(summary.OverflowFormat, 3), Is.EqualTo("외 3줄"));
         }

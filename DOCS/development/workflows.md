@@ -224,6 +224,8 @@ Player 빌드 전에 `Tools > TxT RPG > Application > Validate App Scene Configu
 | 메뉴 | 동작 |
 | --- | --- |
 | `Tools > TxT RPG > Application > Temporary > Apply Candidate Main Scene Initial Content` (`TemporaryCandidateMainSceneApply`) | Play Mode·컴파일 중이거나 `AppScene`·`Candidate_MainScene`에 미저장 변경이 있으면 아무것도 바꾸지 않습니다. Build Settings를 `AppScene`·`Candidate_MainScene`·`TMP_MainScene` 순서로 맞추고 파일이 없는 Scene 항목을 제거한 뒤, `AppRoot.prefab`의 초기 경로를 `Candidate_MainScene`으로 바꾸고, AppScene의 같은 Override를 되돌리고, `Candidate_MainScene`의 `MainArea`와 세 Area를 `FlexibleLayoutPanel.prefab` 인스턴스로 재구성합니다. 바꾼 자산만 저장하며, 이미 적용된 단계는 건너뛰므로 재실행해도 안전합니다. 결과는 `CANDIDATE_MAIN_SCENE_APPLY` 로그로 남습니다. |
+| `Tools > TxT RPG > Application > Temporary > Probe Slot Progressive Total (Play Mode)` (`TemporarySlotProgressiveTotalPlayProbe`, 임시) | AppScene 경유 Play에서 `Candidate_MainScene`이 표시된 상태로 실행합니다([슬롯 합계의 Reel별 누적 표시](../instructions/slot-progressive-total-display.md) 확인용). 먼저 독이 화면 밖(숨김·알파 0)에서 시작하고 합계가 `0`이며 `화면 안으로`만 켜져 있는지 확인합니다. 이어서 DEBUG 패널 `슬롯` Tab 컨트롤러의 회전(`회전` 버튼과 같은 `SpinAsync`)을 합계 확률 1·0, Reduce Motion, Reel 10개(모든 확률 1)로 실행하며 합계 카드를 매 프레임 기록해, `0` 시작, 결과 문구에서 다시 계산한 누적값 순서, 결과 전 합계 배수 없음, 최종 합계, 합계 Critical 대기를 검사합니다. 이어서 Game View를 1920×1080, 2520×1080, 1024×768, 390×844로 바꿔 합계 카드 글자 맞춤을 기록하고 `Temp/slot-progressive-total-*.png`를 저장합니다(임시 크기는 전체 인덱스로 제거). 끝나면 세션 Reel·Fortune 규칙을 설정 자산 값으로 되돌리며 아무것도 저장하지 않습니다. 결과는 `SLOT_PROGRESSIVE_TOTAL_PROBE ... PASS`입니다. 새 Play 세션에서 다시 실행해도 안전하며, 누적 표시 확인이 끝나면 삭제할 수 있습니다. |
+| `Tools > TxT RPG > Application > Temporary > Probe Slot Total Value Only (Play Mode)` (`TemporarySlotTotalValueOnlyPlayProbe`, 임시) | AppScene 경유 Play에서 `Candidate_MainScene`이 표시된 상태로 실행합니다([슬롯 합계의 수치 단독 표시와 합계 카드 중심 정렬](../instructions/slot-total-value-only-and-card-centered-on-reel-edge.md) 확인용). 숨김 상태의 카드가 `SlotReelDockClip` 아래에 있는지 확인하고 `화면 안으로`를 실행한 뒤, `overhangRatio` 0.5, `TotalLabel` 비활성, `TotalValue`가 `ContentRoot` 전체를 채우고 가운데 정렬인지, 카드 중심이 Reel 기계와 `Frame`의 위쪽 가장자리에 있는지, 카드가 Payline 칸을 가리지 않는지 검사합니다. 합계 확률 1로 한 번 회전한 뒤 카드에 `999`와 `×30`을 표시(표시만)하고 Game View 1920×1080, 2520×1080, 1024×768, 390×844에서 값 글자 크기(Canvas 단위·화면 px)와 배수가 카드 안에서 값을 가리지 않는지 기록하며 `Temp/slot-total-value-only-*.png`를 저장합니다. 마지막으로 `화면 밖으로` 후 카드가 프레임 아래로 나갔는지 확인합니다. 세션 Reel·Fortune 규칙을 되돌리며 아무것도 저장하지 않습니다. 결과는 `SLOT_TOTAL_VALUE_ONLY_PROBE ... PASS`입니다. 새 Play 세션에서 다시 실행해도 안전하며, 확인이 끝나면 삭제할 수 있습니다. |
 | `Tools > TxT RPG > Application > Temporary > Measure Candidate Main Scene Layout (Play Mode)` (`TemporaryCandidateLayoutProbe`) | AppScene 경유 Play에서 `Candidate_MainScene`이 표시된 상태로 실행합니다. Game View를 1920×1080, 2560×1080, 1280×720, 1080×1920, 750×1334, 640×1136, 700×400으로 차례로 바꾸며 세 영역의 위치·크기와 축을 `CANDIDATE_LAYOUT` 로그로 남기고 `Temp/candidate-layout-*.png`를 저장합니다. 임시 Game View 크기는 전체 인덱스로 제거하며 아무 자산도 저장하지 않습니다. |
 
 ### Candidate_MainScene 슬롯 Reel 독 적용과 미리보기
@@ -233,8 +235,8 @@ Player 빌드 전에 `Tools > TxT RPG > Application > Validate App Scene Configu
 | 메뉴 | 동작 |
 | --- | --- |
 | `Tools > TxT RPG > Application > Temporary > Apply Slot Reel Dock To Candidate Main Scene` (`TemporarySlotReelDockApply`, 임시) | Play Mode·컴파일 중·Prefab Stage이거나 열린 Scene에 미저장 변경이 있으면 아무것도 바꾸지 않습니다. `SlotReelDock.prefab`이 없으면 `SlotMachinePanel.prefab`의 Reel 기계 외형과 합계 글자를 독립 객체로 복제하고 `SlotReel.prefab` 인스턴스 3개를 넣어 만듭니다. 이미 있으면 다시 만들지 않고 검증만 하며, Reel·구분대 형제 순서가 어긋난 경우에만 그 순서를 고쳐 저장합니다. `Candidate_MainScene`에 독이 없으면 `Canvas/OverlayLayer`와 Prefab 인스턴스를 추가하고 저장합니다. 이미 목표 상태이면 파일을 쓰지 않고 `kept` 로그만 남기므로 재실행해도 안전합니다. 결과는 `SLOT_REEL_DOCK_APPLY` 로그로 남습니다. `SlotMachinePanel.prefab`, `SlotReel.prefab`, `TMP_MainScene`은 읽기만 합니다. 적용은 2026-10-17에 완료했으므로 다시 실행할 필요가 없으며, 사용자가 독을 확인한 뒤 파일을 삭제할 수 있습니다. 검증 실패 시 `SlotReelDock.prefab`을 지우고 다시 실행하면 새로 만들지만, Scene 인스턴스의 GUID 참조가 끊기므로 Scene의 독 인스턴스(2026-10-21부터 `OverlayLayer/SlotReelDockClip/SlotReelDock`)도 함께 지워야 합니다. 이 메뉴는 `Canvas/OverlayLayer`를 찾는 이전 구조를 전제로 하므로 화면 프레임·클리핑 적용 뒤의 Scene에는 쓰지 않습니다. |
-| `Tools > TxT RPG > Application > Preview > Slot Reel Dock > Spin` (`SlotReelDockPreviewMenu`, 영구) | Play Mode에서 로드된 Scene의 활성 `SlotReelDock` 하나를 찾아(없거나 둘 이상이면 경고만 남김) 세션 슬롯머신의 Reel(세션이 없으면 `TemporarySlotMachineConfiguration.asset`)과 미리보기 전용 난수 정지 위치로 `PlaySpinAsync`를 재생합니다. 합계는 Payline 값의 합이며 세션·룬·Fortune Critical 상태는 바뀌지 않습니다. 회전 중에 다시 실행하면 이전 회전을 `StopAtResult`로 끝내고 새로 시작합니다. Reduce Motion은 `PlayerSessionHost.TemporaryDicePreferences.ReduceMotion`(세션이 없으면 꺼짐)을 따릅니다. |
-| `... > Spin With Total Multiplier` | 위와 같고 합계를 2배로 표시하며 합계 배수 `×2`를 보여 줍니다. |
+| `Tools > TxT RPG > Application > Preview > Slot Reel Dock > Spin` (`SlotReelDockPreviewMenu`, 영구) | Play Mode에서 로드된 Scene의 활성 `SlotReelDock` 하나를 찾아(없거나 둘 이상이면 경고만 남김) 세션 슬롯머신의 Reel(세션이 없으면 `TemporarySlotMachineConfiguration.asset`)과 미리보기 전용 난수 정지 위치로 `PlaySpinAsync`를 재생합니다. 합계는 회전 시작 시 `0`에서 Reel이 멈출 때마다 Payline 값을 더해 Payline 값의 합에 이르며, 세션·룬·Fortune Critical 상태는 바뀌지 않습니다. 회전 중에 다시 실행하면 이전 회전을 `StopAtResult`로 끝내고 새로 시작합니다. Reduce Motion은 `PlayerSessionHost.TemporaryDicePreferences.ReduceMotion`(세션이 없으면 꺼짐)을 따릅니다. |
+| `... > Spin With Total Multiplier` | 위와 같고, 마지막 누적값을 회전 설정의 합계 Critical 대기 시간(기본 0.4초, Reduce Motion은 생략)만큼 보여 준 뒤 합계를 2배로 표시하며 합계 배수 `×2`를 보여 줍니다. |
 | `... > Add Reel`, `... > Remove Reel` | 미리보기가 표시하는 Reel 구성의 끝에 Reel을 하나 더하거나 빼고(최소 1개) `SetReels`를 호출합니다. 이후 `Spin`은 이 구성을 씁니다. Play Mode를 다시 시작하면 세션 구성으로 돌아갑니다. |
 | `... > Toggle Shown` | `SetShown(!IsShown)` |
 | `... > Cycle Card Shape` | 합계 카드 모양을 `Rectangle` → `RoundedRectangle` → `Circle` → `Ellipse` 순서로 바꿉니다. 실행 중 값이며 Prefab에 저장하지 않습니다. |
@@ -243,7 +245,7 @@ Player 빌드 전에 `Tools > TxT RPG > Application > Validate App Scene Configu
 
 확인 절차:
 
-1. 아무 Scene에서 Play를 시작하면 AppScene을 거쳐 `Candidate_MainScene`이 로드되고, 화면 하단에 Reel 3개의 독과 흰색 직사각형 합계 카드가 Reel 기계 위쪽 가장자리 가운데에 걸쳐 보입니다.
+1. 아무 Scene에서 Play를 시작하면 AppScene을 거쳐 `Candidate_MainScene`이 로드되고, 독은 화면 아래 밖에서 시작합니다. DEBUG 패널 `슬롯` Tab의 `화면 안으로`를 누르면 화면 하단에 Reel 3개의 독과 흰색 합계 카드가 보입니다. 카드 중심은 Reel 기계 위쪽 경계선에 놓이고(`overhangRatio` 0.5), 카드에는 `합계` 라벨 없이 수치 `0`만 가로·세로 가운데에 표시됩니다.
 2. `Preview > Slot Reel Dock`의 각 메뉴를 실행하고 Console의 `SLOT_REEL_DOCK_PREVIEW` 로그와 화면을 확인합니다.
 3. Inspector에서 `OverlayLayer/SlotReelDockClip/SlotReelDock/PresentationRoot/TotalCard`의 `Appearance > Shape`를 `RoundedRectangle`로, `Corner Radius`를 0, 0.2, 0.5로 바꿔 둥근 정도를 확인합니다. Play Mode에서 바꾼 값은 종료 후 저장되지 않습니다.
 4. Edit Mode 테스트는 `TxTRPG.UI.Tests.SlotReelDockTests`이며, Reel 처리 회귀는 `SlotMachinePanelTests`, `SlotMachinePanelSkinTests`, `SlotMachineCombatTests`, `SlotFortuneCriticalCombatTests`, `ExplorationEventControllerTests`로 확인합니다.
@@ -300,7 +302,7 @@ Player 빌드 전에 `Tools > TxT RPG > Application > Validate App Scene Configu
 
 1. 아무 Scene에서 Play를 시작해 AppScene을 거쳐 `Candidate_MainScene`이 로드되면, 오른쪽 위 `DEBUG` 패널에 `이벤트 판정` Tab이 선택되어 있고 기존 슬라이더 5개·`이벤트 발생`·`기본값으로`·결과 문구가 보입니다([요소 토글과 디버그 이벤트 판정](#candidate_mainscene-요소-토글과-디버그-이벤트-판정)의 3~5).
 2. `슬롯` Tab을 누르면 Reel 수와 Reel별·합계 Critical 확률, `회전`·`기본값으로`·`화면 안으로`·`화면 밖으로`가 보입니다. `+`/`−`로 Reel 수가 1~10에서 바뀌고 독의 Reel 수도 따라갑니다. 페이지는 화면 프레임 아래쪽(여백 16)까지 늘어나므로 1920×1080 프레임에서는 Reel 10개에서도 모든 설정 요소가 스크롤 없이 보이고, 공간이 부족할 때만 세로로 스크롤됩니다. `슬롯` Tab의 패널은 `이벤트 판정` Tab의 패널보다 낮아지지 않으며, Reel 1개처럼 내용이 짧으면 내용은 위쪽에 붙고 아래가 비어 있습니다.
-3. `회전`을 누르면 독이 회전하고 결과 문구(예: `3, 5×2, 2 → 합계 ×3 = 45`)와 합계 카드의 최종 합계·배수가 표시됩니다.
+3. `회전`을 누르면 독이 회전하고 결과 문구(예: `3, 5×2, 2 → 합계 ×3 = 45`)와 합계 카드의 최종 합계·배수가 표시됩니다. 카드에는 라벨 없이 누적값과 최종 합계가 가운데에 표시되고, 합계 Critical이면 `×N`이 수치 옆이나 위에 붙습니다. 결과 문구의 `합계`는 그대로입니다.
 4. `화면 밖으로`/`화면 안으로`로 독이 easeInOutBack으로 움직이고, 프레임 아래쪽 밖(레터박스)에는 그려지지 않습니다. 이동 시간은 `SlotReelDock.prefab`(또는 Scene 인스턴스)의 `SlotReelDockEasedTransition`에서 `Show Duration`·`Hide Duration`으로 바꿉니다(기본 0.3초).
 5. `Slot Debug Tab Play Check`를 실행하고 `SLOT_DEBUG_TAB_CHECK: PASS all steps`를 확인하고, 이어서 `Slot Debug Tab Size Sweep`을 실행해 `SLOT_DEBUG_TAB_CHECK: PASS size sweep`을 확인합니다.
 6. Edit Mode 테스트는 클래스별로 `TxTRPG.UI.Tests.DebugPanelTabGroupTests`, `TxTRPG.UI.Tests.SlotDebugTabViewTests`, `TxTRPG.UI.Tests.SlotReelDockEasedTransitionTests`, `TxTRPG.UI.Tests.SlotReelDockTests`, `TxTRPG.UI.Tests.EncounterDebugPanelTests`, `TxTRPG.Application.Tests.SlotReelDockDebugControllerTests`이며, 회귀 확인은 `TxTRPG.Application.Tests.EncounterRollControllerTests`, `TxTRPG.Application.Tests.SlotFortuneCriticalCombatTests`, `TxTRPG.UI.Tests.SlotMachinePanelTests`입니다. 모두 `AssetWriting`이 아니며 저장된 Prefab·설정 자산을 읽기만 합니다.
@@ -1145,9 +1147,10 @@ Apply 메뉴는 Play Mode를 종료하고 저장된 `TMP_MainScene`을 미저장
 
 Play Mode 검증 메뉴가 검사하는 항목은 다음과 같습니다.
 
-- 주사위 표시가 숨겨져 있고, Reel 3개·합계 `—`·룬 표 `공격 ×1`·`회복 ×1`과 열 제목이 표시되며, 노드 선택 중 패널 입력이 차단됩니다. 카탈로그의 선택 스킨이 적용되어 있고 Payline 표시가 하나만 켜져 있습니다.
+- 주사위 표시가 숨겨져 있고, Reel 3개·합계 `0`·룬 표 `공격 ×1`·`회복 ×1`과 열 제목이 표시되며, 노드 선택 중 패널 입력이 차단됩니다. 카탈로그의 선택 스킨이 적용되어 있고 Payline 표시가 하나만 켜져 있습니다.
 - 1920×1080, 21:9, 1024×768에서 좌우 배치, 390×844에서 상하 배치가 됩니다(전환 경계 ±0.06 안은 어느 쪽이든 통과). 버튼이 Payline 칸·합계 값·룬 표 행을 가리지 않습니다. Reel 창 위쪽 가장자리는 덮을 수 있으며, 덮으면 로그에 `button over the top edge of reel window N (…px deep)`으로 기록합니다. `합계` 라벨이 잘리지 않고 두 자리 합계 `88`이 값 칸 너비에 들어가며, Payline 숫자가 칸 안에 들어가며, 구분대 수가 Reel 수 - 1이고, `PaylineFrame`이 첫 Reel부터 마지막 Reel까지 Payline 칸을 감쌉니다. 보이는 Payline(코드 테두리 또는 스킨 이미지)이 칸 범위를 둘러쌉니다. 네 화면을 선택 스킨과 `slot-skin.sample-image-payline`으로 한 번씩 검사합니다.
 - 회전 중 선택 스킨과 예시 스킨을 번갈아 바꿔도 회전이 계속되고 결과가 맞습니다. Reel 4·5개 단계는 이미지 Payline으로 검사하고, 끝나면 선택 스킨으로 돌아갑니다.
+- 회전 중 합계 값은 `0`에서 시작해 수락된 결과의 Reel별 누적값(`vᵢ × min(C, rᵢ)`) 순서로만 바뀌고, 결과 전에는 합계 배수가 없습니다.
 - 연속 `Submit` 두 번과 회전 중 가방 창 열기·닫기에도 결과가 1회만 적용됩니다. 회전 중 잔상과 세로 늘림이 한 번 이상 보이고, 정지 후에는 잔상이 꺼지고 `VisualRoot` 배율이 1입니다. 정지 후 합계 값과 룬 표 행(`×N → 분배`)이 수락된 결과와 같습니다. Scene에 활성 `GameWindowService`가 없으면 창 단계는 건너뛰고 `game window NOT verified`를 기록합니다.
 - 포인터 클릭과 Reduce Motion으로도 실행됩니다.
 - 실행 중 Reel을 4·5개로 늘리고 칸 값을 바꾸면 다음 회전부터 반영됩니다.
@@ -1244,6 +1247,8 @@ Play Mode 확인 절차는 다음과 같습니다.
    - 세션 상태 API로 reel.2를 항상 ×3, 합계를 항상 ×2로 바꾸고(나머지 Reel 확률 0) 전투를 시작합니다.
    - 키보드 Submit, 포인터 클릭, Reduce Motion으로 한 번씩 실행해 회전 중에는 배수가 없고 정지 후 Reel·합계 배수,
      최종 합계, 분배, Story의 [슬롯]·[행운 치명] 줄이 수락된 결과와 같은지 검사합니다.
+   - Submit 회전에서는 합계가 0에서 시작하고, 마지막 누적값이 합계 배수 없이 회전 설정의 대기 시간
+     (DefaultSlotReelSpinProfile, 기본 0.4초) 이상 유지된 뒤 ×2와 최종 합계로 바뀌는지 검사합니다.
    - 1920x1080, 21:9, 1024x768, 390x844에서 배수 글자가 Payline 숫자·합계 값·합계 라벨·행동 버튼과 겹치지 않는지
      실제 결과와 ×10 문자열로 검사하고, Application.temporaryCachePath/SlotFortuneCritical에 화면을 저장합니다.
    - 끝나면 세션 규칙을 설정 자산 값으로 되돌립니다. 자산은 저장하지 않습니다.
@@ -1255,6 +1260,7 @@ Play Mode 확인 절차는 다음과 같습니다.
 - `TxTRPG.Gameplay.Tests.FortuneCriticalTests`(기본 함수와 분석표, 기대 배수, 정수 확률표 합·결정성·동률, 표 분포, 난수 소비, 상한 예 `F = 175`, Reel별 규칙 선택·실행 중 추가된 Reel, 빈·중복 ID, 잘못된 규칙, 모르는 매개변수, 오버플로, 고정 시드 100,000회 표본, 레지스트리 확장)
 - `TxTRPG.Application.Tests.SlotFortuneCriticalCombatTests`(회전·Fortune·분배 순서와 1회 적용, 별도 난수, 추가된 Reel, 수락 후 변경, Scene 재로드 복원, 오버플로 수락 실패, 설정 없음·잘못된 설정, 세션 API, 설정 자산 기본값·`OnValidate`, Story 6가지와 표시 데이터)
 - `TxTRPG.UI.Tests.SlotMachinePanelTests`의 `Fortune*` 테스트(숨김·입력 없음, 회전 중 지움과 정지 후 표시, 즉시·Reduce Motion, 스킨 교체·구성 변경)
+- 합계 누적 표시([지침서](../instructions/slot-progressive-total-display.md)): `SlotFortuneCriticalCombatTests`의 `SpinDisplay_*`(시작 `0`, 진행 `3, 53, 55`와 결과 `175 ×5`, 상한, 합계 Critical 없음이면 마지막 누적 = `FinalTotal`), `SlotMachinePanelTests`의 `SpinDisplay_*`·`SpinProgress_*`·`RunningTotal_*`·`TotalStep_*`(연속 구간, 대기 중 유지·보류된 `SetReels`, 취소·비활성 시 `false`, Reduce Motion·대기 0), `SlotReelDockTests.RunningTotal_ReachesTheCardAndTheTotalStepWaitsUnlessReduceMotion`, `SlotReelSpinPlannerTests.MaximumPresentation_IncludesTheTotalCriticalWait`. Edit Mode에서는 시간이 흐르지 않으므로 대기가 끝난 뒤의 결과 적용은 Play Mode 메뉴로 확인합니다.
 - 기존 `SlotMachineTests`, `RuneTests`, `SlotMachineCombatTests`, `SlotMachinePanelSkinTests`, `SlotReelSpinPlannerTests`
 
 ### 보류된 주사위 도구
