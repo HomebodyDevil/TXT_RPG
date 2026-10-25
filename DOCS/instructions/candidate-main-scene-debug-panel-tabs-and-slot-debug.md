@@ -126,6 +126,7 @@
 - Reel 행은 Prefab 안의 비활성 행 템플릿을 복제해 만들고, 행 수가 줄면 남는 행을 비활성화해 다시 쓴다(풀링). 행을 다시 만들 때 매 프레임 생성하지 않는다. `SetReels`가 같은 ID 목록을 받으면 행을 새로 만들지 않고 값만 갱신한다.
 - 슬라이더 값은 정수 0~100이며, 이벤트의 확률은 `값 / 100`이다. 슬라이더를 끌고 있는 동안 값이 바뀔 때마다 이벤트를 발생시킨다(이벤트 판정 Tab과 같은 동작).
 - 행 수가 바뀌면 페이지 `LayoutElement.preferredHeight`를 `min(내용 선호 높이, 520)`으로 다시 계산한다. 매 프레임 계산하지 않는다.
+- (기록) 페이지 높이 규칙은 2026-10-21 아래 여백 기준으로 바뀌었고, 2026-10-25 [candidate-main-scene-slot-debug-tab-page-height-fix.md](candidate-main-scene-slot-debug-tab-page-height-fix.md)에서 계산 시점과 `EncounterPage` 기준 높이 하한이 추가되었다. 현재 규칙은 `DOCS/architecture/slot-machine-and-runes.md`의 슬롯 디버그 Tab 절을 따른다.
 - Reel 행의 Navigation은 위아래로 이어지고, 행이 추가·제거되면 갱신한다. 마지막 행 아래는 합계 확률 행, 그 아래는 버튼 줄이다. 포커스된 행이 제거되면 포커스를 `−` 버튼으로 옮긴다.
 - 모든 버튼은 최소 높이 48이다. 버튼 4개는 2열 2행(`회전`·`기본값으로`, `화면 안으로`·`화면 밖으로`)으로 배치한다.
 - 글자는 키보드·Gamepad 기호를 하드코딩하지 않는다.
